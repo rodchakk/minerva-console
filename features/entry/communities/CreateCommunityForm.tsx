@@ -6,6 +6,8 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { createCommunityAction } from "@/features/entry/communities/actions";
 import { BulkUnitsUploader } from "@/features/entry/communities/BulkUnitsUploader";
+import type { AdvancedUnitsImportPayload } from "@/features/entry/communities/unitsImport";
+import { FacilityFields } from "@/features/entry/communities/FacilityFields";
 import { cn } from "@/lib/supabase/utils";
 
 function SubmitButton() {
@@ -27,7 +29,12 @@ export function CreateCommunityForm() {
   const [allowFrequentAccess, setAllowFrequentAccess] = useState(true);
   const [allowReservations, setAllowReservations] = useState(true);
   const [allowMessages, setAllowMessages] = useState(true);
+  const [facilityNames, setFacilityNames] = useState([""]);
   const [unitsInput, setUnitsInput] = useState("");
+  const [unitsMode, setUnitsMode] = useState<"advanced" | "simple">("simple");
+  const [advancedUnitsImport, setAdvancedUnitsImport] =
+    useState<AdvancedUnitsImportPayload | null>(null);
+  const [clientError, setClientError] = useState("");
 
   const stepClasses = (currentStep: number) =>
     cn(
@@ -44,7 +51,11 @@ export function CreateCommunityForm() {
           {state.communityName} created
         </h2>
         <p className="mt-3 text-sm leading-6 text-slate-600">{state.message}</p>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-3xl bg-teal-50 p-4">
+            <p className="text-sm text-teal-700">Community created</p>
+            <p className="mt-2 text-2xl font-semibold text-teal-950">1</p>
+          </div>
           <div className="rounded-3xl bg-emerald-50 p-4">
             <p className="text-sm text-emerald-700">Inserted units</p>
             <p className="mt-2 text-2xl font-semibold text-emerald-950">
@@ -63,7 +74,32 @@ export function CreateCommunityForm() {
               {state.skippedBlank ?? 0}
             </p>
           </div>
+          <div className="rounded-3xl bg-cyan-50 p-4">
+            <p className="text-sm text-cyan-700">Inserted facilities</p>
+            <p className="mt-2 text-2xl font-semibold text-cyan-950">
+              {state.insertedFacilities ?? 0}
+            </p>
+          </div>
+          <div className="rounded-3xl bg-orange-50 p-4">
+            <p className="text-sm text-orange-700">Skipped facilities</p>
+            <p className="mt-2 text-2xl font-semibold text-orange-950">
+              {(state.skippedFacilityDuplicates ?? 0) +
+                (state.skippedFacilityBlank ?? 0)}
+            </p>
+          </div>
+          <div className="rounded-3xl bg-violet-50 p-4">
+            <p className="text-sm text-violet-700">Resident rows prepared</p>
+            <p className="mt-2 text-2xl font-semibold text-violet-950">
+              {state.parsedResidentRows ?? 0}
+            </p>
+          </div>
         </div>
+        {state.usedAdvancedImport ? (
+          <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Advanced import resident data was parsed for preview, but resident
+            users were not created yet in this version.
+          </p>
+        ) : null}
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/products/entry/communities">
             <Button>Back to communities</Button>
@@ -77,10 +113,44 @@ export function CreateCommunityForm() {
   }
 
   return (
-    <form action={formAction} className="space-y-6">
+    <form
+      action={formAction}
+      className="space-y-6"
+      onSubmit={(event) => {
+        if (step !== 3) {
+          return;
+        }
+
+        if (unitsMode === "advanced") {
+          if (!advancedUnitsImport) {
+            event.preventDefault();
+            setClientError(
+              "Parse the advanced import before creating the community.",
+            );
+            return;
+          }
+
+          if (advancedUnitsImport.errors.length > 0) {
+            event.preventDefault();
+            setClientError(
+              "Resolve the blocking advanced import errors before creating the community.",
+            );
+            return;
+          }
+        }
+
+        setClientError("");
+      }}
+    >
       <input type="hidden" name="name" value={name} />
       <input type="hidden" name="city" value={city} />
       <input type="hidden" name="unit_label" value={unitLabel} />
+      <input type="hidden" name="units_mode" value={unitsMode} />
+      <input
+        type="hidden"
+        name="advanced_units_payload"
+        value={advancedUnitsImport ? JSON.stringify(advancedUnitsImport) : ""}
+      />
       <input
         type="hidden"
         name="allow_frequent_access"
@@ -92,6 +162,14 @@ export function CreateCommunityForm() {
         value={String(allowReservations)}
       />
       <input type="hidden" name="allow_messages" value={String(allowMessages)} />
+      {facilityNames.map((facilityName, index) => (
+        <input
+          key={`facility-name-${index}`}
+          type="hidden"
+          name="facility_name"
+          value={facilityName}
+        />
+      ))}
 
       <div className="flex flex-wrap gap-3">
         <span className={stepClasses(1)}>1. Details</span>
@@ -146,57 +224,84 @@ export function CreateCommunityForm() {
       ) : null}
 
       {step === 2 ? (
-        <section className="grid gap-4 rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-sm md:grid-cols-3">
-          {[
-            {
-              name: "allow_frequent_access",
-              title: "Frequent access",
-              description: "Enable recurring or fast-entry workflows for residents.",
-              checked: allowFrequentAccess,
-              onChange: setAllowFrequentAccess,
-            },
-            {
-              name: "allow_reservations",
-              title: "Reservations",
-              description: "Allow amenity, space, or visit reservation flows.",
-              checked: allowReservations,
-              onChange: setAllowReservations,
-            },
-            {
-              name: "allow_messages",
-              title: "Messages",
-              description: "Allow in-product communication and broadcast tools.",
-              checked: allowMessages,
-              onChange: setAllowMessages,
-            },
-          ].map((item) => (
-            <label
-              key={item.name}
-              className="flex cursor-pointer flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] p-5"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-base font-semibold text-slate-900">
-                  {item.title}
-                </span>
-                <input
-                  type="checkbox"
-                  checked={item.checked}
-                  onChange={(event) => item.onChange(event.target.checked)}
-                  className="h-4 w-4 rounded border-slate-300 text-teal-600"
-                />
-              </div>
-              <p className="mt-3 text-sm leading-6 text-slate-600">
-                {item.description}
-              </p>
-            </label>
-          ))}
+        <section className="space-y-5 rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-sm">
+          <div className="grid gap-4 md:grid-cols-3">
+            {[
+              {
+                name: "allow_frequent_access",
+                title: "Frequent access",
+                description:
+                  "Enable recurring or fast-entry workflows for residents.",
+                checked: allowFrequentAccess,
+                onChange: setAllowFrequentAccess,
+              },
+              {
+                name: "allow_reservations",
+                title: "Reservations",
+                description:
+                  "Allow amenity, space, or visit reservation flows.",
+                checked: allowReservations,
+                onChange: setAllowReservations,
+              },
+              {
+                name: "allow_messages",
+                title: "Messages",
+                description:
+                  "Allow in-product communication and broadcast tools.",
+                checked: allowMessages,
+                onChange: setAllowMessages,
+              },
+            ].map((item) => (
+              <label
+                key={item.name}
+                className="flex cursor-pointer flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] p-5"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-base font-semibold text-slate-900">
+                    {item.title}
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={item.checked}
+                    onChange={(event) => item.onChange(event.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-teal-600"
+                  />
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  {item.description}
+                </p>
+              </label>
+            ))}
+          </div>
+
+          <FacilityFields
+            disabled={!allowReservations}
+            value={facilityNames}
+            onChange={setFacilityNames}
+          />
         </section>
       ) : null}
 
       {step === 3 ? (
         <section className="rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-sm">
-          <BulkUnitsUploader value={unitsInput} onChange={setUnitsInput} />
+          <BulkUnitsUploader
+            advancedValue={advancedUnitsImport}
+            mode={unitsMode}
+            onAdvancedChange={setAdvancedUnitsImport}
+            onModeChange={(nextMode) => {
+              setUnitsMode(nextMode);
+              setClientError("");
+            }}
+            onSimpleChange={setUnitsInput}
+            simpleValue={unitsInput}
+          />
         </section>
+      ) : null}
+
+      {clientError ? (
+        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          {clientError}
+        </p>
       ) : null}
 
       {state.message ? (

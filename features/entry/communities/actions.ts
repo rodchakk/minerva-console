@@ -10,11 +10,16 @@ import {
 export type CreateCommunityState = {
   communityId?: string;
   communityName?: string;
+  insertedFacilities?: number;
   insertedUnits?: number;
   message?: string;
+  parsedResidentRows?: number;
+  skippedFacilityBlank?: number;
+  skippedFacilityDuplicates?: number;
   skippedBlank?: number;
   skippedDuplicates?: number;
   success?: boolean;
+  usedAdvancedImport?: boolean;
 };
 
 function parseBooleanField(value: FormDataEntryValue | null) {
@@ -70,6 +75,79 @@ function parseUnits(rawInput: string) {
   return { units, skippedBlank, skippedDuplicates };
 }
 
+type ParsedAdvancedUnitsPayload = {
+  parsedResidentRows: number;
+  skippedBlank: number;
+  units: string[];
+};
+
+function parseAdvancedUnitsPayload(
+  rawPayload: string,
+): ParsedAdvancedUnitsPayload | null {
+  if (!rawPayload.trim()) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(rawPayload) as {
+      blankRowsIgnored?: unknown;
+      parsedResidentRows?: unknown;
+      uniqueUnitLabels?: unknown;
+    };
+
+    const uniqueUnitLabels = Array.isArray(parsed.uniqueUnitLabels)
+      ? parsed.uniqueUnitLabels
+          .map((value) => String(value ?? "").trim())
+          .filter((value) => value.length > 0)
+      : [];
+
+    const seen = new Set<string>();
+    const units: string[] = [];
+
+    uniqueUnitLabels.forEach((unit) => {
+      const normalized = unit.toLowerCase();
+      if (!seen.has(normalized)) {
+        seen.add(normalized);
+        units.push(unit);
+      }
+    });
+
+    return {
+      parsedResidentRows: coerceNumber(parsed.parsedResidentRows),
+      skippedBlank: coerceNumber(parsed.blankRowsIgnored),
+      units,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseNamedList(values: string[]) {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  let skippedBlank = 0;
+  let skippedDuplicates = 0;
+
+  values.forEach((item) => {
+    const value = item.trim();
+    if (!value) {
+      skippedBlank += 1;
+      return;
+    }
+
+    const normalized = value.toLowerCase();
+    if (seen.has(normalized)) {
+      skippedDuplicates += 1;
+      return;
+    }
+
+    seen.add(normalized);
+    names.push(value);
+  });
+
+  return { names, skippedBlank, skippedDuplicates };
+}
+
 export async function createCommunityAction(
   _previousState: CreateCommunityState,
   formData: FormData,
@@ -86,7 +164,12 @@ export async function createCommunityAction(
     formData.get("allow_reservations"),
   );
   const allowMessages = parseBooleanField(formData.get("allow_messages"));
+  const unitsMode = String(formData.get("units_mode") ?? "simple");
   const unitsInput = String(formData.get("units_input") ?? "");
+  const advancedUnitsPayload = String(formData.get("advanced_units_payload") ?? "");
+  const facilityInput = formData
+    .getAll("facility_name")
+    .map((value) => String(value ?? ""));
 
   if (!name) {
     return { message: "Community name is required." };
@@ -117,8 +200,31 @@ export async function createCommunityAction(
     };
   }
 
-  const parsedUnits = parseUnits(unitsInput);
+  const parsedAdvancedUnits =
+    unitsMode === "advanced"
+      ? parseAdvancedUnitsPayload(advancedUnitsPayload)
+      : null;
+
+  if (unitsMode === "advanced" && !parsedAdvancedUnits) {
+    return {
+      message:
+        "The advanced import preview is missing or invalid. Parse the file again before creating the community.",
+    };
+  }
+
+  const parsedUnits = parsedAdvancedUnits
+    ? {
+        skippedBlank: parsedAdvancedUnits.skippedBlank,
+        skippedDuplicates: 0,
+        units: parsedAdvancedUnits.units,
+      }
+    : parseUnits(unitsInput);
+  const parsedFacilities = parseNamedList(facilityInput);
   let insertedUnits = 0;
+  let insertedFacilities = 0;
+  const parsedResidentRows = parsedAdvancedUnits?.parsedResidentRows || 0;
+  let skippedFacilityDuplicates = parsedFacilities.skippedDuplicates;
+  let skippedFacilityBlank = parsedFacilities.skippedBlank;
   let skippedDuplicates = parsedUnits.skippedDuplicates;
   let skippedBlank = parsedUnits.skippedBlank;
 
@@ -147,13 +253,49 @@ export async function createCommunityAction(
     skippedBlank += coerceNumber(bulkRecord.skipped_blank);
   }
 
+  if (allowReservations && parsedFacilities.names.length > 0) {
+    const { data: facilitiesData, error: facilitiesError } = await supabase.rpc(
+      "create_community_facilities_bulk_v1",
+      {
+        p_community_id: communityId,
+        p_facilities: parsedFacilities.names,
+      },
+    );
+
+    if (facilitiesError) {
+      return {
+        message: `Community created, but facilities import failed: ${facilitiesError.message}`,
+      };
+    }
+
+    const facilitiesRecord = (Array.isArray(facilitiesData)
+      ? facilitiesData[0]
+      : facilitiesData ?? {}) as Record<string, unknown>;
+
+    insertedFacilities =
+      coerceNumber(facilitiesRecord.inserted_count) ||
+      parsedFacilities.names.length;
+    skippedFacilityDuplicates += coerceNumber(
+      facilitiesRecord.skipped_duplicates_count,
+    );
+    skippedFacilityBlank += coerceNumber(
+      facilitiesRecord.skipped_blank_count,
+    );
+  }
+
   return {
     communityId,
     communityName: name,
+    insertedFacilities,
     insertedUnits,
-    message: "Community created successfully.",
+    message:
+      "Community created successfully with onboarding data for units and reservable areas.",
+    parsedResidentRows,
+    skippedFacilityBlank,
+    skippedFacilityDuplicates,
     skippedBlank,
     skippedDuplicates,
     success: true,
+    usedAdvancedImport: Boolean(parsedAdvancedUnits),
   };
 }
