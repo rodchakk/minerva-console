@@ -1,0 +1,23 @@
+import { Badge } from "@/components/ui/Badge";
+
+type StatusCardProps = {
+  title: string;
+  description: string;
+  tone?: "default" | "success" | "warning" | "danger" | "info";
+};
+
+export function StatusCard({
+  title,
+  description,
+  tone = "default",
+}: StatusCardProps) {
+  return (
+    <article className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+      <div className="flex items-start justify-between gap-4">
+        <h3 className="text-base font-semibold text-slate-950">{title}</h3>
+        <Badge tone={tone}>{title}</Badge>
+      </div>
+      <p className="mt-3 text-sm leading-6 text-slate-600">{description}</p>
+    </article>
+  );
+}
