@@ -1,5 +1,9 @@
 "use server";
 
+import {
+  buildActivationQueueRows,
+  parseActivationQueueImportResult,
+} from "@/features/entry/activation/actions";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -8,6 +12,10 @@ import {
 } from "@/lib/supabase/utils";
 
 export type CreateCommunityState = {
+  activationFailed?: number;
+  activationInserted?: number;
+  activationRowsWithMissingHouse?: number;
+  activationSkipped?: number;
   communityId?: string;
   communityName?: string;
   insertedFacilities?: number;
@@ -77,6 +85,14 @@ function parseUnits(rawInput: string) {
 
 type ParsedAdvancedUnitsPayload = {
   parsedResidentRows: number;
+  residentQueueRows: Array<{
+    email: string;
+    isOwner: string;
+    phone: string;
+    rawData: Record<string, unknown>;
+    residentName: string;
+    unitLabel: string;
+  }>;
   skippedBlank: number;
   units: string[];
 };
@@ -92,6 +108,7 @@ function parseAdvancedUnitsPayload(
     const parsed = JSON.parse(rawPayload) as {
       blankRowsIgnored?: unknown;
       parsedResidentRows?: unknown;
+      rows?: unknown;
       uniqueUnitLabels?: unknown;
     };
 
@@ -112,8 +129,35 @@ function parseAdvancedUnitsPayload(
       }
     });
 
+    const residentQueueRows = Array.isArray(parsed.rows)
+      ? parsed.rows
+          .map((item) => {
+            const record = item as Record<string, unknown>;
+
+            return {
+              email: coerceString(record.email),
+              isOwner: coerceString(record.isOwner),
+              phone: coerceString(record.phone),
+              rawData:
+                record.rawData && typeof record.rawData === "object"
+                  ? (record.rawData as Record<string, unknown>)
+                  : {},
+              residentName: coerceString(record.residentName),
+              unitLabel: coerceString(record.unitLabel),
+            };
+          })
+          .filter(
+            (item) =>
+              item.unitLabel.length > 0 ||
+              item.residentName.length > 0 ||
+              item.phone.length > 0 ||
+              item.email.length > 0,
+          )
+      : [];
+
     return {
       parsedResidentRows: coerceNumber(parsed.parsedResidentRows),
+      residentQueueRows,
       skippedBlank: coerceNumber(parsed.blankRowsIgnored),
       units,
     };
@@ -220,8 +264,15 @@ export async function createCommunityAction(
       }
     : parseUnits(unitsInput);
   const parsedFacilities = parseNamedList(facilityInput);
+  const activationRows = parsedAdvancedUnits
+    ? buildActivationQueueRows(parsedAdvancedUnits.residentQueueRows)
+    : [];
   let insertedUnits = 0;
   let insertedFacilities = 0;
+  let activationInserted = 0;
+  let activationSkipped = 0;
+  let activationFailed = 0;
+  let activationRowsWithMissingHouse = 0;
   const parsedResidentRows = parsedAdvancedUnits?.parsedResidentRows || 0;
   let skippedFacilityDuplicates = parsedFacilities.skippedDuplicates;
   let skippedFacilityBlank = parsedFacilities.skippedBlank;
@@ -283,13 +334,43 @@ export async function createCommunityAction(
     );
   }
 
+  if (activationRows.length > 0) {
+    const { data: activationData, error: activationError } = await supabase.rpc(
+      "create_resident_activation_queue_bulk_v1",
+      {
+        p_community_id: communityId,
+        p_rows: activationRows,
+      },
+    );
+
+    if (activationError) {
+      activationFailed = activationRows.length;
+    } else {
+      const activationResult = parseActivationQueueImportResult(
+        activationData,
+        activationRows.length,
+      );
+
+      activationInserted = activationResult.inserted;
+      activationSkipped = activationResult.skipped;
+      activationFailed = activationResult.failed;
+      activationRowsWithMissingHouse = activationResult.rowsWithMissingHouse;
+    }
+  }
+
   return {
+    activationFailed,
+    activationInserted,
+    activationRowsWithMissingHouse,
+    activationSkipped,
     communityId,
     communityName: name,
     insertedFacilities,
     insertedUnits,
     message:
-      "Community created successfully with onboarding data for units and reservable areas.",
+      activationRows.length > 0
+        ? "Community created successfully. Resident activation records were prepared without creating active users."
+        : "Community created successfully with onboarding data for units and reservable areas.",
     parsedResidentRows,
     skippedFacilityBlank,
     skippedFacilityDuplicates,

@@ -93,17 +93,58 @@ export function CreateCommunityForm() {
               {state.parsedResidentRows ?? 0}
             </p>
           </div>
+          <div className="rounded-3xl bg-sky-50 p-4">
+            <p className="text-sm text-sky-700">Activation inserted</p>
+            <p className="mt-2 text-2xl font-semibold text-sky-950">
+              {state.activationInserted ?? 0}
+            </p>
+          </div>
+          <div className="rounded-3xl bg-slate-100 p-4">
+            <p className="text-sm text-slate-700">Activation skipped</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">
+              {state.activationSkipped ?? 0}
+            </p>
+          </div>
+          <div className="rounded-3xl bg-yellow-50 p-4">
+            <p className="text-sm text-yellow-700">Missing house match</p>
+            <p className="mt-2 text-2xl font-semibold text-yellow-950">
+              {state.activationRowsWithMissingHouse ?? 0}
+            </p>
+          </div>
+          <div className="rounded-3xl bg-rose-50 p-4">
+            <p className="text-sm text-rose-700">Activation failed</p>
+            <p className="mt-2 text-2xl font-semibold text-rose-950">
+              {state.activationFailed ?? 0}
+            </p>
+          </div>
         </div>
         {state.usedAdvancedImport ? (
-          <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            Advanced import resident data was parsed for preview, but resident
-            users were not created yet in this version.
-          </p>
+          <div className="mt-6 space-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <p>
+              Resident imports are stored as pending activation records only. No
+              active users, emails, or final PINs are created from this flow yet.
+            </p>
+            <p>
+              Inserted: {state.activationInserted ?? 0}
+              {state.activationSkipped ? ` · Skipped duplicates: ${state.activationSkipped}` : ""}
+              {state.activationFailed ? ` · Failed: ${state.activationFailed}` : ""}
+              {state.activationRowsWithMissingHouse
+                ? ` · Missing house match: ${state.activationRowsWithMissingHouse}`
+                : ""}
+            </p>
+          </div>
         ) : null}
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/products/entry/communities">
             <Button>Back to communities</Button>
           </Link>
+          {state.communityId && (state.activationInserted ?? 0) > 0 ? (
+            <Link
+              href={`/products/entry/activation?community_id=${state.communityId}`}
+            >
+              <Button>Go to Activation Queue</Button>
+            </Link>
+          ) : null}
           <Link href="/products/entry/communities/new">
             <Button variant="secondary">Create another</Button>
           </Link>

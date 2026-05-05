@@ -11,8 +11,8 @@ export const TEMPLATE_HEADERS = [
 ] as const;
 
 export const TEMPLATE_EXAMPLE_ROWS = [
-  ["Casa 1", "Ana Pérez", "9999-9999", "ana@example.com", "Yes"],
-  ["Casa 1", "Juan Pérez", "9888-8888", "juan@example.com", "No"],
+  ["Casa 1", "Ana Perez", "9999-9999", "ana@example.com", "Yes"],
+  ["Casa 1", "Juan Perez", "9888-8888", "juan@example.com", "No"],
   ["Casa 2", "Carlos Ruiz", "9777-7777", "", "Yes"],
 ] as const;
 
@@ -28,6 +28,7 @@ export type AdvancedImportRow = {
   email: string;
   isOwner: string;
   phone: string;
+  rawData: Record<string, string | number>;
   residentName: string;
   residentStatus: "Prepared / not created yet";
   rowNumber: number;
@@ -187,6 +188,14 @@ function parseSheetRows(
       email,
       isOwner,
       phone,
+      rawData: {
+        email,
+        isOwner,
+        phone,
+        residentName,
+        rowNumber,
+        unitLabel,
+      },
       residentName,
       residentStatus: "Prepared / not created yet",
       rowNumber,
@@ -245,9 +254,7 @@ export function downloadAdvancedUnitsTemplate() {
     [...TEMPLATE_HEADERS],
     ...TEMPLATE_EXAMPLE_ROWS.map((row) => [...row]),
   ];
-  const worksheet = XLSX.utils.aoa_to_sheet([
-    ...templateRows,
-  ]);
+  const worksheet = XLSX.utils.aoa_to_sheet([...templateRows]);
   const workbook = XLSX.utils.book_new();
 
   XLSX.utils.book_append_sheet(workbook, worksheet, "Units");

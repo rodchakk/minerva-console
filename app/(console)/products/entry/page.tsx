@@ -48,11 +48,17 @@ export default function EntryPage() {
         />
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-4">
         <ProductCard
           title="Communities"
           description="Review current communities, feature flags, activation status, and onboarding counts."
           href="/products/entry/communities"
+          status="Live"
+        />
+        <ProductCard
+          title="Activation Queue"
+          description="Prepare resident account activations without creating active users yet."
+          href="/products/entry/activation"
           status="Live"
         />
         <ProductCard

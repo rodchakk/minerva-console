@@ -3,7 +3,9 @@
     "allow": [
       "Bash(xargs grep *)",
       "mcp__claude_ai_Supabase__execute_sql",
-      "mcp__claude_ai_Supabase__apply_migration"
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__list_projects",
+      "Bash(npm run *)"
     ]
   }
 }
