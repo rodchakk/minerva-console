@@ -35,6 +35,12 @@ type CommunityProgressMeta = {
   totalTasks: number;
 };
 
+type CommunityActiveState = {
+  city?: string;
+  isActive: boolean;
+  name?: string;
+};
+
 function mapCommunityRecord(item: unknown): CommunityWithProgressItem | null {
   const record = item as Record<string, unknown>;
   const communityId =
@@ -111,6 +117,42 @@ function mapProgressRecord(value: unknown): CommunityProgressMeta | null {
     totalTasks:
       coerceNumber(record.total_tasks) ||
       coerceNumber(record.total_steps),
+  };
+}
+
+function mapActiveState(item: unknown): [string, CommunityActiveState] | null {
+  const record = item as Record<string, unknown>;
+  const id = coerceString(record.id);
+
+  if (!id) {
+    return null;
+  }
+
+  return [
+    id,
+    {
+      city: coerceString(record.city),
+      isActive: coerceBoolean(record.is_active),
+      name: coerceString(record.name),
+    },
+  ];
+}
+
+function applyActiveState(
+  community: CommunityWithProgressItem,
+  activeStateById: Map<string, CommunityActiveState>,
+): CommunityWithProgressItem {
+  const activeState = activeStateById.get(community.id);
+
+  if (!activeState) {
+    return community;
+  }
+
+  return {
+    ...community,
+    city: activeState.city || community.city,
+    isActive: activeState.isActive,
+    name: activeState.name || community.name,
   };
 }
 
@@ -257,10 +299,20 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
   const [
     { data: progressListData, error: progressListError },
     { data: communityListData, error: communityListError },
+    { data: activeStateData },
   ] = await Promise.all([
     supabase.rpc("list_superadmin_communities_with_progress_v1"),
     supabase.rpc("list_superadmin_communities_v1"),
+    supabase.from("communities").select("id,name,city,is_active"),
   ]);
+
+  const activeStateById = new Map(
+    Array.isArray(activeStateData)
+      ? activeStateData
+          .map(mapActiveState)
+          .filter((item): item is [string, CommunityActiveState] => item !== null)
+      : [],
+  );
 
   const communitiesFromProgress =
     !progressListError && Array.isArray(progressListData)
@@ -270,6 +322,7 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
             (community): community is CommunityWithProgressItem =>
               community !== null,
           )
+          .map((community) => applyActiveState(community, activeStateById))
       : [];
 
   if (communityListError || !Array.isArray(communityListData)) {
@@ -280,7 +333,8 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
     .map(mapCommunityRecord)
     .filter(
       (community): community is CommunityWithProgressItem => community !== null,
-    );
+    )
+    .map((community) => applyActiveState(community, activeStateById));
 
   if (baseCommunities.length === 0) {
     return communitiesFromProgress;
