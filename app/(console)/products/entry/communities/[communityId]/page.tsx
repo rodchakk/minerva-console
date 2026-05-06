@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CommunityUnitsDrawer } from "@/features/entry/communities/CommunityUnitsDrawer";
 import {
   getCommunityDetailPreviews,
   type CommunityDetailPreviews,
@@ -422,32 +423,13 @@ export default async function CommunitySetupPage(
       </section>
 
       <section className="grid overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_48px_rgba(2,6,23,0.2)] md:grid-cols-2 xl:grid-cols-5">
-        <MiniMetric
-          badge="▣"
-          label="Units"
-          value={community.totalUnits}
-          hint="Total units"
-        />
-        <MiniMetric
-          badge="◎"
-          label="Members"
-          value={community.totalMembers}
-          hint="Total members"
-        />
-        <MiniMetric
-          badge="◴"
-          label="Pending activations"
-          value={community.activationPendingCount}
-          hint="Waiting in queue"
-        />
+        <MiniMetric badge="▣" label="Units" value={community.totalUnits} hint="Total units" />
+        <MiniMetric badge="◎" label="Members" value={community.totalMembers} hint="Total members" />
+        <MiniMetric badge="◴" label="Pending activations" value={community.activationPendingCount} hint="Waiting in queue" />
         <MiniMetric
           badge="▤"
           label="Facilities"
-          value={
-            previews.facilities.state === "live"
-              ? previews.facilities.activeCount
-              : "—"
-          }
+          value={previews.facilities.state === "live" ? previews.facilities.activeCount : "—"}
           hint={
             previews.facilities.state === "live"
               ? "Active facilities"
@@ -459,9 +441,7 @@ export default async function CommunitySetupPage(
         <MiniMetric
           badge="✉"
           label="Messages"
-          value={
-            previews.messages.state === "live" ? previews.messages.total : "—"
-          }
+          value={previews.messages.state === "live" ? previews.messages.total : "—"}
           hint={getPreviewMetricStatus(previews.messages.state)}
         />
       </section>
@@ -473,12 +453,11 @@ export default async function CommunitySetupPage(
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
                 Units snapshot
               </p>
-              <Link
-                href={`/products/entry/communities/${community.id}/units`}
-                className="text-sm font-semibold text-violet-200 transition hover:text-white"
-              >
-                View full units directory →
-              </Link>
+              <CommunityUnitsDrawer
+                communityId={community.id}
+                units={previews.units.items}
+                triggerLabel="View full units directory"
+              />
             </div>
 
             {previews.units.state === "unavailable" ? (
@@ -514,12 +493,8 @@ export default async function CommunitySetupPage(
                           </div>
                         </td>
                         <td className="px-4 py-4">{unit.ownerName}</td>
-                        <td className="px-4 py-4 font-semibold text-white">
-                          {unit.activeResidents}
-                        </td>
-                        <td className="px-4 py-4 font-semibold text-white">
-                          {unit.activePasses}
-                        </td>
+                        <td className="px-4 py-4 font-semibold text-white">{unit.activeResidents}</td>
+                        <td className="px-4 py-4 font-semibold text-white">{unit.activePasses}</td>
                         <td className="px-4 py-4 text-white">{unit.lastAccess}</td>
                         <td className="py-4 pl-4 text-right">
                           <Badge tone={unit.isActive ? "success" : "default"}>
@@ -535,26 +510,18 @@ export default async function CommunitySetupPage(
 
             {previews.units.state === "live" ? (
               <div className="mt-4 text-center">
-                <Link
-                  href={`/products/entry/communities/${community.id}/units`}
-                  className="text-sm font-semibold text-violet-200 transition hover:text-white"
-                >
-                  View full units directory →
-                </Link>
+                <CommunityUnitsDrawer
+                  communityId={community.id}
+                  units={previews.units.items}
+                  triggerLabel="View full units directory"
+                />
               </div>
             ) : null}
           </section>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <SummaryCard
-              title="Users summary"
-              actionHref={`/products/entry/users?community_id=${community.id}`}
-              actionLabel="View all users"
-            >
-              <div
-                id="users-summary"
-                className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4"
-              >
+            <SummaryCard title="Users summary" actionHref={`/products/entry/users?community_id=${community.id}`} actionLabel="View all users">
+              <div id="users-summary" className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
                 {[
                   ["Admins", previews.users.counts.admins],
                   ["Guards", previews.users.counts.guards],
@@ -562,33 +529,23 @@ export default async function CommunitySetupPage(
                   ["Inactive", previews.users.counts.inactive],
                 ].map(([label, value]) => (
                   <div key={label} className="border-r border-white/8 last:border-r-0">
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                      {label}
-                    </p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</p>
                     <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
                   </div>
                 ))}
               </div>
               {previews.users.state === "unavailable" ? (
-                <p className="mt-4 text-sm text-[var(--text-muted)]">
-                  User preview unavailable.
-                </p>
+                <p className="mt-4 text-sm text-[var(--text-muted)]">User preview unavailable.</p>
               ) : null}
             </SummaryCard>
 
-            <SummaryCard
-              title="Facilities summary"
-              actionHref="#facilities-summary"
-              actionLabel="Manage facilities"
-            >
+            <SummaryCard title="Facilities summary" actionHref="#facilities-summary" actionLabel="Manage facilities">
               <div id="facilities-summary">
                 {previews.facilities.state === "live" ? (
                   <div className="space-y-3">
                     {previews.facilities.items.slice(0, 2).map((facility) => (
                       <div key={facility.id}>
-                        <p className="text-sm font-semibold text-white">
-                          {facility.name}
-                        </p>
+                        <p className="text-sm font-semibold text-white">{facility.name}</p>
                         <p className="mt-1 text-sm text-[var(--text-muted)]">
                           {facility.opensAt} to {facility.closesAt} · {facility.pricePerSlot}
                         </p>
@@ -612,21 +569,13 @@ export default async function CommunitySetupPage(
               </div>
             </SummaryCard>
 
-            <SummaryCard
-              title="Recent messages"
-              actionHref={`/products/entry/messages?community_id=${community.id}`}
-              actionLabel="View all messages"
-            >
+            <SummaryCard title="Recent messages" actionHref={`/products/entry/messages?community_id=${community.id}`} actionLabel="View all messages">
               {previews.messages.state === "live" ? (
                 <div className="space-y-3">
                   {previews.messages.items.slice(0, 2).map((message) => (
                     <div key={message.id}>
-                      <p className="text-sm font-semibold text-white">
-                        {message.title}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {message.publishedAt}
-                      </p>
+                      <p className="text-sm font-semibold text-white">{message.title}</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{message.publishedAt}</p>
                     </div>
                   ))}
                 </div>
@@ -660,41 +609,24 @@ export default async function CommunitySetupPage(
             </div>
           </section>
 
-          <section
-            id="setup-status"
-            className="rounded-[30px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.12),rgba(17,24,39,0.9))] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)]"
-          >
+          <section id="setup-status" className="rounded-[30px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.12),rgba(17,24,39,0.9))] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)]">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
               Setup status
             </p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
-              Operational readiness
-            </h3>
+            <h3 className="mt-2 text-xl font-semibold text-white">Operational readiness</h3>
             <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
               {community.completedTasks} / {community.totalTasks} tasks completed.
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="h-2 flex-1 rounded-full bg-white/8">
-                <div
-                  className="h-2 rounded-full bg-[var(--primary)]"
-                  style={{
-                    width: getProgressWidth(
-                      community.completedTasks,
-                      community.totalTasks,
-                    ),
-                  }}
-                />
+                <div className="h-2 rounded-full bg-[var(--primary)]" style={{ width: getProgressWidth(community.completedTasks, community.totalTasks) }} />
               </div>
               <span className="text-sm font-semibold text-white">{progressPercent}%</span>
             </div>
 
             <div className="mt-5 space-y-3">
               {[
-                {
-                  done: true,
-                  label: "Regional settings",
-                  status: "Completed",
-                },
+                { done: true, label: "Regional settings", status: "Completed" },
                 {
                   done: community.allowFrequentAccess || community.allowReservations || community.allowMessages,
                   label: "Guardrails & access",
@@ -711,10 +643,7 @@ export default async function CommunitySetupPage(
                   status: community.totalUnits > 0 ? "Completed" : "In progress",
                 },
               ].map((item) => (
-                <div
-                  key={item.label}
-                  className="flex items-center justify-between gap-3 border-b border-white/8 pb-3 last:border-0 last:pb-0"
-                >
+                <div key={item.label} className="flex items-center justify-between gap-3 border-b border-white/8 pb-3 last:border-0 last:pb-0">
                   <div className="flex items-center gap-3">
                     <span
                       className={`grid h-6 w-6 place-items-center rounded-full border text-xs ${
@@ -732,10 +661,7 @@ export default async function CommunitySetupPage(
               ))}
             </div>
 
-            <Link
-              href={primaryAction.href}
-              className="mt-5 inline-flex text-sm font-semibold text-violet-200 transition hover:text-white"
-            >
+            <Link href={primaryAction.href} className="mt-5 inline-flex text-sm font-semibold text-violet-200 transition hover:text-white">
               Review setup →
             </Link>
           </section>
