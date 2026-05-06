@@ -422,22 +422,6 @@ async function loadUnitsPreview(
   }
 }
 
-async function loadUnitsDirectory(
-  supabase: SupabaseServerClient,
-  communityId: string,
-): Promise<CommunityDetailPreviews["units"]> {
-  const result = await loadUnitsPreview(supabase, communityId);
-
-  if (result.state !== "live") {
-    return result;
-  }
-
-  return {
-    ...result,
-    items: result.items.slice(0, PREVIEW_LIMIT),
-  };
-}
-
 function getEmptyUnitsSummary(): CommunityUnitsSummary {
   return {
     activePasses: 0,
@@ -711,7 +695,7 @@ export async function getCommunityDetailPreviews(
   const supabase = await createClient();
   const [users, units, facilities, messages] = await Promise.all([
     loadUsersPreview(supabase, communityId),
-    loadUnitsDirectory(supabase, communityId),
+    loadUnitsPreview(supabase, communityId),
     loadFacilitiesPreview(supabase, communityId, options.allowReservations),
     loadMessagesPreview(supabase, communityId, options.allowMessages),
   ]);
