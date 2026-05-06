@@ -8,6 +8,26 @@ import {
   coerceString,
 } from "@/lib/supabase/utils";
 
+export type OnboardingTaskSummary = {
+  done: boolean;
+  key: string;
+  label: string;
+  required: boolean;
+  summary: Record<string, unknown>;
+};
+
+export type CommunityOnboardingDetail = {
+  activationQueueReviewedAt: string;
+  blockers: string[];
+  completedAt: string;
+  completedTasks: number;
+  metrics: Record<string, unknown>;
+  nextStepKey: string;
+  onboardingStatus: string;
+  tasks: OnboardingTaskSummary[];
+  totalTasks: number;
+};
+
 export type CommunityListItem = {
   activationPendingCount: number;
   allowFrequentAccess: boolean;
@@ -95,6 +115,39 @@ function extractFirstRecord(value: unknown) {
     : {};
 }
 
+function normalizeJsonObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function normalizeTask(value: unknown): OnboardingTaskSummary | null {
+  const record = normalizeJsonObject(value);
+  const key = coerceString(record.key);
+
+  if (!key) {
+    return null;
+  }
+
+  return {
+    done: coerceBoolean(record.done),
+    key,
+    label: coerceString(record.label, key),
+    required: record.required === undefined ? true : coerceBoolean(record.required),
+    summary: normalizeJsonObject(record.summary),
+  };
+}
+
+function normalizeBlockers(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.map((item) => coerceString(item)).filter(Boolean);
+}
+
 function mapProgressRecord(value: unknown): CommunityProgressMeta | null {
   const record = extractFirstRecord(value);
 
@@ -107,16 +160,43 @@ function mapProgressRecord(value: unknown): CommunityProgressMeta | null {
       coerceNumber(record.completed_tasks) ||
       coerceNumber(record.completed_steps),
     nextStepKey:
-      coerceString(record.next_step_key) ||
-      coerceString(record.next_step) ||
-      "units",
+      coerceString(record.next_step_key) || coerceString(record.next_step) || "units",
     onboardingStatus:
       coerceString(record.onboarding_status) ||
       coerceString(record.status) ||
       "pending_setup",
-    totalTasks:
-      coerceNumber(record.total_tasks) ||
-      coerceNumber(record.total_steps),
+    totalTasks: coerceNumber(record.total_tasks) || coerceNumber(record.total_steps),
+  };
+}
+
+function mapOnboardingDetail(value: unknown): CommunityOnboardingDetail | null {
+  const record = extractFirstRecord(value);
+
+  if (Object.keys(record).length === 0) {
+    return null;
+  }
+
+  const tasks = Array.isArray(record.tasks)
+    ? record.tasks
+        .map(normalizeTask)
+        .filter((task): task is OnboardingTaskSummary => task !== null)
+    : [];
+
+  return {
+    activationQueueReviewedAt: coerceString(record.activation_queue_reviewed_at),
+    blockers: normalizeBlockers(record.blockers),
+    completedAt: coerceString(record.completed_at),
+    completedTasks:
+      coerceNumber(record.completed_tasks) || coerceNumber(record.completed_steps),
+    metrics: normalizeJsonObject(record.metrics),
+    nextStepKey:
+      coerceString(record.next_step_key) || coerceString(record.next_step) || "units",
+    onboardingStatus:
+      coerceString(record.onboarding_status) ||
+      coerceString(record.status) ||
+      "pending_setup",
+    tasks,
+    totalTasks: coerceNumber(record.total_tasks) || coerceNumber(record.total_steps),
   };
 }
 
@@ -233,23 +313,19 @@ function mergeCommunityProgress(
       progress?.completedTasks ||
       progressFromList?.completedTasks ||
       fallback.completedTasks,
-    nextStepKey:
-      (() => {
-        const rawNextStepKey =
-          progress?.nextStepKey ||
-          progressFromList?.nextStepKey ||
-          fallback.nextStepKey;
+    nextStepKey: (() => {
+      const rawNextStepKey =
+        progress?.nextStepKey || progressFromList?.nextStepKey || fallback.nextStepKey;
 
-        if (
-          rawNextStepKey === "residents" &&
-          (progressFromList?.activationPendingCount ?? community.activationPendingCount) >
-            0
-        ) {
-          return "review_activation_queue";
-        }
+      if (
+        rawNextStepKey === "residents" &&
+        (progressFromList?.activationPendingCount ?? community.activationPendingCount) > 0
+      ) {
+        return "review_activation_queue";
+      }
 
-        return rawNextStepKey;
-      })(),
+      return rawNextStepKey;
+    })(),
     onboardingStatus:
       progress?.onboardingStatus ||
       progressFromList?.onboardingStatus ||
@@ -258,7 +334,6 @@ function mergeCommunityProgress(
       progress?.totalTasks || progressFromList?.totalTasks || fallback.totalTasks,
   };
 
-  // Protect the UI from stale or contradictory RPC progress output.
   if (merged.totalUnits <= 0) {
     return {
       ...merged,
@@ -319,8 +394,7 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
       ? progressListData
           .map(mapCommunityRecord)
           .filter(
-            (community): community is CommunityWithProgressItem =>
-              community !== null,
+            (community): community is CommunityWithProgressItem => community !== null,
           )
           .map((community) => applyActiveState(community, activeStateById))
       : [];
@@ -377,7 +451,43 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
   );
 }
 
+export async function getCommunityOnboardingDetail(
+  communityId: string,
+): Promise<CommunityOnboardingDetail | null> {
+  await requireSuperadmin();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "get_community_onboarding_progress_v1",
+    {
+      p_community_id: communityId,
+    },
+  );
+
+  if (error) {
+    return null;
+  }
+
+  return mapOnboardingDetail(data);
+}
+
 export async function getCommunityWithProgress(communityId: string) {
-  const communities = await listCommunitiesWithProgress();
-  return communities.find((community) => community.id === communityId) ?? null;
+  const [communities, detail] = await Promise.all([
+    listCommunitiesWithProgress(),
+    getCommunityOnboardingDetail(communityId),
+  ]);
+
+  const community = communities.find((item) => item.id === communityId) ?? null;
+
+  if (!community || !detail) {
+    return community;
+  }
+
+  return {
+    ...community,
+    completedTasks: detail.completedTasks || community.completedTasks,
+    nextStepKey: detail.nextStepKey || community.nextStepKey,
+    onboardingStatus: detail.onboardingStatus || community.onboardingStatus,
+    totalTasks: detail.totalTasks || community.totalTasks,
+  };
 }
