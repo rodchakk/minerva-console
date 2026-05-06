@@ -59,6 +59,14 @@ function getSetupTone(community: CommunityWithProgressItem) {
 }
 
 function getPrimaryAction(community: CommunityWithProgressItem) {
+  if (community.nextStepKey === "units" || community.totalUnits <= 0) {
+    return {
+      href: `/products/entry/communities/${community.id}/units/new`,
+      label: "Create units",
+      note: "Add unit records required for onboarding.",
+    };
+  }
+
   if (
     community.activationPendingCount > 0 ||
     community.nextStepKey === "review_activation_queue" ||
@@ -68,6 +76,22 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
       href: `/products/entry/activation?community_id=${community.id}`,
       label: "Open activation queue",
       note: "Review residents waiting for activation and next setup steps.",
+    };
+  }
+
+  if (community.nextStepKey === "facilities") {
+    return {
+      href: `/products/entry/communities/${community.id}/facilities/new`,
+      label: "Configure facilities",
+      note: "Add reservable areas required for onboarding.",
+    };
+  }
+
+  if (community.nextStepKey === "residents" || community.nextStepKey === "admins") {
+    return {
+      href: `/products/entry/users?community_id=${community.id}`,
+      label: "Review users",
+      note: "Create or review admin and resident records.",
     };
   }
 
@@ -289,7 +313,7 @@ export default async function CommunitySetupPage(
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Next step</p>
             <h3 className="mt-2 text-xl font-semibold text-white">{nextStepLabel}</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Continue from the current setup checkpoint.</p>
-            <Link href={primaryAction.href} className="mt-3 inline-flex"><Button variant="secondary">Continue setup</Button></Link>
+            <Link href={primaryAction.href} className="mt-3 inline-flex"><Button variant="secondary">{primaryAction.label}</Button></Link>
           </div>
 
           <div className="xl:pl-5">
@@ -320,7 +344,13 @@ export default async function CommunitySetupPage(
           <section id="units-snapshot" className="rounded-[30px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)] xl:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">Units snapshot</p>
-              <CommunityUnitsDrawer communityId={community.id} units={previews.units.items} triggerLabel="View full units directory" />
+              {previews.units.state === "empty" ? (
+                <Link href={`/products/entry/communities/${community.id}/units/new`} className="text-sm font-semibold text-violet-200 transition hover:text-white">
+                  Add units →
+                </Link>
+              ) : (
+                <CommunityUnitsDrawer communityId={community.id} units={previews.units.items} triggerLabel="View full units directory" />
+              )}
             </div>
             {previews.units.state === "unavailable" ? (
               <div className="mt-5"><EmptyInline>Units preview unavailable.</EmptyInline></div>
