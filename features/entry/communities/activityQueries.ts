@@ -27,6 +27,7 @@ export type CommunityAdminActivityResult = {
 };
 
 const DEFAULT_LIMIT = 40;
+const ADMIN_ACTIVITY_ROLES = new Set(["ADMIN", "SUPERADMIN"]);
 
 function formatDateTime(value: string) {
   if (!value) {
@@ -51,6 +52,10 @@ function normalizeMetadata(value: unknown): Record<string, unknown> {
   }
 
   return value as Record<string, unknown>;
+}
+
+function normalizeRole(value: string) {
+  return value.trim().toUpperCase();
 }
 
 export async function getCommunityAdminActivityPreview(
@@ -93,13 +98,14 @@ export async function getCommunityAdminActivityPreview(
           coerceString(record.summary) || "Admin activity recorded";
         const actionType =
           coerceString(record.action_type) || "admin_activity";
+        const actorRole = normalizeRole(coerceString(record.actor_role) || "");
         const id =
           coerceString(record.id) ||
           `${actionType}-${createdAtRaw}-${coerceString(record.target_id)}`;
 
         return {
           actorName: coerceString(record.actor_name) || "Admin",
-          actorRole: coerceString(record.actor_role) || "Admin",
+          actorRole,
           actionType,
           createdAt: formatDateTime(createdAtRaw),
           createdAtRaw,
@@ -110,7 +116,7 @@ export async function getCommunityAdminActivityPreview(
           targetType: coerceString(record.target_type) || "activity",
         };
       })
-      .filter((item) => item.id);
+      .filter((item) => item.id && ADMIN_ACTIVITY_ROLES.has(item.actorRole));
 
     return {
       items,
