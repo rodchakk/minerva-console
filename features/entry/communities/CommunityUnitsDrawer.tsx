@@ -56,6 +56,14 @@ function UnitStatusBadge({ unit }: { unit: CommunityUnitPreview }) {
   );
 }
 
+function EmptyInline({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
+      {children}
+    </div>
+  );
+}
+
 export function CommunityUnitsDrawer({
   communityId,
   triggerLabel = "View full units directory",

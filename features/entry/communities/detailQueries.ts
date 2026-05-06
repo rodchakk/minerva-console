@@ -113,7 +113,6 @@ export type CommunityDetailPreviews = {
 
 type PreviewOptions = {
   allowMessages: boolean;
-  allowReservations: boolean;
 };
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -228,6 +227,43 @@ function formatSourceType(value: string) {
     .join(" ");
 }
 
+function getUsernameFromSyntheticEmail(email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (!normalizedEmail.endsWith("@entry.local")) {
+    return "";
+  }
+
+  const localPart = normalizedEmail.slice(0, normalizedEmail.indexOf("@"));
+  const match = localPart.match(
+    /^(?:(?:resident|guard|admin)-)?(.+?)-[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i,
+  );
+
+  return match?.[1] ?? localPart;
+}
+
+function getPreferredUserContact(email: string, username: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (normalizedEmail && !normalizedEmail.endsWith("@entry.local")) {
+    return email;
+  }
+
+  const normalizedUsername = username.trim();
+
+  if (normalizedUsername) {
+    return normalizedUsername;
+  }
+
+  const derivedUsername = getUsernameFromSyntheticEmail(email);
+
+  if (derivedUsername) {
+    return derivedUsername;
+  }
+
+  return "No contact available";
+}
+
 function buildUnavailableResult<T>(
   error: string,
   extras?: Partial<CommunityPreviewResult<T>>,
@@ -246,14 +282,42 @@ async function loadUsersPreview(
   communityId: string,
 ): Promise<CommunityDetailPreviews["users"]> {
   try {
-    const { data, error } = await supabase.rpc("list_community_users_admin", {
-      p_community_id: communityId,
-      p_include_inactive: true,
-    });
+    const [
+      { data, error },
+      { data: profilesData, error: profilesError },
+      { data: operatorMembershipsData, error: operatorMembershipsError },
+    ] = await Promise.all([
+      supabase.rpc("sa_list_users", {
+        p_community_id: communityId,
+        p_search: null,
+      }),
+      supabase
+        .from("profiles")
+        .select("user_id,username,full_name,phone,synthetic_email,house_id")
+        .eq("community_id", communityId),
+      supabase
+        .from("community_members")
+        .select("user_id,role,is_active")
+        .eq("community_id", communityId),
+    ]);
 
     if (error) {
       return {
         ...buildUnavailableResult<CommunityUserPreview>(error.message),
+        counts: emptyUserCounts,
+      };
+    }
+
+    if (profilesError) {
+      return {
+        ...buildUnavailableResult<CommunityUserPreview>(profilesError.message),
+        counts: emptyUserCounts,
+      };
+    }
+
+    if (operatorMembershipsError) {
+      return {
+        ...buildUnavailableResult<CommunityUserPreview>(operatorMembershipsError.message),
         counts: emptyUserCounts,
       };
     }
@@ -267,26 +331,35 @@ async function loadUsersPreview(
       };
     }
 
+    const profilesByUserId = new Map(
+      (Array.isArray(profilesData) ? profilesData : []).map((profile) => [
+        coerceString(profile.user_id),
+        profile,
+      ]),
+    );
+
     const items = data
       .map((item) => {
         const record = item as Record<string, unknown>;
+        const userId = coerceString(record.user_id) || coerceString(record.id);
+        const profile = profilesByUserId.get(userId);
         const fullName =
           coerceString(record.full_name) ||
           coerceString(record.name) ||
+          coerceString(profile?.full_name) ||
+          coerceString(profile?.username) ||
           "Unnamed user";
         const role = formatRole(coerceString(record.role));
-        const contact =
-          coerceString(record.email) ||
-          coerceString(record.username) ||
-          "No contact available";
+        const contact = getPreferredUserContact(
+          coerceString(record.email),
+          coerceString(profile?.username),
+        );
         const houseLabel =
           coerceString(record.house_label) ||
           coerceString(record.unit_label) ||
-          coerceString(record.house_name) ||
           "No unit linked";
         const id =
-          coerceString(record.user_id) ||
-          coerceString(record.id) ||
+          userId ||
           makePreviewId(fullName, role, contact, houseLabel);
 
         return {
@@ -300,7 +373,114 @@ async function loadUsersPreview(
       })
       .filter((item) => item.id);
 
-    const counts = items.reduce<CommunityUserCounts>(
+    const existingUserIds = new Set(items.map((item) => item.id));
+    const missingOperatorHouseIds = Array.from(
+      new Set(
+        (Array.isArray(operatorMembershipsData) ? operatorMembershipsData : [])
+          .filter((membership) => {
+            const membershipRecord = membership as Record<string, unknown>;
+            const normalizedRole = coerceString(membershipRecord.role).toUpperCase();
+            return normalizedRole === "ADMIN" || normalizedRole === "GUARD";
+          })
+          .map((membership) => {
+            const membershipRecord = membership as Record<string, unknown>;
+            const operatorUserId = coerceString(membershipRecord.user_id);
+
+            if (!operatorUserId || existingUserIds.has(operatorUserId)) {
+              return "";
+            }
+
+            const profile = profilesByUserId.get(operatorUserId);
+            return coerceString(profile?.house_id);
+          })
+          .filter(Boolean),
+      ),
+    );
+
+    let housesById = new Map<string, string>();
+
+    if (missingOperatorHouseIds.length > 0) {
+      const { data: housesData, error: housesError } = await supabase
+        .from("houses")
+        .select("id,house_label")
+        .eq("community_id", communityId)
+        .in("id", missingOperatorHouseIds);
+
+      if (housesError) {
+        return {
+          ...buildUnavailableResult<CommunityUserPreview>(housesError.message),
+          counts: emptyUserCounts,
+        };
+      }
+
+      housesById = new Map(
+        (Array.isArray(housesData) ? housesData : []).map((house) => [
+          coerceString(house.id),
+          coerceString(house.house_label),
+        ]),
+      );
+    }
+
+    const missingOperators = (Array.isArray(operatorMembershipsData)
+      ? operatorMembershipsData
+      : []
+    )
+      .filter((membership) => {
+        const membershipRecord = membership as Record<string, unknown>;
+        const normalizedRole = coerceString(membershipRecord.role).toUpperCase();
+        return normalizedRole === "ADMIN" || normalizedRole === "GUARD";
+      })
+      .map((membership) => {
+        const membershipRecord = membership as Record<string, unknown>;
+        const userId = coerceString(membershipRecord.user_id);
+
+        if (!userId || existingUserIds.has(userId)) {
+          return null;
+        }
+
+        const profile = profilesByUserId.get(userId);
+        const role = formatRole(coerceString(membershipRecord.role));
+        const contact = getPreferredUserContact(
+          coerceString(profile?.synthetic_email),
+          coerceString(profile?.username),
+        );
+        const houseLabel =
+          housesById.get(coerceString(profile?.house_id)) ||
+          "No unit linked";
+
+        return {
+          contact,
+          fullName:
+            coerceString(profile?.full_name) ||
+            coerceString(profile?.username) ||
+            "Unnamed user",
+          houseLabel,
+          id: userId,
+          isActive: coerceBoolean(membershipRecord.is_active),
+          role,
+        };
+      })
+      .filter((item): item is CommunityUserPreview => item !== null);
+
+    const mergedItems = [...items, ...missingOperators].sort((a, b) => {
+      const roleOrder = (role: string) => {
+        const normalizedRole = role.trim().toLowerCase();
+        if (normalizedRole === "admin") {
+          return 0;
+        }
+        if (normalizedRole === "guard") {
+          return 1;
+        }
+        if (normalizedRole === "resident") {
+          return 2;
+        }
+        return 3;
+      };
+
+      return roleOrder(a.role) - roleOrder(b.role) || a.fullName.localeCompare(b.fullName);
+    });
+
+    const counts = mergedItems.reduce<CommunityUserCounts>(
       (acc, item) => {
         const normalizedRole = item.role.toLowerCase();
 
@@ -323,9 +503,9 @@ async function loadUsersPreview(
 
     return {
       counts,
-      items: items.slice(0, PREVIEW_LIMIT),
-      state: items.length > 0 ? "live" : "empty",
-      total: items.length,
+      items: mergedItems,
+      state: mergedItems.length > 0 ? "live" : "empty",
+      total: mergedItems.length,
     };
   } catch (error) {
     return {
@@ -509,24 +689,35 @@ function filterCommunityUnits(
 async function loadFacilitiesPreview(
   supabase: SupabaseServerClient,
   communityId: string,
-  allowReservations: boolean,
 ): Promise<CommunityDetailPreviews["facilities"]> {
-  if (!allowReservations) {
-    return {
-      activeCount: 0,
-      items: [],
-      state: "disabled",
-      total: 0,
-    };
-  }
-
   try {
-    const { data, error } = await supabase.rpc(
-      "superadmin_list_community_facilities",
-      {
-        p_community_id: communityId,
-      },
-    );
+    const [{ data: settingsData, error: settingsError }, { data, error }] =
+      await Promise.all([
+        supabase
+          .from("community_settings")
+          .select("allow_reservations")
+          .eq("community_id", communityId)
+          .maybeSingle(),
+        supabase
+          .from("community_facilities")
+          .select(
+            "id,name,is_active,opening_time,closing_time,slot_minutes,price_per_slot,currency_code,created_at",
+          )
+          .eq("community_id", communityId)
+          .order("created_at", { ascending: false }),
+      ]);
+
+    if (settingsError) {
+      return {
+        ...buildUnavailableResult<CommunityFacilityPreview>(settingsError.message),
+        activeCount: 0,
+      };
+    }
+
+    const allowReservations =
+      settingsData?.allow_reservations === undefined
+        ? true
+        : coerceBoolean(settingsData.allow_reservations);
 
     if (error) {
       return {
@@ -539,7 +730,7 @@ async function loadFacilitiesPreview(
       return {
         activeCount: 0,
         items: [],
-        state: "empty",
+        state: allowReservations ? "empty" : "disabled",
         total: 0,
       };
     }
@@ -567,6 +758,7 @@ async function loadFacilitiesPreview(
         return {
           closesAt: formatTime(
             coerceString(record.closes_at) ||
+              coerceString(record.closing_time) ||
               coerceString(record.close_time) ||
               coerceString(record.end_time),
           ),
@@ -579,6 +771,7 @@ async function loadFacilitiesPreview(
           name,
           opensAt: formatTime(
             coerceString(record.opens_at) ||
+              coerceString(record.opening_time) ||
               coerceString(record.open_time) ||
               coerceString(record.start_time),
           ),
@@ -696,7 +889,7 @@ export async function getCommunityDetailPreviews(
   const [users, units, facilities, messages] = await Promise.all([
     loadUsersPreview(supabase, communityId),
     loadUnitsPreview(supabase, communityId),
-    loadFacilitiesPreview(supabase, communityId, options.allowReservations),
+    loadFacilitiesPreview(supabase, communityId),
     loadMessagesPreview(supabase, communityId, options.allowMessages),
   ]);
 

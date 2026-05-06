@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CommunityFacilitiesDrawer } from "@/features/entry/communities/CommunityFacilitiesDrawer";
+import { CommunityUsersDrawer } from "@/features/entry/communities/CommunityUsersDrawer";
 import { CommunityUnitsDrawer } from "@/features/entry/communities/CommunityUnitsDrawer";
 import {
   getCommunityDetailPreviews,
@@ -172,6 +174,13 @@ function getAttentionItems(
   return items.slice(0, 3);
 }
 
+function getCommunityOperators(users: CommunityDetailPreviews["users"]["items"]) {
+  return users.filter((user) => {
+    const normalizedRole = user.role.trim().toLowerCase();
+    return normalizedRole === "admin" || normalizedRole === "guard";
+  });
+}
+
 function MiniMetric({
   badge,
   hint,
@@ -200,13 +209,11 @@ function MiniMetric({
 }
 
 function SummaryCard({
-  actionHref,
-  actionLabel,
+  action,
   children,
   title,
 }: {
-  actionHref?: string;
-  actionLabel?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   title: string;
 }) {
@@ -216,14 +223,7 @@ function SummaryCard({
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
           {title}
         </p>
-        {actionHref && actionLabel ? (
-          <Link
-            href={actionHref}
-            className="text-sm font-semibold text-violet-200 transition hover:text-white"
-          >
-            {actionLabel} →
-          </Link>
-        ) : null}
+        {action}
       </div>
       <div className="mt-5">{children}</div>
     </section>
@@ -269,7 +269,6 @@ export default async function CommunitySetupPage(
 
   const previews = await getCommunityDetailPreviews(community.id, {
     allowMessages: community.allowMessages,
-    allowReservations: community.allowReservations,
   });
   const primaryAction = getPrimaryAction(community);
   const progressPercent = getProgressPercent(
@@ -278,6 +277,7 @@ export default async function CommunitySetupPage(
   );
   const nextStepLabel = getOnboardingNextStepLabel(community.nextStepKey);
   const attentionItems = getAttentionItems(community, previews);
+  const communityOperators = getCommunityOperators(previews.users.items);
   const unitsForSnapshot = previews.units.items.slice(0, 5);
 
   const quickActions: ActionItem[] = [
@@ -306,7 +306,6 @@ export default async function CommunitySetupPage(
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="ENTRY › COMMUNITIES › REVIEW"
         title={community.name}
         description={community.city}
         actions={
@@ -520,7 +519,17 @@ export default async function CommunitySetupPage(
           </section>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <SummaryCard title="Users summary" actionHref={`/products/entry/users?community_id=${community.id}`} actionLabel="View all users">
+            <SummaryCard
+              title="Users summary"
+              action={
+                <CommunityUsersDrawer
+                  communityId={community.id}
+                  users={previews.users.items}
+                  state={previews.users.state}
+                  triggerLabel="Review users"
+                />
+              }
+            >
               <div id="users-summary" className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
                 {[
                   ["Admins", previews.users.counts.admins],
@@ -534,21 +543,92 @@ export default async function CommunitySetupPage(
                   </div>
                 ))}
               </div>
+              {previews.users.state === "live" ? (
+                <div className="mt-5 rounded-[22px] border border-white/8 bg-white/4 px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                      Community operators
+                    </p>
+                    <span className="text-xs text-[var(--text-muted)]">
+                      Admins and guards
+                    </span>
+                  </div>
+
+                  {communityOperators.length > 0 ? (
+                    <div className="mt-4 space-y-3">
+                      {communityOperators.slice(0, 4).map((user) => (
+                        <div
+                          key={user.id}
+                          className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-3 py-3"
+                        >
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {user.fullName}
+                            </p>
+                            <p className="mt-1 text-sm text-[var(--text-muted)]">
+                              {user.contact}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <Badge tone="info">{user.role}</Badge>
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">
+                              {user.houseLabel}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="mt-4 text-sm text-[var(--text-muted)]">
+                      No admins or guards linked to this community yet.
+                    </p>
+                  )}
+                </div>
+              ) : null}
               {previews.users.state === "unavailable" ? (
                 <p className="mt-4 text-sm text-[var(--text-muted)]">User preview unavailable.</p>
               ) : null}
             </SummaryCard>
 
-            <SummaryCard title="Facilities summary" actionHref="#facilities-summary" actionLabel="Manage facilities">
+            <SummaryCard
+              title="Facilities summary"
+              action={
+                <CommunityFacilitiesDrawer
+                  facilities={previews.facilities.items}
+                  state={previews.facilities.state}
+                  triggerLabel="Manage facilities"
+                />
+              }
+            >
               <div id="facilities-summary">
                 {previews.facilities.state === "live" ? (
                   <div className="space-y-3">
                     {previews.facilities.items.slice(0, 2).map((facility) => (
-                      <div key={facility.id}>
-                        <p className="text-sm font-semibold text-white">{facility.name}</p>
-                        <p className="mt-1 text-sm text-[var(--text-muted)]">
-                          {facility.opensAt} to {facility.closesAt} · {facility.pricePerSlot}
-                        </p>
+                      <div
+                        key={facility.id}
+                        className="rounded-[22px] border border-white/8 bg-white/4 px-4 py-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-white">
+                              {facility.name}
+                            </p>
+                            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                              {facility.opensAt} to {facility.closesAt}
+                            </p>
+                          </div>
+                          <Badge tone={facility.isActive ? "success" : "default"}>
+                            {facility.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                            {facility.slotMinutes} min
+                          </span>
+                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white">
+                            {facility.pricePerSlot}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -569,7 +649,17 @@ export default async function CommunitySetupPage(
               </div>
             </SummaryCard>
 
-            <SummaryCard title="Recent messages" actionHref={`/products/entry/messages?community_id=${community.id}`} actionLabel="View all messages">
+            <SummaryCard
+              title="Recent messages"
+              action={
+                <Link
+                  href={`/products/entry/messages?community_id=${community.id}`}
+                  className="text-sm font-semibold text-violet-200 transition hover:text-white"
+                >
+                  View all messages {"->"}
+                </Link>
+              }
+            >
               {previews.messages.state === "live" ? (
                 <div className="space-y-3">
                   {previews.messages.items.slice(0, 2).map((message) => (
