@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import type { CommunityOnboardingDetail } from "@/features/entry/communities/queries";
@@ -39,12 +40,12 @@ function getTaskActionHref(communityId: string, key: string) {
     case "review_activation_queue":
       return `/products/entry/activation?community_id=${communityId}`;
     case "facilities":
-      return "#facilities-summary";
+      return `/products/entry/communities/${communityId}/facilities/new`;
     case "units":
-      return "#units-snapshot";
+      return `/products/entry/communities/${communityId}/units/new`;
     case "admins":
     case "residents":
-      return "#users-summary";
+      return `/products/entry/users?community_id=${communityId}`;
     default:
       return "#setup-status";
   }
@@ -183,12 +184,12 @@ export function CommunityOnboardingReadinessPanel({
                 </div>
               </div>
               {!task.done ? (
-                <a
+                <Link
                   href={getTaskActionHref(communityId, task.key)}
                   className="shrink-0 text-xs font-semibold text-violet-200 transition hover:text-white"
                 >
                   Review →
-                </a>
+                </Link>
               ) : (
                 <span className="shrink-0 text-xs font-semibold text-emerald-200">
                   Done
