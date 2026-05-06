@@ -1,5 +1,7 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   buildActivationQueueRows,
   parseActivationQueueImportResult,
@@ -190,6 +192,38 @@ function parseNamedList(values: string[]) {
   });
 
   return { names, skippedBlank, skippedDuplicates };
+}
+
+export async function addCommunityUnitsAction(formData: FormData) {
+  await requireSuperadmin();
+
+  const communityId = String(formData.get("community_id") ?? "").trim();
+  const unitsInput = String(formData.get("units_input") ?? "");
+  const parsedUnits = parseUnits(unitsInput);
+
+  if (!communityId) {
+    redirect("/products/entry/communities");
+  }
+
+  if (parsedUnits.units.length === 0) {
+    redirect(`/products/entry/communities/${communityId}/units/new?error=empty`);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("create_houses_bulk_v2", {
+    p_community_id: communityId,
+    p_houses: parsedUnits.units,
+  });
+
+  if (error) {
+    redirect(
+      `/products/entry/communities/${communityId}/units/new?error=import_failed`,
+    );
+  }
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/products/entry/communities/${communityId}/units`);
+  redirect(`/products/entry/communities/${communityId}?units_added=1`);
 }
 
 export async function createCommunityAction(
