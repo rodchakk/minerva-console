@@ -8,9 +8,9 @@ import {
 } from "@/features/entry/communities/queries";
 
 type CommunityFilter =
-  | "all"
-  | "pending_setup"
   | "active"
+  | "pending_setup"
+  | "all"
   | "inactive"
   | "needs_attention";
 
@@ -35,16 +35,19 @@ function filterCommunities(
   switch (filter) {
     case "pending_setup":
       return communities.filter(
-        (community) => community.onboardingStatus !== "complete_active",
+        (community) => community.isActive && community.onboardingStatus !== "complete_active",
       );
-    case "active":
-      return communities.filter((community) => community.isActive);
+    case "all":
+      return communities;
     case "inactive":
       return communities.filter((community) => !community.isActive);
     case "needs_attention":
-      return communities.filter(needsAttention);
+      return communities.filter(
+        (community) => community.isActive && needsAttention(community),
+      );
+    case "active":
     default:
-      return communities;
+      return communities.filter((community) => community.isActive);
   }
 }
 
@@ -52,9 +55,9 @@ function getEmptyStateCopy(filter: CommunityFilter) {
   switch (filter) {
     case "pending_setup":
       return {
-        title: "No communities pending setup",
+        title: "No active communities pending setup",
         description:
-          "All connected communities are either complete or currently outside the pending setup stage.",
+          "All active communities are either complete or currently outside the pending setup stage.",
       };
     case "active":
       return {
@@ -66,13 +69,13 @@ function getEmptyStateCopy(filter: CommunityFilter) {
       return {
         title: "No inactive communities found",
         description:
-          "Every connected community is currently marked active in this view.",
+          "No communities are currently archived or marked inactive.",
       };
     case "needs_attention":
       return {
-        title: "No communities need attention",
+        title: "No active communities need attention",
         description:
-          "No communities are currently missing core setup requirements.",
+          "No active communities are currently missing core setup requirements.",
       };
     default:
       return {
@@ -91,26 +94,42 @@ export default async function CommunitiesPage(
   const rawFilter = getSingleParam(searchParams.filter);
   const currentFilter: CommunityFilter =
     rawFilter === "pending_setup" ||
-    rawFilter === "active" ||
+    rawFilter === "all" ||
     rawFilter === "inactive" ||
     rawFilter === "needs_attention"
       ? rawFilter
-      : "all";
+      : "active";
 
   const filteredCommunities = filterCommunities(communities, currentFilter);
   const totalCount = communities.length;
   const activeCount = communities.filter((community) => community.isActive).length;
   const pendingCount = communities.filter(
-    (community) => community.onboardingStatus !== "complete_active",
+    (community) => community.isActive && community.onboardingStatus !== "complete_active",
   ).length;
   const inactiveCount = communities.filter((community) => !community.isActive).length;
 
-  const filters: Array<{ label: string; value: CommunityFilter }> = [
-    { label: "All communities", value: "all" },
-    { label: "Pending setup", value: "pending_setup" },
-    { label: "Active", value: "active" },
-    { label: "Inactive", value: "inactive" },
-    { label: "Needs attention", value: "needs_attention" },
+  const filters: Array<{ label: string; value: CommunityFilter; href: string }> = [
+    { label: "Active", value: "active", href: "/products/entry/communities" },
+    {
+      label: "Pending setup",
+      value: "pending_setup",
+      href: "/products/entry/communities?filter=pending_setup",
+    },
+    {
+      label: "Needs attention",
+      value: "needs_attention",
+      href: "/products/entry/communities?filter=needs_attention",
+    },
+    {
+      label: "Inactive / archived",
+      value: "inactive",
+      href: "/products/entry/communities?filter=inactive",
+    },
+    {
+      label: "All communities",
+      value: "all",
+      href: "/products/entry/communities?filter=all",
+    },
   ];
 
   const emptyState = getEmptyStateCopy(currentFilter);
@@ -132,7 +151,8 @@ export default async function CommunitiesPage(
               ENTRY communities
             </h1>
             <p className="max-w-3xl text-sm leading-7 text-[var(--text-muted)]">
-              Directory and onboarding workspace for ENTRY communities.
+              Directory and onboarding workspace for active ENTRY communities.
+              Archived communities stay available through the inactive filter.
             </p>
           </div>
 
@@ -148,16 +168,12 @@ export default async function CommunitiesPage(
 
         <div className="mt-6 flex flex-wrap gap-3">
           {filters.map((filter) => {
-            const href =
-              filter.value === "all"
-                ? "/products/entry/communities"
-                : `/products/entry/communities?filter=${filter.value}`;
             const isActive = currentFilter === filter.value;
 
             return (
               <Link
                 key={filter.value}
-                href={href}
+                href={filter.href}
                 className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
                   isActive
                     ? "bg-violet-500/18 text-white ring-1 ring-inset ring-violet-400/30"
@@ -185,7 +201,7 @@ export default async function CommunitiesPage(
             {
               label: "Active communities",
               value: activeCount,
-              hint: "Currently operational",
+              hint: "Shown by default",
               tone:
                 "bg-emerald-500/14 text-emerald-200 ring-emerald-400/20",
               marker: "↗",
@@ -193,7 +209,7 @@ export default async function CommunitiesPage(
             {
               label: "Pending setup",
               value: pendingCount,
-              hint: "Awaiting completion",
+              hint: "Active communities awaiting completion",
               tone:
                 "bg-amber-500/14 text-amber-200 ring-amber-400/20",
               marker: "◔",
@@ -201,7 +217,7 @@ export default async function CommunitiesPage(
             {
               label: "Inactive communities",
               value: inactiveCount,
-              hint: "Not currently active",
+              hint: "Archived from the main view",
               tone:
                 "bg-slate-500/14 text-slate-200 ring-slate-400/20",
               marker: "⊘",
@@ -241,7 +257,7 @@ export default async function CommunitiesPage(
           title={emptyState.title}
           description={emptyState.description}
           actionHref="/products/entry/communities"
-          actionLabel="View all communities"
+          actionLabel="View active communities"
         />
       )}
     </div>
