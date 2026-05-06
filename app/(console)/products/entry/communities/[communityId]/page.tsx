@@ -3,7 +3,9 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CommunityAdminActivityDrawer } from "@/features/entry/communities/CommunityAdminActivityDrawer";
 import { CommunityUnitsDrawer } from "@/features/entry/communities/CommunityUnitsDrawer";
+import { getCommunityAdminActivityPreview } from "@/features/entry/communities/activityQueries";
 import {
   getCommunityDetailPreviews,
   type CommunityDetailPreviews,
@@ -84,25 +86,9 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
     };
   }
 
-  if (needsSetupAttention(community)) {
-    return {
-      href: "#setup-status",
-      label: "Review setup",
-      note: "Baseline setup needs attention before regular operation.",
-    };
-  }
-
-  if (community.onboardingStatus !== "complete_active") {
-    return {
-      href: "#setup-status",
-      label: "Continue setup",
-      note: "Continue the remaining setup work for this community.",
-    };
-  }
-
   return {
     href: "#setup-status",
-    label: "Review setup",
+    label: needsSetupAttention(community) ? "Review setup" : "Continue setup",
     note: "Review the current setup and operational readiness.",
   };
 }
@@ -200,13 +186,11 @@ function MiniMetric({
 }
 
 function SummaryCard({
-  actionHref,
-  actionLabel,
+  action,
   children,
   title,
 }: {
-  actionHref?: string;
-  actionLabel?: string;
+  action?: React.ReactNode;
   children: React.ReactNode;
   title: string;
 }) {
@@ -216,14 +200,7 @@ function SummaryCard({
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
           {title}
         </p>
-        {actionHref && actionLabel ? (
-          <Link
-            href={actionHref}
-            className="text-sm font-semibold text-violet-200 transition hover:text-white"
-          >
-            {actionLabel} →
-          </Link>
-        ) : null}
+        {action}
       </div>
       <div className="mt-5">{children}</div>
     </section>
@@ -267,10 +244,14 @@ export default async function CommunitySetupPage(
     notFound();
   }
 
-  const previews = await getCommunityDetailPreviews(community.id, {
-    allowMessages: community.allowMessages,
-    allowReservations: community.allowReservations,
-  });
+  const [previews, adminActivity] = await Promise.all([
+    getCommunityDetailPreviews(community.id, {
+      allowMessages: community.allowMessages,
+      allowReservations: community.allowReservations,
+    }),
+    getCommunityAdminActivityPreview(community.id, 50),
+  ]);
+
   const primaryAction = getPrimaryAction(community);
   const progressPercent = getProgressPercent(
     community.completedTasks,
@@ -279,6 +260,7 @@ export default async function CommunitySetupPage(
   const nextStepLabel = getOnboardingNextStepLabel(community.nextStepKey);
   const attentionItems = getAttentionItems(community, previews);
   const unitsForSnapshot = previews.units.items.slice(0, 5);
+  const recentActivities = adminActivity.items.slice(0, 3);
 
   const quickActions: ActionItem[] = [
     {
@@ -439,10 +421,10 @@ export default async function CommunitySetupPage(
           }
         />
         <MiniMetric
-          badge="✉"
-          label="Messages"
-          value={previews.messages.state === "live" ? previews.messages.total : "—"}
-          hint={getPreviewMetricStatus(previews.messages.state)}
+          badge="⌁"
+          label="Admin activity"
+          value={adminActivity.state === "live" ? adminActivity.total : "—"}
+          hint={getPreviewMetricStatus(adminActivity.state)}
         />
       </section>
 
@@ -507,20 +489,20 @@ export default async function CommunitySetupPage(
                 </table>
               </div>
             )}
-
-            {previews.units.state === "live" ? (
-              <div className="mt-4 text-center">
-                <CommunityUnitsDrawer
-                  communityId={community.id}
-                  units={previews.units.items}
-                  triggerLabel="View full units directory"
-                />
-              </div>
-            ) : null}
           </section>
 
           <div className="grid gap-6 lg:grid-cols-3">
-            <SummaryCard title="Users summary" actionHref={`/products/entry/users?community_id=${community.id}`} actionLabel="View all users">
+            <SummaryCard
+              title="Users summary"
+              action={
+                <Link
+                  href={`/products/entry/users?community_id=${community.id}`}
+                  className="text-sm font-semibold text-violet-200 transition hover:text-white"
+                >
+                  View all users →
+                </Link>
+              }
+            >
               <div id="users-summary" className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4">
                 {[
                   ["Admins", previews.users.counts.admins],
@@ -539,7 +521,7 @@ export default async function CommunitySetupPage(
               ) : null}
             </SummaryCard>
 
-            <SummaryCard title="Facilities summary" actionHref="#facilities-summary" actionLabel="Manage facilities">
+            <SummaryCard title="Facilities summary" action={<span className="text-sm font-semibold text-violet-200">Manage facilities →</span>}>
               <div id="facilities-summary">
                 {previews.facilities.state === "live" ? (
                   <div className="space-y-3">
@@ -569,27 +551,37 @@ export default async function CommunitySetupPage(
               </div>
             </SummaryCard>
 
-            <SummaryCard title="Recent messages" actionHref={`/products/entry/messages?community_id=${community.id}`} actionLabel="View all messages">
-              {previews.messages.state === "live" ? (
+            <SummaryCard
+              title="Recent admin activity"
+              action={
+                <CommunityAdminActivityDrawer
+                  activities={adminActivity.items}
+                  triggerLabel="View full log"
+                />
+              }
+            >
+              {adminActivity.state === "live" ? (
                 <div className="space-y-3">
-                  {previews.messages.items.slice(0, 2).map((message) => (
-                    <div key={message.id}>
-                      <p className="text-sm font-semibold text-white">{message.title}</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">{message.publishedAt}</p>
+                  {recentActivities.map((activity) => (
+                    <div key={activity.id}>
+                      <p className="text-sm font-semibold text-white">
+                        {activity.summary}
+                      </p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">
+                        {activity.actorName} · {activity.createdAt}
+                      </p>
                     </div>
                   ))}
                 </div>
               ) : (
                 <div>
                   <p className="text-base font-semibold text-white">
-                    {previews.messages.state === "disabled"
-                      ? "Messages disabled"
-                      : previews.messages.state === "unavailable"
-                        ? "Preview unavailable"
-                        : "No recent messages"}
+                    {adminActivity.state === "unavailable"
+                      ? "Activity preview unavailable"
+                      : "No admin activity yet"}
                   </p>
                   <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                    Community-targeted messages will appear here.
+                    Important administrative actions for this community will appear here.
                   </p>
                 </div>
               )}
@@ -619,7 +611,15 @@ export default async function CommunitySetupPage(
             </p>
             <div className="mt-4 flex items-center gap-3">
               <div className="h-2 flex-1 rounded-full bg-white/8">
-                <div className="h-2 rounded-full bg-[var(--primary)]" style={{ width: getProgressWidth(community.completedTasks, community.totalTasks) }} />
+                <div
+                  className="h-2 rounded-full bg-[var(--primary)]"
+                  style={{
+                    width: getProgressWidth(
+                      community.completedTasks,
+                      community.totalTasks,
+                    ),
+                  }}
+                />
               </div>
               <span className="text-sm font-semibold text-white">{progressPercent}%</span>
             </div>
@@ -628,7 +628,10 @@ export default async function CommunitySetupPage(
               {[
                 { done: true, label: "Regional settings", status: "Completed" },
                 {
-                  done: community.allowFrequentAccess || community.allowReservations || community.allowMessages,
+                  done:
+                    community.allowFrequentAccess ||
+                    community.allowReservations ||
+                    community.allowMessages,
                   label: "Guardrails & access",
                   status: "Completed",
                 },
