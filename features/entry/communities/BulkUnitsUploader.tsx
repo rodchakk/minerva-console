@@ -28,8 +28,8 @@ export function BulkUnitsUploader({
           onClick={() => onModeChange("simple")}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
             mode === "simple"
-              ? "bg-teal-600 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              ? "bg-violet-500/18 text-white ring-1 ring-inset ring-violet-400/30"
+              : "bg-white/6 text-[var(--text-muted)] ring-1 ring-inset ring-white/10 hover:bg-white/10"
           }`}
         >
           Simple units
@@ -39,8 +39,8 @@ export function BulkUnitsUploader({
           onClick={() => onModeChange("advanced")}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
             mode === "advanced"
-              ? "bg-teal-600 text-white"
-              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              ? "bg-violet-500/18 text-white ring-1 ring-inset ring-violet-400/30"
+              : "bg-white/6 text-[var(--text-muted)] ring-1 ring-inset ring-white/10 hover:bg-white/10"
           }`}
         >
           Advanced Excel import
@@ -49,7 +49,7 @@ export function BulkUnitsUploader({
 
       {mode === "simple" ? (
         <div className="space-y-3">
-          <label className="text-sm font-medium text-slate-700" htmlFor="units_input">
+          <label className="text-sm font-medium text-slate-200" htmlFor="units_input">
             Units list
           </label>
           <textarea
@@ -58,10 +58,10 @@ export function BulkUnitsUploader({
             rows={8}
             value={simpleValue}
             onChange={(event) => onSimpleChange(event.target.value)}
-            className="w-full rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 outline-none transition focus:border-teal-600"
+            className="w-full rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
             placeholder={"Casa 1\nCasa 2\nCasa 3"}
           />
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-sm leading-6 text-[var(--text-muted)]">
             Paste one unit per line. This keeps the fastest manual setup flow for
             small communities.
           </p>

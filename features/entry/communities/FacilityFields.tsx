@@ -36,9 +36,9 @@ export function FacilityFields({
 
   if (disabled) {
     return (
-      <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 px-5 py-4">
-        <h3 className="text-base font-semibold text-slate-900">Reservable areas</h3>
-        <p className="mt-2 text-sm leading-6 text-slate-500">
+      <div className="rounded-3xl border border-dashed border-[var(--border-strong)] bg-[var(--surface-strong)] px-5 py-4">
+        <h3 className="text-base font-semibold text-white">Reservable areas</h3>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
           Enable Reservations to add the real facility names for this community.
         </p>
       </div>
@@ -46,11 +46,11 @@ export function FacilityFields({
   }
 
   return (
-    <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] p-5">
+    <div className="rounded-3xl border border-white/8 bg-[var(--surface-strong)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-2">
-          <h3 className="text-base font-semibold text-slate-900">Reservable areas</h3>
-          <p className="text-sm leading-6 text-slate-600">
+          <h3 className="text-base font-semibold text-white">Reservable areas</h3>
+          <p className="text-sm leading-6 text-[var(--text-muted)]">
             Add the reservable areas this community should manage during
             onboarding. Placeholder examples are only suggestions.
           </p>
@@ -66,11 +66,8 @@ export function FacilityFields({
             <input
               value={facilityName}
               onChange={(event) => updateField(index, event.target.value)}
-              className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-teal-600"
-              placeholder={
-                facilityPlaceholders[index] ??
-                `Area ${index + 1}`
-              }
+              className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[rgba(9,12,24,0.72)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
+              placeholder={facilityPlaceholders[index] ?? `Area ${index + 1}`}
             />
             <Button
               type="button"
@@ -84,9 +81,9 @@ export function FacilityFields({
         ))}
       </div>
 
-      <p className="mt-4 text-sm leading-6 text-slate-500">
-        Examples: Casa Club, Piscina, Cancha, Salon social. Type the actual
-        names used by this community.
+      <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
+        Examples: Casa Club, Piscina, Cancha, Salon social. Type the actual names
+        used by this community.
       </p>
     </div>
   );

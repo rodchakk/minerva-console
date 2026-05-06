@@ -6,8 +6,8 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/Button";
 import { createCommunityAction } from "@/features/entry/communities/actions";
 import { BulkUnitsUploader } from "@/features/entry/communities/BulkUnitsUploader";
-import type { AdvancedUnitsImportPayload } from "@/features/entry/communities/unitsImport";
 import { FacilityFields } from "@/features/entry/communities/FacilityFields";
+import type { AdvancedUnitsImportPayload } from "@/features/entry/communities/unitsImport";
 import { cn } from "@/lib/supabase/utils";
 
 function SubmitButton() {
@@ -38,95 +38,68 @@ export function CreateCommunityForm() {
 
   const stepClasses = (currentStep: number) =>
     cn(
-      "rounded-full px-4 py-2 text-sm font-semibold",
+      "rounded-full px-4 py-2 text-sm font-semibold ring-1 ring-inset transition",
       step === currentStep
-        ? "bg-teal-600 text-white"
-        : "bg-slate-100 text-slate-500",
+        ? "bg-violet-500/18 text-white ring-violet-400/30"
+        : "bg-white/6 text-[var(--text-muted)] ring-white/10",
     );
 
   if (state.success) {
     return (
-      <div className="rounded-[32px] border border-emerald-200 bg-white p-8 shadow-sm">
-        <h2 className="text-2xl font-semibold text-slate-950">
+      <div className="rounded-[32px] border border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(112,104,255,0.16),rgba(17,24,39,0.94))] p-8 shadow-[0_24px_70px_rgba(2,6,23,0.32)] backdrop-blur">
+        <div className="inline-flex items-center rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+          Community created
+        </div>
+        <h2 className="mt-4 text-3xl font-semibold text-white">
           {state.communityName} created
         </h2>
-        <p className="mt-3 text-sm leading-6 text-slate-600">{state.message}</p>
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-3xl bg-teal-50 p-4">
-            <p className="text-sm text-teal-700">Community created</p>
-            <p className="mt-2 text-2xl font-semibold text-teal-950">1</p>
-          </div>
-          <div className="rounded-3xl bg-emerald-50 p-4">
-            <p className="text-sm text-emerald-700">Inserted units</p>
-            <p className="mt-2 text-2xl font-semibold text-emerald-950">
-              {state.insertedUnits ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-amber-50 p-4">
-            <p className="text-sm text-amber-700">Skipped duplicates</p>
-            <p className="mt-2 text-2xl font-semibold text-amber-950">
-              {state.skippedDuplicates ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-slate-100 p-4">
-            <p className="text-sm text-slate-700">Skipped blank rows</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950">
-              {state.skippedBlank ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-cyan-50 p-4">
-            <p className="text-sm text-cyan-700">Inserted facilities</p>
-            <p className="mt-2 text-2xl font-semibold text-cyan-950">
-              {state.insertedFacilities ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-orange-50 p-4">
-            <p className="text-sm text-orange-700">Skipped facilities</p>
-            <p className="mt-2 text-2xl font-semibold text-orange-950">
-              {(state.skippedFacilityDuplicates ?? 0) +
-                (state.skippedFacilityBlank ?? 0)}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-violet-50 p-4">
-            <p className="text-sm text-violet-700">Resident rows prepared</p>
-            <p className="mt-2 text-2xl font-semibold text-violet-950">
-              {state.parsedResidentRows ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-sky-50 p-4">
-            <p className="text-sm text-sky-700">Activation inserted</p>
-            <p className="mt-2 text-2xl font-semibold text-sky-950">
-              {state.activationInserted ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-slate-100 p-4">
-            <p className="text-sm text-slate-700">Activation skipped</p>
-            <p className="mt-2 text-2xl font-semibold text-slate-950">
-              {state.activationSkipped ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-yellow-50 p-4">
-            <p className="text-sm text-yellow-700">Missing house match</p>
-            <p className="mt-2 text-2xl font-semibold text-yellow-950">
-              {state.activationRowsWithMissingHouse ?? 0}
-            </p>
-          </div>
-          <div className="rounded-3xl bg-rose-50 p-4">
-            <p className="text-sm text-rose-700">Activation failed</p>
-            <p className="mt-2 text-2xl font-semibold text-rose-950">
-              {state.activationFailed ?? 0}
-            </p>
-          </div>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+          {state.message}
+        </p>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {[
+            { label: "Community created", value: 1 },
+            { label: "Inserted units", value: state.insertedUnits ?? 0 },
+            { label: "Skipped duplicates", value: state.skippedDuplicates ?? 0 },
+            { label: "Skipped blank rows", value: state.skippedBlank ?? 0 },
+            { label: "Inserted facilities", value: state.insertedFacilities ?? 0 },
+            {
+              label: "Skipped facilities",
+              value:
+                (state.skippedFacilityDuplicates ?? 0) +
+                (state.skippedFacilityBlank ?? 0),
+            },
+            { label: "Resident rows prepared", value: state.parsedResidentRows ?? 0 },
+            { label: "Activation inserted", value: state.activationInserted ?? 0 },
+            { label: "Activation skipped", value: state.activationSkipped ?? 0 },
+            {
+              label: "Missing house match",
+              value: state.activationRowsWithMissingHouse ?? 0,
+            },
+            { label: "Activation failed", value: state.activationFailed ?? 0 },
+          ].map((metric) => (
+            <div
+              key={metric.label}
+              className="rounded-3xl border border-white/10 bg-[var(--surface-elevated)] p-4"
+            >
+              <p className="text-sm text-[var(--text-muted)]">{metric.label}</p>
+              <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
+            </div>
+          ))}
         </div>
+
         {state.usedAdvancedImport ? (
-          <div className="mt-6 space-y-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mt-6 space-y-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
             <p>
               Resident imports are stored as pending activation records only. No
               active users, emails, or final PINs are created from this flow yet.
             </p>
             <p>
               Inserted: {state.activationInserted ?? 0}
-              {state.activationSkipped ? ` · Skipped duplicates: ${state.activationSkipped}` : ""}
+              {state.activationSkipped
+                ? ` · Skipped duplicates: ${state.activationSkipped}`
+                : ""}
               {state.activationFailed ? ` · Failed: ${state.activationFailed}` : ""}
               {state.activationRowsWithMissingHouse
                 ? ` · Missing house match: ${state.activationRowsWithMissingHouse}`
@@ -134,6 +107,7 @@ export function CreateCommunityForm() {
             </p>
           </div>
         ) : null}
+
         <div className="mt-8 flex flex-wrap gap-3">
           <Link href="/products/entry/communities">
             <Button>Back to communities</Button>
@@ -212,17 +186,19 @@ export function CreateCommunityForm() {
         />
       ))}
 
-      <div className="flex flex-wrap gap-3">
-        <span className={stepClasses(1)}>1. Details</span>
-        <span className={stepClasses(2)}>2. Features</span>
-        <span className={stepClasses(3)}>3. Units</span>
+      <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
+        <div className="flex flex-wrap gap-3">
+          <span className={stepClasses(1)}>1. Details</span>
+          <span className={stepClasses(2)}>2. Features</span>
+          <span className={stepClasses(3)}>3. Units</span>
+        </div>
       </div>
 
       {step === 1 ? (
-        <section className="rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-sm">
+        <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="name">
+              <label className="text-sm font-medium text-slate-200" htmlFor="name">
                 Community name
               </label>
               <input
@@ -230,34 +206,34 @@ export function CreateCommunityForm() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required
-                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-teal-600"
+                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
                 placeholder="Residencial Las Flores"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium text-slate-700" htmlFor="city">
+              <label className="text-sm font-medium text-slate-200" htmlFor="city">
                 City
               </label>
               <input
                 id="city"
                 value={city}
                 onChange={(event) => setCity(event.target.value)}
-                className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-teal-600"
+                className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
                 placeholder="San Pedro Sula"
               />
             </div>
           </div>
           <div className="mt-6 space-y-2">
-            <label className="text-sm font-medium text-slate-700" htmlFor="unit_label">
+            <label className="text-sm font-medium text-slate-200" htmlFor="unit_label">
               Unit label
             </label>
             <input
               id="unit_label"
               value={unitLabel}
               onChange={(event) => setUnitLabel(event.target.value)}
-              className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-teal-600"
+              className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
             />
-            <p className="text-sm leading-6 text-slate-500">
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
               Examples: Casas, Apartamentos, Condominios, Oficinas.
             </p>
           </div>
@@ -265,7 +241,7 @@ export function CreateCommunityForm() {
       ) : null}
 
       {step === 2 ? (
-        <section className="space-y-5 rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-sm">
+        <section className="space-y-5 rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
           <div className="grid gap-4 md:grid-cols-3">
             {[
               {
@@ -295,20 +271,20 @@ export function CreateCommunityForm() {
             ].map((item) => (
               <label
                 key={item.name}
-                className="flex cursor-pointer flex-col rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] p-5"
+                className="flex cursor-pointer flex-col rounded-3xl border border-white/8 bg-[var(--surface-strong)] p-5"
               >
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-base font-semibold text-slate-900">
+                  <span className="text-base font-semibold text-white">
                     {item.title}
                   </span>
                   <input
                     type="checkbox"
                     checked={item.checked}
                     onChange={(event) => item.onChange(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 text-teal-600"
+                    className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
                   />
                 </div>
-                <p className="mt-3 text-sm leading-6 text-slate-600">
+                <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
                   {item.description}
                 </p>
               </label>
@@ -324,7 +300,7 @@ export function CreateCommunityForm() {
       ) : null}
 
       {step === 3 ? (
-        <section className="rounded-[32px] border border-[var(--border)] bg-white p-8 shadow-sm">
+        <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-8 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
           <BulkUnitsUploader
             advancedValue={advancedUnitsImport}
             mode={unitsMode}
@@ -340,13 +316,13 @@ export function CreateCommunityForm() {
       ) : null}
 
       {clientError ? (
-        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {clientError}
         </p>
       ) : null}
 
       {state.message ? (
-        <p className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <p className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           {state.message}
         </p>
       ) : null}

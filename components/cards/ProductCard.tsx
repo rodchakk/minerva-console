@@ -16,11 +16,13 @@ export function ProductCard({
   status,
 }: ProductCardProps) {
   return (
-    <article className="flex h-full flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
+    <article className="flex h-full flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h3 className="text-lg font-semibold text-slate-950">{title}</h3>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+          <h3 className="text-lg font-semibold text-white">{title}</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+            {description}
+          </p>
         </div>
         <Badge tone="info">{status}</Badge>
       </div>

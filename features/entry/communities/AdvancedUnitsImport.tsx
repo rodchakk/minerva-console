@@ -71,11 +71,11 @@ export function AdvancedUnitsImport({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
-        <p className="text-sm font-semibold text-amber-900">
+      <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-5">
+        <p className="text-sm font-semibold text-amber-100">
           Resident data will be previewed but not created yet in this version.
         </p>
-        <p className="mt-2 text-sm leading-6 text-amber-800">
+        <p className="mt-2 text-sm leading-6 text-amber-50/90">
           Units will be prepared for import, while resident columns remain visible
           so the structure is ready for a future backend release.
         </p>
@@ -91,8 +91,8 @@ export function AdvancedUnitsImport({
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="space-y-3 rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] p-5">
-          <label className="text-sm font-medium text-slate-700" htmlFor="units_import_file">
+        <div className="space-y-3 rounded-3xl border border-white/8 bg-[var(--surface-strong)] p-5">
+          <label className="text-sm font-medium text-slate-200" htmlFor="units_import_file">
             Upload Excel or CSV
           </label>
           <input
@@ -109,15 +109,15 @@ export function AdvancedUnitsImport({
                 );
               }
             }}
-            className="block w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-700 file:mr-4 file:rounded-2xl file:border-0 file:bg-teal-600 file:px-4 file:py-2 file:font-semibold file:text-white"
+            className="block w-full rounded-2xl border border-[var(--border)] bg-[rgba(9,12,24,0.72)] px-4 py-3 text-sm text-slate-300 file:mr-4 file:rounded-2xl file:border-0 file:bg-[var(--primary)] file:px-4 file:py-2 file:font-semibold file:text-white"
           />
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-sm leading-6 text-[var(--text-muted)]">
             Accepted formats: <code>.xlsx</code> and <code>.csv</code>.
           </p>
         </div>
 
-        <div className="space-y-3 rounded-3xl border border-[var(--border)] bg-[var(--surface-muted)] p-5">
-          <label className="text-sm font-medium text-slate-700" htmlFor="units_import_paste">
+        <div className="space-y-3 rounded-3xl border border-white/8 bg-[var(--surface-strong)] p-5">
+          <label className="text-sm font-medium text-slate-200" htmlFor="units_import_paste">
             Or paste spreadsheet data
           </label>
           <textarea
@@ -125,12 +125,12 @@ export function AdvancedUnitsImport({
             rows={5}
             value={pasteValue}
             onChange={(event) => setPasteValue(event.target.value)}
-            className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 outline-none transition focus:border-teal-600"
+            className="w-full rounded-2xl border border-[var(--border)] bg-[rgba(9,12,24,0.72)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
             placeholder={
-              "Unit Label,Resident Name,Phone,Email,Is Owner\nCasa 1,Ana Pérez,9999-9999,ana@example.com,Yes"
+              "Unit Label,Resident Name,Phone,Email,Is Owner\nCasa 1,Ana Perez,9999-9999,ana@example.com,Yes"
             }
           />
-          <p className="text-sm leading-6 text-slate-500">
+          <p className="text-sm leading-6 text-[var(--text-muted)]">
             CSV and tab-separated spreadsheet paste are supported.
           </p>
         </div>
@@ -140,58 +140,48 @@ export function AdvancedUnitsImport({
         <Button type="button" onClick={handleParse} disabled={isParsing}>
           {isParsing ? "Parsing import..." : "Parse data"}
         </Button>
-        <p className="text-sm leading-6 text-slate-600">{statusMessage}</p>
+        <p className="text-sm leading-6 text-[var(--text-muted)]">{statusMessage}</p>
       </div>
 
       {value ? (
         <div className="space-y-5">
           <div className="grid gap-4 md:grid-cols-4">
-            <div className="rounded-3xl bg-teal-50 p-4">
-              <p className="text-sm text-teal-700">Unique units to create</p>
-              <p className="mt-2 text-2xl font-semibold text-teal-950">
-                {value.uniqueUnitLabels.length}
-              </p>
-            </div>
-            <div className="rounded-3xl bg-cyan-50 p-4">
-              <p className="text-sm text-cyan-700">Resident rows prepared</p>
-              <p className="mt-2 text-2xl font-semibold text-cyan-950">
-                {value.parsedResidentRows}
-              </p>
-            </div>
-            <div className="rounded-3xl bg-rose-50 p-4">
-              <p className="text-sm text-rose-700">Errors</p>
-              <p className="mt-2 text-2xl font-semibold text-rose-950">
-                {value.errors.length}
-              </p>
-            </div>
-            <div className="rounded-3xl bg-amber-50 p-4">
-              <p className="text-sm text-amber-700">Warnings</p>
-              <p className="mt-2 text-2xl font-semibold text-amber-950">
-                {value.warnings.length}
-              </p>
-            </div>
+            {[
+              { label: "Unique units to create", value: value.uniqueUnitLabels.length },
+              { label: "Resident rows prepared", value: value.parsedResidentRows },
+              { label: "Errors", value: value.errors.length },
+              { label: "Warnings", value: value.warnings.length },
+            ].map((metric) => (
+              <div
+                key={metric.label}
+                className="rounded-3xl border border-white/8 bg-[var(--surface-elevated)] p-4"
+              >
+                <p className="text-sm text-[var(--text-muted)]">{metric.label}</p>
+                <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
+              </div>
+            ))}
           </div>
 
-          <div className="rounded-3xl border border-[var(--border)] bg-white p-5">
+          <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">
+                <h3 className="text-base font-semibold text-white">
                   Validation summary
                 </h3>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+                <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                   Blank rows ignored: {value.blankRowsIgnored}. Duplicate unit labels
                   are allowed and will only be created once on final submit.
                 </p>
               </div>
-              <p className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+              <p className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
                 Preview only
               </p>
             </div>
 
             {value.errors.length > 0 ? (
-              <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                <p className="text-sm font-semibold text-rose-800">Blocking errors</p>
-                <ul className="mt-2 space-y-2 text-sm text-rose-700">
+              <div className="mt-4 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4">
+                <p className="text-sm font-semibold text-rose-200">Blocking errors</p>
+                <ul className="mt-2 space-y-2 text-sm text-rose-100">
                   {value.errors.map((issue, index) => (
                     <li key={`error-${issue.rowNumber ?? "general"}-${index}`}>
                       {issue.rowNumber ? `Row ${issue.rowNumber}: ` : ""}
@@ -201,15 +191,15 @@ export function AdvancedUnitsImport({
                 </ul>
               </div>
             ) : (
-              <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <p className="mt-4 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
                 No blocking import errors found.
               </p>
             )}
 
             {value.warnings.length > 0 ? (
-              <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm font-semibold text-amber-800">Warnings</p>
-                <ul className="mt-2 space-y-2 text-sm text-amber-700">
+              <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
+                <p className="text-sm font-semibold text-amber-200">Warnings</p>
+                <ul className="mt-2 space-y-2 text-sm text-amber-100">
                   {value.warnings.map((issue, index) => (
                     <li key={`warning-${issue.rowNumber ?? "general"}-${index}`}>
                       {issue.rowNumber ? `Row ${issue.rowNumber}: ` : ""}
@@ -221,16 +211,16 @@ export function AdvancedUnitsImport({
             ) : null}
           </div>
 
-          <div className="rounded-3xl border border-[var(--border)] bg-white p-5">
+          <div className="rounded-3xl border border-[var(--border)] bg-[var(--surface)] p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-base font-semibold text-slate-950">Preview table</h3>
-                <p className="mt-1 text-sm leading-6 text-slate-500">
+                <h3 className="text-base font-semibold text-white">Preview table</h3>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                   Nothing is created on upload or parse. Records are only created
                   when you press the main Create community button.
                 </p>
               </div>
-              <p className="text-sm font-medium text-slate-500">
+              <p className="text-sm font-medium text-[var(--text-muted)]">
                 Source: {value.sourceName}
               </p>
             </div>
@@ -238,7 +228,7 @@ export function AdvancedUnitsImport({
             <div className="mt-4 overflow-x-auto">
               <div className="max-h-[24rem] overflow-y-auto rounded-2xl border border-[var(--border)]">
                 <table className="min-w-full divide-y divide-[var(--border)] text-left text-sm">
-                  <thead className="sticky top-0 bg-slate-50 text-slate-600">
+                  <thead className="sticky top-0 bg-[rgba(9,12,24,0.95)] text-slate-300 backdrop-blur">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Row</th>
                       <th className="px-4 py-3 font-semibold">Unit Label</th>
@@ -249,18 +239,18 @@ export function AdvancedUnitsImport({
                       <th className="px-4 py-3 font-semibold">Resident Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[var(--border)] bg-white text-slate-700">
+                  <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] text-slate-200">
                     {value.rows.length > 0 ? (
                       value.rows.map((row) => (
                         <tr key={`preview-row-${row.rowNumber}`}>
                           <td className="px-4 py-3">{row.rowNumber}</td>
-                          <td className="px-4 py-3">{row.unitLabel || "—"}</td>
-                          <td className="px-4 py-3">{row.residentName || "—"}</td>
-                          <td className="px-4 py-3">{row.phone || "—"}</td>
-                          <td className="px-4 py-3">{row.email || "—"}</td>
-                          <td className="px-4 py-3">{row.isOwner || "—"}</td>
+                          <td className="px-4 py-3">{row.unitLabel || "-"}</td>
+                          <td className="px-4 py-3">{row.residentName || "-"}</td>
+                          <td className="px-4 py-3">{row.phone || "-"}</td>
+                          <td className="px-4 py-3">{row.email || "-"}</td>
+                          <td className="px-4 py-3">{row.isOwner || "-"}</td>
                           <td className="px-4 py-3">
-                            <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800">
+                            <span className="rounded-full bg-amber-500/12 px-3 py-1 text-xs font-semibold text-amber-200">
                               {row.residentStatus}
                             </span>
                           </td>
@@ -268,7 +258,7 @@ export function AdvancedUnitsImport({
                       ))
                     ) : (
                       <tr>
-                        <td className="px-4 py-6 text-slate-500" colSpan={7}>
+                        <td className="px-4 py-6 text-[var(--text-muted)]" colSpan={7}>
                           No non-blank rows were found in this import.
                         </td>
                       </tr>

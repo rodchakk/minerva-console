@@ -17,12 +17,12 @@ export function ActivationQueueFilters({
   return (
     <form
       action="/products/entry/activation"
-      className="rounded-[28px] border border-[var(--border)] bg-white p-6 shadow-sm"
+      className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur"
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_auto] lg:items-end">
         <div className="space-y-2">
           <label
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-slate-200"
             htmlFor="activation-community"
           >
             Community
@@ -31,7 +31,7 @@ export function ActivationQueueFilters({
             id="activation-community"
             name="community_id"
             defaultValue={selectedCommunityId}
-            className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-teal-600"
+            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[var(--primary)]"
           >
             <option value="">Select a community</option>
             {communities.map((community) => (
@@ -44,7 +44,7 @@ export function ActivationQueueFilters({
 
         <div className="space-y-2">
           <label
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-slate-200"
             htmlFor="activation-status"
           >
             Status
@@ -53,7 +53,7 @@ export function ActivationQueueFilters({
             id="activation-status"
             name="status"
             defaultValue={selectedStatus}
-            className="w-full rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-teal-600"
+            className="w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[var(--primary)]"
           >
             {ACTIVATION_QUEUE_STATUS_OPTIONS.map((option) => (
               <option key={option.label} value={option.value}>

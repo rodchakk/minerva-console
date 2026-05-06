@@ -34,8 +34,8 @@ export default async function ActivationQueuePage(
         }
       />
 
-      <div className="rounded-[28px] border border-amber-200 bg-amber-50 p-5 shadow-sm">
-        <p className="text-sm font-semibold text-amber-900">
+      <div className="rounded-[28px] border border-amber-400/20 bg-amber-500/10 p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
+        <p className="text-sm font-semibold text-amber-200">
           Prepared residents stay in a pre-activation state here. Generate PIN
           creates temporary 7-day credentials for selected residents. It does not
           create active ENTRY users, send emails, or create profiles.
@@ -62,20 +62,20 @@ export default async function ActivationQueuePage(
                 <Link
                   key={community.id}
                   href={`/products/entry/activation?community_id=${community.id}`}
-                  className="rounded-[28px] border border-[var(--border)] bg-white p-5 shadow-sm transition hover:border-teal-300 hover:shadow-md"
+                  className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur transition hover:border-violet-400/20"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <h2 className="text-lg font-semibold text-slate-950">
+                      <h2 className="text-lg font-semibold text-white">
                         {community.name}
                       </h2>
-                      <p className="mt-1 text-sm text-slate-600">{community.city}</p>
+                      <p className="mt-1 text-sm text-[var(--text-muted)]">{community.city}</p>
                     </div>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                    <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
                       {community.activationPendingCount} pending
                     </span>
                   </div>
-                  <p className="mt-4 text-sm leading-6 text-slate-600">
+                  <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
                     Next step: {getOnboardingNextStepLabel(community.nextStepKey)}
                   </p>
                 </Link>
@@ -86,19 +86,19 @@ export default async function ActivationQueuePage(
       ) : (
         <>
           {data.progress ? (
-            <section className="rounded-[28px] border border-[var(--border)] bg-white p-6 shadow-sm">
+            <section className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
               <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-950">
+                  <h2 className="text-lg font-semibold text-white">
                     Onboarding progress
                   </h2>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                     {data.progress.completedTasks} / {data.progress.totalTasks} tasks
                     completed. Next step:{" "}
                     {getOnboardingNextStepLabel(data.progress.nextStepKey)}.
                   </p>
                 </div>
-                <span className="rounded-full bg-teal-50 px-3 py-1 text-sm font-semibold text-teal-800">
+                <span className="rounded-full bg-violet-500/12 px-3 py-1 text-sm font-semibold text-violet-200 ring-1 ring-inset ring-violet-400/20">
                   {data.progress.onboardingStatus === "complete_active"
                     ? "Complete & Active"
                     : "Pending setup"}

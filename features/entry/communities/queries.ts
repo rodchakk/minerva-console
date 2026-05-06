@@ -35,8 +35,14 @@ type CommunityProgressMeta = {
   totalTasks: number;
 };
 
-function mapCommunityRecord(item: unknown): CommunityWithProgressItem {
+function mapCommunityRecord(item: unknown): CommunityWithProgressItem | null {
   const record = item as Record<string, unknown>;
+  const communityId =
+    coerceString(record.community_id) || coerceString(record.id);
+
+  if (!communityId) {
+    return null;
+  }
 
   return {
     activationPendingCount:
@@ -50,10 +56,7 @@ function mapCommunityRecord(item: unknown): CommunityWithProgressItem {
     completedTasks:
       coerceNumber(record.completed_tasks) ||
       coerceNumber(record.completed_steps),
-    id:
-      coerceString(record.community_id) ||
-      coerceString(record.id) ||
-      crypto.randomUUID(),
+    id: communityId,
     isActive: coerceBoolean(record.is_active),
     name: coerceString(record.name, "Untitled community"),
     nextStepKey:
@@ -180,7 +183,7 @@ function mergeCommunityProgress(
       progressFromList?.activationPendingCount ?? community.activationPendingCount,
   });
 
-  return {
+  const merged = {
     ...community,
     activationPendingCount:
       progressFromList?.activationPendingCount ?? community.activationPendingCount,
@@ -212,6 +215,39 @@ function mergeCommunityProgress(
     totalTasks:
       progress?.totalTasks || progressFromList?.totalTasks || fallback.totalTasks,
   };
+
+  // Protect the UI from stale or contradictory RPC progress output.
+  if (merged.totalUnits <= 0) {
+    return {
+      ...merged,
+      completedTasks: Math.min(1, Math.max(0, merged.completedTasks)),
+      nextStepKey: "units",
+      onboardingStatus: "pending_setup",
+      totalTasks: Math.max(merged.totalTasks, fallback.totalTasks, 3),
+    };
+  }
+
+  if (merged.nextStepKey === "units") {
+    return {
+      ...merged,
+      completedTasks: Math.min(
+        merged.completedTasks,
+        Math.max(0, merged.totalTasks - 1),
+      ),
+      onboardingStatus: "pending_setup",
+    };
+  }
+
+  if (merged.onboardingStatus === "complete_active" && merged.totalUnits <= 0) {
+    return {
+      ...merged,
+      completedTasks: Math.min(1, Math.max(0, merged.completedTasks)),
+      nextStepKey: "units",
+      onboardingStatus: "pending_setup",
+    };
+  }
+
+  return merged;
 }
 
 export async function listCommunitiesWithProgress(): Promise<CommunityWithProgressItem[]> {
@@ -228,14 +264,23 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
 
   const communitiesFromProgress =
     !progressListError && Array.isArray(progressListData)
-      ? progressListData.map(mapCommunityRecord)
+      ? progressListData
+          .map(mapCommunityRecord)
+          .filter(
+            (community): community is CommunityWithProgressItem =>
+              community !== null,
+          )
       : [];
 
   if (communityListError || !Array.isArray(communityListData)) {
     return communitiesFromProgress;
   }
 
-  const baseCommunities = communityListData.map(mapCommunityRecord);
+  const baseCommunities = communityListData
+    .map(mapCommunityRecord)
+    .filter(
+      (community): community is CommunityWithProgressItem => community !== null,
+    );
 
   if (baseCommunities.length === 0) {
     return communitiesFromProgress;

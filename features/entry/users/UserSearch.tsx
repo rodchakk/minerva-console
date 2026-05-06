@@ -23,20 +23,20 @@ export function UserSearch() {
     <div className="space-y-6">
       <form
         action={formAction}
-        className="rounded-[28px] border border-[var(--border)] bg-white p-6 shadow-sm"
+        className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur"
       >
         <div className="flex flex-col gap-4 lg:flex-row">
           <input
             name="query"
             type="text"
             defaultValue={state.query}
-            className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 outline-none transition focus:border-teal-600"
+            className="min-w-0 flex-1 rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
             placeholder="Search by full name or email"
           />
           <SearchButton />
         </div>
         {state.message ? (
-          <p className="mt-4 text-sm text-rose-700">{state.message}</p>
+          <p className="mt-4 text-sm text-rose-300">{state.message}</p>
         ) : null}
       </form>
 
@@ -44,11 +44,11 @@ export function UserSearch() {
         {state.results?.map((user) => (
           <article
             key={user.id}
-            className="flex flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-white p-6 shadow-sm lg:flex-row lg:items-center lg:justify-between"
+            className="flex flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur lg:flex-row lg:items-center lg:justify-between"
           >
             <div>
-              <h3 className="text-lg font-semibold text-slate-950">{user.fullName}</h3>
-              <p className="mt-1 text-sm text-slate-600">{user.email}</p>
+              <h3 className="text-lg font-semibold text-white">{user.fullName}</h3>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">{user.email}</p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <Badge tone="info">{user.role}</Badge>
@@ -63,7 +63,7 @@ export function UserSearch() {
         ))}
 
         {state.results && state.results.length === 0 && state.query ? (
-          <div className="rounded-[28px] border border-dashed border-[var(--border)] bg-white px-6 py-10 text-center text-sm text-slate-600 shadow-sm">
+          <div className="rounded-[28px] border border-dashed border-[var(--border-strong)] bg-[var(--surface)] px-6 py-10 text-center text-sm text-[var(--text-muted)] shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
             No users matched <span className="font-semibold">{state.query}</span>.
           </div>
         ) : null}

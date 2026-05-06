@@ -8,12 +8,12 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const styles = {
   primary:
-    "bg-[var(--primary)] text-white hover:bg-[var(--primary-strong)] disabled:bg-slate-400",
+    "bg-[var(--primary)] text-white shadow-[0_12px_30px_rgba(89,80,243,0.28)] hover:bg-[var(--primary-strong)] disabled:bg-slate-500",
   secondary:
-    "bg-white text-slate-900 ring-1 ring-inset ring-[var(--border)] hover:bg-slate-50 disabled:text-slate-400",
+    "bg-white/6 text-[var(--foreground)] ring-1 ring-inset ring-[var(--border)] hover:bg-white/10 disabled:text-slate-500",
   ghost:
-    "bg-transparent text-slate-700 hover:bg-slate-100 disabled:text-slate-400",
-  danger: "bg-[var(--danger)] text-white hover:bg-rose-700 disabled:bg-slate-400",
+    "bg-transparent text-[var(--text-soft)] hover:bg-white/6 hover:text-white disabled:text-slate-500",
+  danger: "bg-[var(--danger)] text-white hover:bg-rose-500 disabled:bg-slate-500",
 };
 
 export function Button({

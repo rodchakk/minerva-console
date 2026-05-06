@@ -88,26 +88,32 @@ function getMethodLabel(method: string) {
 function buildWhatsAppMessage(item: GeneratePinItem, communityName: string) {
   const username = item.suggested_username
     ? item.suggested_username
-    : "Se confirmará durante activación";
+    : "Se confirmara durante activacion";
 
   const lines = [
-    `Hola ${item.resident_name ?? "residente"}, tu activación de ENTRY está lista.`,
+    `Hola ${item.resident_name ?? "residente"}, tu activacion de ENTRY esta lista.`,
     "",
   ];
 
   if (communityName) {
     lines.push(`Comunidad: ${communityName}`);
   }
-  lines.push(`Unidad: ${item.unit_label ?? "—"}`);
+  lines.push(`Unidad: ${item.unit_label ?? "-"}`);
   lines.push(`Usuario: ${username}`);
-  lines.push(`PIN de activación: ${item.pin ?? "—"}`);
+  lines.push(`PIN de activacion: ${item.pin ?? "-"}`);
   lines.push("");
-  lines.push('Abrí la app ENTRY y seleccioná "Activar cuenta".');
+  lines.push('Abri la app ENTRY y selecciona "Activar cuenta".');
 
   return lines.join("\n");
 }
 
-// ── Result modal ──────────────────────────────────────────────────────────────
+function Overlay({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
+      {children}
+    </div>
+  );
+}
 
 function ResultModal({
   result,
@@ -124,11 +130,9 @@ function ResultModal({
   if (!result.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] bg-white p-6 shadow-xl">
-          <h3 className="text-lg font-semibold text-slate-950">
-            PIN generation failed
-          </h3>
-          <p className="text-sm text-slate-600">{result.error}</p>
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-rose-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-white">PIN generation failed</h3>
+          <p className="text-sm text-[var(--text-muted)]">{result.error}</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>Close</Button>
           </div>
@@ -143,8 +147,7 @@ function ResultModal({
   );
   const otherItems = data.items.filter((item) => item.status !== "pin_generated");
   const isPartialFailure = data.failed_count > 0;
-  const isAllFailed =
-    data.generated_count === 0 && data.failed_count > 0;
+  const isAllFailed = data.generated_count === 0 && data.failed_count > 0;
 
   function copyMessage(item: GeneratePinItem) {
     const text = buildWhatsAppMessage(item, communityName);
@@ -166,90 +169,80 @@ function ResultModal({
 
   return (
     <Overlay>
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[28px] bg-white shadow-xl">
-        {/* Header */}
-        <div className="flex-shrink-0 border-b border-slate-200 p-6">
-          <h3 className="text-lg font-semibold text-slate-950">
-            PIN generation results
-          </h3>
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] shadow-xl">
+        <div className="flex-shrink-0 border-b border-white/10 p-6">
+          <h3 className="text-lg font-semibold text-white">PIN generation results</h3>
           <div className="mt-3 flex flex-wrap gap-3">
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              {data.generated_count} generated
-            </span>
-            {data.skipped_count > 0 && (
-              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">
-                {data.skipped_count} skipped
-              </span>
-            )}
-            {data.failed_count > 0 && (
-              <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
-                {data.failed_count} failed
-              </span>
-            )}
+            <Badge tone="success">{data.generated_count} generated</Badge>
+            {data.skipped_count > 0 ? (
+              <Badge tone="default">{data.skipped_count} skipped</Badge>
+            ) : null}
+            {data.failed_count > 0 ? (
+              <Badge tone="danger">{data.failed_count} failed</Badge>
+            ) : null}
           </div>
 
-          {isAllFailed && (
-            <div className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3">
-              <p className="text-sm font-semibold text-rose-900">
-                All selected rows failed. Check that the residents are in a
-                valid state and try again.
+          {isAllFailed ? (
+            <div className="mt-3 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3">
+              <p className="text-sm font-semibold text-rose-200">
+                All selected rows failed. Check that the residents are in a valid
+                state and try again.
               </p>
             </div>
-          )}
+          ) : null}
 
-          {isPartialFailure && !isAllFailed && (
-            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-              <p className="text-sm font-semibold text-amber-900">
-                {data.failed_count} row{data.failed_count !== 1 ? "s" : ""}{" "}
-                failed. PINs were generated for the rest.
+          {isPartialFailure && !isAllFailed ? (
+            <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+              <p className="text-sm font-semibold text-amber-100">
+                {data.failed_count} row{data.failed_count !== 1 ? "s" : ""} failed.
+                PINs were generated for the rest.
               </p>
             </div>
-          )}
+          ) : null}
 
-          {generatedItems.length > 0 && (
-            <div className="mt-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3">
-              <p className="text-sm font-semibold text-teal-900">
-                Save or copy these PINs now. For security, this screen may not
-                show them again after you close it.
+          {generatedItems.length > 0 ? (
+            <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
+              <p className="text-sm font-semibold text-violet-100">
+                Save or copy these PINs now. For security, this screen may not show
+                them again after you close it.
               </p>
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Scrollable items */}
         <div className="flex-1 overflow-y-auto p-6">
-          {generatedItems.length > 0 && (
+          {generatedItems.length > 0 ? (
             <div className="space-y-3">
               {generatedItems.map((item) => (
                 <div
                   key={item.queue_id}
-                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                  className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
-                      <p className="font-semibold text-slate-900">
+                      <p className="font-semibold text-white">
                         {item.resident_name ?? "Unnamed resident"}
                       </p>
-                      <p className="text-xs text-slate-500">
-                        {item.unit_label ?? "—"}
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {item.unit_label ?? "-"}
                         {item.email ? ` · ${item.email}` : ""}
                         {item.phone ? ` · ${item.phone}` : ""}
                       </p>
-                      {item.suggested_username && (
-                        <p className="text-xs text-slate-600">
+                      {item.suggested_username ? (
+                        <p className="text-xs text-[var(--text-muted)]">
                           Username:{" "}
-                          <span className="font-medium">
+                          <span className="font-medium text-slate-200">
                             {item.suggested_username}
                           </span>
                         </p>
-                      )}
+                      ) : null}
                     </div>
                     <div className="flex flex-shrink-0 flex-col items-end gap-2">
-                      <div className="rounded-xl border border-teal-300 bg-white px-4 py-2 text-center">
-                        <p className="text-xs font-medium text-slate-500">
+                      <div className="rounded-xl border border-violet-400/20 bg-[rgba(9,12,24,0.72)] px-4 py-2 text-center">
+                        <p className="text-xs font-medium text-[var(--text-muted)]">
                           Activation PIN
                         </p>
-                        <p className="font-mono text-xl font-bold tracking-widest text-teal-700">
+                        <p className="font-mono text-xl font-bold tracking-widest text-violet-200">
                           {item.pin}
                         </p>
                       </div>
@@ -268,47 +261,43 @@ function ResultModal({
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
 
-          {/* Skipped / failed rows */}
-          {otherItems.length > 0 && (
+          {otherItems.length > 0 ? (
             <div className="mt-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
                 Skipped / failed
               </p>
               {otherItems.map((item) => (
                 <div
                   key={item.queue_id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm"
                 >
-                  <span className="text-slate-700">
+                  <span className="text-slate-200">
                     {item.resident_name ?? item.queue_id}
                   </span>
                   <div className="flex items-center gap-2">
-                    <Badge
-                      tone={item.status === "failed" ? "danger" : "default"}
-                    >
+                    <Badge tone={item.status === "failed" ? "danger" : "default"}>
                       {item.status}
                     </Badge>
-                    {item.message && (
-                      <span className="text-xs text-slate-400">
+                    {item.message ? (
+                      <span className="text-xs text-[var(--text-muted)]">
                         {item.message}
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}
             </div>
-          )}
+          ) : null}
         </div>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 flex flex-wrap items-center justify-end gap-3 border-t border-slate-200 p-6">
-          {generatedItems.length > 1 && (
+        <div className="flex-shrink-0 flex flex-wrap items-center justify-end gap-3 border-t border-white/10 p-6">
+          {generatedItems.length > 1 ? (
             <Button type="button" variant="secondary" onClick={copyAll}>
               {copiedAll ? "Copied!" : "Copy all messages"}
             </Button>
-          )}
+          ) : null}
           <Button type="button" onClick={onClose}>
             Done
           </Button>
@@ -317,16 +306,6 @@ function ResultModal({
     </Overlay>
   );
 }
-
-function Overlay({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      {children}
-    </div>
-  );
-}
-
-// ── Main table ────────────────────────────────────────────────────────────────
 
 export function ActivationQueueTable({
   communityId,
@@ -369,7 +348,6 @@ export function ActivationQueueTable({
   function handleCloseResult() {
     setResult(null);
     setPhase("idle");
-    // Clear selection after generation so stale selected IDs don't linger
     setSelectedIds([]);
   }
 
@@ -377,20 +355,20 @@ export function ActivationQueueTable({
 
   return (
     <>
-      {/* Confirmation overlay */}
-      {phase === "confirming" && (
+      {phase === "confirming" ? (
         <Overlay>
-          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] bg-white p-6 shadow-xl">
-            <h3 className="text-lg font-semibold text-slate-950">
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-white">
               Generate activation PINs?
             </h3>
-            <p className="text-sm leading-6 text-slate-600">
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
               This will generate activation PINs for{" "}
-              <span className="font-semibold">{selectedCount}</span> selected
-              prepared resident{selectedCount !== 1 ? "s" : ""}. It will{" "}
-              <span className="font-semibold">not</span> create ENTRY users yet.
+              <span className="font-semibold text-slate-100">{selectedCount}</span>{" "}
+              selected prepared resident{selectedCount !== 1 ? "s" : ""}. It will{" "}
+              <span className="font-semibold text-slate-100">not</span> create
+              ENTRY users yet.
             </p>
-            <p className="text-sm leading-6 text-slate-500">
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
               PINs will expire in 7 days and can be regenerated.
             </p>
             <div className="flex flex-wrap justify-end gap-3">
@@ -407,60 +385,52 @@ export function ActivationQueueTable({
             </div>
           </div>
         </Overlay>
-      )}
+      ) : null}
 
-      {/* Loading overlay */}
-      {phase === "loading" && (
+      {phase === "loading" ? (
         <Overlay>
-          <div className="rounded-[28px] bg-white px-8 py-6 shadow-xl">
-            <p className="text-sm font-semibold text-slate-900">
-              Generating PINs…
-            </p>
+          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] px-8 py-6 shadow-xl">
+            <p className="text-sm font-semibold text-white">Generating PINs...</p>
           </div>
         </Overlay>
-      )}
+      ) : null}
 
-      {/* Result modal */}
-      {phase === "result" && result !== null && (
+      {phase === "result" && result !== null ? (
         <ResultModal
           result={result}
           communityName={communityName}
           onClose={handleCloseResult}
         />
-      )}
+      ) : null}
 
-      <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-white p-5 shadow-sm">
+      <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">
+            <h2 className="text-lg font-semibold text-white">
               Residents ready for activation
             </h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
+            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
               Review prepared resident records and generate activation PINs.
             </p>
           </div>
 
           <div className="space-y-2 xl:max-w-lg">
             <div className="flex flex-wrap gap-2">
-              {/* Functional: Generate PIN */}
-              <div className="flex flex-col gap-1">
-                <Button
-                  type="button"
-                  disabled={!canGenerate || phase === "loading"}
-                  onClick={() => setPhase("confirming")}
-                  title={
-                    !communityId
-                      ? "Select a community before generating PINs."
-                      : selectedCount === 0
-                        ? "Select residents to generate PINs."
-                        : "Generate activation PINs for selected residents."
-                  }
-                >
-                  Generate PIN
-                </Button>
-              </div>
+              <Button
+                type="button"
+                disabled={!canGenerate || phase === "loading"}
+                onClick={() => setPhase("confirming")}
+                title={
+                  !communityId
+                    ? "Select a community before generating PINs."
+                    : selectedCount === 0
+                      ? "Select residents to generate PINs."
+                      : "Generate activation PINs for selected residents."
+                }
+              >
+                Generate PIN
+              </Button>
 
-              {/* Placeholder actions */}
               {PLACEHOLDER_ACTIONS.map((label) => (
                 <Button
                   key={label}
@@ -474,53 +444,53 @@ export function ActivationQueueTable({
               ))}
             </div>
 
-            {!communityId && (
-              <p className="text-xs leading-5 text-amber-700">
+            {!communityId ? (
+              <p className="text-xs leading-5 text-amber-200">
                 Select a community before generating PINs.
               </p>
-            )}
+            ) : null}
 
-            {communityId && selectedCount === 0 && (
-              <p className="text-xs leading-5 text-slate-500">
+            {communityId && selectedCount === 0 ? (
+              <p className="text-xs leading-5 text-[var(--text-muted)]">
                 Select residents above to enable Generate PIN.
               </p>
-            )}
+            ) : null}
 
-            {communityId && selectedCount > 0 && (
-              <p className="text-xs leading-5 text-slate-500">
-                {selectedCount} resident{selectedCount !== 1 ? "s" : ""}{" "}
-                selected. Send email invite, Copy WhatsApp message, and Mark
-                skipped are coming soon.
+            {communityId && selectedCount > 0 ? (
+              <p className="text-xs leading-5 text-[var(--text-muted)]">
+                {selectedCount} resident{selectedCount !== 1 ? "s" : ""} selected.
+                Send email invite, Copy WhatsApp message, and Mark skipped are
+                coming soon.
               </p>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
+            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
               <input
                 type="checkbox"
                 checked={allVisibleSelected}
                 onChange={toggleAllVisibleRows}
-                className="h-4 w-4 rounded border-slate-300 text-teal-600"
+                className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
               />
               Select all visible rows
             </label>
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700">
+            <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
               {selectedCount} selected
             </span>
           </div>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-[var(--text-muted)]">
             {selectedCount > 0
               ? `${selectedCount} resident${selectedCount !== 1 ? "s" : ""} selected.`
               : "Select residents to prepare activation actions."}
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="min-w-[1120px] divide-y divide-[var(--border)] text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
+        <div className="overflow-x-auto rounded-2xl border border-white/8">
+          <table className="min-w-[1120px] divide-y divide-white/8 text-left text-sm">
+            <thead className="bg-[rgba(9,12,24,0.92)] text-slate-300">
               <tr>
                 <th className="w-12 px-3 py-3 font-semibold">
                   <span className="sr-only">Select row</span>
@@ -537,24 +507,24 @@ export function ActivationQueueTable({
                 <th className="px-3 py-3 font-semibold">Created</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--border)] bg-white text-slate-700">
+            <tbody className="divide-y divide-white/8 bg-[var(--surface)] text-slate-200">
               {rows.map((row) => {
                 const isSelected = selectedIds.includes(row.id);
 
                 return (
                   <tr
                     key={row.id}
-                    className={isSelected ? "bg-teal-50/40" : undefined}
+                    className={isSelected ? "bg-violet-500/10" : "hover:bg-white/4"}
                   >
                     <td className="px-3 py-3 align-top">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleRow(row.id)}
-                        className="mt-1 h-4 w-4 rounded border-slate-300 text-teal-600"
+                        className="mt-1 h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
                       />
                     </td>
-                    <td className="max-w-[10rem] px-3 py-3 align-top font-medium text-slate-900">
+                    <td className="max-w-[10rem] px-3 py-3 align-top font-medium text-white">
                       <span className="block truncate" title={row.unit}>
                         {row.unit}
                       </span>
@@ -574,12 +544,11 @@ export function ActivationQueueTable({
                         {row.email}
                       </span>
                     </td>
-                    <td className="px-3 py-3 align-top">{row.ownerReference}</td>
+                    <td className="px-3 py-3 align-top text-[var(--text-muted)]">
+                      {row.ownerReference}
+                    </td>
                     <td className="max-w-[10rem] px-3 py-3 align-top">
-                      <span
-                        className="block truncate"
-                        title={row.suggestedUsername}
-                      >
+                      <span className="block truncate" title={row.suggestedUsername}>
                         {row.suggestedUsername}
                       </span>
                     </td>
@@ -593,12 +562,12 @@ export function ActivationQueueTable({
                         {getStatusLabel(row.status)}
                       </Badge>
                     </td>
-                    <td className="max-w-[14rem] px-3 py-3 align-top">
+                    <td className="max-w-[14rem] px-3 py-3 align-top text-[var(--text-muted)]">
                       <span className="block truncate" title={row.lastError}>
                         {row.lastError}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 py-3 align-top">
+                    <td className="whitespace-nowrap px-3 py-3 align-top text-[var(--text-muted)]">
                       {row.createdAt}
                     </td>
                   </tr>
