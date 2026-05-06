@@ -1,7 +1,5 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MetricCard } from "@/components/cards/MetricCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -16,17 +14,21 @@ import {
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 
 type ActionItem = {
-  href?: string;
+  href: string;
   label: string;
   note: string;
 };
 
-function getProgressWidth(completed: number, total: number) {
+function getProgressPercent(completed: number, total: number) {
   if (total <= 0) {
-    return "0%";
+    return 0;
   }
 
-  return `${Math.min(100, Math.round((completed / total) * 100))}%`;
+  return Math.min(100, Math.round((completed / total) * 100));
+}
+
+function getProgressWidth(completed: number, total: number) {
+  return `${getProgressPercent(completed, total)}%`;
 }
 
 function needsSetupAttention(community: CommunityWithProgressItem) {
@@ -75,15 +77,15 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
 
   if (community.onboardingStatus === "complete_active" && community.isActive) {
     return {
-      href: `/products/entry/activation?community_id=${community.id}`,
+      href: `/products/entry/communities/${community.id}/units`,
       label: "Open operations",
-      note: "Open the most active operational surface for this community.",
+      note: "Community is ready for regular operational review.",
     };
   }
 
   if (needsSetupAttention(community)) {
     return {
-      href: `/products/entry/communities/${community.id}`,
+      href: "#setup-status",
       label: "Review setup",
       note: "Baseline setup needs attention before regular operation.",
     };
@@ -91,29 +93,17 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
 
   if (community.onboardingStatus !== "complete_active") {
     return {
-      href: `/products/entry/communities/${community.id}`,
+      href: "#setup-status",
       label: "Continue setup",
       note: "Continue the remaining setup work for this community.",
     };
   }
 
   return {
-    href: `/products/entry/communities/${community.id}`,
+    href: "#setup-status",
     label: "Review setup",
     note: "Review the current setup and operational readiness.",
   };
-}
-
-function getPreviewMetricTone(state: CommunityDetailPreviews["messages"]["state"]) {
-  if (state === "live") {
-    return "success" as const;
-  }
-
-  if (state === "unavailable") {
-    return "default" as const;
-  }
-
-  return "info" as const;
 }
 
 function getPreviewMetricStatus(
@@ -135,93 +125,133 @@ function getPreviewMetricStatus(
   return "Empty";
 }
 
-function renderPreviewNotice(
-  state: CommunityDetailPreviews["messages"]["state"],
-  messages: {
-    disabled?: string;
-    empty: string;
-    unavailable?: string;
-  },
+function getAttentionItems(
+  community: CommunityWithProgressItem,
+  previews: CommunityDetailPreviews,
 ) {
-  if (state === "disabled" && messages.disabled) {
-    return (
-      <div className="rounded-[24px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
-        {messages.disabled}
-      </div>
-    );
+  const items: Array<{ description: string; title: string }> = [];
+
+  if (community.totalUnits <= 0 || community.nextStepKey === "units") {
+    items.push({
+      description:
+        "Units are required to manage residents and control access.",
+      title: "Create unit records",
+    });
   }
 
-  if (state === "empty") {
-    return (
-      <div className="rounded-[24px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
-        {messages.empty}
-      </div>
-    );
+  if (community.activationPendingCount > 0) {
+    items.push({
+      description: "Prepared residents are waiting in the activation queue.",
+      title: "Review pending activations",
+    });
   }
 
-  if (state === "unavailable") {
-    return (
-      <div className="rounded-[24px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
-        {messages.unavailable ?? "Preview unavailable"}
-      </div>
-    );
+  if (community.allowReservations && previews.facilities.state !== "live") {
+    items.push({
+      description:
+        "Reservable areas can be configured before using reservations.",
+      title: "Configure facilities",
+    });
   }
 
-  return null;
+  if (previews.users.state === "unavailable") {
+    items.push({
+      description: "The user preview could not be loaded safely right now.",
+      title: "User preview unavailable",
+    });
+  }
+
+  if (items.length === 0) {
+    items.push({
+      description: "No immediate blockers were detected in the current preview.",
+      title: "No critical attention items",
+    });
+  }
+
+  return items.slice(0, 3);
 }
 
-function SectionShell({
-  id,
-  title,
-  description,
+function MiniMetric({
   badge,
-  action,
-  children,
-}: {
-  action?: ReactNode;
-  badge?: ReactNode;
-  children: ReactNode;
-  description: string;
-  id: string;
-  title: string;
-}) {
-  return (
-    <section
-      id={id}
-      className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-7"
-    >
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-              {title}
-            </p>
-            {badge}
-          </div>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-            {description}
-          </p>
-        </div>
-        {action ? <div className="shrink-0">{action}</div> : null}
-      </div>
-      <div className="mt-6">{children}</div>
-    </section>
-  );
-}
-
-function StatChip({
+  hint,
   label,
   value,
 }: {
+  badge?: string;
+  hint: string;
   label: string;
   value: string | number;
 }) {
   return (
-    <div className="rounded-[22px] border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-        {label}
-      </p>
-      <p className="mt-2 text-lg font-semibold text-white">{value}</p>
+    <div className="flex min-w-0 items-center gap-4 border-white/8 px-4 py-4 md:border-r last:border-r-0">
+      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/10 bg-[var(--surface-strong)] text-lg text-violet-200">
+        {badge ?? "•"}
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+          {label}
+        </p>
+        <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
+        <p className="mt-1 truncate text-sm text-[var(--text-muted)]">{hint}</p>
+      </div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  actionHref,
+  actionLabel,
+  children,
+  title,
+}: {
+  actionHref?: string;
+  actionLabel?: string;
+  children: React.ReactNode;
+  title: string;
+}) {
+  return (
+    <section className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_16px_42px_rgba(2,6,23,0.2)]">
+      <div className="flex items-start justify-between gap-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+          {title}
+        </p>
+        {actionHref && actionLabel ? (
+          <Link
+            href={actionHref}
+            className="text-sm font-semibold text-violet-200 transition hover:text-white"
+          >
+            {actionLabel} →
+          </Link>
+        ) : null}
+      </div>
+      <div className="mt-5">{children}</div>
+    </section>
+  );
+}
+
+function QuickActionCard({ action }: { action: ActionItem }) {
+  return (
+    <Link
+      href={action.href}
+      className="group flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-white/4 p-4 transition hover:border-violet-300/40 hover:bg-white/7"
+    >
+      <div>
+        <p className="text-sm font-semibold text-white">{action.label}</p>
+        <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+          {action.note}
+        </p>
+      </div>
+      <span className="text-lg text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-white">
+        →
+      </span>
+    </Link>
+  );
+}
+
+function EmptyInline({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-[22px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
+      {children}
     </div>
   );
 }
@@ -241,47 +271,43 @@ export default async function CommunitySetupPage(
     allowReservations: community.allowReservations,
   });
   const primaryAction = getPrimaryAction(community);
+  const progressPercent = getProgressPercent(
+    community.completedTasks,
+    community.totalTasks,
+  );
+  const nextStepLabel = getOnboardingNextStepLabel(community.nextStepKey);
+  const attentionItems = getAttentionItems(community, previews);
+  const unitsForSnapshot = previews.units.items.slice(0, 5);
 
   const quickActions: ActionItem[] = [
     {
-      href: "#users-preview",
+      href: "#users-summary",
       label: "Review users",
-      note: "Jump to the user preview for this community.",
-    },
-    {
-      href: `/products/entry/communities/${community.id}/units`,
-      label: "View units",
-      note: "Inspect known unit records and recent access context.",
-    },
-    {
-      href: "#facilities-preview",
-      label: "Manage facilities",
-      note: community.allowReservations
-        ? "Review reservable facility configuration and operating windows."
-        : "Reservations are disabled for this community.",
-    },
-    {
-      href: `/products/entry/messages?community_id=${community.id}`,
-      label: "Send message",
-      note: "Prepare a community-targeted Minerva message draft.",
-    },
-    {
-      href: `/products/entry/settings?community_id=${community.id}`,
-      label: "Community settings",
-      note: "Review product-level defaults and guardrails.",
+      note: "Jump to the user summary.",
     },
     {
       href: `/products/entry/activation?community_id=${community.id}`,
       label: "Open activation queue",
-      note: "Review residents waiting in the activation queue.",
+      note: "Review pending activations.",
+    },
+    {
+      href: `/products/entry/settings?community_id=${community.id}`,
+      label: "Community settings",
+      note: "Review defaults and guardrails.",
+    },
+    {
+      href: `/products/entry/messages?community_id=${community.id}`,
+      label: "Send message",
+      note: "Post a community update.",
     },
   ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
+        eyebrow="ENTRY › COMMUNITIES › REVIEW"
         title={community.name}
-        description="Operational overview for this ENTRY community."
+        description={community.city}
         actions={
           <div className="flex flex-wrap gap-3">
             <Link href="/products/entry/communities">
@@ -294,486 +320,426 @@ export default async function CommunitySetupPage(
         }
       />
 
-      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.14),rgba(17,24,39,0.92))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.28)] backdrop-blur xl:p-7">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge tone={community.isActive ? "success" : "default"}>
-                {community.isActive ? "Active" : "Inactive"}
-              </Badge>
-              <Badge tone={getSetupTone(community)}>{getSetupLabel(community)}</Badge>
-              <Badge tone="info">{community.unitLabel}</Badge>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge tone={community.isActive ? "success" : "default"}>
+          {community.isActive ? "Active" : "Inactive"}
+        </Badge>
+        <Badge tone={getSetupTone(community)}>{getSetupLabel(community)}</Badge>
+        <Badge tone="info">{community.unitLabel}</Badge>
+      </div>
+
+      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(112,104,255,0.16),rgba(17,24,39,0.88)_42%,rgba(8,11,22,0.96))] p-5 shadow-[0_24px_70px_rgba(2,6,23,0.28)] backdrop-blur xl:p-6">
+        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-violet-200">
+          Operational health
+        </p>
+        <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.25fr_1fr_1.25fr] xl:divide-x xl:divide-white/8">
+          <div className="flex gap-4 xl:pr-5">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-amber-400/25 bg-amber-500/12 text-2xl text-amber-300">
+              {getSetupLabel(community) === "Complete" ? "✓" : "!"}
             </div>
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-                Community operations
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                Current status
               </p>
-              <h2 className="mt-2 text-3xl font-semibold text-white">
-                {community.name}
+              <h2 className="mt-2 text-xl font-semibold text-white">
+                {getSetupLabel(community)}
               </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                {community.city}
+              <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                {getSetupLabel(community) === "Complete"
+                  ? "Community is ready for regular operation."
+                  : "Action required to reach full readiness."}
               </p>
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-[rgba(9,12,24,0.5)] px-5 py-4 xl:max-w-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-              Operations note
+          <div className="flex items-center gap-5 xl:px-5">
+            <div
+              className="grid h-20 w-20 shrink-0 place-items-center rounded-full p-1"
+              style={{
+                background: `conic-gradient(var(--primary) ${progressPercent}%, rgba(255,255,255,0.12) 0)`,
+              }}
+            >
+              <div className="grid h-full w-full place-items-center rounded-full bg-[var(--surface-strong)] text-sm font-semibold text-white">
+                {progressPercent}%
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+                Setup progress
+              </p>
+              <p className="mt-2 text-xl font-semibold text-white">
+                {community.completedTasks} / {community.totalTasks} tasks complete
+              </p>
+              <div className="mt-3 h-2 rounded-full bg-white/8">
+                <div
+                  className="h-2 rounded-full bg-[var(--primary)]"
+                  style={{
+                    width: getProgressWidth(
+                      community.completedTasks,
+                      community.totalTasks,
+                    ),
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="xl:px-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+              Next step
             </p>
-            <p className="mt-2 text-base font-semibold text-white">
-              {community.onboardingStatus === "complete_active"
-                ? "Community is ready for daily operations."
-                : "Community still needs setup attention before full operation."}
+            <h3 className="mt-2 text-xl font-semibold text-white">{nextStepLabel}</h3>
+            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+              Continue from the current setup checkpoint.
             </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              {primaryAction.note}
+            <Link href={primaryAction.href} className="mt-3 inline-flex">
+              <Button variant="secondary">Continue setup</Button>
+            </Link>
+          </div>
+
+          <div className="xl:pl-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+              What needs attention
             </p>
+            <div className="mt-3 space-y-3">
+              {attentionItems.map((item) => (
+                <div key={item.title}>
+                  <p className="text-sm font-semibold text-white">• {item.title}</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                    {item.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <a
+              href="#setup-status"
+              className="mt-3 inline-flex text-sm font-semibold text-violet-200 transition hover:text-white"
+            >
+              View setup details →
+            </a>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        <MetricCard
-          label="Total units"
-          value={String(community.totalUnits)}
-          hint="Known unit records for this community."
-          status="Live"
-          tone="info"
+      <section className="grid overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_48px_rgba(2,6,23,0.2)] md:grid-cols-2 xl:grid-cols-5">
+        <MiniMetric
+          badge="▣"
+          label="Units"
+          value={community.totalUnits}
+          hint="Total units"
         />
-        <MetricCard
-          label="Total members"
-          value={String(community.totalMembers)}
-          hint="Known members currently connected."
-          status="Live"
-          tone="info"
+        <MiniMetric
+          badge="◎"
+          label="Members"
+          value={community.totalMembers}
+          hint="Total members"
         />
-        <MetricCard
+        <MiniMetric
+          badge="◴"
           label="Pending activations"
-          value={String(community.activationPendingCount)}
-          hint="Residents waiting in the activation queue."
-          status="Live"
-          tone={community.activationPendingCount > 0 ? "warning" : "success"}
+          value={community.activationPendingCount}
+          hint="Waiting in queue"
         />
-        <MetricCard
-          label="Tasks complete"
-          value={`${community.completedTasks}/${community.totalTasks}`}
-          hint="Setup progress stays visible without taking over the page."
-          status="Live"
-          tone={community.onboardingStatus === "complete_active" ? "success" : "info"}
-        />
-        <MetricCard
-          label="Active facilities"
+        <MiniMetric
+          badge="▤"
+          label="Facilities"
           value={
             previews.facilities.state === "live"
-              ? String(previews.facilities.activeCount)
+              ? previews.facilities.activeCount
               : "—"
           }
           hint={
-            previews.facilities.state === "disabled"
-              ? "Reservations are disabled for this community."
-              : previews.facilities.state === "unavailable"
-                ? "Facility preview could not be loaded safely."
-                : "Active reservable facilities configured for this community."
+            previews.facilities.state === "live"
+              ? "Active facilities"
+              : previews.facilities.state === "disabled"
+                ? "Reservations disabled"
+                : "Not configured"
           }
-          status={getPreviewMetricStatus(previews.facilities.state)}
-          tone={getPreviewMetricTone(previews.facilities.state)}
         />
-        <MetricCard
-          label="Recent messages"
+        <MiniMetric
+          badge="✉"
+          label="Messages"
           value={
-            previews.messages.state === "live"
-              ? String(previews.messages.total)
-              : "—"
+            previews.messages.state === "live" ? previews.messages.total : "—"
           }
-          hint={
-            previews.messages.state === "disabled"
-              ? "Messages are disabled for this community."
-              : previews.messages.state === "unavailable"
-                ? "Message history preview pending safe wiring."
-                : "Recent community-targeted messages returned by the current RPC."
-          }
-          status={getPreviewMetricStatus(previews.messages.state)}
-          tone={getPreviewMetricTone(previews.messages.state)}
+          hint={getPreviewMetricStatus(previews.messages.state)}
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_360px]">
+      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
-          <SectionShell
-            id="users-preview"
-            title="Users preview"
-            description="Read-only snapshot of connected admins, guards, and residents."
-            badge={<Badge tone="info">{previews.users.total} known</Badge>}
-            action={
-              <Link href={`/products/entry/users?community_id=${community.id}`}>
-                <Button variant="secondary">Open users</Button>
+          <section className="rounded-[30px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)] xl:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+                Units snapshot
+              </p>
+              <Link
+                href={`/products/entry/communities/${community.id}/units`}
+                className="text-sm font-semibold text-violet-200 transition hover:text-white"
+              >
+                View full units directory →
               </Link>
-            }
-          >
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-              <StatChip label="Admins" value={previews.users.counts.admins} />
-              <StatChip label="Guards" value={previews.users.counts.guards} />
-              <StatChip label="Residents" value={previews.users.counts.residents} />
-              <StatChip label="Inactive" value={previews.users.counts.inactive} />
             </div>
 
-            {renderPreviewNotice(previews.users.state, {
-              empty: "No users connected yet.",
-              unavailable: "Preview unavailable",
-            }) ?? (
-              <div className="mt-5 space-y-3">
-                {previews.users.items.map((user) => (
-                  <div
-                    key={user.id}
-                    className="grid gap-3 rounded-[24px] border border-white/8 bg-[var(--surface-strong)] px-4 py-4 md:grid-cols-[minmax(0,1.3fr)_160px_180px_130px]"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {user.fullName}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {user.contact}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Role
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {user.role}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Unit
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {user.houseLabel}
-                      </p>
-                    </div>
-                    <div className="md:justify-self-end">
-                      <Badge tone={user.isActive ? "success" : "default"}>
-                        {user.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+            {previews.units.state === "unavailable" ? (
+              <div className="mt-5">
+                <EmptyInline>Units preview unavailable.</EmptyInline>
+              </div>
+            ) : previews.units.state === "empty" ? (
+              <div className="mt-5">
+                <EmptyInline>No units created yet.</EmptyInline>
+              </div>
+            ) : (
+              <div className="mt-5 overflow-x-auto">
+                <table className="min-w-[820px] w-full text-left text-sm">
+                  <thead className="border-b border-white/8 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    <tr>
+                      <th className="py-3 pr-4 font-semibold">Unit / building</th>
+                      <th className="px-4 py-3 font-semibold">Owner</th>
+                      <th className="px-4 py-3 font-semibold">Active residents</th>
+                      <th className="px-4 py-3 font-semibold">Passes</th>
+                      <th className="px-4 py-3 font-semibold">Last access</th>
+                      <th className="py-3 pl-4 text-right font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/7">
+                    {unitsForSnapshot.map((unit, index) => (
+                      <tr key={unit.id} className="text-[var(--text-muted)]">
+                        <td className="py-4 pr-4">
+                          <div className="flex items-center gap-3">
+                            <span className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-white">
+                              {String(index + 1).padStart(2, "0")}
+                            </span>
+                            <span className="font-semibold text-white">{unit.label}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">{unit.ownerName}</td>
+                        <td className="px-4 py-4 font-semibold text-white">
+                          {unit.activeResidents}
+                        </td>
+                        <td className="px-4 py-4 font-semibold text-white">
+                          {unit.activePasses}
+                        </td>
+                        <td className="px-4 py-4 text-white">{unit.lastAccess}</td>
+                        <td className="py-4 pl-4 text-right">
+                          <Badge tone={unit.isActive ? "success" : "default"}>
+                            {unit.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
-          </SectionShell>
 
-          <SectionShell
-            id="units-preview"
-            title="Units preview"
-            description="Read-only view of houses, apartments, or unit records currently returned by the admin RPC."
-            badge={<Badge tone="info">{previews.units.total} known</Badge>}
-            action={
-              <Link href={`/products/entry/communities/${community.id}/units`}>
-                <Button variant="secondary">Open units</Button>
-              </Link>
-            }
-          >
-            {renderPreviewNotice(previews.units.state, {
-              empty: "No units created yet.",
-              unavailable: "Preview unavailable",
-            }) ?? (
-              <div className="space-y-3">
-                {previews.units.items.map((unit) => (
-                  <div
-                    key={unit.id}
-                    className="grid gap-3 rounded-[24px] border border-white/8 bg-[var(--surface-strong)] px-4 py-4 md:grid-cols-[minmax(0,1.2fr)_170px_120px_120px_150px_120px]"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-white">{unit.label}</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {unit.ownerName}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Active residents
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {unit.activeResidents}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Passes
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {unit.activePasses}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Last access
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {unit.lastAccess}
-                      </p>
-                    </div>
-                    <div className="md:col-span-2 md:justify-self-end">
-                      <Badge tone={unit.isActive ? "success" : "default"}>
-                        {unit.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
-                  </div>
-                ))}
+            {previews.units.state === "live" ? (
+              <div className="mt-4 text-center">
+                <Link
+                  href={`/products/entry/communities/${community.id}/units`}
+                  className="text-sm font-semibold text-violet-200 transition hover:text-white"
+                >
+                  View full units directory →
+                </Link>
               </div>
-            )}
-          </SectionShell>
+            ) : null}
+          </section>
 
-          <SectionShell
-            id="facilities-preview"
-            title="Facilities preview"
-            description="Read-only status of reservable areas, operating hours, and slot pricing."
-            badge={
-              <Badge
-                tone={
-                  previews.facilities.state === "disabled" ? "default" : "info"
-                }
+          <div className="grid gap-6 lg:grid-cols-3">
+            <SummaryCard
+              title="Users summary"
+              actionHref={`/products/entry/users?community_id=${community.id}`}
+              actionLabel="View all users"
+            >
+              <div
+                id="users-summary"
+                className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-2 xl:grid-cols-4"
               >
-                {previews.facilities.state === "disabled"
-                  ? "Reservations disabled"
-                  : `${previews.facilities.total} known`}
-              </Badge>
-            }
-          >
-            {renderPreviewNotice(previews.facilities.state, {
-              disabled: "Reservations are disabled for this community.",
-              empty: "No facilities configured yet.",
-              unavailable: "Preview unavailable",
-            }) ?? (
-              <div className="space-y-3">
-                {previews.facilities.items.map((facility) => (
-                  <div
-                    key={facility.id}
-                    className="grid gap-3 rounded-[24px] border border-white/8 bg-[var(--surface-strong)] px-4 py-4 md:grid-cols-[minmax(0,1.2fr)_150px_140px_150px_150px_120px]"
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-white">
-                        {facility.name}
-                      </p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {facility.opensAt} to {facility.closesAt}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Slot minutes
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {facility.slotMinutes || 0}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Price
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {facility.pricePerSlot}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Currency
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {facility.currency}
-                      </p>
-                    </div>
-                    <div className="md:col-span-2 md:justify-self-end">
-                      <Badge tone={facility.isActive ? "success" : "default"}>
-                        {facility.isActive ? "Active" : "Inactive"}
-                      </Badge>
-                    </div>
+                {[
+                  ["Admins", previews.users.counts.admins],
+                  ["Guards", previews.users.counts.guards],
+                  ["Residents", previews.users.counts.residents],
+                  ["Inactive", previews.users.counts.inactive],
+                ].map(([label, value]) => (
+                  <div key={label} className="border-r border-white/8 last:border-r-0">
+                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                      {label}
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
                   </div>
                 ))}
               </div>
-            )}
-          </SectionShell>
+              {previews.users.state === "unavailable" ? (
+                <p className="mt-4 text-sm text-[var(--text-muted)]">
+                  User preview unavailable.
+                </p>
+              ) : null}
+            </SummaryCard>
 
-          <SectionShell
-            id="messages-preview"
-            title="Messages preview"
-            description="Recent community messages when the current read-only RPC is available."
-            badge={
-              <Badge tone={getPreviewMetricTone(previews.messages.state)}>
-                {getPreviewMetricStatus(previews.messages.state)}
-              </Badge>
-            }
-            action={
-              <Link href={`/products/entry/messages?community_id=${community.id}`}>
-                <Button variant="secondary">Prepare message</Button>
-              </Link>
-            }
-          >
-            {renderPreviewNotice(previews.messages.state, {
-              disabled: "Messages are disabled for this community.",
-              empty: "Message history preview pending.",
-              unavailable: "Preview unavailable",
-            }) ?? (
-              <div className="space-y-3">
-                {previews.messages.items.map((message) => (
-                  <div
-                    key={message.id}
-                    className="grid gap-3 rounded-[24px] border border-white/8 bg-[var(--surface-strong)] px-4 py-4 md:grid-cols-[minmax(0,1.35fr)_160px_180px_160px]"
-                  >
-                    <div>
+            <SummaryCard
+              title="Facilities summary"
+              actionHref="#facilities-summary"
+              actionLabel="Manage facilities"
+            >
+              <div id="facilities-summary">
+                {previews.facilities.state === "live" ? (
+                  <div className="space-y-3">
+                    {previews.facilities.items.slice(0, 2).map((facility) => (
+                      <div key={facility.id}>
+                        <p className="text-sm font-semibold text-white">
+                          {facility.name}
+                        </p>
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">
+                          {facility.opensAt} to {facility.closesAt} · {facility.pricePerSlot}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div>
+                    <p className="text-base font-semibold text-white">
+                      {previews.facilities.state === "disabled"
+                        ? "Reservations disabled"
+                        : previews.facilities.state === "unavailable"
+                          ? "Preview unavailable"
+                          : "No facilities configured"}
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+                      Add facilities to manage reservable areas and operating windows.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </SummaryCard>
+
+            <SummaryCard
+              title="Recent messages"
+              actionHref={`/products/entry/messages?community_id=${community.id}`}
+              actionLabel="View all messages"
+            >
+              {previews.messages.state === "live" ? (
+                <div className="space-y-3">
+                  {previews.messages.items.slice(0, 2).map((message) => (
+                    <div key={message.id}>
                       <p className="text-sm font-semibold text-white">
                         {message.title}
                       </p>
                       <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {message.sourceType}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Published
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
                         {message.publishedAt}
                       </p>
                     </div>
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                        Expires
-                      </p>
-                      <p className="mt-2 text-sm font-medium text-white">
-                        {message.expiresAt}
-                      </p>
-                    </div>
-                    <div className="md:justify-self-end">
-                      <Badge tone="info">{message.sourceType}</Badge>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </SectionShell>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-base font-semibold text-white">
+                    {previews.messages.state === "disabled"
+                      ? "Messages disabled"
+                      : previews.messages.state === "unavailable"
+                        ? "Preview unavailable"
+                        : "No recent messages"}
+                  </p>
+                  <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+                    Community-targeted messages will appear here.
+                  </p>
+                </div>
+              )}
+            </SummaryCard>
+          </div>
         </div>
 
-        <div className="space-y-6">
-          <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
+        <aside className="space-y-6">
+          <section className="rounded-[30px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)]">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
               Quick actions
             </p>
             <div className="mt-4 space-y-3">
-              {quickActions.map((action) => {
-                const card = (
-                  <div className="rounded-[24px] border border-white/8 bg-white/4 p-4">
-                    <p className="text-sm font-semibold text-white">{action.label}</p>
-                    <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                      {action.note}
-                    </p>
-                  </div>
-                );
-
-                if (!action.href) {
-                  return <div key={action.label}>{card}</div>;
-                }
-
-                if (action.href.startsWith("#")) {
-                  return (
-                    <a key={action.label} href={action.href} className="block">
-                      {card}
-                    </a>
-                  );
-                }
-
-                return (
-                  <Link key={action.label} href={action.href} className="block">
-                    {card}
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
-
-          <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-            <div className="flex flex-col gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-                  Setup status
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-white">
-                  Operational readiness
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                  {community.completedTasks} / {community.totalTasks} tasks
-                  completed. Next step:{" "}
-                  {getOnboardingNextStepLabel(community.nextStepKey)}.
-                </p>
-              </div>
-              <Link href={primaryAction.href}>
-                <Button>{primaryAction.label}</Button>
-              </Link>
-            </div>
-
-            <div className="mt-5 h-3 rounded-full bg-white/8">
-              <div
-                className="h-3 rounded-full bg-[var(--primary)] transition-[width]"
-                style={{
-                  width: getProgressWidth(
-                    community.completedTasks,
-                    community.totalTasks,
-                  ),
-                }}
-              />
-            </div>
-
-            <div className="mt-5 grid gap-3">
-              <StatChip label="Current status" value={getSetupLabel(community)} />
-              <StatChip
-                label="Tasks complete"
-                value={`${community.completedTasks}/${community.totalTasks}`}
-              />
-              <StatChip
-                label="Next step"
-                value={getOnboardingNextStepLabel(community.nextStepKey)}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-              Feature flags
-            </p>
-            <div className="mt-4 space-y-3">
-              {[
-                {
-                  enabled: community.allowFrequentAccess,
-                  label: "Frequent access",
-                },
-                {
-                  enabled: community.allowReservations,
-                  label: "Reservations",
-                },
-                {
-                  enabled: community.allowMessages,
-                  label: "Messages",
-                },
-              ].map((feature) => (
-                <div
-                  key={feature.label}
-                  className="flex items-center justify-between rounded-[22px] border border-white/8 bg-[var(--surface-strong)] px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-white">{feature.label}</p>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      Read-only status
-                    </p>
-                  </div>
-                  <Badge tone={feature.enabled ? "success" : "default"}>
-                    {feature.enabled ? "Enabled" : "Disabled"}
-                  </Badge>
-                </div>
+              {quickActions.map((action) => (
+                <QuickActionCard key={action.label} action={action} />
               ))}
             </div>
           </section>
-        </div>
+
+          <section
+            id="setup-status"
+            className="rounded-[30px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.12),rgba(17,24,39,0.9))] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)]"
+          >
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+              Setup status
+            </p>
+            <h3 className="mt-2 text-xl font-semibold text-white">
+              Operational readiness
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              {community.completedTasks} / {community.totalTasks} tasks completed.
+            </p>
+            <div className="mt-4 flex items-center gap-3">
+              <div className="h-2 flex-1 rounded-full bg-white/8">
+                <div
+                  className="h-2 rounded-full bg-[var(--primary)]"
+                  style={{
+                    width: getProgressWidth(
+                      community.completedTasks,
+                      community.totalTasks,
+                    ),
+                  }}
+                />
+              </div>
+              <span className="text-sm font-semibold text-white">{progressPercent}%</span>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {[
+                {
+                  done: true,
+                  label: "Regional settings",
+                  status: "Completed",
+                },
+                {
+                  done: community.allowFrequentAccess || community.allowReservations || community.allowMessages,
+                  label: "Guardrails & access",
+                  status: "Completed",
+                },
+                {
+                  done: community.totalMembers > 0,
+                  label: "Admins & guards",
+                  status: community.totalMembers > 0 ? "Completed" : "Pending",
+                },
+                {
+                  done: community.totalUnits > 0,
+                  label: nextStepLabel,
+                  status: community.totalUnits > 0 ? "Completed" : "In progress",
+                },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="flex items-center justify-between gap-3 border-b border-white/8 pb-3 last:border-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`grid h-6 w-6 place-items-center rounded-full border text-xs ${
+                        item.done
+                          ? "border-emerald-400/40 bg-emerald-400/12 text-emerald-300"
+                          : "border-white/15 bg-white/5 text-[var(--text-muted)]"
+                      }`}
+                    >
+                      {item.done ? "✓" : ""}
+                    </span>
+                    <p className="text-sm font-medium text-white">{item.label}</p>
+                  </div>
+                  <p className="text-xs text-[var(--text-muted)]">{item.status}</p>
+                </div>
+              ))}
+            </div>
+
+            <Link
+              href={primaryAction.href}
+              className="mt-5 inline-flex text-sm font-semibold text-violet-200 transition hover:text-white"
+            >
+              Review setup →
+            </Link>
+          </section>
+        </aside>
       </section>
     </div>
   );
