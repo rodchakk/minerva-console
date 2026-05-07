@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
 
 export type StaffUserItem = {
+  accountMode: string;
   contact: string;
   fullName: string;
   houseId: string;
@@ -48,6 +49,10 @@ function getPreferredContact(record: Record<string, unknown>) {
 
 function mapStaffUser(record: Record<string, unknown>): StaffUserItem {
   return {
+    accountMode:
+      coerceString(record.account_mode) ||
+      coerceString(record.guard_account_type) ||
+      coerceString(record.account_type),
     contact: getPreferredContact(record),
     fullName: coerceString(record.full_name, "Unnamed user"),
     houseId: coerceString(record.house_id),

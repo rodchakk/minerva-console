@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
-import { StaffOperatorsPanel } from "@/features/entry/staff/StaffOperatorsPanel";
 import { getCommunityStaffPageData } from "@/features/entry/staff/actions";
+import { StaffOperatorsPanel } from "@/features/entry/staff/StaffOperatorsPanel";
 
 export default async function CommunityStaffPage(
   props: PageProps<"/products/entry/communities/[communityId]/staff">,
@@ -20,13 +20,13 @@ export default async function CommunityStaffPage(
     <div className="space-y-6">
       <PageHeader
         title="Community operators"
-        description={`${community.name} · assign resident admins and guard accounts before final onboarding review.`}
+        description="Manage resident admins and guard accounts who operate within your community."
         actions={
           <div className="flex flex-wrap gap-3">
             <Link href={`/products/entry/communities/${community.id}`}>
               <Button variant="secondary">Back to community</Button>
             </Link>
-            <Link href={`/products/entry/communities/${community.id}#setup-status`}>
+            <Link href={`/products/entry/communities/${community.id}#completion-actions`}>
               <Button>Final review</Button>
             </Link>
           </div>
