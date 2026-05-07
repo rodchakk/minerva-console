@@ -16,6 +16,7 @@ import {
 export type CreateCommunityState = {
   activationFailed?: number;
   activationInserted?: number;
+  activationMissingUnitsCreated?: number;
   activationRowsWithMissingHouse?: number;
   activationSkipped?: number;
   communityId?: string;
@@ -58,6 +59,10 @@ function extractCommunityId(value: unknown): string | null {
   return null;
 }
 
+function normalizeUnitLabelForClient(value: string) {
+  return value.trim().replace(/\s+/g, "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+}
+
 function parseUnits(rawInput: string) {
   const rawLines = rawInput.split(/\r?\n/);
   const seen = new Set<string>();
@@ -67,12 +72,13 @@ function parseUnits(rawInput: string) {
 
   rawLines.forEach((line) => {
     const value = line.trim();
-    if (!value) {
+    const normalized = normalizeUnitLabelForClient(value);
+
+    if (!normalized) {
       skippedBlank += 1;
       return;
     }
 
-    const normalized = value.toLowerCase();
     if (seen.has(normalized)) {
       skippedDuplicates += 1;
       return;
@@ -124,8 +130,8 @@ function parseAdvancedUnitsPayload(
     const units: string[] = [];
 
     uniqueUnitLabels.forEach((unit) => {
-      const normalized = unit.toLowerCase();
-      if (!seen.has(normalized)) {
+      const normalized = normalizeUnitLabelForClient(unit);
+      if (normalized && !seen.has(normalized)) {
         seen.add(normalized);
         units.push(unit);
       }
@@ -307,6 +313,7 @@ export async function createCommunityAction(
   let activationSkipped = 0;
   let activationFailed = 0;
   let activationRowsWithMissingHouse = 0;
+  let activationMissingUnitsCreated = 0;
   const parsedResidentRows = parsedAdvancedUnits?.parsedResidentRows || 0;
   let skippedFacilityDuplicates = parsedFacilities.skippedDuplicates;
   let skippedFacilityBlank = parsedFacilities.skippedBlank;
@@ -334,8 +341,12 @@ export async function createCommunityAction(
 
     insertedUnits =
       coerceNumber(bulkRecord.inserted_count) || parsedUnits.units.length;
-    skippedDuplicates += coerceNumber(bulkRecord.skipped_duplicates);
-    skippedBlank += coerceNumber(bulkRecord.skipped_blank);
+    skippedDuplicates +=
+      coerceNumber(bulkRecord.skipped_duplicates_count) ||
+      coerceNumber(bulkRecord.skipped_duplicates);
+    skippedBlank +=
+      coerceNumber(bulkRecord.skipped_blank_count) ||
+      coerceNumber(bulkRecord.skipped_blank);
   }
 
   if (allowReservations && parsedFacilities.names.length > 0) {
@@ -370,9 +381,10 @@ export async function createCommunityAction(
 
   if (activationRows.length > 0) {
     const { data: activationData, error: activationError } = await supabase.rpc(
-      "create_resident_activation_queue_bulk_v1",
+      "confirm_resident_bulk_import_v1",
       {
         p_community_id: communityId,
+        p_create_missing_units: true,
         p_rows: activationRows,
       },
     );
@@ -389,12 +401,18 @@ export async function createCommunityAction(
       activationSkipped = activationResult.skipped;
       activationFailed = activationResult.failed;
       activationRowsWithMissingHouse = activationResult.rowsWithMissingHouse;
+      activationMissingUnitsCreated = activationResult.missingUnitsCreated;
     }
   }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/products/entry/communities");
+  revalidatePath("/products/entry/activation");
 
   return {
     activationFailed,
     activationInserted,
+    activationMissingUnitsCreated,
     activationRowsWithMissingHouse,
     activationSkipped,
     communityId,
@@ -403,7 +421,7 @@ export async function createCommunityAction(
     insertedUnits,
     message:
       activationRows.length > 0
-        ? "Community created successfully. Resident activation records were prepared without creating active users."
+        ? "Community created successfully. Resident activation records were prepared with normalized units and without creating active users."
         : "Community created successfully with onboarding data for units and reservable areas.",
     parsedResidentRows,
     skippedFacilityBlank,
