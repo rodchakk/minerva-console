@@ -70,11 +70,15 @@ export function CreateCommunityForm() {
                 (state.skippedFacilityDuplicates ?? 0) +
                 (state.skippedFacilityBlank ?? 0),
             },
-            { label: "Resident rows prepared", value: state.parsedResidentRows ?? 0 },
+            { label: "Resident rows parsed", value: state.parsedResidentRows ?? 0 },
             { label: "Activation inserted", value: state.activationInserted ?? 0 },
             { label: "Activation skipped", value: state.activationSkipped ?? 0 },
             {
-              label: "Missing house match",
+              label: "Units auto-created",
+              value: state.activationMissingUnitsCreated ?? 0,
+            },
+            {
+              label: "Missing unit match",
               value: state.activationRowsWithMissingHouse ?? 0,
             },
             { label: "Activation failed", value: state.activationFailed ?? 0 },
@@ -93,17 +97,20 @@ export function CreateCommunityForm() {
           <div className="mt-6 space-y-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
             <p>
               Resident imports are stored as pending activation records only. No
-              active users, emails, or final PINs are created from this flow yet.
+              active ENTRY users, emails, or final PINs are created from this flow.
             </p>
             <p>
               Inserted: {state.activationInserted ?? 0}
               {state.activationSkipped
                 ? ` · Skipped duplicates: ${state.activationSkipped}`
                 : ""}
-              {state.activationFailed ? ` · Failed: ${state.activationFailed}` : ""}
-              {state.activationRowsWithMissingHouse
-                ? ` · Missing house match: ${state.activationRowsWithMissingHouse}`
+              {state.activationMissingUnitsCreated
+                ? ` · Units auto-created: ${state.activationMissingUnitsCreated}`
                 : ""}
+              {state.activationRowsWithMissingHouse
+                ? ` · Missing unit match: ${state.activationRowsWithMissingHouse}`
+                : ""}
+              {state.activationFailed ? ` · Failed: ${state.activationFailed}` : ""}
             </p>
           </div>
         ) : null}
