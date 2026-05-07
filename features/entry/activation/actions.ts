@@ -32,6 +32,8 @@ export type ActivationQueueImportRow = {
 export type ActivationQueueImportResult = {
   failed: number;
   inserted: number;
+  missingUnitsCreated: number;
+  missingUnitsUncreated: number;
   rowsWithMissingHouse: number;
   skipped: number;
   submitted: number;
@@ -71,7 +73,7 @@ function parseOwnerFlag(value: string) {
     return null;
   }
 
-  if (["1", "true", "yes", "y", "si", "owner"].includes(normalized)) {
+  if (["1", "true", "yes", "y", "si", "sí", "owner", "propietario"].includes(normalized)) {
     return true;
   }
 
@@ -184,6 +186,8 @@ export function parseActivationQueueImportResult(
   submitted: number,
 ): ActivationQueueImportResult {
   const record = extractFirstRecord(value);
+  const missingUnitsCreated = coerceNumber(record.missing_units_created_count);
+  const missingUnitsUncreated = coerceNumber(record.missing_units_uncreated_count);
 
   return {
     failed:
@@ -194,7 +198,10 @@ export function parseActivationQueueImportResult(
       coerceNumber(record.inserted_count) ||
       coerceNumber(record.created_count) ||
       coerceNumber(record.success_count),
+    missingUnitsCreated,
+    missingUnitsUncreated,
     rowsWithMissingHouse:
+      missingUnitsUncreated ||
       coerceNumber(record.rows_with_missing_house_count) ||
       coerceNumber(record.missing_house_count),
     skipped:
