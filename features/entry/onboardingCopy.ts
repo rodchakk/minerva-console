@@ -1,7 +1,8 @@
 export function getOnboardingNextStepLabel(nextStepKey: string) {
   switch (nextStepKey) {
     case "admins":
-      return "Assign admin";
+    case "staff":
+      return "Assign resident admin";
     case "details":
       return "Complete details";
     case "facilities":
