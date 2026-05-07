@@ -146,24 +146,6 @@ export function CommunityAdminActivityDrawer({
       return;
     }
 
-    if (filteredActivities.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-
-    if (
-      !selectedId ||
-      !filteredActivities.some((activity) => activity.id === selectedId)
-    ) {
-      setSelectedId(filteredActivities[0]?.id ?? null);
-    }
-  }, [filteredActivities, open, selectedId]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -174,8 +156,13 @@ export function CommunityAdminActivityDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  const effectiveSelectedId =
+    selectedId && filteredActivities.some((activity) => activity.id === selectedId)
+      ? selectedId
+      : filteredActivities[0]?.id ?? null;
+
   const selectedActivity =
-    filteredActivities.find((activity) => activity.id === selectedId) ??
+    filteredActivities.find((activity) => activity.id === effectiveSelectedId) ??
     filteredActivities[0] ??
     null;
 

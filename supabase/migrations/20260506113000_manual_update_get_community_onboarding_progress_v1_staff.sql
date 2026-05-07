@@ -1,0 +1,17 @@
+-- Manual follow-up required in Supabase SQL editor.
+-- The repository does not currently contain the full source for
+-- public.get_community_onboarding_progress_v1, so this file documents
+-- the exact function body change requested for onboarding.
+--
+-- Replace this block inside public.get_community_onboarding_progress_v1:
+--
+--   elsif not v_admin_done then
+--     v_next_step := 'residents';
+--
+-- with:
+--
+--   elsif not v_admin_done then
+--     v_next_step := 'staff';
+--
+-- After updating the function definition, redeploy it with:
+-- create or replace function public.get_community_onboarding_progress_v1(...);

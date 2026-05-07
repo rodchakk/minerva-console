@@ -20,7 +20,7 @@ type CommunityOnboardingReadinessPanelProps = {
 
 function formatValue(value: unknown) {
   if (value === null || value === undefined || value === "") {
-    return "—";
+    return "-";
   }
 
   if (typeof value === "boolean") {
@@ -44,11 +44,34 @@ function getTaskActionHref(communityId: string, key: string) {
     case "units":
       return `/products/entry/communities/${communityId}/units/new`;
     case "admins":
+    case "staff":
+      return `/products/entry/communities/${communityId}/staff`;
     case "residents":
       return `/products/entry/users?community_id=${communityId}`;
+    case "final_review":
+      return "#completion-actions";
     default:
       return "#setup-status";
   }
+}
+
+function TaskActionLink({ href }: { href: string }) {
+  const className =
+    "shrink-0 text-xs font-semibold text-violet-200 transition hover:text-white";
+
+  if (href.startsWith("#")) {
+    return (
+      <a href={href} className={className}>
+        Review {"->"}
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href} className={className}>
+      Review {"->"}
+    </Link>
+  );
 }
 
 export function CommunityOnboardingReadinessPanel({
@@ -138,7 +161,7 @@ export function CommunityOnboardingReadinessPanel({
           </p>
           <ul className="mt-2 space-y-1 text-sm text-amber-50/90">
             {detail.blockers.map((blocker) => (
-              <li key={blocker}>• {blocker}</li>
+              <li key={blocker}>- {blocker}</li>
             ))}
           </ul>
         </div>
@@ -163,7 +186,7 @@ export function CommunityOnboardingReadinessPanel({
                       : "border-white/15 bg-white/5 text-[var(--text-muted)]"
                   }`}
                 >
-                  {task.done ? "✓" : ""}
+                  {task.done ? "OK" : ""}
                 </span>
                 <div>
                   <p className="text-sm font-medium text-white">{task.label}</p>
@@ -184,12 +207,7 @@ export function CommunityOnboardingReadinessPanel({
                 </div>
               </div>
               {!task.done ? (
-                <Link
-                  href={getTaskActionHref(communityId, task.key)}
-                  className="shrink-0 text-xs font-semibold text-violet-200 transition hover:text-white"
-                >
-                  Review →
-                </Link>
+                <TaskActionLink href={getTaskActionHref(communityId, task.key)} />
               ) : (
                 <span className="shrink-0 text-xs font-semibold text-emerald-200">
                   Done
@@ -214,14 +232,17 @@ export function CommunityOnboardingReadinessPanel({
           {!result.success && result.blockers?.length ? (
             <ul className="mt-2 space-y-1">
               {result.blockers.map((blocker) => (
-                <li key={blocker}>• {blocker}</li>
+                <li key={blocker}>- {blocker}</li>
               ))}
             </ul>
           ) : null}
         </div>
       ) : null}
 
-      <div className="mt-5 space-y-3 border-t border-white/10 pt-5">
+      <div
+        id="completion-actions"
+        className="mt-5 space-y-3 border-t border-white/10 pt-5"
+      >
         {canMarkActivationQueueReviewed ? (
           <Button
             type="button"

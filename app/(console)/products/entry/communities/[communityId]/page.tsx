@@ -87,17 +87,28 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
     };
   }
 
-  if (community.nextStepKey === "residents" || community.nextStepKey === "admins") {
+  if (
+    community.nextStepKey === "admins" ||
+    community.nextStepKey === "staff"
+  ) {
+    return {
+      href: `/products/entry/communities/${community.id}/staff`,
+      label: "Assign resident admin",
+      note: "Select an existing resident and grant community admin privileges.",
+    };
+  }
+
+  if (community.nextStepKey === "residents") {
     return {
       href: `/products/entry/users?community_id=${community.id}`,
       label: "Review users",
-      note: "Create or review admin and resident records.",
+      note: "Import residents and review activation readiness.",
     };
   }
 
   if (community.nextStepKey === "final_review") {
     return {
-      href: "#setup-status",
+      href: "#completion-actions",
       label: "Final review",
       note: "Complete readiness checks and activate the community.",
     };
@@ -224,6 +235,34 @@ function QuickActionCard({ action }: { action: ActionItem }) {
   );
 }
 
+function ActionButtonLink({
+  href,
+  label,
+  variant,
+}: {
+  href: string;
+  label: string;
+  variant?: "primary" | "secondary";
+}) {
+  if (href.startsWith("#")) {
+    return (
+      <a href={href}>
+        <Button variant={variant === "secondary" ? "secondary" : undefined}>
+          {label}
+        </Button>
+      </a>
+    );
+  }
+
+  return (
+    <Link href={href}>
+      <Button variant={variant === "secondary" ? "secondary" : undefined}>
+        {label}
+      </Button>
+    </Link>
+  );
+}
+
 function EmptyInline({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-[22px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
@@ -258,6 +297,11 @@ export default async function CommunitySetupPage(
 
   const quickActions: ActionItem[] = [
     { href: "#users-summary", label: "Review users", note: "Jump to the user summary." },
+    {
+      href: `/products/entry/communities/${community.id}/staff`,
+      label: "Community operators",
+      note: "Assign resident admins and guard access.",
+    },
     { href: `/products/entry/activation?community_id=${community.id}`, label: "Open activation queue", note: "Review pending activations." },
     { href: `/products/entry/settings?community_id=${community.id}`, label: "Community settings", note: "Review defaults and guardrails." },
     { href: `/products/entry/messages?community_id=${community.id}`, label: "Send message", note: "Post a community update." },
@@ -270,8 +314,10 @@ export default async function CommunitySetupPage(
         description={community.city}
         actions={
           <div className="flex flex-wrap gap-3">
-            <Link href="/products/entry/communities"><Button variant="secondary">Back to communities</Button></Link>
-            <Link href={primaryAction.href}><Button>{primaryAction.label}</Button></Link>
+            <Link href="/products/entry/communities">
+              <Button variant="secondary">Back to communities</Button>
+            </Link>
+            <ActionButtonLink href={primaryAction.href} label={primaryAction.label} />
           </div>
         }
       />
@@ -313,7 +359,13 @@ export default async function CommunitySetupPage(
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">Next step</p>
             <h3 className="mt-2 text-xl font-semibold text-white">{nextStepLabel}</h3>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">Continue from the current setup checkpoint.</p>
-            <Link href={primaryAction.href} className="mt-3 inline-flex"><Button variant="secondary">{primaryAction.label}</Button></Link>
+            <div className="mt-3 inline-flex">
+              <ActionButtonLink
+                href={primaryAction.href}
+                label={primaryAction.label}
+                variant="secondary"
+              />
+            </div>
           </div>
 
           <div className="xl:pl-5">

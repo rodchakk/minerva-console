@@ -107,21 +107,6 @@ export function CommunityUnitsDrawer({
       return;
     }
 
-    if (filteredUnits.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-
-    if (!selectedId || !filteredUnits.some((unit) => unit.id === selectedId)) {
-      setSelectedId(filteredUnits[0]?.id ?? null);
-    }
-  }, [filteredUnits, open, selectedId]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -132,8 +117,15 @@ export function CommunityUnitsDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  const effectiveSelectedId =
+    selectedId && filteredUnits.some((unit) => unit.id === selectedId)
+      ? selectedId
+      : filteredUnits[0]?.id ?? null;
+
   const selectedUnit =
-    filteredUnits.find((unit) => unit.id === selectedId) ?? filteredUnits[0] ?? null;
+    filteredUnits.find((unit) => unit.id === effectiveSelectedId) ??
+    filteredUnits[0] ??
+    null;
 
   return (
     <>

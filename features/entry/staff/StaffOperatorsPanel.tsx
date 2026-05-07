@@ -10,11 +10,17 @@ import {
   type StaffUserItem,
 } from "@/features/entry/staff/actions";
 
-function SubmitButton({ children }: { children: string }) {
+function SubmitButton({
+  children,
+  disabled = false,
+}: {
+  children: string;
+  disabled?: boolean;
+}) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" disabled={pending}>
+    <Button type="submit" disabled={pending || disabled}>
       {pending ? "Working..." : children}
     </Button>
   );
@@ -63,6 +69,7 @@ export function StaffOperatorsPanel({
     {},
   );
   const [guardState, guardAction] = useActionState(createGuardAction, {});
+  const hasEligibleResidents = residents.length > 0;
 
   return (
     <div className="space-y-6">
@@ -109,7 +116,9 @@ export function StaffOperatorsPanel({
                 Promote an existing resident
               </h2>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
-                Community admins keep their resident access and receive admin privileges. This keeps the ENTRY model aligned with neighborhood administrators.
+                Community admins keep their resident access and receive admin
+                privileges. This keeps the ENTRY model aligned with
+                neighborhood administrators.
               </p>
             </div>
             <Badge tone={admins.length > 0 ? "success" : "warning"}>
@@ -125,9 +134,12 @@ export function StaffOperatorsPanel({
                 name="userId"
                 className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
                 defaultValue=""
+                disabled={!hasEligibleResidents}
               >
                 <option value="" disabled>
-                  Select active resident
+                  {hasEligibleResidents
+                    ? "Select active resident"
+                    : "No eligible residents available"}
                 </option>
                 {residents.map((resident) => (
                   <option key={resident.id} value={resident.id}>
@@ -136,8 +148,16 @@ export function StaffOperatorsPanel({
                 ))}
               </select>
             </label>
+            {!hasEligibleResidents ? (
+              <p className="text-sm text-amber-200">
+                No active residents available. Import or activate residents before
+                assigning a community admin.
+              </p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-3">
-              <SubmitButton>Make resident admin</SubmitButton>
+              <SubmitButton disabled={!hasEligibleResidents}>
+                Make resident admin
+              </SubmitButton>
               <StatusMessage message={promoteState.message} ok={promoteState.ok} />
             </div>
           </form>
@@ -161,7 +181,9 @@ export function StaffOperatorsPanel({
             Add gate access
           </h2>
           <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-            Individual guard accounts are best for audit history. Shared guard accounts are allowed for communities that want one caseta login.
+            Individual guard accounts are best for audit history. Shared guard
+            accounts are less precise for auditing, but they are allowed for
+            communities that want one caseta login.
           </p>
 
           <form action={guardAction} className="mt-6 space-y-4">
@@ -182,7 +204,7 @@ export function StaffOperatorsPanel({
               <input
                 name="fullName"
                 className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
-                placeholder="Juan Pérez or Guardia Caseta Principal"
+                placeholder="Juan Perez or Guardia Caseta Principal"
               />
             </label>
             <label className="block text-sm font-semibold text-white">

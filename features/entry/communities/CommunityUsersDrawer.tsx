@@ -116,21 +116,6 @@ export function CommunityUsersDrawer({
       return;
     }
 
-    if (filteredUsers.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-
-    if (!selectedId || !filteredUsers.some((user) => user.id === selectedId)) {
-      setSelectedId(filteredUsers[0]?.id ?? null);
-    }
-  }, [filteredUsers, open, selectedId]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -141,8 +126,13 @@ export function CommunityUsersDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  const effectiveSelectedId =
+    selectedId && filteredUsers.some((user) => user.id === selectedId)
+      ? selectedId
+      : filteredUsers[0]?.id ?? null;
+
   const selectedUser =
-    filteredUsers.find((user) => user.id === selectedId) ??
+    filteredUsers.find((user) => user.id === effectiveSelectedId) ??
     filteredUsers[0] ??
     users[0] ??
     null;

@@ -4,10 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import {
-  coerceBoolean,
-  coerceString,
-} from "@/lib/supabase/utils";
+import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
 
 export type StaffUserItem = {
   contact: string;
@@ -108,6 +105,45 @@ export async function promoteResidentAdminAction(
   }
 
   const supabase = await createClient();
+  const { data: users, error: usersError } = await supabase.rpc("sa_list_users", {
+    p_community_id: communityId,
+    p_search: null,
+  });
+
+  if (usersError || !Array.isArray(users)) {
+    return {
+      ok: false,
+      message: usersError?.message ?? "Could not validate the selected resident.",
+    };
+  }
+
+  const selectedUser = users
+    .map((item) => mapStaffUser(item as Record<string, unknown>))
+    .find((item) => item.id === userId);
+
+  if (!selectedUser || !selectedUser.isActive) {
+    return {
+      ok: false,
+      message: "The selected user is not an active resident in this community.",
+    };
+  }
+
+  const normalizedRole = selectedUser.role.toUpperCase();
+
+  if (normalizedRole === "ADMIN") {
+    return {
+      ok: true,
+      message: "This resident already has community admin access.",
+    };
+  }
+
+  if (normalizedRole !== "RESIDENT") {
+    return {
+      ok: false,
+      message: "Only active residents can be promoted to community admin.",
+    };
+  }
+
   const { error } = await supabase.rpc("sa_change_user_role", {
     p_user_id: userId,
     p_community_id: communityId,
@@ -158,7 +194,20 @@ export async function createGuardAction(
     };
   }
 
-  const adminSupabase = createAdminClient();
+  let adminSupabase: ReturnType<typeof createAdminClient>;
+
+  try {
+    adminSupabase = createAdminClient();
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Missing Supabase admin configuration.",
+    };
+  }
+
   const { data: createdUser, error: createError } =
     await adminSupabase.auth.admin.createUser({
       email,
@@ -190,9 +239,16 @@ export async function createGuardAction(
   });
 
   if (setupError) {
+    const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(
+      createdUser.user.id,
+      true,
+    );
+
     return {
       ok: false,
-      message: setupError.message,
+      message: cleanupError
+        ? `${setupError.message} Cleanup also failed for auth user ${createdUser.user.id}: ${cleanupError.message}`
+        : `${setupError.message} The newly created auth user was deleted.`,
     };
   }
 

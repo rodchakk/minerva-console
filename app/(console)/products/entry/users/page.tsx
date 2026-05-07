@@ -2,22 +2,18 @@ import { redirect } from "next/navigation";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { UserSearch } from "@/features/entry/users/UserSearch";
 
-type EntryUsersPageProps = {
-  searchParams?: Promise<{
-    community_id?: string;
-  }>;
-};
-
-export default async function EntryUsersPage({ searchParams }: EntryUsersPageProps) {
-  const params = await searchParams;
-  const communityId = params?.community_id?.trim();
+export default async function EntryUsersPage(
+  props: PageProps<"/products/entry/users">,
+) {
+  const params = await props.searchParams;
+  const rawCommunityId = params?.community_id;
+  const communityId =
+    typeof rawCommunityId === "string"
+      ? rawCommunityId.trim()
+      : rawCommunityId?.[0]?.trim();
 
   if (communityId) {
-    redirect(
-      `/products/entry/activation?community_id=${encodeURIComponent(
-        communityId,
-      )}&status=pending`,
-    );
+    redirect(`/products/entry/communities/${encodeURIComponent(communityId)}/staff`);
   }
 
   return (

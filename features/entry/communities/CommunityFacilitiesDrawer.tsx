@@ -96,24 +96,6 @@ export function CommunityFacilitiesDrawer({
       return;
     }
 
-    if (filteredFacilities.length === 0) {
-      setSelectedId(null);
-      return;
-    }
-
-    if (
-      !selectedId ||
-      !filteredFacilities.some((facility) => facility.id === selectedId)
-    ) {
-      setSelectedId(filteredFacilities[0]?.id ?? null);
-    }
-  }, [filteredFacilities, open, selectedId]);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setOpen(false);
@@ -124,8 +106,13 @@ export function CommunityFacilitiesDrawer({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open]);
 
+  const effectiveSelectedId =
+    selectedId && filteredFacilities.some((facility) => facility.id === selectedId)
+      ? selectedId
+      : filteredFacilities[0]?.id ?? null;
+
   const selectedFacility =
-    filteredFacilities.find((facility) => facility.id === selectedId) ??
+    filteredFacilities.find((facility) => facility.id === effectiveSelectedId) ??
     filteredFacilities[0] ??
     facilities[0] ??
     null;
