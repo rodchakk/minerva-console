@@ -22,7 +22,7 @@ export function AdvancedUnitsImport({
   const [file, setFile] = useState<File | null>(null);
   const [pasteValue, setPasteValue] = useState("");
   const [statusMessage, setStatusMessage] = useState(
-    "Upload a file or paste spreadsheet rows, then parse the data to preview it before creating anything.",
+    "Upload a file or paste spreadsheet rows, then parse the data to review it before creating anything.",
   );
   const [isParsing, setIsParsing] = useState(false);
 
@@ -42,7 +42,7 @@ export function AdvancedUnitsImport({
 
       onChange(nextValue);
       setStatusMessage(
-        `Preview ready from ${nextValue.sourceName}. ${nextValue.uniqueUnitLabels.length} unique units prepared for creation.`,
+        `Preview ready from ${nextValue.sourceName}. ${nextValue.uniqueUnitLabels.length} unique units and ${nextValue.parsedResidentRows} resident rows prepared.`,
       );
     } catch (error) {
       onChange(null);
@@ -60,7 +60,7 @@ export function AdvancedUnitsImport({
     setFile(null);
     setPasteValue("");
     setStatusMessage(
-      "Upload a file or paste spreadsheet rows, then parse the data to preview it before creating anything.",
+      "Upload a file or paste spreadsheet rows, then parse the data to review it before creating anything.",
     );
     onChange(null);
 
@@ -71,13 +71,15 @@ export function AdvancedUnitsImport({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl border border-amber-400/20 bg-amber-500/10 p-5">
-        <p className="text-sm font-semibold text-amber-100">
-          Resident data will be previewed but not created yet in this version.
+      <div className="rounded-3xl border border-violet-400/20 bg-violet-500/10 p-5">
+        <p className="text-sm font-semibold text-violet-100">
+          Resident rows will now be prepared in the Activation Queue when the
+          community is created.
         </p>
-        <p className="mt-2 text-sm leading-6 text-amber-50/90">
-          Units will be prepared for import, while resident columns remain visible
-          so the structure is ready for a future backend release.
+        <p className="mt-2 text-sm leading-6 text-violet-50/90">
+          The backend normalizes unit labels, creates missing units safely, and
+          stores resident imports as pending activation records. No active ENTRY
+          users or final PINs are created from this step.
         </p>
       </div>
 
@@ -170,11 +172,11 @@ export function AdvancedUnitsImport({
                 </h3>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                   Blank rows ignored: {value.blankRowsIgnored}. Duplicate unit labels
-                  are allowed and will only be created once on final submit.
+                  are normalized and will only be created once on final submit.
                 </p>
               </div>
               <p className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
-                Preview only
+                Local preview
               </p>
             </div>
 
@@ -216,8 +218,9 @@ export function AdvancedUnitsImport({
               <div>
                 <h3 className="text-base font-semibold text-white">Preview table</h3>
                 <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                  Nothing is created on upload or parse. Records are only created
-                  when you press the main Create community button.
+                  Nothing is created on upload or parse. Units and resident queue
+                  records are only created when you press the main Create community
+                  button.
                 </p>
               </div>
               <p className="text-sm font-medium text-[var(--text-muted)]">
