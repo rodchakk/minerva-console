@@ -20,7 +20,7 @@ export default async function EntryUsersPage(
     <div className="space-y-8">
       <PageHeader
         title="ENTRY users"
-        description="Search users through the production admin RPC and prepare future support actions from a single product workspace."
+        description="Global person-level search for ENTRY users. For community-scoped management, open a community and use its users workspace."
       />
       <UserSearch />
     </div>

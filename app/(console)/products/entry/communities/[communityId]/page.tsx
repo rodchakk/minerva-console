@@ -97,7 +97,7 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
 
   if (community.nextStepKey === "residents") {
     return {
-      href: `/products/entry/users?community_id=${community.id}`,
+      href: `/products/entry/communities/${community.id}/users`,
       label: "Review users",
       note: "Import residents and review activation readiness.",
     };
@@ -323,7 +323,11 @@ export default async function CommunitySetupPage(
     community.onboardingStatus !== "complete_active";
 
   const quickActions: ActionItem[] = [
-    { href: "#users-summary", label: "Review users", note: "Jump to the user summary." },
+    {
+      href: `/products/entry/communities/${community.id}/users`,
+      label: "Manage users",
+      note: "Open the community-scoped users workspace.",
+    },
     {
       href: `/products/entry/communities/${community.id}/staff`,
       label: "Community operators",

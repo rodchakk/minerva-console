@@ -146,6 +146,15 @@ export function CommunityList({ communities }: CommunityListProps) {
 
   return (
     <>
+      {openMenuId ? (
+        <button
+          type="button"
+          aria-label="Close community menu"
+          className="fixed inset-0 z-30 cursor-default bg-black/20 backdrop-blur-[1px]"
+          onClick={() => setOpenMenuId(null)}
+        />
+      ) : null}
+
       <div className="space-y-4">
         {communities.map((community) => {
           const cta = getCta(community);
@@ -159,7 +168,9 @@ export function CommunityList({ communities }: CommunityListProps) {
           return (
             <article
               key={community.id}
-              className="rounded-[30px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(11,16,28,0.96))] p-5 shadow-[0_20px_55px_rgba(2,6,23,0.24)] backdrop-blur sm:p-6"
+              className={`relative rounded-[30px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.92),rgba(11,16,28,0.96))] p-5 shadow-[0_20px_55px_rgba(2,6,23,0.24)] backdrop-blur sm:p-6 ${
+                openMenuId === community.id ? "z-40" : "z-0"
+              }`}
             >
               <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1.45fr)_minmax(420px,0.95fr)_auto] xl:items-center">
                 <div className="flex min-w-0 gap-4">
@@ -297,13 +308,20 @@ export function CommunityList({ communities }: CommunityListProps) {
                       </button>
 
                       {openMenuId === community.id ? (
-                        <div className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-2 shadow-[0_22px_60px_rgba(0,0,0,0.42)]">
+                        <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-white/10 bg-[#111827] p-2 shadow-[0_22px_60px_rgba(0,0,0,0.42)]">
                           <Link
                             href={cta.href}
                             className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/8 hover:text-white"
                             onClick={() => setOpenMenuId(null)}
                           >
                             Open community
+                          </Link>
+                          <Link
+                            href={`/products/entry/communities/${community.id}/users`}
+                            className="block rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-200 transition hover:bg-white/8 hover:text-white"
+                            onClick={() => setOpenMenuId(null)}
+                          >
+                            Manage users
                           </Link>
                           <button
                             type="button"

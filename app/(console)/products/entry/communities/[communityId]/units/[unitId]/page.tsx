@@ -4,6 +4,7 @@ import { MetricCard } from "@/components/cards/MetricCard";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { CommunityUnitQuickActions } from "@/features/entry/communities/CommunityUnitQuickActions";
 import { getCommunityUnitDetailPageData } from "@/features/entry/communities/detailQueries";
 
 function formatMetricValue(value: string) {
@@ -301,30 +302,21 @@ export default async function CommunityUnitDetailPage(
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
               Actions
             </p>
-            <div className="mt-4 space-y-3">
-              {[
-                "Edit unit",
-                "Disable unit",
-                "Manage residents",
-                "View access history",
-              ].map((label) => (
-                <div
-                  key={label}
-                  className="rounded-[24px] border border-white/8 bg-white/4 p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-white">{label}</p>
-                      <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                        Coming soon
-                      </p>
-                    </div>
-                    <Button type="button" variant="secondary" disabled>
-                      Coming soon
-                    </Button>
-                  </div>
+            <div className="mt-4">
+              <CommunityUnitQuickActions communityId={community.id} unit={unit} />
+            </div>
+            <div className="mt-4 rounded-[24px] border border-white/8 bg-white/4 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">Manage residents</p>
+                  <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                    Coming soon
+                  </p>
                 </div>
-              ))}
+                <Button type="button" variant="secondary" disabled>
+                  Coming soon
+                </Button>
+              </div>
             </div>
           </section>
         </div>

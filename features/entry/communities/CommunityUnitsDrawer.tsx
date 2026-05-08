@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { CommunityUnitQuickActions } from "@/features/entry/communities/CommunityUnitQuickActions";
 import type { CommunityUnitPreview } from "@/features/entry/communities/detailQueries";
 
 type UnitFilter = "all" | "active" | "inactive" | "has_residents" | "has_passes";
@@ -310,21 +311,11 @@ export function CommunityUnitsDrawer({
                     ))}
                   </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    {[
-                      "Edit unit",
-                      "Disable unit",
-                      "View access history",
-                    ].map((label) => (
-                      <button
-                        key={label}
-                        type="button"
-                        disabled
-                        className="rounded-2xl border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-[var(--text-muted)]"
-                      >
-                        {label} <span className="ml-2 text-xs">Coming soon</span>
-                      </button>
-                    ))}
+                  <div className="mt-4">
+                    <CommunityUnitQuickActions
+                      communityId={communityId}
+                      unit={selectedUnit}
+                    />
                   </div>
                 </div>
               ) : (
