@@ -12,9 +12,9 @@ export default function UnauthorizedPage() {
           You are signed in, but not authorized for Minerva Console.
         </h1>
         <p className="mt-4 text-sm leading-7 text-slate-600">
-          This console is limited to users who pass the backend superadmin check.
-          If you believe this is incorrect, ask an administrator to verify your
-          permissions in Supabase.
+          This workspace is limited to approved superadmin accounts. If you
+          believe you should have access, contact your Minerva administrator to
+          review your account permissions.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/login">
