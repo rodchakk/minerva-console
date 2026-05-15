@@ -265,9 +265,9 @@ export function CommunityOnboardingReadinessPanel({
     return (
       <section
         id="setup-progress"
-        className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.08),rgba(10,16,30,0.94))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.24)]"
+        className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
       >
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
           Setup progress
         </p>
         <h2 className="mt-3 text-2xl font-semibold text-white">
@@ -283,11 +283,11 @@ export function CommunityOnboardingReadinessPanel({
   return (
     <section
       id="setup-progress"
-      className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.08),rgba(10,16,30,0.94))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.24)]"
+      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
             Setup progress
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
@@ -298,14 +298,14 @@ export function CommunityOnboardingReadinessPanel({
           </p>
         </div>
 
-        <div className="rounded-[26px] border border-white/8 bg-white/[0.03] p-5">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-sm font-semibold text-white">Overall progress</p>
             <Badge tone="info">{progressPercent}%</Badge>
           </div>
           <div className="mt-4 h-3 rounded-full bg-white/8">
             <div
-              className="h-3 rounded-full bg-[linear-gradient(90deg,var(--primary),rgba(140,129,255,0.95))]"
+              className="h-3 rounded-full bg-[var(--primary)]"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
@@ -316,7 +316,7 @@ export function CommunityOnboardingReadinessPanel({
       </div>
 
       {detail.blockers.length > 0 ? (
-        <div className="mt-6 rounded-[24px] border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+        <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
           <p className="text-sm font-semibold text-amber-100">
             Readiness blockers
           </p>
@@ -328,14 +328,14 @@ export function CommunityOnboardingReadinessPanel({
         </div>
       ) : null}
 
-      <div className="mt-6 overflow-hidden rounded-[28px] border border-white/8 bg-[rgba(6,10,22,0.36)]">
-        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px] gap-4 border-b border-white/8 px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+      <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-strong)]">
+        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px] gap-4 border-b border-[var(--border)] px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
           <p>Task</p>
           <p>Description</p>
           <p className="text-right">Status</p>
         </div>
 
-        <div className="divide-y divide-white/7">
+        <div className="divide-y divide-[var(--border)]">
           {refinedTasks.map((task) => (
             <div key={task.key} className="px-5 py-4">
               <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px] xl:items-center">
@@ -401,7 +401,7 @@ export function CommunityOnboardingReadinessPanel({
 
       <div
         id="completion-actions"
-        className="mt-6 grid gap-4 border-t border-white/10 pt-6 xl:grid-cols-[minmax(0,1fr)_300px]"
+        className="mt-6 grid gap-4 border-t border-[var(--border)] pt-6 xl:grid-cols-[minmax(0,1fr)_300px]"
       >
         <div className="space-y-4">
           {canMarkActivationQueueReviewed ? (

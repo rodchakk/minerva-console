@@ -8,11 +8,11 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const styles = {
   primary:
-    "bg-[var(--primary)] text-white shadow-[0_12px_30px_rgba(89,80,243,0.28)] hover:bg-[var(--primary-strong)] disabled:bg-slate-500",
+    "border border-transparent bg-[var(--primary)] text-white hover:bg-[var(--primary-strong)] disabled:bg-slate-500",
   secondary:
-    "bg-white/6 text-[var(--foreground)] ring-1 ring-inset ring-[var(--border)] hover:bg-white/10 disabled:text-slate-500",
+    "border border-[var(--border)] bg-[var(--surface-strong)] text-[var(--foreground)] hover:border-white/20 hover:bg-[var(--surface-muted)] disabled:text-slate-500",
   ghost:
-    "bg-transparent text-[var(--text-soft)] hover:bg-white/6 hover:text-white disabled:text-slate-500",
+    "bg-transparent text-[var(--text-soft)] hover:bg-white/5 hover:text-white disabled:text-slate-500",
   danger: "bg-[var(--danger)] text-white hover:bg-rose-500 disabled:bg-slate-500",
 };
 
@@ -25,7 +25,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center rounded-2xl px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors disabled:cursor-not-allowed",
         styles[variant],
         className,
       )}

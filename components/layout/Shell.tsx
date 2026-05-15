@@ -20,7 +20,7 @@ export function Shell({ children, email }: ShellProps) {
       />
       <div className="lg:pl-64">
         <Topbar email={email} onOpenSidebar={() => setIsSidebarOpen(true)} />
-        <main className="px-4 py-4 lg:px-7 lg:py-5 2xl:px-8">
+        <main className="px-4 py-4 lg:px-6 lg:py-5 2xl:px-7">
           <div className="mx-auto max-w-[1820px]">{children}</div>
         </main>
       </div>

@@ -11,9 +11,84 @@ function getProgressWidth(completed: number, total: number) {
   return `${Math.min(100, Math.round((completed / total) * 100))}%`;
 }
 
+function getProgressValue(completed: number, total: number) {
+  if (total <= 0) {
+    return 0;
+  }
+
+  return Math.min(100, Math.round((completed / total) * 100));
+}
+
 function getCommunityHref(communityId: string) {
   return `/products/entry/communities/${communityId}`;
 }
+
+function getStatusLabel(onboardingStatus: string, isActive: boolean) {
+  if (onboardingStatus === "complete_active" && isActive) {
+    return "Active";
+  }
+
+  if (onboardingStatus === "complete_active") {
+    return "Complete";
+  }
+
+  if (onboardingStatus.includes("progress")) {
+    return "In progress";
+  }
+
+  if (onboardingStatus.includes("pending")) {
+    return "Pending";
+  }
+
+  return isActive ? "Active" : "Inactive";
+}
+
+function getStatusClass(onboardingStatus: string, isActive: boolean) {
+  if (onboardingStatus === "complete_active" && isActive) {
+    return "border-emerald-400/18 bg-emerald-500/10 text-emerald-200";
+  }
+
+  if (onboardingStatus.includes("progress")) {
+    return "border-sky-400/18 bg-sky-500/10 text-sky-200";
+  }
+
+  if (onboardingStatus.includes("pending")) {
+    return "border-amber-400/18 bg-amber-500/10 text-amber-200";
+  }
+
+  if (isActive) {
+    return "border-emerald-400/18 bg-emerald-500/10 text-emerald-200";
+  }
+
+  return "border-white/10 bg-white/5 text-slate-200";
+}
+
+const quickActions = [
+  {
+    label: "Create community",
+    href: "/products/entry/communities/new",
+    note: "Start a new onboarding flow.",
+    tone: "bg-violet-500/12 text-violet-200",
+  },
+  {
+    label: "Open Activation Queue",
+    href: "/products/entry/activation",
+    note: "Review residents waiting for setup.",
+    tone: "bg-amber-500/12 text-amber-200",
+  },
+  {
+    label: "Review users",
+    href: "/products/entry/users",
+    note: "Search current user records.",
+    tone: "bg-sky-500/12 text-sky-200",
+  },
+  {
+    label: "Publish message",
+    href: "/products/entry/messages",
+    note: "Prepare official Minerva updates.",
+    tone: "bg-fuchsia-500/12 text-fuchsia-200",
+  },
+];
 
 export default async function DashboardPage() {
   const communities = await listCommunitiesWithProgress();
@@ -45,221 +120,208 @@ export default async function DashboardPage() {
     .slice(0, 5);
 
   return (
-    <div className="space-y-5 2xl:space-y-6">
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,2.35fr)_330px] 2xl:grid-cols-[minmax(0,2.7fr)_340px]">
-        <div className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.18),rgba(17,24,39,0.92))] p-7 shadow-[0_24px_70px_rgba(2,6,23,0.32)] backdrop-blur xl:min-h-[250px] xl:p-8 2xl:min-h-[270px] 2xl:p-9">
-          <div className="flex flex-wrap items-start justify-between gap-6">
-            <div className="max-w-4xl">
-              <div className="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-100 ring-1 ring-inset ring-white/10">
-                ENTRY dashboard
-              </div>
-              <h1 className="mt-4 text-5xl font-semibold tracking-tight text-white 2xl:text-[3.4rem]">
-                ENTRY Operations
-              </h1>
-              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-200">
-                Onboard communities, manage setup, and support clients from one
-                place.
-              </p>
-            </div>
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 lg:px-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-200">
+              ENTRY Operations
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[2rem]">
+              ENTRY Operations
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
+              Onboard communities, monitor setup, and keep operational work moving
+              from one workspace.
+            </p>
+          </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Link href="/products/entry/communities/new">
-                <Button>Create community</Button>
-              </Link>
-              <Link href="/products/entry/messages">
-                <Button variant="secondary">Send Minerva message</Button>
-              </Link>
-            </div>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/products/entry/communities/new">
+              <Button>Create community</Button>
+            </Link>
+            <Link href="/products/entry/messages">
+              <Button variant="secondary">Send Minerva message</Button>
+            </Link>
           </div>
         </div>
-
-        <aside className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-            Quick Actions
-          </p>
-          <div className="mt-4 space-y-3">
-            {[
-              {
-                label: "Create community",
-                href: "/products/entry/communities/new",
-                note: "Start a new onboarding flow.",
-              },
-              {
-                label: "Open Activation Queue",
-                href: "/products/entry/activation",
-                note: "Review residents waiting for setup.",
-              },
-              {
-                label: "Review users",
-                href: "/products/entry/users",
-                note: "Search current user records.",
-              },
-              {
-                label: "Publish message",
-                href: "/products/entry/messages",
-                note: "Prepare official Minerva updates.",
-              },
-            ].map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="block rounded-[24px] border border-white/8 bg-white/4 p-4 transition hover:border-violet-400/20 hover:bg-white/8"
-              >
-                <p className="text-sm font-semibold text-white">{action.label}</p>
-                <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                  {action.note}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </aside>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-          <p className="text-sm font-medium text-[var(--text-muted)]">
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Active Communities
           </p>
           <p className="mt-3 text-3xl font-semibold text-white">
             {activeCommunities.length}
           </p>
-          <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
-            Communities currently marked active in the existing onboarding data.
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Communities currently active.
           </p>
         </article>
-        <article className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-          <p className="text-sm font-medium text-[var(--text-muted)]">
+        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Pending Setup
           </p>
           <p className="mt-3 text-3xl font-semibold text-white">
             {pendingSetup.length}
           </p>
-          <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
-            Communities still moving toward <span className="font-semibold text-slate-200">complete_active</span>.
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Communities not yet `complete_active`.
           </p>
         </article>
-        <article className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-          <p className="text-sm font-medium text-[var(--text-muted)]">
+        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+          <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Residents in Activation Queue
           </p>
           <p className="mt-3 text-3xl font-semibold text-white">
             {residentsInActivationQueue}
           </p>
-          <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
-            Sum of pending activation rows derived from the community progress
-            dataset.
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Pending activation rows across communities.
           </p>
         </article>
-        <article className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium text-[var(--text-muted)]">
-                Messages Sent Today
-              </p>
-              <p className="mt-3 text-3xl font-semibold text-white">Pending</p>
-            </div>
-            <span className="inline-flex items-center rounded-full bg-violet-500/12 px-2.5 py-1 text-xs font-semibold text-violet-200 ring-1 ring-inset ring-violet-400/20">
-              Coming soon
+        <article className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Messages Today
+            </p>
+            <span className="inline-flex items-center rounded-md border border-violet-400/16 bg-violet-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-200">
+              Pending
             </span>
           </div>
-          <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
-            Messaging UI is ready for backend wiring once send and delivery
-            tracking are connected.
+          <p className="mt-3 text-3xl font-semibold text-white">Pending</p>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Messaging UI is ready for backend wiring.
           </p>
         </article>
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,2.5fr)_300px] 2xl:grid-cols-[minmax(0,2.85fr)_320px]">
-        <div className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-7 2xl:p-8">
-          <div className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-                Community Focus
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white">
-                Setup priorities across ENTRY
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                The most important communities are sorted by onboarding urgency and
-                activation load.
-              </p>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.9fr)_320px]">
+        <div className="space-y-4">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="flex flex-col gap-3 border-b border-[var(--border)] px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-200">
+                  Community Focus
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-white">
+                  Setup priorities across ENTRY
+                </h2>
+                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                  Communities sorted by onboarding urgency and activation load.
+                </p>
+              </div>
+              <Link href="/products/entry/communities">
+                <Button variant="secondary">View all communities</Button>
+              </Link>
             </div>
-            <Link href="/products/entry/communities">
-              <Button variant="secondary">View all communities</Button>
-            </Link>
-          </div>
 
-          <div className="mt-6 space-y-4">
             {prioritizedCommunities.length > 0 ? (
-              prioritizedCommunities.map((community) => {
-                const isComplete = community.onboardingStatus === "complete_active";
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="border-b border-[var(--border)] bg-[var(--surface-strong)] text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    <tr>
+                      <th className="px-5 py-3 font-medium">Community</th>
+                      <th className="px-4 py-3 font-medium">City</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Onboarding</th>
+                      <th className="px-4 py-3 font-medium">Units</th>
+                      <th className="px-4 py-3 font-medium">Pending</th>
+                      <th className="px-5 py-3 text-right font-medium">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {prioritizedCommunities.map((community) => {
+                      const isComplete =
+                        community.onboardingStatus === "complete_active";
+                      const progressValue = getProgressValue(
+                        community.completedTasks,
+                        community.totalTasks,
+                      );
 
-                return (
-                  <article
-                    key={community.id}
-                    className="rounded-[28px] border border-white/8 bg-white/4 p-5 xl:p-6"
-                  >
-                    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-lg font-semibold text-white">
-                            {community.name}
-                          </h3>
-                          <span className="inline-flex items-center rounded-full bg-white/8 px-2.5 py-1 text-xs font-semibold text-slate-200">
+                      return (
+                        <tr
+                          key={community.id}
+                          className="border-b border-[var(--border)] last:border-b-0"
+                        >
+                          <td className="px-5 py-4 align-top">
+                            <div className="flex items-start gap-3">
+                              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/8 bg-[var(--surface-strong)] text-xs font-semibold text-slate-200">
+                                {community.name
+                                  .split(" ")
+                                  .map((part) => part[0] ?? "")
+                                  .join("")
+                                  .slice(0, 2)
+                                  .toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="font-medium text-white">{community.name}</p>
+                                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                                  Next:{" "}
+                                  {getOnboardingNextStepLabel(community.nextStepKey)}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-slate-200">
                             {community.city}
-                          </span>
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${
-                              community.isActive
-                                ? "bg-emerald-500/12 text-emerald-300 ring-emerald-400/20"
-                                : "bg-amber-500/12 text-amber-300 ring-amber-400/20"
-                            }`}
-                          >
-                            {community.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-
-                        <div className="mt-4 rounded-[24px] border border-white/8 bg-[var(--surface-strong)] p-4">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <p className="text-sm font-medium text-slate-200">
-                              Onboarding progress
-                            </p>
-                            <p className="text-sm text-[var(--text-muted)]">
-                              {community.completedTasks} / {community.totalTasks} complete
-                            </p>
-                          </div>
-                          <div className="mt-3 h-2 rounded-full bg-white/8">
-                            <div
-                              className="h-2 rounded-full bg-[var(--primary)]"
-                              style={{
-                                width: getProgressWidth(
-                                  community.completedTasks,
-                                  community.totalTasks,
-                                ),
-                              }}
-                            />
-                          </div>
-                          <div className="mt-3 grid gap-2 text-sm text-[var(--text-muted)] sm:grid-cols-3">
-                            <p>Next step: {getOnboardingNextStepLabel(community.nextStepKey)}</p>
-                            <p>Total units: {community.totalUnits}</p>
-                            <p>Pending activations: {community.activationPendingCount}</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex shrink-0 items-center xl:pl-4">
-                        <Link href={getCommunityHref(community.id)}>
-                          <Button variant={isComplete ? "secondary" : "primary"}>
-                            {isComplete ? "Open" : "Continue setup"}
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <span
+                              className={`inline-flex items-center rounded-md border px-2 py-1 text-xs font-medium ${getStatusClass(
+                                community.onboardingStatus,
+                                community.isActive,
+                              )}`}
+                            >
+                              {getStatusLabel(
+                                community.onboardingStatus,
+                                community.isActive,
+                              )}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4 align-top">
+                            <div className="min-w-[190px]">
+                              <div className="flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+                                <span>
+                                  {community.completedTasks}/{community.totalTasks} complete
+                                </span>
+                                <span>{progressValue}%</span>
+                              </div>
+                              <div className="mt-2 h-1.5 rounded-full bg-white/6">
+                                <div
+                                  className="h-1.5 rounded-full bg-[var(--primary)]"
+                                  style={{
+                                    width: getProgressWidth(
+                                      community.completedTasks,
+                                      community.totalTasks,
+                                    ),
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-4 align-top text-slate-200">
+                            {community.totalUnits}
+                          </td>
+                          <td className="px-4 py-4 align-top text-slate-200">
+                            {community.activationPendingCount}
+                          </td>
+                          <td className="px-5 py-4 align-top text-right">
+                            <Link href={getCommunityHref(community.id)}>
+                              <Button variant={isComplete ? "secondary" : "primary"}>
+                                {isComplete ? "Open" : "Continue setup"}
+                              </Button>
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <article className="rounded-[28px] border border-dashed border-[var(--border-strong)] bg-white/4 px-6 py-10 text-center">
+              <div className="px-5 py-10 text-center">
                 <h3 className="text-lg font-semibold text-white">
                   No community records yet
                 </h3>
@@ -267,18 +329,50 @@ export default async function DashboardPage() {
                   Once `listCommunitiesWithProgress()` returns rows, this panel will
                   surface the communities that need the most attention.
                 </p>
-              </article>
+              </div>
             )}
-          </div>
+          </section>
         </div>
 
-        <div className="space-y-5">
-          <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-              Setup Priorities
-            </p>
-            <div className="mt-4 space-y-3">
-              <div className="rounded-[24px] border border-white/8 bg-white/4 p-4">
+        <div className="space-y-4">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+                Quick Actions
+              </p>
+            </div>
+            <div className="px-3 py-2">
+              {quickActions.map((action) => (
+                <Link
+                  key={action.href}
+                  href={action.href}
+                  className="flex items-center gap-3 rounded-xl px-3 py-3 transition-colors hover:bg-white/4"
+                >
+                  <span
+                    className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-semibold ${action.tone}`}
+                  >
+                    •
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-white">{action.label}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
+                      {action.note}
+                    </p>
+                  </div>
+                  <span className="text-sm text-[var(--text-muted)]">›</span>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+                Setup Priorities
+              </p>
+            </div>
+            <div className="space-y-3 px-4 py-4">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
                 <p className="text-2xl font-semibold text-white">
                   {pendingSetup.length}
                 </p>
@@ -286,7 +380,7 @@ export default async function DashboardPage() {
                   communities needing setup
                 </p>
               </div>
-              <div className="rounded-[24px] border border-white/8 bg-white/4 p-4">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
                 <p className="text-2xl font-semibold text-white">
                   {residentsInActivationQueue}
                 </p>
@@ -294,7 +388,7 @@ export default async function DashboardPage() {
                   residents pending activation
                 </p>
               </div>
-              <div className="rounded-[24px] border border-white/8 bg-white/4 p-4">
+              <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
                 <p className="text-2xl font-semibold text-white">
                   {inactiveCommunities.length}
                 </p>
@@ -305,17 +399,19 @@ export default async function DashboardPage() {
             </div>
           </section>
 
-          <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-              Recent Activity
-            </p>
-            <div className="mt-4 rounded-[24px] border border-dashed border-[var(--border-strong)] bg-white/4 p-5">
-              <p className="text-sm font-semibold text-white">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+                Operational Notes
+              </p>
+            </div>
+            <div className="px-5 py-4">
+              <p className="text-sm font-medium text-white">
                 Live activity feed coming soon
               </p>
               <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                This panel is reserved for onboarding events, queue changes, and
-                publishing activity once the live feed is wired in.
+                This space remains reserved for onboarding events, queue changes,
+                and publishing activity once the feed is connected.
               </p>
             </div>
           </section>

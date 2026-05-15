@@ -35,7 +35,8 @@ function filterCommunities(
   switch (filter) {
     case "pending_setup":
       return communities.filter(
-        (community) => community.isActive && community.onboardingStatus !== "complete_active",
+        (community) =>
+          community.isActive && community.onboardingStatus !== "complete_active",
       );
     case "all":
       return communities;
@@ -86,6 +87,29 @@ function getEmptyStateCopy(filter: CommunityFilter) {
   }
 }
 
+const summaryCards = [
+  {
+    label: "Total communities",
+    hint: "Across all statuses",
+    iconTone: "border-violet-400/16 bg-violet-500/10 text-violet-200",
+  },
+  {
+    label: "Active communities",
+    hint: "Shown by default",
+    iconTone: "border-emerald-400/16 bg-emerald-500/10 text-emerald-200",
+  },
+  {
+    label: "Pending setup",
+    hint: "Active communities awaiting completion",
+    iconTone: "border-amber-400/16 bg-amber-500/10 text-amber-200",
+  },
+  {
+    label: "Inactive communities",
+    hint: "Archived from the main view",
+    iconTone: "border-slate-400/16 bg-slate-500/10 text-slate-200",
+  },
+] as const;
+
 export default async function CommunitiesPage(
   props: PageProps<"/products/entry/communities">,
 ) {
@@ -104,7 +128,8 @@ export default async function CommunitiesPage(
   const totalCount = communities.length;
   const activeCount = communities.filter((community) => community.isActive).length;
   const pendingCount = communities.filter(
-    (community) => community.isActive && community.onboardingStatus !== "complete_active",
+    (community) =>
+      community.isActive && community.onboardingStatus !== "complete_active",
   ).length;
   const inactiveCount = communities.filter((community) => !community.isActive).length;
 
@@ -133,40 +158,36 @@ export default async function CommunitiesPage(
   ];
 
   const emptyState = getEmptyStateCopy(currentFilter);
+  const cardValues = [totalCount, activeCount, pendingCount, inactiveCount];
 
   return (
-    <div className="space-y-8">
-      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(10,13,24,0.98))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.26)] backdrop-blur xl:p-7">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-200">
-                Minerva Console
-              </p>
-              <span className="inline-flex items-center rounded-full bg-violet-500/14 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200 ring-1 ring-inset ring-violet-400/20">
-                ENTRY
-              </span>
-            </div>
-            <h1 className="text-4xl font-semibold tracking-tight text-white">
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 lg:px-6">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-200">
+              ENTRY Directory
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[2rem]">
               ENTRY communities
             </h1>
-            <p className="max-w-3xl text-sm leading-7 text-[var(--text-muted)]">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
               Directory and onboarding workspace for active ENTRY communities.
-              Archived communities stay available through the inactive filter.
+              Archived communities remain available through the inactive filter.
             </p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex flex-wrap gap-2">
             <Link href="/products/entry/communities/new">
-              <Button>+ Onboard new community</Button>
+              <Button>Onboard new community</Button>
             </Link>
             <Link href="/products/entry/communities?filter=pending_setup">
-              <Button variant="secondary">◌ View pending setup</Button>
+              <Button variant="secondary">View pending setup</Button>
             </Link>
           </div>
         </div>
 
-        <div className="mt-6 flex flex-wrap gap-3">
+        <div className="mt-5 flex flex-wrap gap-2">
           {filters.map((filter) => {
             const isActive = currentFilter === filter.value;
 
@@ -174,10 +195,10 @@ export default async function CommunitiesPage(
               <Link
                 key={filter.value}
                 href={filter.href}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-violet-500/18 text-white ring-1 ring-inset ring-violet-400/30"
-                    : "bg-white/6 text-[var(--text-muted)] ring-1 ring-inset ring-white/10 hover:bg-white/10 hover:text-white"
+                    ? "border-violet-400/18 bg-violet-500/12 text-white"
+                    : "border-[var(--border)] bg-[var(--surface-strong)] text-[var(--text-muted)] hover:border-white/12 hover:bg-[var(--surface-muted)] hover:text-white"
                 }`}
               >
                 {filter.label}
@@ -188,57 +209,24 @@ export default async function CommunitiesPage(
       </section>
 
       {communities.length > 0 ? (
-        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {[
-            {
-              label: "Total communities",
-              value: totalCount,
-              hint: "Across all statuses",
-              tone:
-                "bg-violet-500/14 text-violet-200 ring-violet-400/20",
-              marker: "◎",
-            },
-            {
-              label: "Active communities",
-              value: activeCount,
-              hint: "Shown by default",
-              tone:
-                "bg-emerald-500/14 text-emerald-200 ring-emerald-400/20",
-              marker: "↗",
-            },
-            {
-              label: "Pending setup",
-              value: pendingCount,
-              hint: "Active communities awaiting completion",
-              tone:
-                "bg-amber-500/14 text-amber-200 ring-amber-400/20",
-              marker: "◔",
-            },
-            {
-              label: "Inactive communities",
-              value: inactiveCount,
-              hint: "Archived from the main view",
-              tone:
-                "bg-slate-500/14 text-slate-200 ring-slate-400/20",
-              marker: "⊘",
-            },
-          ].map((card) => (
+        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          {summaryCards.map((card, index) => (
             <article
               key={card.label}
-              className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur"
+              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4"
             >
-              <div className="flex items-start gap-4">
+              <div className="flex items-start gap-3">
                 <div
-                  className={`flex h-12 w-12 items-center justify-center rounded-2xl bg-white/6 text-lg font-semibold ring-1 ring-inset ${card.tone}`}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold ${card.iconTone}`}
                 >
-                  {card.marker}
+                  {index + 1}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-[var(--text-muted)]">
+                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
                     {card.label}
                   </p>
                   <p className="mt-2 text-3xl font-semibold text-white">
-                    {card.value}
+                    {cardValues[index]}
                   </p>
                   <p className="mt-2 text-sm text-[var(--text-muted)]">
                     {card.hint}

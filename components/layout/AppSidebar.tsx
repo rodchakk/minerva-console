@@ -32,25 +32,31 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
       ) : null}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-[var(--sidebar)] px-4 py-5 text-[var(--sidebar-foreground)] shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl transition-transform lg:translate-x-0",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-[var(--border)] bg-[var(--sidebar)] px-4 py-4 text-[var(--sidebar-foreground)] transition-transform lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="rounded-[22px] border border-white/10 bg-white/6 p-4">
-          <div className="flex items-center gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-200">
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-100">
               Minerva Console
             </p>
-            <span className="inline-flex items-center rounded-full bg-violet-500/14 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-200 ring-1 ring-inset ring-violet-400/20">
+            <span className="inline-flex items-center rounded-md border border-violet-400/16 bg-violet-500/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
               ENTRY
             </span>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-300">
-            ENTRY operating workspace for onboarding, users, messages, and setup.
+          <p className="mt-3 text-sm leading-5 text-[var(--text-muted)]">
+            Workspace for onboarding, users, messages, and setup.
           </p>
         </div>
 
-        <nav className="mt-6 flex-1 space-y-2">
+        <div className="mt-6">
+          <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">
+            ENTRY Operations
+          </p>
+        </div>
+
+        <nav className="mt-3 flex-1 space-y-1.5">
           {navSections.map((item) => {
             const isActive =
               pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -61,10 +67,10 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
                 href={item.href}
                 onClick={onClose}
                 className={cn(
-                  "flex items-center rounded-2xl px-4 py-2.5 text-sm font-medium transition",
+                  "flex items-center rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
-                    ? "bg-violet-500/16 text-white ring-1 ring-inset ring-violet-400/20"
-                    : "text-slate-300 hover:bg-white/6 hover:text-white",
+                    ? "border-violet-400/18 bg-violet-500/12 text-white"
+                    : "border-transparent text-slate-300 hover:border-white/8 hover:bg-white/4 hover:text-white",
                 )}
               >
                 {item.label}
@@ -73,8 +79,8 @@ export function AppSidebar({ isOpen, onClose }: AppSidebarProps) {
           })}
         </nav>
 
-        <div className="rounded-[22px] border border-white/8 bg-[var(--sidebar-muted)] p-4 text-sm leading-6 text-slate-300">
-          ENTRY is the live operating surface today, with the shell ready for
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--sidebar-muted)] p-4 text-sm leading-5 text-[var(--text-muted)]">
+          ENTRY is the live operating surface today, with the console ready for
           future Minerva products when they are real.
         </div>
       </aside>

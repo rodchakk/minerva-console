@@ -205,16 +205,16 @@ function MiniMetric({
   value: string | number;
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-4 border-white/8 px-4 py-4 md:border-r last:border-r-0">
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl border border-white/10 bg-[var(--surface-strong)] text-lg text-violet-200">
+    <div className="flex min-w-0 items-center gap-3 border-b border-[var(--border)] px-4 py-4 sm:border-r sm:last:border-r-0 xl:border-b-0">
+      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] text-sm text-violet-200">
         {badge ?? "•"}
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
           {label}
         </p>
         <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
-        <p className="mt-1 truncate text-sm text-[var(--text-muted)]">{hint}</p>
+        <p className="mt-1 truncate text-xs text-[var(--text-muted)]">{hint}</p>
       </div>
     </div>
   );
@@ -230,14 +230,14 @@ function SummaryCard({
   title: string;
 }) {
   return (
-    <section className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_16px_42px_rgba(2,6,23,0.2)]">
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
       <div className="flex items-start justify-between gap-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
           {title}
         </p>
         {action}
       </div>
-      <div className="mt-5">{children}</div>
+      <div className="mt-4">{children}</div>
     </section>
   );
 }
@@ -246,14 +246,17 @@ function QuickActionCard({ action }: { action: ActionItem }) {
   return (
     <Link
       href={action.href}
-      className="group flex items-center justify-between gap-3 rounded-[22px] border border-white/8 bg-white/4 p-4 transition hover:border-violet-300/40 hover:bg-white/7"
+      className="group flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 transition-colors hover:border-white/12 hover:bg-[var(--surface-muted)]"
     >
-      <div>
+      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-violet-400/14 bg-violet-500/10 text-xs font-semibold text-violet-200">
+        •
+      </span>
+      <div className="min-w-0 flex-1">
         <p className="text-sm font-semibold text-white">{action.label}</p>
-        <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">{action.note}</p>
+        <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">{action.note}</p>
       </div>
-      <span className="text-lg text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-white">
-        →
+      <span className="text-sm text-[var(--text-muted)] transition-colors group-hover:text-white">
+        ›
       </span>
     </Link>
   );
@@ -289,7 +292,7 @@ function ActionButtonLink({
 
 function EmptyInline({ children }: { children: ReactNode }) {
   return (
-    <div className="rounded-[22px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
+    <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5 text-sm text-[var(--text-muted)]">
       {children}
     </div>
   );
@@ -351,79 +354,91 @@ export default async function CommunitySetupPage(
   ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={community.name}
-        description={community.city}
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Link href="/products/entry/communities">
-              <Button variant="secondary">Back to communities</Button>
-            </Link>
-            <ActionButtonLink href={primaryAction.href} label={primaryAction.label} />
-          </div>
-        }
-      />
+    <div className="space-y-4">
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 lg:px-6">
+        <PageHeader
+          title={community.name}
+          description={community.city}
+          actions={
+            <div className="flex flex-wrap gap-2">
+              <Link href="/products/entry/communities">
+                <Button variant="secondary">Back to communities</Button>
+              </Link>
+              <ActionButtonLink href={primaryAction.href} label={primaryAction.label} />
+            </div>
+          }
+        />
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge tone={community.isActive ? "success" : "default"}>
-          {community.isActive ? "Active" : "Inactive"}
-        </Badge>
-        <Badge tone={getSetupTone(community)}>{getSetupLabel(community)}</Badge>
-        <Badge tone="info">{community.unitLabel}</Badge>
-      </div>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Badge tone={community.isActive ? "success" : "default"}>
+            {community.isActive ? "Active" : "Inactive"}
+          </Badge>
+          <Badge tone={getSetupTone(community)}>{getSetupLabel(community)}</Badge>
+          <Badge tone="info">{community.unitLabel}</Badge>
+        </div>
+      </section>
 
-      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(135deg,rgba(112,104,255,0.16),rgba(17,24,39,0.88)_42%,rgba(8,11,22,0.96))] p-5 shadow-[0_24px_70px_rgba(2,6,23,0.28)] backdrop-blur xl:p-6">
-        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-violet-200">
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4 lg:px-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
           Operational health
         </p>
-        <div className="mt-5 grid gap-5 xl:grid-cols-[1fr_1.25fr_1fr_1.25fr] xl:divide-x xl:divide-white/8">
-          <div className="flex gap-4 xl:pr-5">
-            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-amber-400/25 bg-amber-500/12 text-2xl text-amber-300">
-              {getSetupLabel(community) === "Complete" ? "✓" : "!"}
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Current status
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">{getSetupLabel(community)}</h2>
-              <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                {getSetupLabel(community) === "Complete"
-                  ? "Community is ready for regular operation."
-                  : "Action required to reach full readiness."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-5 xl:px-5">
-            <div
-              className="grid h-20 w-20 shrink-0 place-items-center rounded-full p-1"
-              style={{
-                background: `conic-gradient(var(--primary) ${progressPercent}%, rgba(255,255,255,0.12) 0)`,
-              }}
-            >
-              <div className="grid h-full w-full place-items-center rounded-full bg-[var(--surface-strong)] text-sm font-semibold text-white">
-                {progressPercent}%
+        <div className="mt-4 grid gap-4 xl:grid-cols-4">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 xl:border-r xl:border-[var(--border)]">
+            <div className="flex items-start gap-3">
+              <div
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border ${
+                  getSetupLabel(community) === "Complete"
+                    ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
+                    : "border-amber-400/20 bg-amber-500/10 text-amber-300"
+                }`}
+              >
+                {getSetupLabel(community) === "Complete" ? "✓" : "!"}
               </div>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
-                Setup progress
-              </p>
-              <p className="mt-2 text-xl font-semibold text-white">
-                {community.completedTasks} / {community.totalTasks} tasks complete
-              </p>
-              <div className="mt-3 h-2 rounded-full bg-white/8">
-                <div
-                  className="h-2 rounded-full bg-[var(--primary)]"
-                  style={{ width: getProgressWidth(community.completedTasks, community.totalTasks) }}
-                />
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  Current status
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-white">{getSetupLabel(community)}</h2>
+                <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+                  {getSetupLabel(community) === "Complete"
+                    ? "Community is ready for regular operation."
+                    : "Action required to reach full readiness."}
+                </p>
               </div>
             </div>
           </div>
 
-          <div className="xl:px-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Setup progress
+            </p>
+            <div className="mt-3 flex items-center gap-4">
+              <div
+                className="grid h-14 w-14 shrink-0 place-items-center rounded-full p-1"
+                style={{
+                  background: `conic-gradient(var(--primary) ${progressPercent}%, rgba(255,255,255,0.1) 0)`,
+                }}
+              >
+                <div className="grid h-full w-full place-items-center rounded-full bg-[var(--surface)] text-xs font-semibold text-white">
+                  {progressPercent}%
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-semibold text-white">
+                  {community.completedTasks} / {community.totalTasks} tasks complete
+                </p>
+                <div className="mt-2 h-1.5 rounded-full bg-white/6">
+                  <div
+                    className="h-1.5 rounded-full bg-[var(--primary)]"
+                    style={{ width: getProgressWidth(community.completedTasks, community.totalTasks) }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
               Next step
             </p>
             <h3 className="mt-2 text-xl font-semibold text-white">{nextStepLabel}</h3>
@@ -439,14 +454,14 @@ export default async function CommunitySetupPage(
             </div>
           </div>
 
-          <div className="xl:pl-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--text-muted)]">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
               What needs attention
             </p>
             <div className="mt-3 space-y-3">
               {attentionItems.map((item) => (
                 <div key={item.title}>
-                  <p className="text-sm font-semibold text-white">• {item.title}</p>
+                  <p className="text-sm font-semibold text-white">{item.title}</p>
                   <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
                     {item.description}
                   </p>
@@ -458,15 +473,15 @@ export default async function CommunitySetupPage(
                 href="#setup-progress"
                 className="mt-3 inline-flex text-sm font-semibold text-violet-200 transition hover:text-white"
               >
-                View setup details →
+                View setup details ›
               </a>
             ) : null}
           </div>
         </div>
       </section>
 
-      <section className="grid overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_48px_rgba(2,6,23,0.2)] md:grid-cols-2 xl:grid-cols-5">
-        <MiniMetric badge="▣" label="Units" value={community.totalUnits} hint="Total units" />
+      <section className="grid overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)] sm:grid-cols-2 xl:grid-cols-5">
+        <MiniMetric badge="□" label="Units" value={community.totalUnits} hint="Total units" />
         <MiniMetric badge="◎" label="Members" value={community.totalMembers} hint="Total members" />
         <MiniMetric
           badge="◴"
@@ -494,14 +509,14 @@ export default async function CommunitySetupPage(
         />
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-6">
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="space-y-4">
           <section
             id="units-snapshot"
-            className="rounded-[30px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)] xl:p-6"
+            className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5"
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
                 Units snapshot
               </p>
               {previews.units.state === "empty" ? (
@@ -509,7 +524,7 @@ export default async function CommunitySetupPage(
                   href={`/products/entry/communities/${community.id}/units/new`}
                   className="text-sm font-semibold text-violet-200 transition hover:text-white"
                 >
-                  Add units →
+                  Add units ›
                 </Link>
               ) : (
                 <CommunityUnitsDrawer
@@ -520,17 +535,17 @@ export default async function CommunitySetupPage(
               )}
             </div>
             {previews.units.state === "unavailable" ? (
-              <div className="mt-5">
+              <div className="mt-4">
                 <EmptyInline>Units preview unavailable.</EmptyInline>
               </div>
             ) : previews.units.state === "empty" ? (
-              <div className="mt-5">
+              <div className="mt-4">
                 <EmptyInline>No units created yet.</EmptyInline>
               </div>
             ) : (
-              <div className="mt-5 overflow-x-auto">
+              <div className="mt-4 overflow-x-auto">
                 <table className="min-w-[820px] w-full text-left text-sm">
-                  <thead className="border-b border-white/8 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  <thead className="border-b border-[var(--border)] text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
                     <tr>
                       <th className="py-3 pr-4 font-semibold">Unit / building</th>
                       <th className="px-4 py-3 font-semibold">Owner</th>
@@ -540,22 +555,22 @@ export default async function CommunitySetupPage(
                       <th className="py-3 pl-4 text-right font-semibold">Status</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-white/7">
+                  <tbody className="divide-y divide-[var(--border)]">
                     {unitsForSnapshot.map((unit, index) => (
                       <tr key={unit.id} className="text-[var(--text-muted)]">
-                        <td className="py-4 pr-4">
+                        <td className="py-3 pr-4">
                           <div className="flex items-center gap-3">
-                            <span className="grid h-8 w-8 place-items-center rounded-full border border-white/10 bg-white/5 text-xs font-semibold text-white">
+                            <span className="grid h-7 w-7 place-items-center rounded-md border border-[var(--border)] bg-[var(--surface-strong)] text-[10px] font-semibold text-white">
                               {String(index + 1).padStart(2, "0")}
                             </span>
                             <span className="font-semibold text-white">{unit.label}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-4">{unit.ownerName}</td>
-                        <td className="px-4 py-4 font-semibold text-white">{unit.activeResidents}</td>
-                        <td className="px-4 py-4 font-semibold text-white">{unit.activePasses}</td>
-                        <td className="px-4 py-4 text-white">{unit.lastAccess}</td>
-                        <td className="py-4 pl-4 text-right">
+                        <td className="px-4 py-3">{unit.ownerName}</td>
+                        <td className="px-4 py-3 font-semibold text-white">{unit.activeResidents}</td>
+                        <td className="px-4 py-3 font-semibold text-white">{unit.activePasses}</td>
+                        <td className="px-4 py-3 text-white">{unit.lastAccess}</td>
+                        <td className="py-3 pl-4 text-right">
                           <Badge tone={unit.isActive ? "success" : "default"}>
                             {unit.isActive ? "Active" : "Inactive"}
                           </Badge>
@@ -568,7 +583,7 @@ export default async function CommunitySetupPage(
             )}
           </section>
 
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-4 lg:grid-cols-3">
             <SummaryCard
               title="Users summary"
               action={
@@ -587,30 +602,30 @@ export default async function CommunitySetupPage(
                   ["Residents", previews.users.counts.residents],
                   ["Inactive", previews.users.counts.inactive],
                 ].map(([label, value]) => (
-                  <div key={label} className="border-r border-white/8 last:border-r-0">
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</p>
+                  <div key={label} className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
+                    <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">{label}</p>
                     <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
                   </div>
                 ))}
               </div>
               {previews.users.state === "live" ? (
-                <div className="mt-5 rounded-[22px] border border-white/8 bg-white/4 px-4 py-4">
+                <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
                   <div className="flex items-center justify-between gap-3">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                       Community operators
                     </p>
                     <span className="text-xs text-[var(--text-muted)]">Admins and guards</span>
                   </div>
                   {communityOperators.length > 0 ? (
-                    <div className="mt-4 space-y-3">
+                    <div className="mt-3 space-y-3">
                       {communityOperators.slice(0, 4).map((user) => (
                         <div
                           key={user.id}
-                          className="flex items-center justify-between gap-3 rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-3 py-3"
+                          className="flex items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-3 py-3"
                         >
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-white">{user.fullName}</p>
-                            <p className="mt-1 text-sm text-[var(--text-muted)]">{user.contact}</p>
+                            <p className="mt-1 text-xs text-[var(--text-muted)]">{user.contact}</p>
                           </div>
                           <div className="shrink-0 text-right">
                             <Badge tone="info">{user.role}</Badge>
@@ -645,11 +660,11 @@ export default async function CommunitySetupPage(
                 {previews.facilities.state === "live" ? (
                   <div className="space-y-3">
                     {previews.facilities.items.slice(0, 2).map((facility) => (
-                      <div key={facility.id} className="rounded-[22px] border border-white/8 bg-white/4 px-4 py-3">
+                      <div key={facility.id} className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="truncate text-sm font-semibold text-white">{facility.name}</p>
-                            <p className="mt-1 text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                            <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
                               {facility.opensAt} to {facility.closesAt}
                             </p>
                           </div>
@@ -657,11 +672,11 @@ export default async function CommunitySetupPage(
                             {facility.isActive ? "Active" : "Inactive"}
                           </Badge>
                         </div>
-                        <div className="mt-3 flex flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1">
+                        <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-[var(--text-muted)]">
+                          <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1">
                             {facility.slotMinutes} min
                           </span>
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-white">
+                          <span className="rounded-full border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-white">
                             {facility.pricePerSlot}
                           </span>
                         </div>
@@ -697,11 +712,19 @@ export default async function CommunitySetupPage(
               {adminActivity.state === "live" ? (
                 <div className="space-y-3">
                   {recentActivities.map((activity) => (
-                    <div key={activity.id}>
-                      <p className="text-sm font-semibold text-white">{activity.summary}</p>
-                      <p className="mt-1 text-sm text-[var(--text-muted)]">
-                        {activity.actorName} · {activity.createdAt}
-                      </p>
+                    <div
+                      key={activity.id}
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="mt-1 inline-flex h-2 w-2 shrink-0 rounded-full bg-emerald-400" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-white">{activity.summary}</p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {activity.actorName} · {activity.createdAt}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -721,9 +744,9 @@ export default async function CommunitySetupPage(
           </div>
         </div>
 
-        <aside className="space-y-6">
-          <section className="rounded-[30px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.2)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+        <aside className="space-y-4">
+          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
               Quick actions
             </p>
             <div className="mt-4 space-y-3">
