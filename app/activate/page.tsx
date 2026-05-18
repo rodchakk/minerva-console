@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
 
@@ -112,41 +111,28 @@ export default function ActivatePage() {
 
     try {
       const supabase = createClient();
-      console.log("[activate] calling validate_resident_activation_pin_v1", { pin });
       const { data, error } = await supabase.rpc(
         "validate_resident_activation_pin_v1",
         { p_pin: pin },
       );
-      console.log("[activate] rpc result", { data, error });
 
       if (error) {
-        setErrorMsg(
-          `No pudimos verificar el PIN: ${error.message ?? "error desconocido"}`,
-        );
+        setErrorMsg("No pudimos verificar el PIN. Revisa tu conexión.");
         setStep("invalid");
         return null;
       }
 
       const result = data as ValidationResult | null;
-      if (!result) {
-        setErrorMsg("La verificación regresó vacía. Intenta de nuevo.");
-        setStep("invalid");
-        return null;
-      }
-
-      if (!result.valid) {
-        setErrorMsg(mapValidationError(result.reason));
+      if (!result?.valid) {
+        setErrorMsg(mapValidationError(result?.reason));
         setStep("invalid");
         return null;
       }
 
       setValidation(result);
       return result;
-    } catch (e) {
-      console.error("[activate] validatePin threw", e);
-      setErrorMsg(
-        `Error inesperado: ${e instanceof Error ? e.message : String(e)}`,
-      );
+    } catch {
+      setErrorMsg("Error inesperado verificando el enlace.");
       setStep("invalid");
       return null;
     }
@@ -236,11 +222,11 @@ export default function ActivatePage() {
   }
 
   const headerInfo = validation ? (
-    <div className="mb-6 rounded-2xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 text-left">
-      <p className="text-xs uppercase tracking-wider text-violet-200/80">
+    <div className="mb-5 rounded-2xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 text-left">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/80">
         Activando como
       </p>
-      <p className="mt-1 text-base font-semibold text-white">
+      <p className="mt-1 text-sm font-semibold text-white sm:text-base">
         {validation.resident_name ?? "Residente"}
       </p>
       <p className="text-xs text-[var(--text-muted)]">
@@ -251,24 +237,26 @@ export default function ActivatePage() {
   ) : null;
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-12">
-      <div className="w-full max-w-xl rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(8,12,22,0.98))] p-8 text-center shadow-[0_24px_70px_rgba(2,6,23,0.28)]">
-        <p className="text-xs font-semibold uppercase tracking-[0.28em] text-violet-200">
-          Minerva Console · ENTRY
+    <div className="flex min-h-screen items-center justify-center px-4 py-8 sm:py-12">
+      <div className="w-full max-w-md rounded-3xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(8,12,22,0.98))] p-6 text-center shadow-[0_24px_70px_rgba(2,6,23,0.28)] sm:max-w-lg sm:rounded-[32px] sm:p-8">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-violet-200 sm:text-xs">
+          ENTRY · Minerva
         </p>
 
         {step === "loading" ? (
-          <div className="mt-8">
-            <h1 className="text-2xl font-semibold text-white">Verificando...</h1>
-            <p className="mt-3 text-sm text-[var(--text-muted)]">
+          <div className="mt-6 sm:mt-8">
+            <h1 className="text-xl font-semibold text-white sm:text-2xl">
+              Verificando...
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
               Estamos validando tu enlace de activación.
             </p>
           </div>
         ) : null}
 
         {step === "mobile-redirect" ? (
-          <div className="mt-8">
-            <h1 className="text-2xl font-semibold text-white">
+          <div className="mt-6 sm:mt-8">
+            <h1 className="text-xl font-semibold text-white sm:text-2xl">
               ¿Cómo quieres continuar?
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
@@ -276,12 +264,12 @@ export default function ActivatePage() {
               Si no, puedes hacerlo aquí mismo en tu navegador.
             </p>
             <div className="mt-6 flex flex-col gap-3">
-              <a href={`entry://activate?pin=${pin}`}>
-                <Button className="w-full">Abrir app ENTRY</Button>
+              <a href={`entry://activate?pin=${pin}`} className="w-full">
+                <Button className="w-full py-3">Abrir app ENTRY</Button>
               </a>
               <Button
                 variant="secondary"
-                className="w-full"
+                className="w-full py-3"
                 onClick={() => void startWebFlow()}
               >
                 Continuar en navegador
@@ -291,25 +279,20 @@ export default function ActivatePage() {
         ) : null}
 
         {step === "invalid" ? (
-          <div className="mt-8">
-            <h1 className="text-2xl font-semibold text-white">
+          <div className="mt-6 sm:mt-8">
+            <h1 className="text-xl font-semibold text-white sm:text-2xl">
               Enlace no válido
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
               {errorMsg ?? "Este enlace ya no funciona."}
             </p>
-            <div className="mt-6 flex justify-center">
-              <Link href="/login">
-                <Button variant="secondary">Ir al login</Button>
-              </Link>
-            </div>
           </div>
         ) : null}
 
         {step === "notifications" ? (
-          <div className="mt-8 text-left">
+          <div className="mt-6 text-left sm:mt-8">
             {headerInfo}
-            <h1 className="text-center text-2xl font-semibold text-white">
+            <h1 className="text-center text-xl font-semibold text-white sm:text-2xl">
               {notifPermission === "granted"
                 ? "Notificaciones activadas"
                 : notifPermission === "denied"
@@ -331,31 +314,37 @@ export default function ActivatePage() {
             <div className="mt-6 flex flex-col gap-3">
               {notifPermission === "default" ? (
                 <>
-                  <Button onClick={handleRequestNotifications}>
+                  <Button className="py-3" onClick={handleRequestNotifications}>
                     Permitir notificaciones
                   </Button>
-                  <Button variant="secondary" onClick={handleSkipNotifications}>
+                  <Button
+                    variant="secondary"
+                    className="py-3"
+                    onClick={handleSkipNotifications}
+                  >
                     Ahora no
                   </Button>
                 </>
               ) : (
-                <Button onClick={() => setStep("password")}>Continuar</Button>
+                <Button className="py-3" onClick={() => setStep("password")}>
+                  Continuar
+                </Button>
               )}
             </div>
           </div>
         ) : null}
 
         {step === "password" ? (
-          <div className="mt-8 text-left">
+          <div className="mt-6 text-left sm:mt-8">
             {headerInfo}
-            <h1 className="text-center text-2xl font-semibold text-white">
+            <h1 className="text-center text-xl font-semibold text-white sm:text-2xl">
               Crea tu contraseña
             </h1>
             <p className="mt-3 text-center text-sm leading-6 text-[var(--text-muted)]">
-              Esta será tu contraseña para iniciar sesión en ENTRY.
+              Será tu contraseña para iniciar sesión en ENTRY.
             </p>
 
-            <label className="mt-6 block text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+            <label className="mt-5 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
               Nueva contraseña
             </label>
             <div className="relative mt-2">
@@ -371,7 +360,7 @@ export default function ActivatePage() {
                 autoCapitalize="none"
                 autoCorrect="off"
                 disabled={submitting}
-                className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 pr-12 text-sm text-white placeholder:text-slate-500 focus:border-violet-400/60 focus:outline-none disabled:opacity-50"
+                className="w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 pr-20 text-base text-white placeholder:text-slate-500 focus:border-violet-400/60 focus:outline-none disabled:opacity-50"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && password.length >= 8 && !submitting) {
                     void handleActivate();
@@ -407,7 +396,7 @@ export default function ActivatePage() {
               <Button
                 onClick={handleActivate}
                 disabled={submitting || password.length < 8}
-                className="w-full"
+                className="w-full py-3"
               >
                 {submitting ? "Activando..." : "Crear contraseña"}
               </Button>
@@ -416,20 +405,41 @@ export default function ActivatePage() {
         ) : null}
 
         {step === "success" ? (
-          <div className="mt-8">
-            <h1 className="text-2xl font-semibold text-white">¡Cuenta activada!</h1>
+          <div className="mt-6 sm:mt-8">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full border border-emerald-400/30 bg-emerald-500/10">
+              <svg
+                aria-hidden
+                viewBox="0 0 24 24"
+                className="h-7 w-7 text-emerald-300"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M5 12l5 5L20 7" />
+              </svg>
+            </div>
+            <h1 className="mt-4 text-xl font-semibold text-white sm:text-2xl">
+              ¡Cuenta activada!
+            </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-              Tu cuenta de ENTRY está lista. Ya puedes iniciar sesión.
+              Tu cuenta de ENTRY está lista. Abre el app para iniciar sesión.
             </p>
             {loginEmail ? (
-              <p className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 text-sm text-violet-100">
-                Tu correo de login: <strong>{loginEmail}</strong>
-              </p>
+              <div className="mt-5 rounded-xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-violet-200/80">
+                  Tu correo de login
+                </p>
+                <p className="mt-1 break-all text-sm font-medium text-violet-100">
+                  {loginEmail}
+                </p>
+              </div>
             ) : null}
-            <div className="mt-6 flex justify-center">
-              <Link href="/login">
-                <Button>Ir al login</Button>
-              </Link>
+            <div className="mt-6">
+              <a href="entry://" className="block w-full">
+                <Button className="w-full py-3">Abrir app ENTRY</Button>
+              </a>
             </div>
           </div>
         ) : null}

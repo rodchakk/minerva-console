@@ -23,9 +23,14 @@ type ActivationQueueTableProps = {
   rows: ActivationQueueRow[];
 };
 
-const PLACEHOLDER_ACTIONS = [
-  "Copy WhatsApp message",
-  "Mark skipped",
+const TABLE_STATUS_OPTIONS = [
+  { label: "All statuses", value: "all" },
+  { label: "Pending", value: "pending" },
+  { label: "Invited", value: "invited" },
+  { label: "PIN Generated", value: "pin_generated" },
+  { label: "Activated", value: "activated" },
+  { label: "Skipped", value: "skipped" },
+  { label: "Error", value: "failed" },
 ] as const;
 
 function getStatusTone(
@@ -89,6 +94,17 @@ function getMethodLabel(method: string) {
     default:
       return "Not configured";
   }
+}
+
+function getInitials(name: string) {
+  const parts = name
+    .split(" ")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (parts.length === 0) return "R";
+  return parts.map((part) => part[0]?.toUpperCase() ?? "").join("");
 }
 
 function buildWhatsAppMessage(item: GeneratePinItem, communityName: string) {
@@ -589,13 +605,41 @@ export function ActivationQueueTable({
   rows,
 }: ActivationQueueTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const visibleRowIds = useMemo(() => rows.map((row) => row.id), [rows]);
+  const [activeRowId, setActiveRowId] = useState<string | null>(rows[0]?.id ?? null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const filteredRows = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return rows.filter((row) => {
+      const matchesStatus =
+        statusFilter === "all" ? true : row.status === statusFilter;
+      const matchesQuery =
+        !normalizedQuery ||
+        row.unit.toLowerCase().includes(normalizedQuery) ||
+        row.resident.toLowerCase().includes(normalizedQuery) ||
+        row.email.toLowerCase().includes(normalizedQuery) ||
+        row.phone.toLowerCase().includes(normalizedQuery);
+
+      return matchesStatus && matchesQuery;
+    });
+  }, [rows, searchQuery, statusFilter]);
+  const visibleRowIds = useMemo(
+    () => filteredRows.map((row) => row.id),
+    [filteredRows],
+  );
   const allVisibleSelected =
     visibleRowIds.length > 0 &&
     visibleRowIds.every((rowId) => selectedIds.includes(rowId));
   const selectedCount = selectedIds.length;
   const createUserTargetIds = selectedCount > 0 ? selectedIds : visibleRowIds;
   const createUserTargetCount = createUserTargetIds.length;
+  const activeRow =
+    filteredRows.find((row) => row.id === activeRowId) ??
+    rows.find((row) => row.id === activeRowId) ??
+    filteredRows[0] ??
+    rows[0] ??
+    null;
 
   type Phase =
     | "idle"
@@ -673,6 +717,22 @@ export function ActivationQueueTable({
     setCreateUserResult(null);
     setPhase("idle");
     setSelectedIds([]);
+  }
+
+  function focusRow(rowId: string) {
+    setActiveRowId(rowId);
+  }
+
+  function runResidentEmail(rowId: string) {
+    setSelectedIds([rowId]);
+    setActiveRowId(rowId);
+    setPhase("confirmingEmail");
+  }
+
+  function runResidentCreateUser(rowId: string) {
+    setSelectedIds([rowId]);
+    setActiveRowId(rowId);
+    setPhase("confirmingCreateUser");
   }
 
   const canGenerate = selectedCount > 0 && !!communityId;
@@ -822,219 +882,359 @@ export function ActivationQueueTable({
         />
       ) : null}
 
-      <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-white">
-              Residents ready for activation
-            </h2>
-            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-              Review prepared resident records, generate activation PINs, or
-              create users directly when needed.
-            </p>
-          </div>
-
-          <div className="space-y-2 xl:max-w-lg">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                disabled={!canGenerate || (phase !== "idle" && phase !== "confirming")}
-                onClick={() => setPhase("confirming")}
-                title={
-                  !communityId
-                    ? "Select a community before generating PINs."
-                    : selectedCount === 0
-                      ? "Select residents to generate PINs."
-                      : "Generate activation PINs for selected residents."
-                }
-              >
-                Generate PIN
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={
-                  !canCreateUsers ||
-                  (phase !== "idle" && phase !== "confirmingCreateUser")
-                }
-                onClick={() => setPhase("confirmingCreateUser")}
-                title={
-                  !communityId
-                    ? "Select a community before creating users."
-                    : createUserTargetCount === 0
-                      ? "No residents are visible to create users."
-                      : selectedCount === 0
-                        ? "Create users for all visible residents."
-                      : "Create active users directly from selected residents."
-                }
-              >
-                Create user
-              </Button>
-
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={!canGenerate || (phase !== "idle" && phase !== "confirmingEmail")}
-                onClick={() => setPhase("confirmingEmail")}
-                title={
-                  !communityId
-                    ? "Select a community before sending emails."
-                    : selectedCount === 0
-                      ? "Select residents to send emails."
-                      : allSelectedAreInvited
-                        ? "Resend activation email to selected residents."
-                        : "Send email invites with activation PINs."
-                }
-              >
-                {allSelectedAreInvited ? "Resend email" : "Send email invite"}
-              </Button>
-
-              {PLACEHOLDER_ACTIONS.map((label) => (
-                <Button
-                  key={label}
-                  type="button"
-                  variant="secondary"
-                  disabled
-                  title="Coming soon."
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-
-            {!communityId ? (
-              <p className="text-xs leading-5 text-amber-200">
-                Select a community before generating PINs.
-              </p>
-            ) : null}
-
-            {communityId && selectedCount === 0 ? (
-              <p className="text-xs leading-5 text-[var(--text-muted)]">
-                Generate PIN and email require selection. Create user can use all
-                visible residents even if none are selected.
-              </p>
-            ) : null}
-
-            {communityId && selectedCount > 0 ? (
-              <p className="text-xs leading-5 text-[var(--text-muted)]">
-                {selectedCount} resident{selectedCount !== 1 ? "s" : ""} selected.
-              </p>
-            ) : null}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3 rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-              <input
-                type="checkbox"
-                checked={allVisibleSelected}
-                onChange={toggleAllVisibleRows}
-                className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
-              />
-              Select all visible rows
-            </label>
-            <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
-              {selectedCount} selected
-            </span>
-          </div>
+      <section className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(16,20,29,0.94),rgba(12,17,25,0.9))] p-4 shadow-[0_18px_50px_rgba(2,6,23,0.18)] backdrop-blur">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-white">Prepared residents</h2>
           <p className="text-sm text-[var(--text-muted)]">
-            {selectedCount > 0
-              ? `${selectedCount} resident${selectedCount !== 1 ? "s" : ""} selected.`
-              : "Select residents to prepare activation actions."}
+            Review prepared residents and run controlled activation actions.
           </p>
         </div>
 
-        <div className="overflow-x-auto rounded-2xl border border-white/8">
-          <table className="min-w-[1120px] divide-y divide-white/8 text-left text-sm">
-            <thead className="bg-[rgba(9,12,24,0.92)] text-slate-300">
-              <tr>
-                <th className="w-12 px-3 py-3 font-semibold">
-                  <span className="sr-only">Select row</span>
-                </th>
-                <th className="px-3 py-3 font-semibold">Unit</th>
-                <th className="px-3 py-3 font-semibold">Resident</th>
-                <th className="px-3 py-3 font-semibold">Phone</th>
-                <th className="px-3 py-3 font-semibold">Email</th>
-                <th className="px-3 py-3 font-semibold">Owner reference</th>
-                <th className="px-3 py-3 font-semibold">Suggested username</th>
-                <th className="px-3 py-3 font-semibold">Method</th>
-                <th className="px-3 py-3 font-semibold">Status</th>
-                <th className="px-3 py-3 font-semibold">Last error</th>
-                <th className="px-3 py-3 font-semibold">Created</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/8 bg-[var(--surface)] text-slate-200">
-              {rows.map((row) => {
-                const isSelected = selectedIds.includes(row.id);
+        <div
+          className={[
+            "grid gap-4",
+            activeRow ? "xl:min-h-[calc(100vh-24rem)] xl:grid-cols-[minmax(0,1fr)_352px]" : "",
+          ].join(" ")}
+        >
+          <div className="flex min-h-0 flex-col gap-3">
 
-                return (
-                  <tr
-                    key={row.id}
-                    className={isSelected ? "bg-violet-500/10" : "hover:bg-white/4"}
-                  >
-                    <td className="px-3 py-3 align-top">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleRow(row.id)}
-                        className="mt-1 h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
-                      />
-                    </td>
-                    <td className="max-w-[10rem] px-3 py-3 align-top font-medium text-white">
-                      <span className="block truncate" title={row.unit}>
-                        {row.unit}
-                      </span>
-                    </td>
-                    <td className="max-w-[12rem] px-3 py-3 align-top">
-                      <span className="block truncate" title={row.resident}>
-                        {row.resident}
-                      </span>
-                    </td>
-                    <td className="max-w-[10rem] px-3 py-3 align-top">
-                      <span className="block truncate" title={row.phone}>
-                        {row.phone}
-                      </span>
-                    </td>
-                    <td className="max-w-[16rem] px-3 py-3 align-top">
-                      <span className="block truncate" title={row.email}>
-                        {row.email}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 align-top text-[var(--text-muted)]">
-                      {row.ownerReference}
-                    </td>
-                    <td className="max-w-[10rem] px-3 py-3 align-top">
-                      <span className="block truncate" title={row.suggestedUsername}>
-                        {row.suggestedUsername}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 align-top">
-                      <Badge tone={getMethodTone(row.method)}>
-                        {getMethodLabel(row.method)}
-                      </Badge>
-                    </td>
-                    <td className="px-3 py-3 align-top">
-                      <Badge tone={getStatusTone(row.status)}>
-                        {getStatusLabel(row.status)}
-                      </Badge>
-                    </td>
-                    <td className="max-w-[14rem] px-3 py-3 align-top text-[var(--text-muted)]">
-                      <span className="block truncate" title={row.lastError}>
-                        {row.lastError}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 align-top text-[var(--text-muted)]">
-                      {row.createdAt}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="rounded-[22px] border border-white/8 bg-[rgba(12,17,25,0.58)] p-3.5">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={allVisibleSelected}
+                  onChange={toggleAllVisibleRows}
+                  className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
+                />
+                Select all visible rows
+              </label>
+              <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
+                {selectedCount} selected
+              </span>
+            </div>
+
+            <p className="text-xs text-[var(--text-muted)]">
+              Select one or more residents to enable activation actions.
+            </p>
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={!canGenerate || (phase !== "idle" && phase !== "confirming")}
+              onClick={() => setPhase("confirming")}
+              title={
+                !communityId
+                  ? "Select a community before generating PINs."
+                  : selectedCount === 0
+                    ? "Select residents to generate PINs."
+                    : "Generate activation PINs for selected residents."
+              }
+            >
+              Generate PIN
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={
+                !canCreateUsers ||
+                (phase !== "idle" && phase !== "confirmingCreateUser")
+              }
+              onClick={() => setPhase("confirmingCreateUser")}
+              title={
+                !communityId
+                  ? "Select a community before creating users."
+                  : createUserTargetCount === 0
+                    ? "No residents are visible to create users."
+                    : selectedCount === 0
+                      ? "Create users for all visible residents."
+                      : "Create active users directly from selected residents."
+              }
+            >
+              Create user
+            </Button>
+
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={!canGenerate || (phase !== "idle" && phase !== "confirmingEmail")}
+              onClick={() => setPhase("confirmingEmail")}
+              title={
+                !communityId
+                  ? "Select a community before sending emails."
+                  : selectedCount === 0
+                    ? "Select residents to send emails."
+                    : allSelectedAreInvited
+                      ? "Resend activation email to selected residents."
+                      : "Send email invites with activation PINs."
+              }
+            >
+              {allSelectedAreInvited ? "Resend email" : "Send email invite"}
+            </Button>
+          </div>
+
+          <div className="mt-2.5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="flex flex-wrap gap-3 text-xs leading-5">
+              {!communityId ? (
+                <p className="text-amber-200">
+                  Select a community before generating PINs.
+                </p>
+              ) : null}
+
+              {communityId && selectedCount === 0 ? (
+                <p className="text-[var(--text-muted)]">
+                  Generate PIN and email require selection. Create user can use all
+                  visible residents even if none are selected.
+                </p>
+              ) : null}
+
+              {communityId && selectedCount > 0 ? (
+                <p className="text-[var(--text-muted)]">
+                  {selectedCount} resident{selectedCount !== 1 ? "s" : ""} selected.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <label className="relative">
+                <input
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  placeholder="Search unit or resident"
+                  className="h-11 w-full min-w-[16rem] rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+                />
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="h-11 min-w-[9rem] rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 text-sm text-white outline-none transition focus:border-violet-400/50"
+              >
+                {TABLE_STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/8 bg-[rgba(9,12,24,0.36)]">
+          <div className="min-h-[22rem] flex-1 overflow-auto">
+            <table className="min-w-[1040px] w-full table-fixed divide-y divide-white/8 text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-[rgba(9,12,24,0.94)] text-slate-300 backdrop-blur">
+                <tr>
+                  <th className="w-12 px-3 py-3 font-semibold">
+                    <span className="sr-only">Select row</span>
+                  </th>
+                  <th className="w-[15%] px-3 py-3 font-semibold">Unit</th>
+                  <th className="w-[16%] px-3 py-3 font-semibold">Resident</th>
+                  <th className="w-[19%] px-3 py-3 font-semibold">Contact</th>
+                  <th className="w-[15%] px-3 py-3 font-semibold">Username</th>
+                  <th className="w-[13%] px-3 py-3 font-semibold">Method</th>
+                  <th className="w-[12%] px-3 py-3 font-semibold">Status</th>
+                  <th className="w-[18%] px-3 py-3 font-semibold">Created</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/8 bg-[var(--surface)] text-slate-200">
+                {filteredRows.map((row) => {
+                  const isSelected = selectedIds.includes(row.id);
+                  const isActive = activeRow?.id === row.id;
+
+                  return (
+                    <tr
+                      key={row.id}
+                      className={[
+                        "cursor-pointer transition",
+                        isActive
+                          ? "bg-violet-500/10 ring-1 ring-inset ring-violet-400/30"
+                          : isSelected
+                            ? "bg-violet-500/8"
+                            : "hover:bg-white/4",
+                      ].join(" ")}
+                      onClick={() => focusRow(row.id)}
+                    >
+                      <td className="px-3 py-3 align-top">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRow(row.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          className="mt-1 h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
+                        />
+                      </td>
+                      <td className="px-3 py-3 align-top font-medium text-white">
+                        <span className="block truncate" title={row.unit}>
+                          {row.unit}
+                        </span>
+                        <span className="mt-1 block text-xs text-[var(--text-muted)]">
+                          {row.ownerReference}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className="block truncate text-white" title={row.resident}>
+                          {row.resident}
+                        </span>
+                        {row.lastError !== "â€”" ? (
+                          <span
+                            className="mt-1 block truncate text-xs text-rose-200"
+                            title={row.lastError}
+                          >
+                            {row.lastError}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className="block truncate" title={row.phone}>
+                          {row.phone}
+                        </span>
+                        <span
+                          className="mt-1 block truncate text-[var(--text-muted)]"
+                          title={row.email}
+                        >
+                          {row.email}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <span className="block truncate" title={row.suggestedUsername}>
+                          {row.suggestedUsername}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <Badge tone={getMethodTone(row.method)}>
+                          {getMethodLabel(row.method)}
+                        </Badge>
+                      </td>
+                      <td className="px-3 py-3 align-top">
+                        <Badge tone={getStatusTone(row.status)}>
+                          {getStatusLabel(row.status)}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-3 align-top text-[var(--text-muted)]">
+                        {row.createdAt}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="border-t border-white/8 px-4 py-3 text-sm text-[var(--text-muted)]">
+            Showing 1 to {filteredRows.length} of {rows.length} residents
+          </div>
+        </div>
+
+          </div>
+
+          {activeRow ? (
+            <aside className="flex h-full flex-col self-start rounded-[24px] border border-white/8 bg-[rgba(12,17,25,0.72)] p-5 xl:sticky xl:top-4">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-lg font-semibold text-white">Resident actions</h3>
+                <button
+                  type="button"
+                  onClick={() => setActiveRowId(null)}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/8 bg-white/[0.03] text-[var(--text-muted)] transition hover:text-white"
+                  aria-label="Close resident actions"
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="mt-6 flex items-start gap-4">
+                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[linear-gradient(180deg,rgba(109,99,255,0.22),rgba(65,50,170,0.3))] text-xl font-semibold text-violet-100">
+                  {getInitials(activeRow.resident)}
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-base font-semibold text-white">{activeRow.resident}</p>
+                    <Badge tone={getStatusTone(activeRow.status)}>
+                      {getStatusLabel(activeRow.status)}
+                    </Badge>
+                  </div>
+                  <p className="mt-1.5 text-sm text-[var(--text-muted)]">{activeRow.unit}</p>
+                  <p className="mt-3 text-sm text-slate-200">{activeRow.phone}</p>
+                  <p className="mt-1.5 text-sm text-[var(--text-muted)]">{activeRow.email}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-[20px] border border-white/8 bg-[var(--surface-strong)] p-5">
+                <h4 className="text-sm font-semibold text-white">Resident summary</h4>
+                <div className="mt-5 space-y-4 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[var(--text-muted)]">Username</span>
+                    <span className="text-slate-200">{activeRow.suggestedUsername}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[var(--text-muted)]">Method</span>
+                    <span className="text-slate-200">{getMethodLabel(activeRow.method)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[var(--text-muted)]">Created</span>
+                    <span className="text-slate-200">{activeRow.createdAt}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-4">
+                <h4 className="text-sm font-semibold text-white">Available actions</h4>
+
+                <button
+                  type="button"
+                  disabled
+                  className="flex w-full items-center justify-between rounded-[18px] border border-white/8 bg-[var(--surface-strong)] px-4 py-5 text-left text-sm text-[var(--text-muted)]"
+                  title="Coming soon."
+                >
+                  <div>
+                    <p className="font-semibold text-white">Send info to WhatsApp</p>
+                    <p className="mt-1 text-[var(--text-muted)]">
+                      Send credential info and community access details via WhatsApp.
+                    </p>
+                  </div>
+                  <span>›</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => runResidentEmail(activeRow.id)}
+                  disabled={!canGenerate || phase !== "idle"}
+                  className="flex w-full items-center justify-between rounded-[18px] border border-white/8 bg-[var(--surface-strong)] px-4 py-5 text-left text-sm transition hover:border-violet-400/20"
+                >
+                  <div>
+                    <p className="font-semibold text-white">Send email invite</p>
+                    <p className="mt-1 text-[var(--text-muted)]">
+                      Send an email invite with access instructions.
+                    </p>
+                  </div>
+                  <span className="text-[var(--text-muted)]">›</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => runResidentCreateUser(activeRow.id)}
+                  disabled={!communityId || phase !== "idle"}
+                  className="flex w-full items-center justify-between rounded-[18px] border border-white/8 bg-[var(--surface-strong)] px-4 py-5 text-left text-sm transition hover:border-violet-400/20"
+                >
+                  <div>
+                    <p className="font-semibold text-white">Create user</p>
+                    <p className="mt-1 text-[var(--text-muted)]">
+                      Create the resident user and activate access.
+                    </p>
+                  </div>
+                  <span className="text-[var(--text-muted)]">›</span>
+                </button>
+              </div>
+
+              <p className="mt-auto pt-6 text-xs leading-5 text-[var(--text-muted)]">
+                PINs are temporary 7-day credentials and will expire automatically.
+              </p>
+            </aside>
+          ) : null}
+        </div>
+      </section>
     </>
   );
 }
