@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { MetricCard } from "@/components/cards/MetricCard";
+import type { ReactNode } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +24,83 @@ const statusFilters: Array<{
   { label: "Has passes", value: "has_passes" },
   { label: "Recent access", value: "recent_access" },
 ];
+
+const unitDisplayLimits = [10, 20, 50, 100] as const;
+
+type UnitsMetricTone = "default" | "success" | "warning" | "info";
+
+function formatCommunityUnitLabel(label: string) {
+  const normalized = label.trim().toLowerCase();
+
+  if (normalized === "condominios") {
+    return "Condominiums";
+  }
+
+  if (normalized === "casas") {
+    return "Houses";
+  }
+
+  if (normalized === "apartamentos") {
+    return "Apartments";
+  }
+
+  return label;
+}
+
+function UnitsMetricCard({
+  badgeLabel,
+  description,
+  icon,
+  label,
+  tone = "default",
+  value,
+}: {
+  badgeLabel?: string;
+  description: string;
+  icon: ReactNode;
+  label: string;
+  tone?: UnitsMetricTone;
+  value: string;
+}) {
+  const toneClasses: Record<UnitsMetricTone, string> = {
+    default:
+      "border-slate-400/14 bg-slate-500/10 text-slate-200 ring-slate-300/10",
+    success:
+      "border-emerald-400/14 bg-emerald-500/10 text-emerald-200 ring-emerald-300/10",
+    warning:
+      "border-amber-400/14 bg-amber-500/10 text-amber-200 ring-amber-300/10",
+    info:
+      "border-violet-400/14 bg-violet-500/10 text-violet-100 ring-violet-300/20",
+  };
+
+  return (
+    <article className="rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-4 py-4 shadow-[0_18px_40px_rgba(2,6,23,0.18)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-sm ${toneClasses[tone]}`}
+          >
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-slate-100">{label}</p>
+            <p className="mt-1 text-3xl font-semibold tracking-tight text-white">
+              {value}
+            </p>
+          </div>
+        </div>
+        {badgeLabel ? <Badge tone={tone}>{badgeLabel}</Badge> : null}
+      </div>
+      <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+        {description}
+      </p>
+    </article>
+  );
+}
+
+function UnitsMetricIcon({ children }: { children: string }) {
+  return <span className="text-xs font-semibold">{children}</span>;
+}
 
 function needsSetupAttention(community: CommunityWithProgressItem) {
   return (
@@ -67,6 +144,7 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
 function buildUnitsHref(
   communityId: string,
   params: {
+    limit?: number;
     q?: string;
     status?: CommunityUnitsStatusFilter;
   },
@@ -79,6 +157,10 @@ function buildUnitsHref(
 
   if (params.status && params.status !== "all") {
     search.set("status", params.status);
+  }
+
+  if (params.limit && params.limit !== 10) {
+    search.set("limit", String(params.limit));
   }
 
   const queryString = search.toString();
@@ -104,11 +186,63 @@ export default async function CommunityUnitsPage(
     q: typeof searchParams.q === "string" ? searchParams.q : undefined,
     status: typeof searchParams.status === "string" ? searchParams.status : undefined,
   });
+  const rawLimit =
+    typeof searchParams.limit === "string" ? Number(searchParams.limit) : NaN;
+  const visibleLimit = unitDisplayLimits.includes(rawLimit as (typeof unitDisplayLimits)[number])
+    ? (rawLimit as (typeof unitDisplayLimits)[number])
+    : 10;
+  const visibleItems = unitsData.filteredItems.slice(0, visibleLimit);
   const primaryAction = getPrimaryAction(community);
   const hasFilters = Boolean(unitsData.query) || unitsData.status !== "all";
+  const metricBadge = unitsData.state === "unavailable" ? "Preview" : "Live";
+  const communityUnitLabel = formatCommunityUnitLabel(community.unitLabel);
+  const metrics = [
+    {
+      label: "Total units",
+      value: String(unitsData.summary.totalUnits),
+      description: "All known houses or apartments returned by the admin RPC.",
+      tone: "info" as const,
+      icon: <UnitsMetricIcon>UT</UnitsMetricIcon>,
+    },
+    {
+      label: "Active units",
+      value: String(unitsData.summary.activeUnits),
+      description: "Units currently marked as active.",
+      tone: "success" as const,
+      icon: <UnitsMetricIcon>AC</UnitsMetricIcon>,
+    },
+    {
+      label: "Inactive units",
+      value: String(unitsData.summary.inactiveUnits),
+      description: "Units not currently active.",
+      tone: "default" as const,
+      icon: <UnitsMetricIcon>IN</UnitsMetricIcon>,
+    },
+    {
+      label: "Active residents",
+      value: String(unitsData.summary.activeResidents),
+      description: "Sum of active residents across all units.",
+      tone: "info" as const,
+      icon: <UnitsMetricIcon>RS</UnitsMetricIcon>,
+    },
+    {
+      label: "Active passes",
+      value: String(unitsData.summary.activePasses),
+      description: "Sum of active passes currently linked to units.",
+      tone: unitsData.summary.activePasses > 0 ? ("warning" as const) : ("info" as const),
+      icon: <UnitsMetricIcon>PS</UnitsMetricIcon>,
+    },
+    {
+      label: "Units with recent access",
+      value: String(unitsData.summary.unitsWithRecentAccess),
+      description: "Units where a recent access timestamp is available.",
+      tone: "success" as const,
+      icon: <UnitsMetricIcon>RA</UnitsMetricIcon>,
+    },
+  ];
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <PageHeader
         title="Units"
         description="Review houses, apartments, and operational unit records for this community."
@@ -124,82 +258,61 @@ export default async function CommunityUnitsPage(
         }
       />
 
-      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.14),rgba(17,24,39,0.92))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.28)] backdrop-blur xl:p-7">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
-          <div className="space-y-4">
+      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.16),rgba(14,19,29,0.96))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.24)] backdrop-blur xl:p-7">
+        <div className="flex flex-col gap-6 xl:flex-row xl:items-stretch xl:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col justify-between">
             <div className="flex flex-wrap items-center gap-3">
               <Badge tone="info">ENTRY community</Badge>
               <Badge tone={community.isActive ? "success" : "default"}>
                 {community.isActive ? "Active" : "Inactive"}
               </Badge>
-              <Badge tone="info">{community.unitLabel}</Badge>
+              <Badge tone="info">{communityUnitLabel}</Badge>
             </div>
-            <div>
+            <div className="mt-5">
               <h2 className="text-3xl font-semibold text-white">{community.name}</h2>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              <p className="mt-3 inline-flex items-center gap-2 text-sm leading-6 text-[var(--text-muted)]">
+                <span className="grid h-5 w-5 place-items-center rounded-full border border-white/10 bg-white/5 text-[10px] text-slate-300">
+                  •
+                </span>
                 {community.city}
               </p>
             </div>
           </div>
 
-          <div className="rounded-[24px] border border-white/10 bg-[rgba(9,12,24,0.5)] px-5 py-4 xl:max-w-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-              Unit directory
-            </p>
-            <p className="mt-2 text-base font-semibold text-white">
-              Read-only operational record of houses and apartments.
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Use this view to inspect occupancy, access activity, and current
-              setup coverage before editing tools are wired in.
-            </p>
+          <div className="rounded-[24px] border border-white/10 bg-[rgba(9,12,24,0.46)] px-5 py-5 xl:max-w-[24rem] xl:border-l xl:border-l-white/12">
+            <div className="flex items-start gap-4">
+              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-violet-300/20 bg-[linear-gradient(180deg,rgba(103,80,255,0.22),rgba(50,38,119,0.34))] text-sm font-semibold text-violet-100">
+                UD
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
+                  Unit directory
+                </p>
+                <p className="mt-2 text-base font-semibold text-white">
+                  Read-only operational record of houses and apartments.
+                </p>
+                <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+                  Use this view to inspect occupancy, access activity, and current
+                  setup coverage before editing tools are wired in.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-        <MetricCard
-          label="Total units"
-          value={String(unitsData.summary.totalUnits)}
-          hint="All known houses or apartments returned by the admin RPC."
-          status={unitsData.state === "unavailable" ? "Preview" : "Live"}
-          tone="info"
-        />
-        <MetricCard
-          label="Active units"
-          value={String(unitsData.summary.activeUnits)}
-          hint="Units currently marked as active."
-          status={unitsData.state === "unavailable" ? "Preview" : "Live"}
-          tone="success"
-        />
-        <MetricCard
-          label="Inactive units"
-          value={String(unitsData.summary.inactiveUnits)}
-          hint="Units not currently active."
-          status={unitsData.state === "unavailable" ? "Preview" : "Live"}
-          tone="default"
-        />
-        <MetricCard
-          label="Active residents"
-          value={String(unitsData.summary.activeResidents)}
-          hint="Sum of active residents across all units."
-          status={unitsData.state === "unavailable" ? "Preview" : "Live"}
-          tone="info"
-        />
-        <MetricCard
-          label="Active passes"
-          value={String(unitsData.summary.activePasses)}
-          hint="Sum of active passes currently linked to units."
-          status={unitsData.state === "unavailable" ? "Preview" : "Live"}
-          tone={unitsData.summary.activePasses > 0 ? "warning" : "info"}
-        />
-        <MetricCard
-          label="Units with recent access"
-          value={String(unitsData.summary.unitsWithRecentAccess)}
-          hint="Units where a recent access timestamp is available."
-          status={unitsData.state === "unavailable" ? "Preview" : "Live"}
-          tone="success"
-        />
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        {metrics.map((metric) => (
+          <UnitsMetricCard
+            key={metric.label}
+            badgeLabel={metricBadge}
+            description={metric.description}
+            icon={metric.icon}
+            label={metric.label}
+            tone={metric.tone}
+            value={metric.value}
+          />
+        ))}
       </section>
 
       <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-7">
@@ -222,7 +335,7 @@ export default async function CommunityUnitsPage(
           ) : null}
         </div>
 
-        <form className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px_auto]">
+        <form className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_auto]">
           <label className="space-y-2">
             <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
               Search
@@ -230,7 +343,7 @@ export default async function CommunityUnitsPage(
             <input
               name="q"
               defaultValue={unitsData.query}
-              placeholder="Search by house label or owner"
+              placeholder="Search by unit label or owner"
               className="w-full rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/40"
             />
           </label>
@@ -253,15 +366,17 @@ export default async function CommunityUnitsPage(
           </label>
 
           <div className="flex items-end">
+            <input type="hidden" name="limit" value={String(visibleLimit)} />
             <Button type="submit" className="w-full lg:w-auto">
               Apply filters
             </Button>
           </div>
         </form>
 
-        <div className="mt-5 flex flex-wrap gap-3">
+        <div className="mt-5 flex flex-wrap gap-2.5">
           {statusFilters.map((filter) => {
             const href = buildUnitsHref(community.id, {
+              limit: visibleLimit,
               q: unitsData.query,
               status: filter.value,
             });
@@ -288,14 +403,40 @@ export default async function CommunityUnitsPage(
       <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-7">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-              Unit records
-            </p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
+            <h3 className="text-xl font-semibold text-white">
               Community unit directory
             </h3>
           </div>
-          <Badge tone="info">{unitsData.totalMatching} matching units</Badge>
+          <div className="flex flex-wrap items-center gap-3">
+            <Badge tone="info">{unitsData.totalMatching} matching units</Badge>
+            <form
+              action={`/products/entry/communities/${community.id}/units`}
+              className="flex items-center gap-2"
+            >
+              <input type="hidden" name="q" value={unitsData.query} />
+              <input type="hidden" name="status" value={unitsData.status} />
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                  <span>Show</span>
+                  <select
+                    name="limit"
+                    defaultValue={String(visibleLimit)}
+                    className="h-10 rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/40"
+                  >
+                    {unitDisplayLimits.map((limit) => (
+                      <option key={limit} value={String(limit)}>
+                        {limit}
+                      </option>
+                    ))}
+                  </select>
+                  <span>units</span>
+                </label>
+                <Button type="submit" variant="secondary">
+                  Apply
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
 
         {unitsData.state === "unavailable" ? (
@@ -336,8 +477,8 @@ export default async function CommunityUnitsPage(
             </div>
           </div>
         ) : (
-          <div className="mt-6 overflow-hidden rounded-[28px] border border-white/8">
-            <div className="hidden grid-cols-[minmax(0,1.2fr)_1fr_130px_130px_140px_150px_150px_220px] gap-3 border-b border-white/8 bg-white/4 px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] xl:grid">
+          <div className="mt-6 overflow-hidden rounded-[28px] border border-white/8 bg-[rgba(8,12,24,0.34)]">
+            <div className="hidden grid-cols-[minmax(0,1.25fr)_1fr_130px_110px_110px_150px_160px_220px] gap-3 border-b border-white/8 bg-white/[0.03] px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] xl:grid">
               <span>Unit</span>
               <span>Owner</span>
               <span>Status</span>
@@ -349,20 +490,29 @@ export default async function CommunityUnitsPage(
             </div>
 
             <div className="divide-y divide-white/8">
-              {unitsData.filteredItems.map((unit) => (
+              {visibleItems.map((unit) => (
                 <div
                   key={unit.id}
-                  className="grid gap-4 bg-[var(--surface-strong)] px-5 py-5 xl:grid-cols-[minmax(0,1.2fr)_1fr_130px_130px_140px_150px_150px_220px] xl:items-center"
+                  className="grid gap-4 bg-[var(--surface-strong)] px-5 py-5 xl:grid-cols-[minmax(0,1.25fr)_1fr_130px_110px_110px_150px_160px_220px] xl:items-center"
                 >
                   <div>
-                    <p className="text-sm font-semibold text-white">{unit.label}</p>
-                    <p className="mt-1 text-sm text-[var(--text-muted)] xl:hidden">
-                      {unit.ownerName || "No owner recorded"}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-violet-300/14 bg-violet-500/10 text-xs font-semibold text-violet-100 ring-1 ring-inset ring-violet-300/12">
+                        {unit.label.slice(0, 2).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-white">
+                          {unit.label}
+                        </p>
+                        <p className="mt-1 text-xs text-[var(--text-muted)] xl:hidden">
+                          {unit.ownerName || "No owner linked"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                   <div className="hidden xl:block">
                     <p className="text-sm text-white">
-                      {unit.ownerName || "No owner recorded"}
+                      {unit.ownerName || "No owner linked"}
                     </p>
                   </div>
                   <div>

@@ -11,6 +11,34 @@ function formatMetricValue(value: string) {
   return value === "Not available" ? "No access yet" : value;
 }
 
+function getUnitTypeLabel(label: string) {
+  const normalized = label.trim().toLowerCase();
+
+  if (normalized === "casas") return "Casa";
+  if (normalized === "condominios") return "Condo";
+  if (normalized === "apartamentos") return "Apto";
+  if (normalized === "oficinas") return "Oficina";
+
+  return label.trim();
+}
+
+function formatUnitDisplayLabel(label: string, unitType: string) {
+  const trimmedLabel = label.trim();
+  const trimmedType = getUnitTypeLabel(unitType);
+  const normalizedLabel = trimmedLabel.toLowerCase();
+  const normalizedType = trimmedType.toLowerCase();
+
+  if (!trimmedLabel) {
+    return trimmedType || "Unit";
+  }
+
+  if (normalizedLabel.includes(normalizedType)) {
+    return trimmedLabel;
+  }
+
+  return `${trimmedType} ${trimmedLabel}`.trim();
+}
+
 export default async function CommunityUnitDetailPage(
   props: PageProps<"/products/entry/communities/[communityId]/units/[unitId]">,
 ) {
@@ -93,10 +121,12 @@ export default async function CommunityUnitDetailPage(
     notFound();
   }
 
+  const unitDisplayLabel = formatUnitDisplayLabel(unit.label, community.unitLabel);
+
   return (
     <div className="space-y-8">
       <PageHeader
-        title={unit.label}
+        title={unitDisplayLabel}
         description="Read-only operational view for this unit."
         actions={
           <div className="flex flex-wrap gap-3">
@@ -125,7 +155,7 @@ export default async function CommunityUnitDetailPage(
                 {community.name}
               </p>
               <h2 className="mt-2 text-3xl font-semibold text-white">
-                {unit.label}
+                {unitDisplayLabel}
               </h2>
               <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
                 {community.city}
@@ -205,7 +235,7 @@ export default async function CommunityUnitDetailPage(
                   Unit label
                 </p>
                 <p className="mt-2 text-lg font-semibold text-white">
-                  {unit.label}
+                  {unitDisplayLabel}
                 </p>
               </div>
               <div className="rounded-[24px] border border-white/8 bg-[var(--surface-strong)] px-4 py-4">

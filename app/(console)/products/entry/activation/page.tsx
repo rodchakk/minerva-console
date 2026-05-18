@@ -39,9 +39,14 @@ export default async function ActivationQueuePage(
         title="Activation Queue"
         description="Prepared resident records waiting for controlled activation."
         actions={
-          <Link href="/products/entry/communities/new">
-            <Button>Create community</Button>
-          </Link>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/products/entry/onboarding">
+              <Button variant="secondary">Launch onboarding</Button>
+            </Link>
+            <Link href="/products/entry/communities/new">
+              <Button>Create community</Button>
+            </Link>
+          </div>
         }
       />
 
