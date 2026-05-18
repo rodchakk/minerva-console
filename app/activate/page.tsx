@@ -110,27 +110,46 @@ export default function ActivatePage() {
     if (validatedRef.current) return validation;
     validatedRef.current = true;
 
-    const supabase = createClient();
-    const { data, error } = await supabase.rpc(
-      "validate_resident_activation_pin_v1",
-      { p_pin: pin },
-    );
+    try {
+      const supabase = createClient();
+      console.log("[activate] calling validate_resident_activation_pin_v1", { pin });
+      const { data, error } = await supabase.rpc(
+        "validate_resident_activation_pin_v1",
+        { p_pin: pin },
+      );
+      console.log("[activate] rpc result", { data, error });
 
-    if (error) {
-      setErrorMsg("No pudimos verificar el PIN. Revisa tu conexión.");
+      if (error) {
+        setErrorMsg(
+          `No pudimos verificar el PIN: ${error.message ?? "error desconocido"}`,
+        );
+        setStep("invalid");
+        return null;
+      }
+
+      const result = data as ValidationResult | null;
+      if (!result) {
+        setErrorMsg("La verificación regresó vacía. Intenta de nuevo.");
+        setStep("invalid");
+        return null;
+      }
+
+      if (!result.valid) {
+        setErrorMsg(mapValidationError(result.reason));
+        setStep("invalid");
+        return null;
+      }
+
+      setValidation(result);
+      return result;
+    } catch (e) {
+      console.error("[activate] validatePin threw", e);
+      setErrorMsg(
+        `Error inesperado: ${e instanceof Error ? e.message : String(e)}`,
+      );
       setStep("invalid");
       return null;
     }
-
-    const result = data as ValidationResult;
-    if (!result?.valid) {
-      setErrorMsg(mapValidationError(result?.reason));
-      setStep("invalid");
-      return null;
-    }
-
-    setValidation(result);
-    return result;
   }, [pin, validation]);
 
   const startWebFlow = useCallback(async () => {
@@ -156,27 +175,14 @@ export default function ActivatePage() {
     }
 
     if (isMobileDevice()) {
+      // Show choice screen immediately; validate PIN in the background so
+      // the web flow is ready if the user chooses "Continuar en navegador".
       setStep("mobile-redirect");
-      const deepLink = `entry://activate?pin=${pin}`;
-
-      let appOpened = false;
-      const onVisibilityChange = () => {
-        if (document.hidden) appOpened = true;
-      };
-      document.addEventListener("visibilitychange", onVisibilityChange);
-
-      window.location.href = deepLink;
-
-      window.setTimeout(() => {
-        document.removeEventListener("visibilitychange", onVisibilityChange);
-        if (!appOpened) {
-          void startWebFlow();
-        }
-      }, 2000);
+      void validatePin();
     } else {
       void startWebFlow();
     }
-  }, [pin, startWebFlow]);
+  }, [pin, startWebFlow, validatePin]);
 
   async function handleRequestNotifications() {
     if (typeof Notification === "undefined") {
@@ -263,17 +269,21 @@ export default function ActivatePage() {
         {step === "mobile-redirect" ? (
           <div className="mt-8">
             <h1 className="text-2xl font-semibold text-white">
-              Abriendo ENTRY...
+              ¿Cómo quieres continuar?
             </h1>
             <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-              Si tienes el app instalado, se abrirá automáticamente. Si no, te
-              llevaremos al flujo web en unos segundos.
+              Si ya tienes ENTRY instalado, ábrelo para completar la activación.
+              Si no, puedes hacerlo aquí mismo en tu navegador.
             </p>
-            <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <div className="mt-6 flex flex-col gap-3">
               <a href={`entry://activate?pin=${pin}`}>
-                <Button>Abrir app ENTRY</Button>
+                <Button className="w-full">Abrir app ENTRY</Button>
               </a>
-              <Button variant="secondary" onClick={() => void startWebFlow()}>
+              <Button
+                variant="secondary"
+                className="w-full"
+                onClick={() => void startWebFlow()}
+              >
                 Continuar en navegador
               </Button>
             </div>
