@@ -5,7 +5,16 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "mcp__claude_ai_Supabase__apply_migration",
       "mcp__claude_ai_Supabase__list_projects",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(ls C:/Dev/ | grep -i bridge)",
+      "Read(//c/Dev/**)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Dev\\\\node-bridge-foundation\" -Force)",
+      "Bash(Select-Object Name, Mode)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(npx tsc *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }
