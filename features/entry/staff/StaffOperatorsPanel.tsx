@@ -99,9 +99,9 @@ function MetricCard({
   value: number;
 }) {
   return (
-    <div className="rounded-[26px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_18px_40px_rgba(2,6,23,0.18)]">
-      <div className="flex items-center gap-4">
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(180deg,rgba(103,80,255,0.26),rgba(70,52,190,0.34))] text-lg text-violet-100 ring-1 ring-inset ring-violet-300/20">
+    <div className="rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-4 py-4 shadow-[0_18px_40px_rgba(2,6,23,0.16)]">
+      <div className="flex items-center gap-3">
+        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[linear-gradient(180deg,rgba(103,80,255,0.26),rgba(70,52,190,0.34))] text-xs font-semibold text-violet-100 ring-1 ring-inset ring-violet-300/20">
           {icon}
         </div>
         <div className="min-w-0">
@@ -116,7 +116,7 @@ function MetricCard({
   );
 }
 
-function FilterButton({
+function SegmentedButton({
   active,
   children,
   onClick,
@@ -159,7 +159,7 @@ function OperatorRow({ operator }: { operator: DirectoryOperator }) {
       </td>
       <td className="px-4 py-4">
         <Badge tone={operator.role === "ADMIN" ? "info" : "default"}>
-          {operator.role}
+          {operator.role === "ADMIN" ? "Resident admin" : "Guard"}
         </Badge>
       </td>
       <td className="px-4 py-4 text-slate-200">{operator.contact}</td>
@@ -175,10 +175,14 @@ function OperatorRow({ operator }: { operator: DirectoryOperator }) {
       <td className="px-4 py-4 text-right">
         <button
           type="button"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-lg text-[var(--text-muted)] transition hover:border-violet-300/30 hover:text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/8 bg-white/4 text-[var(--text-muted)] transition hover:border-violet-300/30 hover:text-white"
           aria-label={`Operator actions for ${operator.fullName}`}
         >
-          ⋯
+          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4" fill="currentColor">
+            <circle cx="10" cy="4.5" r="1.4" />
+            <circle cx="10" cy="10" r="1.4" />
+            <circle cx="10" cy="15.5" r="1.4" />
+          </svg>
         </button>
       </td>
     </tr>
@@ -201,7 +205,6 @@ export function StaffOperatorsPanel({
     {},
   );
   const [guardState, guardAction] = useActionState(createGuardAction, {});
-  const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<OperatorFilter>("all");
   const [composerOpen, setComposerOpen] = useState(false);
   const [addType, setAddType] = useState<"admin" | "guard">("admin");
@@ -212,20 +215,12 @@ export function StaffOperatorsPanel({
   }, [admins, guards]);
 
   const filteredOperators = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
     return combinedOperators.filter((operator) => {
-      const matchesQuery =
-        !normalizedQuery ||
-        operator.fullName.toLowerCase().includes(normalizedQuery) ||
-        operator.contact.toLowerCase().includes(normalizedQuery);
-
-      if (!matchesQuery) return false;
       if (filter === "admins") return operator.role === "ADMIN";
       if (filter === "guards") return operator.role === "GUARD";
       return true;
     });
-  }, [combinedOperators, filter, query]);
+  }, [combinedOperators, filter]);
 
   return (
     <div className="space-y-6">
@@ -234,25 +229,25 @@ export function StaffOperatorsPanel({
           eyebrow="Total operators"
           value={combinedOperators.length}
           hint="Admins and guards combined"
-          icon="◎"
+          icon="OPS"
         />
         <MetricCard
           eyebrow="Resident admins"
           value={admins.length}
           hint="Selected from active residents"
-          icon="◈"
+          icon="ADM"
         />
         <MetricCard
           eyebrow="Guard accounts"
           value={guards.length}
           hint="Individual or shared accounts"
-          icon="◌"
+          icon="GRD"
         />
         <MetricCard
           eyebrow="Eligible residents"
           value={residents.length}
           hint="Eligible to be resident admins"
-          icon="◉"
+          icon="ELG"
         />
       </section>
 
@@ -263,58 +258,20 @@ export function StaffOperatorsPanel({
               Operators directory
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
-              All resident admins and guard accounts in one place. Keep access
-              secure and up to date.
+              Create and manage resident admins and guard accounts in one place.
             </p>
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[24px] border border-violet-400/14 bg-[linear-gradient(180deg,rgba(70,82,165,0.18),rgba(31,40,78,0.28))] px-4 py-4">
-          <p className="text-sm leading-6 text-slate-200">
-            Resident admins are selected from active residents and receive admin
-            privileges.
-            <br />
-            Guard accounts can be individual or shared, depending on how access
-            is managed.
-          </p>
-        </div>
-
-        <div className="mt-5 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-1 flex-col gap-4 lg:flex-row lg:items-center">
-            <label className="relative block lg:max-w-md lg:flex-1">
-              <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
-                ⌕
-              </span>
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search by name or email..."
-                className="h-12 w-full rounded-2xl border border-white/10 bg-[var(--surface-strong)] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50"
-              />
-            </label>
-
-            <div className="inline-flex rounded-full border border-white/10 bg-white/4 p-1">
-              <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>
-                All
-              </FilterButton>
-              <FilterButton
-                active={filter === "admins"}
-                onClick={() => setFilter("admins")}
-              >
-                Admins
-              </FilterButton>
-              <FilterButton
-                active={filter === "guards"}
-                onClick={() => setFilter("guards")}
-              >
-                Guards
-              </FilterButton>
-            </div>
           </div>
 
           <Button onClick={() => setComposerOpen((open) => !open)}>
             {composerOpen ? "Close" : "+ Add operator"}
           </Button>
+        </div>
+
+        <div className="mt-5 rounded-[20px] border border-white/8 bg-[rgba(12,17,25,0.58)] px-4 py-3.5">
+          <p className="text-sm leading-6 text-slate-200">
+            Resident admins are selected from active residents. Guard accounts can
+            be individual or shared depending on how access is managed.
+          </p>
         </div>
 
         {composerOpen ? (
@@ -328,19 +285,26 @@ export function StaffOperatorsPanel({
                   Create access without leaving the directory
                 </h3>
               </div>
-              <div className="inline-flex rounded-full border border-white/10 bg-white/4 p-1">
-                <FilterButton
-                  active={addType === "admin"}
-                  onClick={() => setAddType("admin")}
-                >
-                  Resident admin
-                </FilterButton>
-                <FilterButton
-                  active={addType === "guard"}
-                  onClick={() => setAddType("guard")}
-                >
-                  Guard account
-                </FilterButton>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="inline-flex rounded-full border border-white/10 bg-white/4 p-1">
+                  <SegmentedButton
+                    active={addType === "admin"}
+                    onClick={() => setAddType("admin")}
+                  >
+                    Resident admin
+                  </SegmentedButton>
+                  <SegmentedButton
+                    active={addType === "guard"}
+                    onClick={() => setAddType("guard")}
+                  >
+                    Guard account
+                  </SegmentedButton>
+                </div>
+
+                <Button variant="secondary" onClick={() => setComposerOpen(false)}>
+                  Close
+                </Button>
               </div>
             </div>
 
@@ -367,12 +331,14 @@ export function StaffOperatorsPanel({
                     ))}
                   </select>
                 </label>
+
                 {!hasEligibleResidents ? (
                   <p className="text-sm text-amber-200">
                     No active residents available. Import or activate residents
                     before assigning a community admin.
                   </p>
                 ) : null}
+
                 <div className="flex flex-wrap items-center gap-3">
                   <SubmitButton disabled={!hasEligibleResidents}>
                     Make resident admin
@@ -386,6 +352,7 @@ export function StaffOperatorsPanel({
             ) : (
               <form action={guardAction} className="mt-5 grid gap-4 lg:grid-cols-2">
                 <input type="hidden" name="communityId" value={communityId} />
+
                 <label className="block text-sm font-semibold text-white">
                   Account type
                   <select
@@ -397,6 +364,7 @@ export function StaffOperatorsPanel({
                     <option value="shared">Shared</option>
                   </select>
                 </label>
+
                 <label className="block text-sm font-semibold text-white">
                   Name
                   <input
@@ -405,6 +373,7 @@ export function StaffOperatorsPanel({
                     placeholder="Guardia Caseta Principal"
                   />
                 </label>
+
                 <label className="block text-sm font-semibold text-white">
                   Email
                   <input
@@ -414,6 +383,7 @@ export function StaffOperatorsPanel({
                     placeholder="guardia@community.com"
                   />
                 </label>
+
                 <label className="block text-sm font-semibold text-white">
                   Phone optional
                   <input
@@ -422,6 +392,7 @@ export function StaffOperatorsPanel({
                     placeholder="Optional"
                   />
                 </label>
+
                 <label className="block text-sm font-semibold text-white lg:col-span-2">
                   Description optional
                   <input
@@ -430,6 +401,7 @@ export function StaffOperatorsPanel({
                     placeholder="Shared guard account is less precise for audit trails, but allowed."
                   />
                 </label>
+
                 <label className="block text-sm font-semibold text-white lg:col-span-2">
                   Temporary password
                   <input
@@ -439,6 +411,7 @@ export function StaffOperatorsPanel({
                     placeholder="Minimum 8 characters"
                   />
                 </label>
+
                 <div className="flex flex-wrap items-center gap-3 lg:col-span-2">
                   <SubmitButton>Create guard</SubmitButton>
                   <StatusMessage message={guardState.message} ok={guardState.ok} />
@@ -448,13 +421,39 @@ export function StaffOperatorsPanel({
           </div>
         ) : null}
 
+        <div className="mt-5 rounded-[24px] border border-white/8 bg-[rgba(12,17,25,0.58)] px-4 py-3.5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold text-white">Current operators</p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                {combinedOperators.length === 0
+                  ? "Create a resident admin or guard account to continue."
+                  : "Review the current resident admins and guard accounts for this community."}
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <span>Operator type</span>
+              <select
+                value={filter}
+                onChange={(event) => setFilter(event.target.value as OperatorFilter)}
+                className="h-10 rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-300/40"
+              >
+                <option value="all">All operator types</option>
+                <option value="admins">Resident admins</option>
+                <option value="guards">Guard accounts</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
         <div className="mt-5 overflow-hidden rounded-[26px] border border-white/8 bg-[rgba(8,12,24,0.34)]">
           <div className="overflow-x-auto">
             <table className="min-w-[980px] w-full">
               <thead className="bg-white/[0.03] text-left text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
                 <tr>
                   <th className="px-4 py-4 font-semibold">Name</th>
-                  <th className="px-4 py-4 font-semibold">Type</th>
+                  <th className="px-4 py-4 font-semibold">Role</th>
                   <th className="px-4 py-4 font-semibold">Contact / email</th>
                   <th className="px-4 py-4 font-semibold">Linked unit</th>
                   <th className="px-4 py-4 font-semibold">Account mode</th>
@@ -467,13 +466,24 @@ export function StaffOperatorsPanel({
                   filteredOperators.map((operator) => (
                     <OperatorRow key={operator.id} operator={operator} />
                   ))
+                ) : combinedOperators.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-14 text-center">
+                      <p className="text-lg font-semibold text-white">
+                        No operators added yet.
+                      </p>
+                      <p className="mt-2 text-sm text-[var(--text-muted)]">
+                        Create a resident admin or guard account to continue.
+                      </p>
+                    </td>
+                  </tr>
                 ) : (
                   <tr>
                     <td
                       colSpan={7}
-                      className="px-4 py-10 text-center text-sm text-[var(--text-muted)]"
+                      className="px-6 py-12 text-center text-sm text-[var(--text-muted)]"
                     >
-                      No operators match the current search or filter.
+                      No operators found for the selected type.
                     </td>
                   </tr>
                 )}
@@ -483,10 +493,15 @@ export function StaffOperatorsPanel({
 
           <div className="flex flex-col gap-3 border-t border-white/8 px-4 py-4 text-sm text-[var(--text-muted)] lg:flex-row lg:items-center lg:justify-between">
             <p>
-              Showing 1 to {filteredOperators.length} of {combinedOperators.length}{" "}
-              operators
+              Showing {filteredOperators.length} of {combinedOperators.length} operators
             </p>
-            <p>{filter === "all" ? "All operator types" : `Filtered by ${filter}`}</p>
+            <p>
+              {filter === "all"
+                ? "All operator types"
+                : filter === "admins"
+                  ? "Resident admins only"
+                  : "Guard accounts only"}
+            </p>
           </div>
         </div>
       </section>

@@ -74,6 +74,16 @@ function getInitials(name: string) {
   );
 }
 
+function formatUnitLabel(label: string) {
+  const normalized = label.trim().toLowerCase();
+
+  if (normalized === "condominios") {
+    return "Condos";
+  }
+
+  return label;
+}
+
 function getCta(community: CommunityListItem) {
   const setupState = getSetupState(community);
 
@@ -255,8 +265,8 @@ export function CommunityList({ communities }: CommunityListProps) {
                       <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
                         Unit label
                       </p>
-                      <p className="mt-2 text-xl font-semibold text-white">
-                        {community.unitLabel}
+                      <p className="mt-2 truncate text-xl font-semibold text-white">
+                        {formatUnitLabel(community.unitLabel)}
                       </p>
                     </div>
                     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">

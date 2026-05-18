@@ -36,7 +36,9 @@ function filterCommunities(
     case "pending_setup":
       return communities.filter(
         (community) =>
-          community.isActive && community.onboardingStatus !== "complete_active",
+          community.isActive &&
+          community.onboardingStatus !== "complete_active" &&
+          !needsAttention(community),
       );
     case "all":
       return communities;
@@ -48,7 +50,10 @@ function filterCommunities(
       );
     case "active":
     default:
-      return communities.filter((community) => community.isActive);
+      return communities.filter(
+        (community) =>
+          community.isActive && community.onboardingStatus === "complete_active",
+      );
   }
 }
 
@@ -64,7 +69,7 @@ function getEmptyStateCopy(filter: CommunityFilter) {
       return {
         title: "No active communities found",
         description:
-          "There are no communities currently marked active in this view.",
+          "There are no fully active communities in this view right now.",
       };
     case "inactive":
       return {
@@ -126,10 +131,15 @@ export default async function CommunitiesPage(
 
   const filteredCommunities = filterCommunities(communities, currentFilter);
   const totalCount = communities.length;
-  const activeCount = communities.filter((community) => community.isActive).length;
+  const activeCount = communities.filter(
+    (community) =>
+      community.isActive && community.onboardingStatus === "complete_active",
+  ).length;
   const pendingCount = communities.filter(
     (community) =>
-      community.isActive && community.onboardingStatus !== "complete_active",
+      community.isActive &&
+      community.onboardingStatus !== "complete_active" &&
+      !needsAttention(community),
   ).length;
   const inactiveCount = communities.filter((community) => !community.isActive).length;
 
