@@ -37,8 +37,9 @@ export default async function ActivationQueuePage(
       <div className="rounded-[28px] border border-amber-400/20 bg-amber-500/10 p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
         <p className="text-sm font-semibold text-amber-200">
           Prepared residents stay in a pre-activation state here. Generate PIN
-          creates temporary 7-day credentials for selected residents. It does not
-          create active ENTRY users, send emails, or create profiles.
+          creates temporary 7-day credentials for selected residents. Use Create
+          user when you need to activate an ENTRY account directly from the
+          console.
         </p>
       </div>
 

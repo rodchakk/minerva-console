@@ -4,6 +4,11 @@ import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { ActivationQueueRow } from "@/features/entry/activation/actions";
+import { createActivatedUsers } from "@/features/entry/activation/createUserActions";
+import type {
+  CreateActivatedUserItem,
+  CreateActivatedUsersActionResult,
+} from "@/features/entry/activation/createUserActions";
 import { generateActivationPins } from "@/features/entry/activation/pinActions";
 import type {
   GeneratePinItem,
@@ -104,6 +109,34 @@ function buildWhatsAppMessage(item: GeneratePinItem, communityName: string) {
   lines.push(`PIN de activacion: ${item.pin ?? "-"}`);
   lines.push("");
   lines.push('Abri la app ENTRY y selecciona "Activar cuenta".');
+
+  return lines.join("\n");
+}
+
+function buildCreatedUserMessage(
+  item: CreateActivatedUserItem,
+  communityName: string,
+) {
+  const identity =
+    item.login_identity ||
+    item.suggested_username ||
+    item.email ||
+    "Se confirmara al iniciar sesion";
+
+  const lines = [
+    `Hola ${item.resident_name ?? "residente"}, tu cuenta ENTRY ya fue creada.`,
+    "",
+  ];
+
+  if (communityName) {
+    lines.push(`Comunidad: ${communityName}`);
+  }
+
+  lines.push(`Unidad: ${item.unit_label ?? "-"}`);
+  lines.push(`Usuario: ${identity}`);
+  lines.push(`Contrasena temporal: ${item.temporary_password ?? "-"}`);
+  lines.push("");
+  lines.push("Inicia sesion y cambia tu contrasena lo antes posible.");
 
   return lines.join("\n");
 }
@@ -384,6 +417,172 @@ function EmailResultModal({
   );
 }
 
+function CreateUserResultModal({
+  result,
+  communityName,
+  onClose,
+}: {
+  result: CreateActivatedUsersActionResult;
+  communityName: string;
+  onClose: () => void;
+}) {
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [copiedAll, setCopiedAll] = useState(false);
+
+  if (!result.success) {
+    return (
+      <Overlay>
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-rose-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-white">User creation failed</h3>
+          <p className="text-sm text-[var(--text-muted)]">{result.error}</p>
+          <div className="flex justify-end">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  const { data } = result;
+  const activatedItems = data.items.filter((item) => item.status === "activated");
+  const otherItems = data.items.filter((item) => item.status !== "activated");
+
+  function copyCredentials(item: CreateActivatedUserItem) {
+    const text = buildCreatedUserMessage(item, communityName);
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedId(item.queue_id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  }
+
+  function copyAll() {
+    const text = activatedItems
+      .map((item) => buildCreatedUserMessage(item, communityName))
+      .join("\n\n---\n\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 2000);
+    });
+  }
+
+  return (
+    <Overlay>
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] shadow-xl">
+        <div className="flex-shrink-0 border-b border-white/10 p-6">
+          <h3 className="text-lg font-semibold text-white">Created user results</h3>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Badge tone="success">{data.activated_count} created</Badge>
+            {data.skipped_count > 0 ? (
+              <Badge tone="default">{data.skipped_count} skipped</Badge>
+            ) : null}
+            {data.failed_count > 0 ? (
+              <Badge tone="danger">{data.failed_count} failed</Badge>
+            ) : null}
+          </div>
+
+          {activatedItems.length > 0 ? (
+            <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
+              <p className="text-sm font-semibold text-violet-100">
+                Save these temporary credentials now. They will not be shown again
+                after you close this window.
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6">
+          {activatedItems.length > 0 ? (
+            <div className="space-y-3">
+              {activatedItems.map((item) => (
+                <div
+                  key={item.queue_id}
+                  className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] p-4"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-semibold text-white">
+                        {item.resident_name ?? "Unnamed resident"}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        {item.unit_label ?? "-"}
+                        {item.auth_type ? ` · ${item.auth_type}` : ""}
+                      </p>
+                      <p className="text-xs text-[var(--text-muted)]">
+                        Login:{" "}
+                        <span className="font-medium text-slate-200">
+                          {item.login_identity ?? "Not available"}
+                        </span>
+                      </p>
+                    </div>
+
+                    <div className="flex flex-shrink-0 flex-col items-end gap-2">
+                      <div className="rounded-xl border border-violet-400/20 bg-[rgba(9,12,24,0.72)] px-4 py-2 text-center">
+                        <p className="text-xs font-medium text-[var(--text-muted)]">
+                          Temporary password
+                        </p>
+                        <p className="font-mono text-lg font-bold tracking-wide text-violet-200">
+                          {item.temporary_password}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="text-xs"
+                        onClick={() => copyCredentials(item)}
+                      >
+                        {copiedId === item.queue_id ? "Copied!" : "Copy credentials"}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
+          {otherItems.length > 0 ? (
+            <div className="mt-4 space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Skipped / failed
+              </p>
+              {otherItems.map((item) => (
+                <div
+                  key={item.queue_id}
+                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm"
+                >
+                  <span className="text-slate-200">
+                    {item.resident_name ?? item.queue_id}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <Badge tone={item.status === "failed" ? "danger" : "default"}>
+                      {item.status}
+                    </Badge>
+                    {item.message ? (
+                      <span className="text-xs text-[var(--text-muted)]">
+                        {item.message}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="flex-shrink-0 flex flex-wrap items-center justify-end gap-3 border-t border-white/10 p-6">
+          {activatedItems.length > 1 ? (
+            <Button type="button" variant="secondary" onClick={copyAll}>
+              {copiedAll ? "Copied!" : "Copy all credentials"}
+            </Button>
+          ) : null}
+          <Button type="button" onClick={onClose}>
+            Done
+          </Button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
 export function ActivationQueueTable({
   communityId,
   communityName,
@@ -395,11 +594,25 @@ export function ActivationQueueTable({
     visibleRowIds.length > 0 &&
     visibleRowIds.every((rowId) => selectedIds.includes(rowId));
   const selectedCount = selectedIds.length;
+  const createUserTargetIds = selectedCount > 0 ? selectedIds : visibleRowIds;
+  const createUserTargetCount = createUserTargetIds.length;
 
-  type Phase = "idle" | "confirming" | "loading" | "result" | "confirmingEmail" | "loadingEmail" | "emailResult";
+  type Phase =
+    | "idle"
+    | "confirming"
+    | "loading"
+    | "result"
+    | "confirmingEmail"
+    | "loadingEmail"
+    | "emailResult"
+    | "confirmingCreateUser"
+    | "loadingCreateUser"
+    | "createUserResult";
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<GeneratePinsActionResult | null>(null);
   const [emailResult, setEmailResult] = useState<SendEmailInviteResult | null>(null);
+  const [createUserResult, setCreateUserResult] =
+    useState<CreateActivatedUsersActionResult | null>(null);
 
   function toggleAllVisibleRows() {
     setSelectedIds(allVisibleSelected ? [] : [...visibleRowIds]);
@@ -434,6 +647,16 @@ export function ActivationQueueTable({
     setPhase("emailResult");
   }
 
+  async function handleConfirmCreateUser() {
+    setPhase("loadingCreateUser");
+    const actionResult = await createActivatedUsers({
+      communityId,
+      queueIds: createUserTargetIds,
+    });
+    setCreateUserResult(actionResult);
+    setPhase("createUserResult");
+  }
+
   function handleCloseResult() {
     setResult(null);
     setPhase("idle");
@@ -446,7 +669,14 @@ export function ActivationQueueTable({
     setSelectedIds([]);
   }
 
+  function handleCloseCreateUserResult() {
+    setCreateUserResult(null);
+    setPhase("idle");
+    setSelectedIds([]);
+  }
+
   const canGenerate = selectedCount > 0 && !!communityId;
+  const canCreateUsers = createUserTargetCount > 0 && !!communityId;
 
   const selectedRows = rows.filter((r) => selectedIds.includes(r.id));
   const allSelectedAreInvited =
@@ -537,6 +767,61 @@ export function ActivationQueueTable({
         <EmailResultModal result={emailResult} onClose={handleCloseEmailResult} />
       ) : null}
 
+      {phase === "confirmingCreateUser" ? (
+        <Overlay>
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-white">
+              Create active ENTRY users?
+            </h3>
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
+              This will immediately create active ENTRY users for{" "}
+              <span className="font-semibold text-slate-100">
+                {createUserTargetCount}
+              </span>{" "}
+              resident{createUserTargetCount !== 1 ? "s" : ""} and generate a
+              temporary password for each one.
+            </p>
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
+              Use this when you need to finish activation from the console instead
+              of waiting for the resident to complete it.
+            </p>
+            {selectedCount === 0 ? (
+              <p className="text-sm leading-6 text-amber-200">
+                No rows are selected, so this will use all visible residents.
+              </p>
+            ) : null}
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setPhase("idle")}
+              >
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleConfirmCreateUser}>
+                Create users
+              </Button>
+            </div>
+          </div>
+        </Overlay>
+      ) : null}
+
+      {phase === "loadingCreateUser" ? (
+        <Overlay>
+          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] px-8 py-6 shadow-xl">
+            <p className="text-sm font-semibold text-white">Creating users...</p>
+          </div>
+        </Overlay>
+      ) : null}
+
+      {phase === "createUserResult" && createUserResult !== null ? (
+        <CreateUserResultModal
+          result={createUserResult}
+          communityName={communityName}
+          onClose={handleCloseCreateUserResult}
+        />
+      ) : null}
+
       <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -544,7 +829,8 @@ export function ActivationQueueTable({
               Residents ready for activation
             </h2>
             <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-              Review prepared resident records and generate activation PINs.
+              Review prepared resident records, generate activation PINs, or
+              create users directly when needed.
             </p>
           </div>
 
@@ -563,6 +849,27 @@ export function ActivationQueueTable({
                 }
               >
                 Generate PIN
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={
+                  !canCreateUsers ||
+                  (phase !== "idle" && phase !== "confirmingCreateUser")
+                }
+                onClick={() => setPhase("confirmingCreateUser")}
+                title={
+                  !communityId
+                    ? "Select a community before creating users."
+                    : createUserTargetCount === 0
+                      ? "No residents are visible to create users."
+                      : selectedCount === 0
+                        ? "Create users for all visible residents."
+                      : "Create active users directly from selected residents."
+                }
+              >
+                Create user
               </Button>
 
               <Button
@@ -604,7 +911,8 @@ export function ActivationQueueTable({
 
             {communityId && selectedCount === 0 ? (
               <p className="text-xs leading-5 text-[var(--text-muted)]">
-                Select residents above to enable Generate PIN.
+                Generate PIN and email require selection. Create user can use all
+                visible residents even if none are selected.
               </p>
             ) : null}
 

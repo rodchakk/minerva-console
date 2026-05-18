@@ -21,34 +21,42 @@ export function BulkUnitsUploader({
   simpleValue,
 }: BulkUnitsUploaderProps) {
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap gap-3">
+    <div className="space-y-6">
+      <div className="inline-flex rounded-full border border-white/8 bg-white/[0.03] p-1">
         <button
           type="button"
           onClick={() => onModeChange("simple")}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
             mode === "simple"
-              ? "bg-violet-500/18 text-white ring-1 ring-inset ring-violet-400/30"
-              : "bg-white/6 text-[var(--text-muted)] ring-1 ring-inset ring-white/10 hover:bg-white/10"
+              ? "bg-[linear-gradient(180deg,rgba(109,99,255,0.24),rgba(78,67,202,0.22))] text-white ring-1 ring-inset ring-violet-400/30"
+              : "text-[var(--text-muted)] hover:text-white"
           }`}
         >
-          Simple units
+          Manual units
         </button>
         <button
           type="button"
           onClick={() => onModeChange("advanced")}
           className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
             mode === "advanced"
-              ? "bg-violet-500/18 text-white ring-1 ring-inset ring-violet-400/30"
-              : "bg-white/6 text-[var(--text-muted)] ring-1 ring-inset ring-white/10 hover:bg-white/10"
+              ? "bg-[linear-gradient(180deg,rgba(109,99,255,0.24),rgba(78,67,202,0.22))] text-white ring-1 ring-inset ring-violet-400/30"
+              : "text-[var(--text-muted)] hover:text-white"
           }`}
         >
-          Advanced Excel import
+          Resident import
         </button>
       </div>
 
       {mode === "simple" ? (
-        <div className="space-y-3">
+        <div className="space-y-5">
+          <div className="space-y-1">
+            <h3 className="text-xl font-semibold text-white">Add units manually</h3>
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
+              Add one unit per line. Best for small communities.
+            </p>
+          </div>
+
+          <div className="space-y-3">
           <label className="text-sm font-medium text-slate-200" htmlFor="units_input">
             Units list
           </label>
@@ -58,13 +66,13 @@ export function BulkUnitsUploader({
             rows={8}
             value={simpleValue}
             onChange={(event) => onSimpleChange(event.target.value)}
-            className="w-full rounded-3xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
+            className="w-full rounded-[26px] border border-white/10 bg-[var(--surface-strong)] px-4 py-4 text-slate-100 outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
             placeholder={"Casa 1\nCasa 2\nCasa 3"}
           />
           <p className="text-sm leading-6 text-[var(--text-muted)]">
-            Paste one unit per line. This keeps the fastest manual setup flow for
-            small communities.
+            Each line will be added as a unit in this community.
           </p>
+        </div>
         </div>
       ) : (
         <AdvancedUnitsImport value={advancedValue} onChange={onAdvancedChange} />
