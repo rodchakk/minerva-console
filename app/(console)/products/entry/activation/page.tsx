@@ -4,6 +4,8 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
 import { ActivationQueueTable } from "@/features/entry/activation/ActivationQueueTable";
 import { getActivationQueuePageData } from "@/features/entry/activation/actions";
+import { LaunchCampaignButton } from "@/features/entry/onboardingCampaigns/LaunchCampaignButton";
+import { getCampaignPreview } from "@/features/entry/onboardingCampaigns/actions";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 
 function getSingleParam(value: string | string[] | undefined) {
@@ -16,10 +18,13 @@ export default async function ActivationQueuePage(
   const searchParams = await props.searchParams;
   const selectedCommunityId = getSingleParam(searchParams.community_id);
   const selectedStatus = getSingleParam(searchParams.status);
-  const data = await getActivationQueuePageData({
-    communityId: selectedCommunityId,
-    status: selectedStatus,
-  });
+  const [data, campaignPreview] = await Promise.all([
+    getActivationQueuePageData({
+      communityId: selectedCommunityId,
+      status: selectedStatus,
+    }),
+    getCampaignPreview(selectedCommunityId),
+  ]);
   const selectedCommunity = data.communities.find(
     (community) => community.id === selectedCommunityId,
   );
@@ -27,6 +32,9 @@ export default async function ActivationQueuePage(
   const pendingPinCount = data.rows.filter((row) => row.status === "pending").length;
   const invitedCount = data.rows.filter((row) => row.status === "invited").length;
   const errorCount = data.rows.filter((row) => row.status === "failed").length;
+  const showLaunchCampaign =
+    Boolean(selectedCommunityId) &&
+    campaignPreview.ready + campaignPreview.alreadyInvited > 0;
   const progressPercent = data.progress
     ? Math.round(
         (data.progress.completedTasks / Math.max(data.progress.totalTasks, 1)) * 100,
@@ -43,6 +51,13 @@ export default async function ActivationQueuePage(
             <Link href="/products/entry/onboarding">
               <Button variant="secondary">Launch onboarding</Button>
             </Link>
+            {showLaunchCampaign ? (
+              <LaunchCampaignButton
+                communityId={selectedCommunityId}
+                communityName={selectedCommunity?.name ?? ""}
+                preview={campaignPreview}
+              />
+            ) : null}
             <Link href="/products/entry/communities/new">
               <Button>Create community</Button>
             </Link>

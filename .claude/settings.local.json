@@ -14,7 +14,9 @@
       "Bash(npx tsc *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(npx --no-install tsc --noEmit -p tsconfig.json)",
+      "mcp__claude_ai_Supabase__deploy_edge_function"
     ]
   }
 }
