@@ -893,10 +893,10 @@ export function ActivationQueueTable({
         <div
           className={[
             "grid gap-4",
-            activeRow ? "xl:min-h-[calc(100vh-24rem)] xl:grid-cols-[minmax(0,1fr)_352px]" : "",
+            activeRow ? "xl:h-[calc(100vh-23rem)] xl:grid-cols-[minmax(0,1fr)_352px]" : "",
           ].join(" ")}
         >
-          <div className="flex min-h-0 flex-col gap-3">
+          <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
 
         <div className="rounded-[22px] border border-white/8 bg-[rgba(12,17,25,0.58)] p-3.5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
@@ -1023,7 +1023,7 @@ export function ActivationQueueTable({
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/8 bg-[rgba(9,12,24,0.36)]">
-          <div className="min-h-[22rem] flex-1 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-auto">
             <table className="min-w-[1040px] w-full table-fixed divide-y divide-white/8 text-left text-sm">
               <thead className="sticky top-0 z-10 bg-[rgba(9,12,24,0.94)] text-slate-300 backdrop-blur">
                 <tr>
@@ -1131,7 +1131,7 @@ export function ActivationQueueTable({
           </div>
 
           {activeRow ? (
-            <aside className="flex h-full flex-col self-start rounded-[24px] border border-white/8 bg-[rgba(12,17,25,0.72)] p-5 xl:sticky xl:top-4">
+            <aside className="flex h-full flex-col self-start overflow-hidden rounded-[24px] border border-white/8 bg-[rgba(12,17,25,0.72)] p-5 xl:sticky xl:top-4">
               <div className="flex items-start justify-between gap-3">
                 <h3 className="text-lg font-semibold text-white">Resident actions</h3>
                 <button
