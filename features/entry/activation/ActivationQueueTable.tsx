@@ -9,6 +9,8 @@ import type {
   GeneratePinItem,
   GeneratePinsActionResult,
 } from "@/features/entry/activation/pinActions";
+import { sendActivationEmails } from "@/features/entry/activation/emailActions";
+import type { SendEmailInviteResult } from "@/features/entry/activation/emailActions";
 
 type ActivationQueueTableProps = {
   communityId: string;
@@ -17,7 +19,6 @@ type ActivationQueueTableProps = {
 };
 
 const PLACEHOLDER_ACTIONS = [
-  "Send email invite",
   "Copy WhatsApp message",
   "Mark skipped",
 ] as const;
@@ -307,6 +308,82 @@ function ResultModal({
   );
 }
 
+function EmailResultModal({
+  result,
+  onClose,
+}: {
+  result: SendEmailInviteResult;
+  onClose: () => void;
+}) {
+  if (!result.success) {
+    return (
+      <Overlay>
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-rose-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <h3 className="text-lg font-semibold text-white">Email sending failed</h3>
+          <p className="text-sm text-[var(--text-muted)]">{result.error}</p>
+          <div className="flex justify-end">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  const { data } = result;
+  if (!data) return null;
+
+  const sentItems = data.items.filter((i) => i.status === "sent");
+  const failedItems = data.items.filter((i) => i.status === "failed");
+  const skippedItems = data.items.filter((i) => i.status === "skipped");
+
+  return (
+    <Overlay>
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] shadow-xl">
+        <div className="flex-shrink-0 border-b border-white/10 p-6">
+          <h3 className="text-lg font-semibold text-white">Email invitation results</h3>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <Badge tone="success">{data.sent_count} sent</Badge>
+            {data.skipped_count > 0 ? <Badge tone="default">{data.skipped_count} skipped</Badge> : null}
+            {data.failed_count > 0 ? <Badge tone="danger">{data.failed_count} failed</Badge> : null}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {sentItems.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-violet-300">Successfully Sent</p>
+              {sentItems.map((item) => (
+                <div key={item.queue_id} className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 py-3">
+                  <p className="text-sm font-medium text-slate-200">{item.email}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {(failedItems.length > 0 || skippedItems.length > 0) && (
+            <div className="space-y-2">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Failed / Skipped</p>
+              {[...failedItems, ...skippedItems].map((item) => (
+                <div key={item.queue_id} className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm">
+                  <span className="text-slate-200 font-medium">{item.email}</span>
+                  <div className="flex items-center gap-2">
+                    <Badge tone={item.status === "failed" ? "danger" : "default"}>{item.status}</Badge>
+                    <span className="text-xs text-[var(--text-muted)]">{item.message}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-shrink-0 flex justify-end border-t border-white/10 p-6">
+          <Button type="button" onClick={onClose}>Done</Button>
+        </div>
+      </div>
+    </Overlay>
+  );
+}
+
 export function ActivationQueueTable({
   communityId,
   communityName,
@@ -319,9 +396,10 @@ export function ActivationQueueTable({
     visibleRowIds.every((rowId) => selectedIds.includes(rowId));
   const selectedCount = selectedIds.length;
 
-  type Phase = "idle" | "confirming" | "loading" | "result";
+  type Phase = "idle" | "confirming" | "loading" | "result" | "confirmingEmail" | "loadingEmail" | "emailResult";
   const [phase, setPhase] = useState<Phase>("idle");
   const [result, setResult] = useState<GeneratePinsActionResult | null>(null);
+  const [emailResult, setEmailResult] = useState<SendEmailInviteResult | null>(null);
 
   function toggleAllVisibleRows() {
     setSelectedIds(allVisibleSelected ? [] : [...visibleRowIds]);
@@ -345,13 +423,35 @@ export function ActivationQueueTable({
     setPhase("result");
   }
 
+  async function handleConfirmSendEmail() {
+    setPhase("loadingEmail");
+    const actionResult = await sendActivationEmails({
+      communityId,
+      communityName,
+      queueIds: selectedIds,
+    });
+    setEmailResult(actionResult);
+    setPhase("emailResult");
+  }
+
   function handleCloseResult() {
     setResult(null);
     setPhase("idle");
     setSelectedIds([]);
   }
 
+  function handleCloseEmailResult() {
+    setEmailResult(null);
+    setPhase("idle");
+    setSelectedIds([]);
+  }
+
   const canGenerate = selectedCount > 0 && !!communityId;
+
+  const selectedRows = rows.filter((r) => selectedIds.includes(r.id));
+  const allSelectedAreInvited =
+    selectedRows.length > 0 && selectedRows.every((r) => r.status === "invited");
+  const someSelectedAreInvited = selectedRows.some((r) => r.status === "invited");
 
   return (
     <>
@@ -403,6 +503,40 @@ export function ActivationQueueTable({
         />
       ) : null}
 
+      {phase === "confirmingEmail" ? (
+        <Overlay>
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+            <h3 className="text-lg font-semibold text-white">
+              {someSelectedAreInvited ? "Resend activation email?" : "Send email invites?"}
+            </h3>
+            <p className="text-sm leading-6 text-[var(--text-muted)]">
+              {someSelectedAreInvited
+                ? <>A new PIN will be generated and the activation email will be resent to <span className="font-semibold text-slate-100">{selectedCount}</span> selected resident(s). Any previous PIN will be replaced.</>
+                : <>This will generate PINs and send invitation emails to <span className="font-semibold text-slate-100">{selectedCount}</span> selected resident(s) who have an email address.</>
+              }
+            </p>
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>Cancel</Button>
+              <Button type="button" onClick={handleConfirmSendEmail}>
+                {someSelectedAreInvited ? "Resend" : "Send Emails"}
+              </Button>
+            </div>
+          </div>
+        </Overlay>
+      ) : null}
+
+      {phase === "loadingEmail" ? (
+        <Overlay>
+          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] px-8 py-6 shadow-xl">
+            <p className="text-sm font-semibold text-white">Sending emails...</p>
+          </div>
+        </Overlay>
+      ) : null}
+
+      {phase === "emailResult" && emailResult !== null ? (
+        <EmailResultModal result={emailResult} onClose={handleCloseEmailResult} />
+      ) : null}
+
       <div className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
@@ -418,7 +552,7 @@ export function ActivationQueueTable({
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
-                disabled={!canGenerate || phase === "loading"}
+                disabled={!canGenerate || (phase !== "idle" && phase !== "confirming")}
                 onClick={() => setPhase("confirming")}
                 title={
                   !communityId
@@ -429,6 +563,24 @@ export function ActivationQueueTable({
                 }
               >
                 Generate PIN
+              </Button>
+
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={!canGenerate || (phase !== "idle" && phase !== "confirmingEmail")}
+                onClick={() => setPhase("confirmingEmail")}
+                title={
+                  !communityId
+                    ? "Select a community before sending emails."
+                    : selectedCount === 0
+                      ? "Select residents to send emails."
+                      : allSelectedAreInvited
+                        ? "Resend activation email to selected residents."
+                        : "Send email invites with activation PINs."
+                }
+              >
+                {allSelectedAreInvited ? "Resend email" : "Send email invite"}
               </Button>
 
               {PLACEHOLDER_ACTIONS.map((label) => (
@@ -459,8 +611,6 @@ export function ActivationQueueTable({
             {communityId && selectedCount > 0 ? (
               <p className="text-xs leading-5 text-[var(--text-muted)]">
                 {selectedCount} resident{selectedCount !== 1 ? "s" : ""} selected.
-                Send email invite, Copy WhatsApp message, and Mark skipped are
-                coming soon.
               </p>
             ) : null}
           </div>
