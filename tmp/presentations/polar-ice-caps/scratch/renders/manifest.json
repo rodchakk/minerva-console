@@ -1,0 +1,31 @@
+{
+  "pptx": "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\output\\output.pptx",
+  "sourcePreview": {
+    "renders": [
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-1.png",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-2.png",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-3.png",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-4.png"
+    ],
+    "layouts": [
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-1.layout.json",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-2.layout.json",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-3.layout.json",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\source-slide-4.layout.json"
+    ]
+  },
+  "savedPreview": {
+    "renders": [
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-1.png",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-2.png",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-3.png",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-4.png"
+    ],
+    "layouts": [
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-1.layout.json",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-2.layout.json",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-3.layout.json",
+      "C:\\Dev\\minerva-console\\tmp\\presentations\\polar-ice-caps\\scratch\\renders\\saved-slide-4.layout.json"
+    ]
+  }
+}
