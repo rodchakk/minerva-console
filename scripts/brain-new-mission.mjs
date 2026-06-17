@@ -221,7 +221,9 @@ if (existsSync(filepath)) {
   fail(`Mission file already exists: ${relPath}`);
 }
 
-const timestamp = new Date().toISOString();
+// `created`/`updated` are date-only ISO strings (YYYY-MM-DD) to match the
+// type contract, the conventions doc, and every other Brain script.
+const date = new Date().toISOString().slice(0, 10);
 const tags = [
   ...new Set(splitList(args.tags).map(normalizeTag).filter(Boolean)),
 ];
@@ -233,8 +235,8 @@ const entry = {
   type: "mission",
   status: "planned",
   summary: args.summary,
-  created: timestamp,
-  updated: timestamp,
+  created: date,
+  updated: date,
   tags,
   related: [],
   path: relPath,
@@ -254,7 +256,7 @@ const markdown = buildMarkdown({
   branch: entry.branch,
   pr: entry.pr,
   commit: entry.commit,
-  timestamp,
+  timestamp: date,
 });
 
 mkdirSync(MISSIONS_DIR, { recursive: true });
