@@ -19,11 +19,16 @@ import inboxData from "@/content/brain/registries/inbox.json";
 
 import type {
   AgentEntry,
+  AnyEntry,
   DecisionEntry,
   InboxEntry,
   ProjectEntry,
   PromptEntry,
+  RegistryKindPlural,
 } from "@/features/brain/lib/types";
+import { PLURAL_TO_SINGULAR } from "@/features/brain/lib/types";
+import { readBrainMarkdown } from "@/features/brain/lib/markdown";
+import type { MarkdownDocument } from "@/features/brain/lib/markdown";
 
 function byUpdatedDesc<T extends { updated: string }>(a: T, b: T): number {
   // Lexicographic compare works for ISO date strings.
@@ -67,4 +72,51 @@ export function getBrainCounts(): BrainCounts {
     agents: getAgents().length,
     inbox: getInbox().length,
   };
+}
+
+export function getRegistry(kind: RegistryKindPlural): AnyEntry[] {
+  switch (kind) {
+    case "projects":
+      return getProjects();
+    case "decisions":
+      return getDecisions();
+    case "prompts":
+      return getPrompts();
+    case "agents":
+      return getAgents();
+    case "inbox":
+      return getInbox();
+    default:
+      return [];
+  }
+}
+
+export function getEntry(
+  kind: RegistryKindPlural,
+  id: string,
+): AnyEntry | null {
+  const singular = PLURAL_TO_SINGULAR[kind];
+  if (!singular) return null;
+  const entries = getRegistry(kind);
+  return entries.find((e) => e.id === id) ?? null;
+}
+
+export function getEntryDocument(
+  kind: RegistryKindPlural,
+  id: string,
+): { entry: AnyEntry; document: MarkdownDocument | null } | null {
+  const entry = getEntry(kind, id);
+  if (!entry) return null;
+  const document = entry.path ? readBrainMarkdown(entry.path) : null;
+  return { entry, document };
+}
+
+export function getAllBrainEntries(): AnyEntry[] {
+  return [
+    ...getProjects(),
+    ...getDecisions(),
+    ...getPrompts(),
+    ...getAgents(),
+    ...getInbox(),
+  ];
 }

@@ -22,6 +22,7 @@ export default function BrainProjectsPage() {
         />
       ) : (
         <RegistryTable
+          kind="projects"
           rows={projects.map((p) => ({
             id: p.id,
             title: p.title,
