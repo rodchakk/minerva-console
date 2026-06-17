@@ -1,0 +1,28 @@
+[
+  {
+    "id": "MCB-0001",
+    "type": "prompt",
+    "status": "approved",
+    "version": "v1",
+    "title": "Brain Placement & Architecture Recon",
+    "summary": "Reconnaissance mission. Inspect Minerva Console and recommend whether Brain should live inside the repo, in a separate repo, hybrid, or as a Git vault. Recommend one primary path with exact paths.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["mission", "recon", "architecture"],
+    "related": ["DEC-0001", "DEC-0002", "DEC-0003"],
+    "path": "content/brain/prompts/MCB-0001.md"
+  },
+  {
+    "id": "MCB-0002",
+    "type": "prompt",
+    "status": "approved",
+    "version": "v1",
+    "title": "Create Brain Harness and Static Shell",
+    "summary": "Build mission. Scaffold content/brain/, harness files, JSON registries, features/brain/ module, app/(console)/brain/** routes, and lightly reorganize the sidebar so Brain appears as a top-level section.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["mission", "build", "v0"],
+    "related": ["MCB-0001", "DEC-0001", "DEC-0002"],
+    "path": "content/brain/prompts/MCB-0002.md"
+  }
+]

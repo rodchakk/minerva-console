@@ -1,0 +1,62 @@
+[
+  {
+    "id": "AGT-0001",
+    "type": "agent",
+    "status": "approved",
+    "title": "Architecture Reviewer",
+    "summary": "Reviews proposed system architectures for Minerva products and Brain. Verifies separation between Operations, Products, Brain, Leads, and System. Flags coupling risks and premature complexity.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["agent", "architecture", "review"],
+    "related": ["AGT-0005"],
+    "path": "content/brain/agents/architecture-reviewer.md"
+  },
+  {
+    "id": "AGT-0002",
+    "type": "agent",
+    "status": "approved",
+    "title": "Codebase Analyst",
+    "summary": "Inspects repositories and reports framework, routing, auth, data layer, components, styling, and deployment assumptions. Produces grounded findings without modifying files.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["agent", "recon", "codebase"],
+    "related": ["AGT-0001"],
+    "path": "content/brain/agents/codebase-analyst.md"
+  },
+  {
+    "id": "AGT-0003",
+    "type": "agent",
+    "status": "approved",
+    "title": "Prompt Librarian",
+    "summary": "Curates Brain's prompt library. Enforces id, version, status, and tag conventions. Promotes drafts to approved only after review.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["agent", "prompts", "curation"],
+    "related": ["AGT-0005"],
+    "path": "content/brain/agents/prompt-librarian.md"
+  },
+  {
+    "id": "AGT-0004",
+    "type": "agent",
+    "status": "approved",
+    "title": "Product Strategist",
+    "summary": "Considers product positioning, scope, and sequencing across Minerva products. Helps decide what should be built next versus deferred.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["agent", "strategy", "product"],
+    "related": [],
+    "path": "content/brain/agents/product-strategist.md"
+  },
+  {
+    "id": "AGT-0005",
+    "type": "agent",
+    "status": "approved",
+    "title": "QA Verifier",
+    "summary": "Verifies that completed work meets the acceptance criteria of its mission. Runs lint and build, checks boundary rules, and confirms read-only and zero-dependency constraints.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["agent", "qa", "verification"],
+    "related": ["AGT-0001", "AGT-0003"],
+    "path": "content/brain/agents/qa-verifier.md"
+  }
+]

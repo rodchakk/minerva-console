@@ -1,0 +1,50 @@
+[
+  {
+    "id": "PRJ-0001",
+    "type": "project",
+    "status": "approved",
+    "title": "ENTRY",
+    "summary": "Residential and community access control system. Has its own Supabase project. Brain may reference ENTRY decisions and architecture but must not read ENTRY operational data.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["product", "access-control", "supabase"],
+    "related": ["PRJ-0004"],
+    "path": "content/brain/projects/entry.md"
+  },
+  {
+    "id": "PRJ-0002",
+    "type": "project",
+    "status": "approved",
+    "title": "Seshat",
+    "summary": "Financial operating system for freelancers, developers, and small studios. Has its own Supabase project. Brain does not store Seshat operational data.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["product", "fintech", "supabase"],
+    "related": ["PRJ-0004"],
+    "path": "content/brain/projects/seshat.md"
+  },
+  {
+    "id": "PRJ-0003",
+    "type": "project",
+    "status": "approved",
+    "title": "Minerva Web",
+    "summary": "Public website for Minerva Technologies. Surface for product marketing and lead capture.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["product", "marketing"],
+    "related": [],
+    "path": "content/brain/projects/minerva-web.md"
+  },
+  {
+    "id": "PRJ-0004",
+    "type": "project",
+    "status": "approved",
+    "title": "Minerva Core Brain",
+    "summary": "Internal intelligence layer for Minerva: knowledge, decisions, prompts, agents, and inbox. v0 is Git-backed; v1 moves to Neon. Lives under app/(console)/brain in Minerva Console.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["brain", "internal", "intelligence-layer"],
+    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0003"],
+    "path": "content/brain/harness/00_PROJECT_CHARTER.md"
+  }
+]

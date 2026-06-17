@@ -1,0 +1,50 @@
+[
+  {
+    "id": "DEC-0001",
+    "type": "decision",
+    "status": "approved",
+    "title": "Brain v0 is Git-backed",
+    "summary": "Brain v0 stores knowledge as Markdown, JSON, and YAML files under content/brain/. No database is used in v0. JSON registries are imported directly via resolveJsonModule, so no parser dependency is required.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["architecture", "v0", "storage"],
+    "related": ["DEC-0003"],
+    "path": "content/brain/harness/03_DECISIONS.md"
+  },
+  {
+    "id": "DEC-0002",
+    "type": "decision",
+    "status": "approved",
+    "title": "Brain UI lives inside Minerva Console",
+    "summary": "Brain routes live under app/(console)/brain/** and inherit the existing superadmin gate from app/(console)/layout.tsx. Brain reuses the Shell, PageHeader, and design tokens. The Brain feature module lives under features/brain/**.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["architecture", "placement", "console"],
+    "related": ["DEC-0001"],
+    "path": "content/brain/harness/03_DECISIONS.md"
+  },
+  {
+    "id": "DEC-0003",
+    "type": "decision",
+    "status": "approved",
+    "title": "Neon Postgres reserved for v1",
+    "summary": "A Neon project exists but is intentionally not connected in v0. No DB deps, no migrations, no environment variables are added. Migration to Neon happens behind features/brain/lib/content.ts without changing UI code.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["architecture", "neon", "v1", "deferred"],
+    "related": ["DEC-0001"],
+    "path": "content/brain/harness/03_DECISIONS.md"
+  },
+  {
+    "id": "DEC-0004",
+    "type": "decision",
+    "status": "approved",
+    "title": "Brain must not use ENTRY or Seshat operational data",
+    "summary": "features/brain/** must not import from features/entry/** and must not read ENTRY's or Seshat's Supabase projects. Brain stores no raw sensitive operational data from any product. Brain is not the CRM.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["boundary", "security", "agent-rules"],
+    "related": ["DEC-0002"],
+    "path": "content/brain/harness/05_AGENT_RULES.md"
+  }
+]

@@ -1,0 +1,15 @@
+[
+  {
+    "id": "INB-TEMPLATE",
+    "type": "inbox",
+    "status": "inbox",
+    "source": "human",
+    "title": "TEMPLATE — raw AI output, unprocessed",
+    "summary": "This is the template inbox item. Inbox items are raw, unverified outputs from Claude Code, GPT, Codex, Gemini, or humans. They are NOT yet Brain knowledge. They must be triaged and promoted to decisions, prompts, projects, or docs after human review before they become authoritative.",
+    "created": "2026-06-16",
+    "updated": "2026-06-16",
+    "tags": ["template", "raw", "unprocessed"],
+    "related": [],
+    "path": "content/brain/inbox/TEMPLATE_inbox_item.md"
+  }
+]
