@@ -181,11 +181,15 @@ export default async function BrainSearchPage({
                         <Badge
                           tone={
                             result.status === "approved" ||
-                            result.status === "promoted"
+                            result.status === "promoted" ||
+                            result.status === "completed"
                               ? "success"
                               : result.status === "draft" ||
-                                  result.status === "inbox"
+                                  result.status === "inbox" ||
+                                  result.status === "planned"
                                 ? "warning"
+                                : result.status === "in_progress"
+                                  ? "info"
                                 : "default"
                           }
                         >

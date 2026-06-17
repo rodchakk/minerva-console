@@ -10,6 +10,26 @@ Brain v0 is read in the app and written in Git. No content is created or edited 
 4. Open a PR. Review is the human approval gate.
 5. Merge. The next deploy publishes the change in the Brain UI.
 
+## Mission ledger loop - Git-backed project control
+
+Brain missions are tracked in `content/brain/registries/missions.json` with one Markdown file per mission under `content/brain/missions/`. This is project control metadata stored in Git. It is not an agent engine, not automation, and not a UI write path.
+
+The loop is:
+
+1. Mission planned in the registry with `status: "planned"` and a Markdown mission doc.
+2. Branch created for the mission.
+3. Agent or human executes the mission on that branch.
+4. PR opened and checks run.
+5. PR merges.
+6. Mission status is updated to `completed`, with branch, PR, and commit recorded when visible.
+7. The next mission is planned.
+
+Prefer the local helper when creating a new mission:
+
+```bash
+npm run brain:new-mission -- --id MCB-0008 --title "Brain Relationship Map" --summary "Add relation views for Brain knowledge." --agent codex --phase planning --tags "brain,missions,planning"
+```
+
 ## Inbox loop — raw AI output to approved knowledge
 
 Raw outputs from Claude Code, GPT, Codex, Gemini, or humans never become Brain knowledge directly. They pass through an inbox-and-promote process.
@@ -62,6 +82,7 @@ Brain has a local search page at `/brain/search` that indexes all registry entri
 - Free-text query across title, summary, id, tags, kind, source, path, and document content.
 - Filters by kind, tag, and status via URL query params.
 - A tag index at `/brain/tags` lists all tags with counts and links to filtered search results.
+- Missions are included automatically in search and can be filtered with `kind=missions`.
 
 Tags help human triage and future promotion of inbox items. They are not semantic vectors — they are manually assigned labels.
 

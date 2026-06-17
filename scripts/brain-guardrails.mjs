@@ -267,6 +267,15 @@ const INBOX_SOURCES = [
   "human",
   "other",
 ];
+const MISSION_STATUSES = ["planned", "in_progress", "completed"];
+const MISSION_FIELDS = [
+  "path",
+  "agent",
+  "branch",
+  "pr",
+  "commit",
+  "phase",
+];
 
 function validateInboxEntry(entry, entryLabel, relPath) {
   if (typeof entry.id !== "string" || !entry.id.startsWith("INB-")) {
@@ -293,6 +302,36 @@ function validateInboxEntry(entry, entryLabel, relPath) {
     fail(`[CHECK 4] ${relPath} - ${entryLabel}.path must point to a Markdown file`);
   } else if (!existsSync(join(ROOT, entry.path))) {
     fail(`[CHECK 4] ${relPath} - ${entryLabel}.path does not exist: ${entry.path}`);
+  }
+}
+
+function validateMissionEntry(entry, entryLabel, relPath) {
+  if (typeof entry.id !== "string" || !entry.id.startsWith("MCB-")) {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.id must start with MCB-`);
+  }
+  if (entry.type !== "mission") {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.type must be "mission"`);
+  }
+  if (!MISSION_STATUSES.includes(entry.status)) {
+    fail(
+      `[CHECK 4] ${relPath} - ${entryLabel}.status must be one of: ${MISSION_STATUSES.join(", ")}`,
+    );
+  }
+  for (const field of MISSION_FIELDS) {
+    if (!(field in entry)) {
+      fail(`[CHECK 4] ${relPath} - ${entryLabel} is missing required field: "${field}"`);
+    } else if (typeof entry[field] !== "string") {
+      fail(`[CHECK 4] ${relPath} - ${entryLabel}.${field} must be a string`);
+    }
+  }
+  if (typeof entry.path === "string") {
+    if (!entry.path.startsWith("content/brain/missions/")) {
+      fail(`[CHECK 4] ${relPath} - ${entryLabel}.path must stay under content/brain/missions/`);
+    } else if (!entry.path.endsWith(".md")) {
+      fail(`[CHECK 4] ${relPath} - ${entryLabel}.path must point to a Markdown file`);
+    } else if (!existsSync(join(ROOT, entry.path))) {
+      fail(`[CHECK 4] ${relPath} - ${entryLabel}.path does not exist: ${entry.path}`);
+    }
   }
 }
 
@@ -353,6 +392,9 @@ if (!existsSync(REGISTRY_DIR)) {
       if (filename === "inbox.json") {
         validateInboxEntry(entry, entryLabel, relPath);
       }
+      if (filename === "missions.json") {
+        validateMissionEntry(entry, entryLabel, relPath);
+      }
     });
   }
 }
@@ -373,8 +415,11 @@ const REQUIRED_FILES = [
   "content/brain/harness/08_CHANGELOG.md",
   "content/brain/harness/09_RISKS.md",
   "content/brain/harness/10_HANDOFF_TEMPLATE.md",
+  "content/brain/missions",
+  "content/brain/registries/missions.json",
   "content/brain/templates/mission-handoff.md",
   "scripts/brain-capture.mjs",
+  "scripts/brain-new-mission.mjs",
   "scripts/brain-promote.mjs",
   "features/brain/lib/content.ts",
   "features/brain/lib/markdown.ts",
@@ -389,7 +434,7 @@ for (const relPath of REQUIRED_FILES) {
     fail(`[CHECK 5] Required Brain file is missing: ${relPath}`);
   } else {
     const s = statSync(full);
-    if (s.size === 0) {
+    if (s.isFile() && s.size === 0) {
       warn(`[CHECK 5] Required Brain file is empty: ${relPath}`);
     }
   }

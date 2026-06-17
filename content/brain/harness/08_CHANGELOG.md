@@ -2,6 +2,15 @@
 
 Append-only. Most recent first.
 
+## 2026-06-17 — MCB-0007 — Brain mission control ledger
+
+- Added `content/brain/registries/missions.json` and `content/brain/missions/` as the Git-backed ledger for Brain missions.
+- Seeded mission records for MCB-0001, MCB-0002, MCB-0002.5, MCB-0002.7, MCB-0003, MCB-0004, MCB-0005, MCB-0006, and MCB-0007.
+- Added missions as a Brain registry kind, including `/brain/missions`, detail routes like `/brain/missions/MCB-0006`, search, tags, sidebar navigation, and the Brain overview card.
+- Added `scripts/brain-new-mission.mjs` and `brain:new-mission` to create future mission docs and registry entries together.
+- Updated guardrails to require the mission registry, mission directory, and mission creation script.
+- Mission control is Git-backed project metadata. It is not an agent engine, not automation, not RAG, not embeddings, and not a UI write path.
+
 ## 2026-06-17 — MCB-0006 — Brain promotion workflow
 
 - Added `scripts/brain-promote.mjs` to promote inbox items into approved Brain knowledge (decisions, prompts, projects, agents).
