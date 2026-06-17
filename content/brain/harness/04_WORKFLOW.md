@@ -14,10 +14,20 @@ Brain v0 is read in the app and written in Git. No content is created or edited 
 
 Raw outputs from Claude Code, GPT, Codex, Gemini, or humans never become Brain knowledge directly. They pass through an inbox-and-promote process.
 
-1. **Capture.** Save the raw output as a Markdown file in `content/brain/inbox/`, using `TEMPLATE_inbox_item.md` as the starting point. Add an entry in `content/brain/registries/inbox.json` with `status: "inbox"` and a clear `source`.
+1. **Capture.** Prefer the Git-backed CLI so the Markdown item and registry entry are created together:
+
+   ```bash
+   npm run brain:capture -- --title "Raw model output" --source codex --file ./raw-output.md --tag mcb-0004
+   ```
+
+   The command writes a Markdown file in `content/brain/inbox/` and appends a matching entry to `content/brain/registries/inbox.json` with `status: "inbox"` and a clear `source`. Manual capture is still allowed: copy `content/brain/inbox/TEMPLATE_inbox_item.md`, then add the registry entry by hand.
 2. **Triage.** A human reads the inbox item. Most of it is noise; that is expected.
 3. **Promote.** Distill the signal into the right typed artifact under `content/brain/{decisions,prompts,projects,agents,docs}/` and add a matching entry to the appropriate registry with `status: "approved"`. Fill in `tags` and `related` so the future graph view can use them.
 4. **Archive or discard.** Move the inbox item to `status: "promoted"` or `"archived"`. A raw inbox item is never authoritative knowledge.
+
+## Mission handoff
+
+When a mission finishes, copy `content/brain/templates/mission-handoff.md` into the relevant handoff location or paste it into the PR description. The handoff records changed files, registry updates, validation, respected boundaries, and the next suggested mission. The harness version in `10_HANDOFF_TEMPLATE.md` is the canonical checklist; the reusable template exists so handoffs do not need to be rebuilt from memory.
 
 ## Conventions
 

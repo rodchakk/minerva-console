@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "brain:capture": "node scripts/brain-capture.mjs",
+    "brain:guardrails": "node scripts/brain-guardrails.mjs",
+    "brain:new-inbox-item": "node scripts/brain-new-inbox-item.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",
