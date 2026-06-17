@@ -318,6 +318,7 @@ const REQUIRED_FILES = [
   "content/brain/harness/09_RISKS.md",
   "content/brain/harness/10_HANDOFF_TEMPLATE.md",
   "features/brain/lib/content.ts",
+  "features/brain/lib/markdown.ts",
   "features/brain/lib/types.ts",
   "app/(console)/brain/page.tsx",
 ];

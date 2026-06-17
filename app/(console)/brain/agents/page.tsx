@@ -22,6 +22,7 @@ export default function BrainAgentsPage() {
         />
       ) : (
         <RegistryTable
+          kind="agents"
           rows={agents.map((a) => ({
             id: a.id,
             title: a.title,

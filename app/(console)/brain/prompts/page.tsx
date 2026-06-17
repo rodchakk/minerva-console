@@ -22,6 +22,7 @@ export default function BrainPromptsPage() {
         />
       ) : (
         <RegistryTable
+          kind="prompts"
           extraLabel="Version"
           rows={prompts.map((p) => ({
             id: p.id,

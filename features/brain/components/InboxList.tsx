@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import type { InboxEntry, InboxStatus } from "@/features/brain/lib/types";
 
@@ -46,9 +47,12 @@ export function InboxList({ items }: InboxListProps) {
                     {item.source}
                   </span>
                 </div>
-                <p className="mt-2 text-base font-semibold text-white">
+                <Link
+                  href={`/brain/inbox/${item.id}`}
+                  className="mt-2 block text-base font-semibold text-white hover:text-sky-400"
+                >
                   {item.title}
-                </p>
+                </Link>
                 <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
                   {item.summary}
                 </p>

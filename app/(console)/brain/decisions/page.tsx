@@ -22,6 +22,7 @@ export default function BrainDecisionsPage() {
         />
       ) : (
         <RegistryTable
+          kind="decisions"
           rows={decisions.map((d) => ({
             id: d.id,
             title: d.title,

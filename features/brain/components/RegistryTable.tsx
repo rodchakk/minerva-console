@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import type { EntryStatus } from "@/features/brain/lib/types";
 
@@ -14,6 +15,8 @@ type RegistryRow = {
 
 type RegistryTableProps = {
   rows: RegistryRow[];
+  /** Plural kind for building detail links, e.g. "projects". */
+  kind: string;
   /** Optional header label for the `extra` column. */
   extraLabel?: string;
 };
@@ -27,7 +30,7 @@ const statusTone: Record<
   archived: "default",
 };
 
-export function RegistryTable({ rows, extraLabel }: RegistryTableProps) {
+export function RegistryTable({ rows, kind, extraLabel }: RegistryTableProps) {
   return (
     <div className="overflow-hidden rounded-[28px] border border-[var(--border)] bg-[var(--surface)] shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur">
       <table className="w-full text-left text-sm">
@@ -48,10 +51,20 @@ export function RegistryTable({ rows, extraLabel }: RegistryTableProps) {
               className="border-b border-[var(--border)] last:border-b-0 align-top"
             >
               <td className="px-5 py-4 font-mono text-xs text-[var(--text-muted)]">
-                {row.id}
+                <Link
+                  href={`/brain/${kind}/${row.id}`}
+                  className="hover:text-sky-400"
+                >
+                  {row.id}
+                </Link>
               </td>
               <td className="px-5 py-4">
-                <p className="font-medium text-white">{row.title}</p>
+                <Link
+                  href={`/brain/${kind}/${row.id}`}
+                  className="font-medium text-white hover:text-sky-400"
+                >
+                  {row.title}
+                </Link>
                 <p className="mt-1 max-w-2xl text-xs leading-5 text-[var(--text-muted)]">
                   {row.summary}
                 </p>

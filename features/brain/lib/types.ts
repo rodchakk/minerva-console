@@ -16,6 +16,21 @@ export type RegistryKind =
   | "agent"
   | "inbox";
 
+export type RegistryKindPlural =
+  | "projects"
+  | "decisions"
+  | "prompts"
+  | "agents"
+  | "inbox";
+
+export const PLURAL_TO_SINGULAR: Record<RegistryKindPlural, RegistryKind> = {
+  projects: "project",
+  decisions: "decision",
+  prompts: "prompt",
+  agents: "agent",
+  inbox: "inbox",
+};
+
 type BaseEntry = {
   id: string;
   title: string;
