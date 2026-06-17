@@ -168,5 +168,22 @@
     "pr": "#7",
     "commit": "4baa164",
     "phase": "relations"
+  },
+  {
+    "id": "MCB-0009",
+    "title": "Brain Audit & Hardening Pass",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Audit of Brain v0 with minimal, safe fixes: added triaged to guardrail inbox statuses, made brain-new-mission emit date-only YYYY-MM-DD timestamps, and corrected the stale MCB-0007 ledger entry to completed.",
+    "created": "2026-06-17",
+    "updated": "2026-06-17",
+    "tags": ["brain", "mission", "audit", "hardening"],
+    "related": ["MCB-0008"],
+    "path": "content/brain/missions/mcb-0009.md",
+    "agent": "claude",
+    "branch": "unknown",
+    "pr": "#8",
+    "commit": "40dac8b",
+    "phase": "audit"
   }
 ]
