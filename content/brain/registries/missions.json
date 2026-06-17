@@ -163,8 +163,8 @@
     "tags": ["brain", "mission", "relations", "map"],
     "related": ["MCB-0007"],
     "path": "content/brain/missions/mcb-0008.md",
-    "agent": "codex",
-    "branch": "mcb-0008-brain-relations-map",
+    "agent": "unknown",
+    "branch": "unknown",
     "pr": "#7",
     "commit": "4baa164",
     "phase": "relations"
