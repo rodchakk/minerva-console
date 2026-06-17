@@ -2,26 +2,30 @@
 //
 // This module is the single typed surface for Brain registry entries.
 // It must not import from `features/entry/**` and must not depend on Supabase.
-// When Brain migrates to Neon in v1, only `content.ts` changes; these shapes
-// are intended to stay stable so UI code never sees the underlying source.
+// These shapes are intended to stay stable so UI code never sees the
+// underlying Git-backed source.
 
 export type EntryStatus = "draft" | "approved" | "archived";
 
 export type InboxStatus = "inbox" | "triaged" | "promoted" | "archived";
+
+export type MissionStatus = "planned" | "in_progress" | "completed";
 
 export type RegistryKind =
   | "project"
   | "decision"
   | "prompt"
   | "agent"
-  | "inbox";
+  | "inbox"
+  | "mission";
 
 export type RegistryKindPlural =
   | "projects"
   | "decisions"
   | "prompts"
   | "agents"
-  | "inbox";
+  | "inbox"
+  | "missions";
 
 export const PLURAL_TO_SINGULAR: Record<RegistryKindPlural, RegistryKind> = {
   projects: "project",
@@ -29,6 +33,7 @@ export const PLURAL_TO_SINGULAR: Record<RegistryKindPlural, RegistryKind> = {
   prompts: "prompt",
   agents: "agent",
   inbox: "inbox",
+  missions: "mission",
 };
 
 type BaseEntry = {
@@ -75,9 +80,20 @@ export type InboxEntry = BaseEntry & {
   source: "claude-code" | "gpt" | "codex" | "gemini" | "human" | "other";
 };
 
+export type MissionEntry = BaseEntry & {
+  type: "mission";
+  status: MissionStatus;
+  agent: string;
+  branch: string;
+  pr: string;
+  commit: string;
+  phase: string;
+};
+
 export type AnyEntry =
   | ProjectEntry
   | DecisionEntry
   | PromptEntry
   | AgentEntry
-  | InboxEntry;
+  | InboxEntry
+  | MissionEntry;

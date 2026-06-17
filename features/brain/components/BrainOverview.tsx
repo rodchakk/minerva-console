@@ -34,6 +34,11 @@ const cards: Card[] = [
     hint: "Raw, unprocessed AI outputs awaiting triage. Not yet knowledge.",
   },
   {
+    label: "Missions",
+    href: "/brain/missions",
+    hint: "Git-backed mission ledger for Brain project control.",
+  },
+  {
     label: "Search",
     href: "/brain/search",
     hint: "Search across all Brain registries and Markdown documents.",
@@ -53,6 +58,7 @@ export function BrainOverview() {
     Prompts: counts.prompts,
     Agents: counts.agents,
     Inbox: counts.inbox,
+    Missions: counts.missions,
   };
 
   return (

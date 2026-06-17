@@ -30,6 +30,18 @@ Reusable copy lives at `content/brain/templates/mission-handoff.md`.
 - `prompts.json`:
 - `agents.json`:
 - `inbox.json`:
+- `missions.json`:
+
+## Mission control
+
+Mission planned -> branch created -> agent or human executes -> PR/checks -> merge -> mission status completed -> next mission planned.
+
+- Mission ledger entry:
+- Mission Markdown file:
+- Branch:
+- PR:
+- Commit:
+- This is Git-backed project control, not an agent engine or automation.
 
 ## Promotion flow
 

@@ -9,6 +9,7 @@
     "lint": "eslint",
     "brain:capture": "node scripts/brain-capture.mjs",
     "brain:guardrails": "node scripts/brain-guardrails.mjs",
+    "brain:new-mission": "node scripts/brain-new-mission.mjs",
     "brain:new-inbox-item": "node scripts/brain-new-inbox-item.mjs",
     "brain:promote": "node scripts/brain-promote.mjs"
   },

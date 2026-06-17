@@ -2,8 +2,8 @@
 //
 // This is the ONLY module the app uses to read Brain content.
 // Today it reads JSON registries from `content/brain/registries/`.
-// In v1 it will be re-implemented against Neon Postgres without changing
-// the public function signatures — UI code will not change.
+// Keep these public signatures stable so UI code does not need to know how
+// the Git-backed source is stored.
 //
 // Hard rules:
 //   * No imports from `features/entry/**`.
@@ -16,12 +16,14 @@ import decisionsData from "@/content/brain/registries/decisions.json";
 import promptsData from "@/content/brain/registries/prompts.json";
 import agentsData from "@/content/brain/registries/agents.json";
 import inboxData from "@/content/brain/registries/inbox.json";
+import missionsData from "@/content/brain/registries/missions.json";
 
 import type {
   AgentEntry,
   AnyEntry,
   DecisionEntry,
   InboxEntry,
+  MissionEntry,
   ProjectEntry,
   PromptEntry,
   RegistryKindPlural,
@@ -56,12 +58,17 @@ export function getInbox(): InboxEntry[] {
   return (inboxData as InboxEntry[]).slice().sort(byUpdatedDesc);
 }
 
+export function getMissions(): MissionEntry[] {
+  return (missionsData as MissionEntry[]).slice().sort(byUpdatedDesc);
+}
+
 export type BrainCounts = {
   projects: number;
   decisions: number;
   prompts: number;
   agents: number;
   inbox: number;
+  missions: number;
 };
 
 export function getBrainCounts(): BrainCounts {
@@ -71,6 +78,7 @@ export function getBrainCounts(): BrainCounts {
     prompts: getPrompts().length,
     agents: getAgents().length,
     inbox: getInbox().length,
+    missions: getMissions().length,
   };
 }
 
@@ -86,6 +94,8 @@ export function getRegistry(kind: RegistryKindPlural): AnyEntry[] {
       return getAgents();
     case "inbox":
       return getInbox();
+    case "missions":
+      return getMissions();
     default:
       return [];
   }
@@ -118,5 +128,6 @@ export function getAllBrainEntries(): AnyEntry[] {
     ...getPrompts(),
     ...getAgents(),
     ...getInbox(),
+    ...getMissions(),
   ];
 }

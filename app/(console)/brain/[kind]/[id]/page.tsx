@@ -16,6 +16,7 @@ const VALID_KINDS = new Set<string>([
   "prompts",
   "agents",
   "inbox",
+  "missions",
 ]);
 
 export default async function BrainDetailPage(props: {
@@ -69,9 +70,14 @@ export default async function BrainDetailPage(props: {
             <Badge
               tone={
                 entry.status === "approved" || entry.status === "promoted"
+                  || entry.status === "completed"
                   ? "success"
-                  : entry.status === "draft" || entry.status === "inbox"
+                  : entry.status === "draft" ||
+                      entry.status === "inbox" ||
+                      entry.status === "planned"
                     ? "warning"
+                    : entry.status === "in_progress"
+                      ? "info"
                     : "default"
               }
             >
@@ -113,6 +119,29 @@ export default async function BrainDetailPage(props: {
                     {rel}
                   </span>
                 ))}
+              </dd>
+            </>
+          )}
+
+          {"agent" in entry && (
+            <>
+              <dt className="text-[var(--text-muted)]">Phase</dt>
+              <dd className="text-slate-300">{entry.phase || "Unavailable"}</dd>
+
+              <dt className="text-[var(--text-muted)]">Agent</dt>
+              <dd className="text-slate-300">{entry.agent || "Unavailable"}</dd>
+
+              <dt className="text-[var(--text-muted)]">Branch</dt>
+              <dd className="font-mono text-xs text-slate-300">
+                {entry.branch || "Unavailable"}
+              </dd>
+
+              <dt className="text-[var(--text-muted)]">PR</dt>
+              <dd className="text-slate-300">{entry.pr || "Unavailable"}</dd>
+
+              <dt className="text-[var(--text-muted)]">Commit</dt>
+              <dd className="font-mono text-xs text-slate-300">
+                {entry.commit || "Unavailable"}
               </dd>
             </>
           )}

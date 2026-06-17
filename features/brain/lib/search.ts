@@ -4,6 +4,7 @@ import {
   getPrompts,
   getAgents,
   getInbox,
+  getMissions,
 } from "@/features/brain/lib/content";
 import { readBrainMarkdown } from "@/features/brain/lib/markdown";
 import type { AnyEntry, RegistryKindPlural } from "@/features/brain/lib/types";
@@ -20,6 +21,11 @@ export type BrainSearchItem = {
   path?: string;
   source?: string;
   topic?: string;
+  agent?: string;
+  branch?: string;
+  pr?: string;
+  commit?: string;
+  phase?: string;
   href: string;
   markdownText?: string;
 };
@@ -41,6 +47,7 @@ const KIND_MAP: Record<string, RegistryKindPlural> = {
   prompt: "prompts",
   agent: "agents",
   inbox: "inbox",
+  mission: "missions",
 };
 
 function entryToSearchItem(entry: AnyEntry, kind: RegistryKindPlural): BrainSearchItem {
@@ -59,6 +66,14 @@ function entryToSearchItem(entry: AnyEntry, kind: RegistryKindPlural): BrainSear
 
   if ("source" in entry) {
     item.source = entry.source;
+  }
+
+  if ("agent" in entry) {
+    item.agent = entry.agent;
+    item.branch = entry.branch;
+    item.pr = entry.pr;
+    item.commit = entry.commit;
+    item.phase = entry.phase;
   }
 
   if (entry.path) {
@@ -80,6 +95,7 @@ export function getBrainSearchIndex(): BrainSearchItem[] {
     ["prompts", getPrompts()],
     ["agents", getAgents()],
     ["inbox", getInbox()],
+    ["missions", getMissions()],
   ];
 
   for (const [kind, entries] of registries) {
@@ -102,6 +118,11 @@ function scoreMatch(item: BrainSearchItem, terms: string[]): number {
   const kindLower = item.kind.toLowerCase();
   const sourceLower = item.source?.toLowerCase() ?? "";
   const topicLower = item.topic?.toLowerCase() ?? "";
+  const agentLower = item.agent?.toLowerCase() ?? "";
+  const branchLower = item.branch?.toLowerCase() ?? "";
+  const prLower = item.pr?.toLowerCase() ?? "";
+  const commitLower = item.commit?.toLowerCase() ?? "";
+  const phaseLower = item.phase?.toLowerCase() ?? "";
   const pathLower = item.path?.toLowerCase() ?? "";
   const markdownLower = item.markdownText?.toLowerCase() ?? "";
 
@@ -133,6 +154,16 @@ function scoreMatch(item: BrainSearchItem, terms: string[]): number {
       matched = true;
     }
     if (topicLower.includes(term)) {
+      score += 2;
+      matched = true;
+    }
+    if (
+      agentLower.includes(term) ||
+      branchLower.includes(term) ||
+      prLower.includes(term) ||
+      commitLower.includes(term) ||
+      phaseLower.includes(term)
+    ) {
       score += 2;
       matched = true;
     }
@@ -208,7 +239,7 @@ export function getBrainTags(): { tag: string; count: number }[] {
 }
 
 export function getBrainKinds(): string[] {
-  return ["projects", "decisions", "prompts", "agents", "inbox"];
+  return ["projects", "decisions", "prompts", "agents", "inbox", "missions"];
 }
 
 export function getBrainStatuses(): string[] {
