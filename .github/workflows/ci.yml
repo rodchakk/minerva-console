@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  brain-guardrails:
+    name: Brain guardrails
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Brain guardrails
+        run: node scripts/brain-guardrails.mjs
+
+  typecheck:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  lint-brain:
+    name: Lint (Brain + layout)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Lint only Brain code and the two shared layout files modified in MCB-0002.
+      # Full `npm run lint` is not used as a blocking step because of pre-existing
+      # lint debt in features/entry/users/CommunityUsersClient.tsx (7 errors,
+      # react-hooks/set-state-in-effect). Those errors predate Brain and are
+      # unrelated to it. They are tracked separately.
+      - name: Lint Brain + layout
+        run: |
+          npx eslint \
+            'features/brain/**' \
+            'app/(console)/brain/**' \
+            'components/layout/AppSidebar.tsx' \
+            'components/layout/PageHeader.tsx'
+
+  lint-report:
+    name: Lint (full — informational)
+    runs-on: ubuntu-latest
+    continue-on-error: true        # does not block the PR; see note above
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Full lint run for visibility. Failures here are annotated on the PR
+      # but do not block merge until the pre-existing debt in features/entry
+      # is resolved. Remove continue-on-error once the debt is cleared.
+      - name: Lint (full)
+        run: npm run lint
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
