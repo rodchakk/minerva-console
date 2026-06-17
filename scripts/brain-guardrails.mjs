@@ -13,9 +13,11 @@
 //   4. Brain registry JSON must be valid and complete.
 //   5. Required Brain files must exist.
 //
-// Scans only TypeScript/TSX source files in:
+// Scans TypeScript/TSX source files in:
 //   features/brain/
 //   app/(console)/brain/
+// and Brain CLI scripts in:
+//   scripts/brain-*.mjs
 //
 // Markdown docs (.md) are intentionally excluded to avoid false positives
 // from documentation that discusses the rules themselves.
@@ -49,6 +51,17 @@ function collectFiles(dir, extensions = [".ts", ".tsx"]) {
     }
   }
   return results;
+}
+
+/** Collect Brain-owned CLI scripts. */
+function collectBrainScripts() {
+  const dir = join(ROOT, "scripts");
+  if (!existsSync(dir)) return [];
+  return readdirSync(dir, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .filter((entry) => /^brain-.*\.mjs$/.test(entry.name))
+    .filter((entry) => entry.name !== "brain-guardrails.mjs")
+    .map((entry) => join(dir, entry.name));
 }
 
 /** Return only lines that are actual import/require statements (not comments). */
@@ -95,6 +108,8 @@ const brainDirs = [
 ];
 
 const brainFiles = brainDirs.flatMap((d) => collectFiles(d));
+const brainScriptFiles = collectBrainScripts();
+const brainSourceFiles = [...brainFiles, ...brainScriptFiles];
 
 // ─── Results accumulator ─────────────────────────────────────────────────────
 const errors = [];
@@ -120,7 +135,7 @@ const ENTRY_PATTERNS = [
   "@/features/entry",
 ];
 
-for (const file of brainFiles) {
+for (const file of brainSourceFiles) {
   const src = readFileSync(file, "utf8");
   for (const { line, num } of importLines(src)) {
     if (ENTRY_PATTERNS.some((p) => line.includes(p))) {
@@ -150,7 +165,7 @@ const SUPABASE_ENV_PATTERNS = [
   "SUPABASE_ANON",
 ];
 
-for (const file of brainFiles) {
+for (const file of brainSourceFiles) {
   const src = readFileSync(file, "utf8");
 
   // Import-only check for library refs
@@ -205,7 +220,7 @@ const NEON_ENV_PATTERNS = [
   "PGDATABASE",
 ];
 
-for (const file of brainFiles) {
+for (const file of brainSourceFiles) {
   const src = readFileSync(file, "utf8");
 
   for (const { line, num } of importLines(src)) {
@@ -242,6 +257,44 @@ const REQUIRED_FIELDS = [
   "tags",
   "related",
 ];
+
+const INBOX_STATUSES = ["inbox", "promoted", "archived"];
+const INBOX_SOURCES = [
+  "claude-code",
+  "gpt",
+  "codex",
+  "gemini",
+  "human",
+  "other",
+];
+
+function validateInboxEntry(entry, entryLabel, relPath) {
+  if (typeof entry.id !== "string" || !entry.id.startsWith("INB-")) {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.id must start with INB-`);
+  }
+  if (entry.type !== "inbox") {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.type must be "inbox"`);
+  }
+  if (!INBOX_STATUSES.includes(entry.status)) {
+    fail(
+      `[CHECK 4] ${relPath} - ${entryLabel}.status must be one of: ${INBOX_STATUSES.join(", ")}`,
+    );
+  }
+  if (!INBOX_SOURCES.includes(entry.source)) {
+    fail(
+      `[CHECK 4] ${relPath} - ${entryLabel}.source must be one of: ${INBOX_SOURCES.join(", ")}`,
+    );
+  }
+  if (typeof entry.path !== "string") {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel} is missing required field: "path"`);
+  } else if (!entry.path.startsWith("content/brain/inbox/")) {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.path must stay under content/brain/inbox/`);
+  } else if (!entry.path.endsWith(".md")) {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.path must point to a Markdown file`);
+  } else if (!existsSync(join(ROOT, entry.path))) {
+    fail(`[CHECK 4] ${relPath} - ${entryLabel}.path does not exist: ${entry.path}`);
+  }
+}
 
 const REGISTRY_DIR = join(ROOT, "content", "brain", "registries");
 
@@ -297,6 +350,9 @@ if (!existsSync(REGISTRY_DIR)) {
           `[CHECK 4] ${relPath} — ${entryLabel}.related must be an array`,
         );
       }
+      if (filename === "inbox.json") {
+        validateInboxEntry(entry, entryLabel, relPath);
+      }
     });
   }
 }
@@ -317,6 +373,8 @@ const REQUIRED_FILES = [
   "content/brain/harness/08_CHANGELOG.md",
   "content/brain/harness/09_RISKS.md",
   "content/brain/harness/10_HANDOFF_TEMPLATE.md",
+  "content/brain/templates/mission-handoff.md",
+  "scripts/brain-capture.mjs",
   "features/brain/lib/content.ts",
   "features/brain/lib/markdown.ts",
   "features/brain/lib/types.ts",
@@ -339,7 +397,7 @@ for (const relPath of REQUIRED_FILES) {
 // Results
 // ─────────────────────────────────────────────────────────────────────────────
 
-const totalFiles = brainFiles.length;
+const totalFiles = brainSourceFiles.length;
 const registryFiles = existsSync(REGISTRY_DIR)
   ? readdirSync(REGISTRY_DIR).filter((f) => f.endsWith(".json")).length
   : 0;

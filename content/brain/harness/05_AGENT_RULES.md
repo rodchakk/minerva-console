@@ -16,6 +16,7 @@ Equivalent, in detail:
 - `features/brain/**` and `content/brain/**` must not import from `features/entry/**` or any other product feature module.
 - Brain code must not import any Supabase client. No `@supabase/ssr`, no `@supabase/supabase-js`, no project-specific clients.
 - Brain v0 has no write paths in the UI. Edits happen in Git.
+- CLI capture scripts may write only to `content/brain/inbox/` and the matching JSON registry, and those writes must be committed through Git.
 - No new dependencies, no new environment variables, no migrations, no DB connections in v0.
 - Brain is not the CRM. Brain does not store raw sensitive operational data from products.
 - Inbox items are never authoritative knowledge until a human promotes them.

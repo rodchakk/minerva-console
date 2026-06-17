@@ -2,6 +2,8 @@
 
 Use this template when you finish a mission and hand off to the next agent or human.
 
+Reusable copy lives at `content/brain/templates/mission-handoff.md`.
+
 ---
 
 ## Mission
