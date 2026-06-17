@@ -4,7 +4,9 @@ import { Badge } from "@/components/ui/Badge";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { BrainEyebrow } from "@/features/brain/components/BrainEyebrow";
 import { MarkdownDocument } from "@/features/brain/components/MarkdownDocument";
+import { RelationsPanel } from "@/features/brain/components/RelationsPanel";
 import { getEntryDocument } from "@/features/brain/lib/content";
+import { getEntryRelations } from "@/features/brain/lib/relations";
 import {
   PLURAL_TO_SINGULAR,
   type RegistryKindPlural,
@@ -34,6 +36,7 @@ export default async function BrainDetailPage(props: {
   const { entry, document } = result;
   const singularKind = PLURAL_TO_SINGULAR[pluralKind];
   const isInbox = singularKind === "inbox";
+  const relations = getEntryRelations(pluralKind, id);
 
   return (
     <div className="space-y-8">
@@ -158,6 +161,8 @@ export default async function BrainDetailPage(props: {
           )}
         </dl>
       </div>
+
+      {relations && <RelationsPanel group={relations} />}
 
       {isInbox && <InboxTriagePanel />}
 

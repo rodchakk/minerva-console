@@ -2,6 +2,16 @@
 
 Append-only. Most recent first.
 
+## 2026-06-17 — MCB-0008 — Brain relations map
+
+- Added `features/brain/lib/relations.ts` deriving outgoing relations, incoming backlinks, and broken references from registry `related` arrays.
+- Added `/brain/relations` page with per-entry outgoing/incoming counts, a broken-relation banner, and a `?focus=ID` detail view.
+- Added a Relations section to every Brain detail page (`/brain/{kind}/{id}`) via a shared `RelationsPanel` component.
+- Added `scripts/brain-check-relations.mjs` and `brain:check-relations` to report broken relations from the CLI (exits non-zero on broken references).
+- Integrated a relation-resolution check (CHECK 6) into `scripts/brain-guardrails.mjs`; guardrails now fail when a `related` ID does not exist in any registry.
+- Added Relations links to the sidebar and Brain overview.
+- Outgoing relations are explicit; incoming backlinks are derived. Relations are Git-backed metadata — not RAG, not embeddings, not an agent engine. No DB, Supabase, model router, cost monitor, or UI write path.
+
 ## 2026-06-17 — MCB-0007 — Brain mission control ledger
 
 - Added `content/brain/registries/missions.json` and `content/brain/missions/` as the Git-backed ledger for Brain missions.

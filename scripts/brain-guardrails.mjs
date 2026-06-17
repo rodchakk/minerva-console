@@ -12,6 +12,7 @@
 //   3. Brain code must not reference Neon/database clients.
 //   4. Brain registry JSON must be valid and complete.
 //   5. Required Brain files must exist.
+//   6. Relation references must resolve to existing entries.
 //
 // Scans TypeScript/TSX source files in:
 //   features/brain/
@@ -421,10 +422,12 @@ const REQUIRED_FILES = [
   "scripts/brain-capture.mjs",
   "scripts/brain-new-mission.mjs",
   "scripts/brain-promote.mjs",
+  "scripts/brain-check-relations.mjs",
   "features/brain/lib/content.ts",
   "features/brain/lib/markdown.ts",
   "features/brain/lib/types.ts",
   "features/brain/lib/search.ts",
+  "features/brain/lib/relations.ts",
   "app/(console)/brain/page.tsx",
 ];
 
@@ -436,6 +439,59 @@ for (const relPath of REQUIRED_FILES) {
     const s = statSync(full);
     if (s.isFile() && s.size === 0) {
       warn(`[CHECK 5] Required Brain file is empty: ${relPath}`);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK 6 — Relation references must resolve to existing entries
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Every `related` ID across all registries must exist as an entry ID in some
+// registry. IDs are not globally unique across kinds, so a reference is broken
+// only when no registry contains the referenced ID. Relations are Git-backed
+// metadata — this is not RAG, embeddings, or an agent engine.
+
+if (existsSync(REGISTRY_DIR)) {
+  const relationFiles = readdirSync(REGISTRY_DIR).filter((f) =>
+    f.endsWith(".json"),
+  );
+
+  const knownIds = new Set();
+  const references = [];
+
+  for (const filename of relationFiles) {
+    const kind = filename.replace(/\.json$/, "");
+    let parsed;
+    try {
+      parsed = JSON.parse(readFileSync(join(REGISTRY_DIR, filename), "utf8"));
+    } catch {
+      // CHECK 4 already reports invalid JSON; skip here.
+      continue;
+    }
+    if (!Array.isArray(parsed)) continue;
+
+    for (const entry of parsed) {
+      if (entry && typeof entry.id === "string") {
+        knownIds.add(entry.id);
+      }
+    }
+    for (const entry of parsed) {
+      if (!entry || typeof entry.id !== "string") continue;
+      const related = Array.isArray(entry.related) ? entry.related : [];
+      for (const relatedId of related) {
+        references.push({ sourceId: entry.id, kind, relatedId });
+      }
+    }
+  }
+
+  for (const ref of references) {
+    if (!knownIds.has(ref.relatedId)) {
+      fail(
+        `[CHECK 6] Broken relation in content/brain/registries/${ref.kind}.json\n` +
+          `  ${ref.sourceId} references missing ID: ${ref.relatedId}\n` +
+          `  Every related ID must exist in some registry. Fix before merge.`,
+      );
     }
   }
 }

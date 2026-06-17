@@ -39,6 +39,11 @@ const cards: Card[] = [
     hint: "Git-backed mission ledger for Brain project control.",
   },
   {
+    label: "Relations",
+    href: "/brain/relations",
+    hint: "Derived map of how Brain entries reference each other.",
+  },
+  {
     label: "Search",
     href: "/brain/search",
     hint: "Search across all Brain registries and Markdown documents.",
