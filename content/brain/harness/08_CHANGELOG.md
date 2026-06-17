@@ -2,6 +2,17 @@
 
 Append-only. Most recent first.
 
+## 2026-06-17 — MCB-0006 — Brain promotion workflow
+
+- Added `scripts/brain-promote.mjs` to promote inbox items into approved Brain knowledge (decisions, prompts, projects, agents).
+- The promote CLI creates a Markdown document in the target folder, updates the target registry, and sets the inbox item status to `promoted`.
+- Raw inbox material is preserved in the promoted document under "Original Raw Material".
+- Added `brain:promote` npm script.
+- Added `scripts/brain-promote.mjs` to guardrails required files.
+- Updated workflow docs to document the promotion flow.
+- Promotion is manual. The human intentionally runs the script. This is not RAG, not automation, not an agent engine.
+- No UI write paths. No Neon, DB, Supabase, RAG, embeddings, model router, cost monitor, agent engine, or new dependencies.
+
 ## 2026-06-17 — MCB-0005 — Brain search and tag index
 
 - Added `features/brain/lib/search.ts` with functions to build a search index from all Brain registries and Markdown docs.

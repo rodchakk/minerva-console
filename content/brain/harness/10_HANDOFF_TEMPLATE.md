@@ -31,8 +31,18 @@ Reusable copy lives at `content/brain/templates/mission-handoff.md`.
 - `agents.json`:
 - `inbox.json`:
 
+## Promotion flow
+
+Inbox item → human review → `brain-promote` script → approved registry + Markdown doc → inbox status `promoted`
+
+- Promotion is manual. The human intentionally runs `npm run brain:promote`.
+- Promotion does not mean final wording is perfect. Promoted docs should be reviewed and refined after creation.
+- Raw inbox material is preserved in the promoted document.
+- This is not RAG, not automation, not an agent engine.
+
 ## Validation
 
+- `npm run brain:guardrails`: pass / fail
 - `npm run lint`: pass / fail
 - `npm run build`: pass / fail
 - Notes:
