@@ -259,7 +259,7 @@ const REQUIRED_FIELDS = [
   "related",
 ];
 
-const INBOX_STATUSES = ["inbox", "promoted", "archived"];
+const INBOX_STATUSES = ["inbox", "triaged", "promoted", "archived"];
 const INBOX_SOURCES = [
   "claude-code",
   "gpt",

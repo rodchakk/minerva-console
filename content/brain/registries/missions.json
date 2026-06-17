@@ -139,7 +139,7 @@
     "id": "MCB-0007",
     "title": "Brain Mission Control Ledger",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Create a Git-backed mission ledger so Brain missions are first-class read-only knowledge in Minerva Core Brain.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
@@ -148,8 +148,8 @@
     "path": "content/brain/missions/mcb-0007.md",
     "agent": "codex",
     "branch": "mcb-0007-brain-mission-control-ledger",
-    "pr": "",
-    "commit": "",
+    "pr": "#6",
+    "commit": "556f996",
     "phase": "implementation"
   }
 ]
