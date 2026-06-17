@@ -33,6 +33,16 @@ const cards: Card[] = [
     href: "/brain/inbox",
     hint: "Raw, unprocessed AI outputs awaiting triage. Not yet knowledge.",
   },
+  {
+    label: "Search",
+    href: "/brain/search",
+    hint: "Search across all Brain registries and Markdown documents.",
+  },
+  {
+    label: "Tags",
+    href: "/brain/tags",
+    hint: "Browse all tags used across Brain entries.",
+  },
 ];
 
 export function BrainOverview() {
@@ -57,9 +67,11 @@ export function BrainOverview() {
             <p className="text-sm font-medium text-[var(--text-muted)]">
               {card.label}
             </p>
-            <p className="text-3xl font-semibold tracking-tight text-white">
-              {valueOf[card.label]}
-            </p>
+            {card.label in valueOf ? (
+              <p className="text-3xl font-semibold tracking-tight text-white">
+                {valueOf[card.label]}
+              </p>
+            ) : null}
           </div>
           <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
             {card.hint}

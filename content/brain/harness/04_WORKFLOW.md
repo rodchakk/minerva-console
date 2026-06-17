@@ -29,6 +29,16 @@ Raw outputs from Claude Code, GPT, Codex, Gemini, or humans never become Brain k
 
 When a mission finishes, copy `content/brain/templates/mission-handoff.md` into the relevant handoff location or paste it into the PR description. The handoff records changed files, registry updates, validation, respected boundaries, and the next suggested mission. The harness version in `10_HANDOFF_TEMPLATE.md` is the canonical checklist; the reusable template exists so handoffs do not need to be rebuilt from memory.
 
+## Search
+
+Brain has a local search page at `/brain/search` that indexes all registry entries and their linked Markdown documents. Search is Git-backed and read-only — no database, no RAG, no embeddings. It supports:
+
+- Free-text query across title, summary, id, tags, kind, source, path, and document content.
+- Filters by kind, tag, and status via URL query params.
+- A tag index at `/brain/tags` lists all tags with counts and links to filtered search results.
+
+Tags help human triage and future promotion of inbox items. They are not semantic vectors — they are manually assigned labels.
+
 ## Conventions
 
 - IDs use prefixes: `PRJ-` projects, `DEC-` decisions, `MCB-` missions/prompts, `AGT-` agents, `INB-` inbox.
