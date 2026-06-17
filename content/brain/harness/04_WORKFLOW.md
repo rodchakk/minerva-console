@@ -75,6 +75,24 @@ Raw outputs from Claude Code, GPT, Codex, Gemini, or humans never become Brain k
 
 When a mission finishes, copy `content/brain/templates/mission-handoff.md` into the relevant handoff location or paste it into the PR description. The handoff records changed files, registry updates, validation, respected boundaries, and the next suggested mission. The harness version in `10_HANDOFF_TEMPLATE.md` is the canonical checklist; the reusable template exists so handoffs do not need to be rebuilt from memory.
 
+## Relations
+
+Brain entries can reference each other through their `related` arrays. The relations layer makes those links functional and visible.
+
+- **Outgoing relations are explicit.** They are the IDs listed in an entry's `related` array.
+- **Incoming backlinks are derived automatically.** Any entry that lists this entry's ID in its `related` array becomes an incoming backlink.
+- **Broken relations should be fixed before merge.** A relation is broken when a `related` ID does not exist in any registry.
+
+Relations are surfaced in three places:
+
+- `/brain/relations` lists every connected entry with outgoing and incoming counts, plus a broken-relation banner. Focus a single entry with `/brain/relations?focus=MCB-0006`.
+- Every detail page (`/brain/{kind}/{id}`) shows a Relations section with outgoing references, incoming backlinks, and broken references.
+- `npm run brain:check-relations` reports broken references from the command line and exits non-zero if any exist. The same check runs inside `brain:guardrails`.
+
+IDs are not globally unique across kinds (for example `MCB-0001` is both a prompt and a mission), so a relation ID resolves to every entry that shares it.
+
+Relations are Git-backed metadata derived from registry `related` arrays. This is not RAG, not embeddings, and not an agent engine.
+
 ## Search
 
 Brain has a local search page at `/brain/search` that indexes all registry entries and their linked Markdown documents. Search is Git-backed and read-only — no database, no RAG, no embeddings. It supports:

@@ -52,9 +52,18 @@ Inbox item → human review → `brain-promote` script → approved registry + M
 - Raw inbox material is preserved in the promoted document.
 - This is not RAG, not automation, not an agent engine.
 
+## Relations
+
+Brain entries reference each other through `related`.
+
+- Outgoing relations are explicit; incoming backlinks are derived automatically.
+- Broken relations (related IDs that exist in no registry) must be fixed before merge.
+- Relations are Git-backed metadata. This is not RAG, not embeddings, and not an agent engine.
+
 ## Validation
 
 - `npm run brain:guardrails`: pass / fail
+- `npm run brain:check-relations`: pass / fail
 - `npm run lint`: pass / fail
 - `npm run build`: pass / fail
 - Notes:
