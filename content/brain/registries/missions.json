@@ -151,5 +151,22 @@
     "pr": "#6",
     "commit": "556f996",
     "phase": "implementation"
+  },
+  {
+    "id": "MCB-0008",
+    "title": "Relations Map",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Added a Brain relations map deriving outgoing relations, incoming backlinks, and broken references from registry related arrays, with read-only views and a CLI/guardrail relation check.",
+    "created": "2026-06-17",
+    "updated": "2026-06-17",
+    "tags": ["brain", "mission", "relations", "map"],
+    "related": ["MCB-0007"],
+    "path": "content/brain/missions/mcb-0008.md",
+    "agent": "unknown",
+    "branch": "unknown",
+    "pr": "#7",
+    "commit": "4baa164",
+    "phase": "relations"
   }
 ]
