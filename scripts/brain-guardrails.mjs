@@ -375,6 +375,7 @@ const REQUIRED_FILES = [
   "content/brain/harness/10_HANDOFF_TEMPLATE.md",
   "content/brain/templates/mission-handoff.md",
   "scripts/brain-capture.mjs",
+  "scripts/brain-promote.mjs",
   "features/brain/lib/content.ts",
   "features/brain/lib/markdown.ts",
   "features/brain/lib/types.ts",

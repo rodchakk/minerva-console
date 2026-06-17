@@ -22,7 +22,33 @@ Raw outputs from Claude Code, GPT, Codex, Gemini, or humans never become Brain k
 
    The command writes a Markdown file in `content/brain/inbox/` and appends a matching entry to `content/brain/registries/inbox.json` with `status: "inbox"` and a clear `source`. Manual capture is still allowed: copy `content/brain/inbox/TEMPLATE_inbox_item.md`, then add the registry entry by hand.
 2. **Triage.** A human reads the inbox item. Most of it is noise; that is expected.
-3. **Promote.** Distill the signal into the right typed artifact under `content/brain/{decisions,prompts,projects,agents,docs}/` and add a matching entry to the appropriate registry with `status: "approved"`. Fill in `tags` and `related` so the future graph view can use them.
+3. **Promote.** Use the promotion CLI to create an approved entry in the target registry and generate a Markdown document:
+
+   ```bash
+   npm run brain:promote -- \
+     --inbox-id INB-0001 \
+     --target decisions \
+     --id DEC-0005 \
+     --title "Brain remains Git-backed in v0" \
+     --summary "Decision approved from inbox review." \
+     --tags "brain,architecture,v0" \
+     --yes
+   ```
+
+   Supported targets: `decisions`, `prompts`, `projects`, `agents`.
+
+   The command:
+   - Creates a Markdown file in `content/brain/<target>/<id-slug>.md` with the original raw material preserved.
+   - Appends an entry to `content/brain/registries/<target>.json` with `status: "approved"`.
+   - Updates the inbox item in `content/brain/registries/inbox.json` to `status: "promoted"` and links the promoted id in `related`.
+   - Does **not** delete the original inbox Markdown file.
+
+   Manual promotion is still allowed: create the target artifact and registry entry by hand, then update the inbox item status.
+
+   Promotion does not mean the final wording is perfect. After promotion, the human should review and refine the "Approved Knowledge" section. The raw inbox material is preserved in the promoted document for reference.
+
+   This is not RAG, not automation, not an agent engine. The human intentionally runs the script.
+
 4. **Archive or discard.** Move the inbox item to `status: "promoted"` or `"archived"`. A raw inbox item is never authoritative knowledge.
 
 ## Mission handoff
