@@ -42,6 +42,8 @@ const navGroups: NavGroup[] = [
       { label: "Prompts", href: "/brain/prompts" },
       { label: "Agents", href: "/brain/agents" },
       { label: "Inbox", href: "/brain/inbox" },
+      { label: "Search", href: "/brain/search" },
+      { label: "Tags", href: "/brain/tags" },
     ],
   },
 ];

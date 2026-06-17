@@ -2,6 +2,15 @@
 
 Append-only. Most recent first.
 
+## 2026-06-17 — MCB-0005 — Brain search and tag index
+
+- Added `features/brain/lib/search.ts` with functions to build a search index from all Brain registries and Markdown docs.
+- Added search page at `/brain/search` with free-text query and filters for kind, tag, and status via URL query params.
+- Added tag index page at `/brain/tags` listing all tags with counts, linking to filtered search results.
+- Added Search and Tags links to sidebar and Brain overview.
+- Search is Git-backed, local, and read-only. No database, RAG, embeddings, model router, agent engine, or write UI.
+- Tags help human triage and future promotion. They are not semantic vectors.
+
 ## 2026-06-17 - MCB-0004 - Brain inbox capture CLI
 
 - Added `scripts/brain-capture.mjs` to capture raw Claude Code, GPT, Codex, Gemini, human, or other outputs into `content/brain/inbox/`.

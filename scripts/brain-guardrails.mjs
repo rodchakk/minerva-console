@@ -378,6 +378,7 @@ const REQUIRED_FILES = [
   "features/brain/lib/content.ts",
   "features/brain/lib/markdown.ts",
   "features/brain/lib/types.ts",
+  "features/brain/lib/search.ts",
   "app/(console)/brain/page.tsx",
 ];
 
