@@ -2,6 +2,13 @@
 
 Append-only. Most recent first.
 
+## 2026-06-24 — MCB-0014 — Minimal AI mission loop bootstrap
+
+- Added `content/brain/loop/` as a Git-backed, Markdown-first coordination skeleton: `PROTOCOL.md`, `ROLES.md`, `OPERATOR_GUIDE.md`, status folders `missions/01_todo`…`05_blocked`, per-agent `reports/{claude,codex,gemini,gpt}`, and `templates/{mission-brief,agent-report,review-report}.md`.
+- Folder = status: a mission brief's state is the folder it lives in; `git mv` moves it. No `QUEUE.json` — by design.
+- Documents the evidence discipline (verified / inferred / unknown), one-writer-per-branch, Rudy as sole merge owner, and that GitHub/Git are authority for branch/diff/CI/merge while Markdown is auditable handoff.
+- Skeleton only. No scripts, no GitHub Actions, no scheduler, no bot, no agent engine. No DB, Supabase, Neon, RAG, embeddings, model router, cost monitor, routes, ENTRY, Seshat, or UI write path.
+
 ## 2026-06-17 — MCB-0012 — Ledger integrity pack
 
 - Registered MCB-0010 (Mission Ledger Completion Pass, PR #9, commit daafb98) and MCB-0011 (Register MCB-0009 in Mission Ledger, PR #10, commit a79c679) in `content/brain/registries/missions.json` with new mission docs `mcb-0010.md` and `mcb-0011.md`. The Mission Ledger is now complete through MCB-0011.
