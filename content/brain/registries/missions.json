@@ -185,5 +185,39 @@
     "pr": "#8",
     "commit": "40dac8b",
     "phase": "audit"
+  },
+  {
+    "id": "MCB-0010",
+    "title": "Mission Ledger Completion Pass",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Registered the previously unrecorded MCB-0008 Relations Map mission in the Brain mission ledger, marking it completed and setting its unverifiable branch/agent to unknown.",
+    "created": "2026-06-17",
+    "updated": "2026-06-17",
+    "tags": ["brain", "mission", "ledger", "completion"],
+    "related": ["MCB-0008", "MCB-0009"],
+    "path": "content/brain/missions/mcb-0010.md",
+    "agent": "claude",
+    "branch": "unknown",
+    "pr": "#9",
+    "commit": "daafb98",
+    "phase": "ledger"
+  },
+  {
+    "id": "MCB-0011",
+    "title": "Register MCB-0009 in Mission Ledger",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Registers MCB-0009 in the Mission Ledger with verified PR, commit, and agent metadata; branch remains unknown because no reliable current branch evidence is available.",
+    "created": "2026-06-17",
+    "updated": "2026-06-17",
+    "tags": ["brain", "mission", "ledger", "audit"],
+    "related": ["MCB-0009", "MCB-0010"],
+    "path": "content/brain/missions/mcb-0011.md",
+    "agent": "claude",
+    "branch": "unknown",
+    "pr": "#10",
+    "commit": "a79c679",
+    "phase": "ledger"
   }
 ]
