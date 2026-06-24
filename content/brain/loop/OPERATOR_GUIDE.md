@@ -74,6 +74,7 @@ You no longer have to drive Git by hand. An agent can do the mechanics; you keep
 - Each mission stays on its own branch (`mcb-####-<slug>`). No single permanent branch for everything.
 - Agents never use `git add .` — staging is by explicit paths.
 - Agents never touch `.env.local`, `.claude/settings.local.json`, or secrets.
-- Agents never merge without your explicit `MERGE APPROVED`. Until then they open the PR and stop.
+- Agents never merge without your explicit `MERGE APPROVED`. That phrase authorizes the merge via GitHub UI or `gh` only — it does **not** authorize a direct push to `master`.
+- `DIRECT PUSH APPROVED` is the separate phrase you give before any direct push to `master` (e.g. a local squash merge pushed straight to master when `gh` is unavailable). Until one of these is given, the agent opens the PR and stops.
 - You stay the merge-approval owner even when the agent runs the command.
 - After you approve and the merge lands, the agent may pull `master` and delete the local/remote branch.

@@ -94,6 +94,7 @@ Agents may run the Git mechanics for a mission so Rudy stops being the manual op
 - Each mission uses its own branch (`mcb-####-<slug>`). Never reuse one permanent branch for all work.
 - Never use `git add .`. Stage by explicit paths only.
 - Never stage or commit `.env.local`, `.claude/settings.local.json`, or any secret.
-- Never merge without explicit approval. The required phrase is `MERGE APPROVED`. Without it, prepare the PR and stop.
+- Never merge without explicit approval. `MERGE APPROVED` authorizes an agent to complete the merge through the GitHub UI or `gh` when available. It does **not** authorize direct push to `master`.
+- `DIRECT PUSH APPROVED` is the separate, explicit phrase required before any direct push to `master` (for example, a local squash merge pushed straight to master when `gh` is unavailable). Without it, prepare the PR and stop.
 - Rudy remains the decision/merge-approval owner even when an agent runs the command.
 - After an approved merge, the agent may pull `master` and delete the local and remote branch.

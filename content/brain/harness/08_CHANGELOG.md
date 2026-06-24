@@ -2,6 +2,13 @@
 
 Append-only. Most recent first.
 
+## 2026-06-24 — MCB-0015 — Register MCB-0014 in mission ledger
+
+- Registered MCB-0014 in `missions.json` with mission doc `mcb-0014.md`. Verified `commit: ef6e20e` (the final squash on master); `pr` and `branch` are `unknown` because MCB-0014 closed via local squash + direct push (no reliable PR number) and its branch was deleted.
+- Closed pre-existing ledger drift surfaced while registering MCB-0014: registered the previously unrecorded MCB-0012 (PR #11, commit 8c4a942) and MCB-0013 (PR #12, commit 7774d34) with mission docs `mcb-0012.md` and `mcb-0013.md`. Both `agent` values are `unknown` (squash commits carry no `Co-authored-by` trailer); both branches are `unknown` (no surviving refs). The ledger is now complete through MCB-0014.
+- Clarified the Delegated Git Ops rule in `loop/PROTOCOL.md` and `loop/OPERATOR_GUIDE.md`: `MERGE APPROVED` authorizes merge via GitHub UI/`gh` only and does **not** authorize direct push to master; `DIRECT PUSH APPROVED` is the separate phrase required for any direct push to master.
+- Ledger-and-docs only. No DB, Supabase, Neon, RAG, embeddings, model router, cost monitor, agent engine, routes, ENTRY, Seshat, `.github/workflows/**`, or UI write path.
+
 ## 2026-06-24 — MCB-0014 — Minimal AI mission loop bootstrap
 
 - Added `content/brain/loop/` as a Git-backed, Markdown-first coordination skeleton: `PROTOCOL.md`, `ROLES.md`, `OPERATOR_GUIDE.md`, status folders `missions/01_todo`…`05_blocked`, per-agent `reports/{claude,codex,gemini,gpt}`, and `templates/{mission-brief,agent-report,review-report}.md`.
