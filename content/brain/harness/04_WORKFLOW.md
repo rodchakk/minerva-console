@@ -110,3 +110,12 @@ Tags help human triage and future promotion of inbox items. They are not semanti
 - `created` and `updated` are ISO date strings.
 - Long-form documents are referenced by registry entries through `path`.
 - Tags use kebab-case.
+
+### Unverifiable mission fields
+
+When a mission is recorded after the fact, some metadata may not be recoverable. Record only what can be verified; never register an inference as a fact.
+
+- `branch: "unknown"` — use when the original branch cannot be verified from reliable current evidence. Record a branch name only when supported by a durable source, such as reliable PR metadata, a live remote branch ref, or another authoritative record. A local `origin/<branch>` remote-tracking ref alone is **not** sufficient proof: it can be stale and may not reflect a branch that still exists on the remote (a deleted branch can 404 on GitHub while the local ref lingers). Do not record a name that merely follows the usual `mcb-####-*` pattern. If only a stale-prone local remote-tracking ref exists, record `branch: "unknown"` and document the reason in the mission doc.
+- `agent: "unknown"` — use when the executing agent cannot be verified. Record a concrete agent (e.g. `claude`, `codex`) only when backed by verifiable evidence such as a commit `Co-authored-by`/`Co-Authored-By` trailer. A value of `human` is acceptable when the work was clearly hand-authored.
+- `pr` / `commit` are verified from local Git: the merge commit subject (e.g. `… (#10)`) and the commit hash. Record these as facts, not guesses.
+- Document the reason for each `unknown` in the mission doc's `Branch / PR / Commit` note so the gap is explicit and auditable.

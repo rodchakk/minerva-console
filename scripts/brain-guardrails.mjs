@@ -13,6 +13,7 @@
 //   4. Brain registry JSON must be valid and complete.
 //   5. Required Brain files must exist.
 //   6. Relation references must resolve to existing entries.
+//   7. Every mission doc on disk must be registered in the mission ledger.
 //
 // Scans TypeScript/TSX source files in:
 //   features/brain/
@@ -492,6 +493,54 @@ if (existsSync(REGISTRY_DIR)) {
           `  ${ref.sourceId} references missing ID: ${ref.relatedId}\n` +
           `  Every related ID must exist in some registry. Fix before merge.`,
       );
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK 7 — Mission ledger completeness (anti ledger-drift)
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Ledger drift happens when a mission lands as a Markdown doc on disk but is
+// never recorded in content/brain/registries/missions.json (exactly the gap that
+// left MCB-0008..MCB-0011 unregistered). CHECK 4 already guarantees the forward
+// direction — every registry `path` must point to an existing file. This is the
+// reverse direction: every mission doc file (mcb-*.md) must be referenced by a
+// registry entry's `path`. The check is purely local and deterministic — it
+// reads files and JSON only, with no dependency on GitHub or any remote.
+
+const MISSIONS_DIR = join(ROOT, "content", "brain", "missions");
+const MISSIONS_REGISTRY = join(REGISTRY_DIR, "missions.json");
+
+if (existsSync(MISSIONS_DIR) && existsSync(MISSIONS_REGISTRY)) {
+  let missions;
+  try {
+    missions = JSON.parse(readFileSync(MISSIONS_REGISTRY, "utf8"));
+  } catch {
+    // CHECK 4 already reports invalid JSON; skip here.
+    missions = null;
+  }
+
+  if (Array.isArray(missions)) {
+    const registeredPaths = new Set(
+      missions
+        .map((entry) => (entry && typeof entry.path === "string" ? entry.path : null))
+        .filter(Boolean),
+    );
+
+    const missionDocs = readdirSync(MISSIONS_DIR, { withFileTypes: true })
+      .filter((entry) => entry.isFile())
+      .filter((entry) => /^mcb-.*\.md$/i.test(entry.name))
+      .map((entry) => `content/brain/missions/${entry.name}`);
+
+    for (const docPath of missionDocs) {
+      if (!registeredPaths.has(docPath)) {
+        fail(
+          `[CHECK 7] Ledger drift: ${docPath} exists on disk but is not registered\n` +
+            `  in content/brain/registries/missions.json.\n` +
+            `  Every mission doc must have a matching ledger entry. Add it before merge.`,
+        );
+      }
     }
   }
 }

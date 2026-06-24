@@ -2,6 +2,14 @@
 
 Append-only. Most recent first.
 
+## 2026-06-17 — MCB-0012 — Ledger integrity pack
+
+- Registered MCB-0010 (Mission Ledger Completion Pass, PR #9, commit daafb98) and MCB-0011 (Register MCB-0009 in Mission Ledger, PR #10, commit a79c679) in `content/brain/registries/missions.json` with new mission docs `mcb-0010.md` and `mcb-0011.md`. The Mission Ledger is now complete through MCB-0011.
+- Verified each registered field from local Git: PR/commit from the merge subject and hash, `agent: "claude"` from the commit `Co-authored-by` trailer. Both missions' branches are registered as `unknown`: MCB-0010 has no surviving ref, and for MCB-0011 the only available evidence is a local `origin/mcb-0011-register-mcb-0009-ledger` remote-tracking ref, which is not reliable proof — local remote-tracking refs can be stale and the live branch ref currently 404s on GitHub.
+- Added guardrail CHECK 7 (anti ledger-drift): every `content/brain/missions/mcb-*.md` doc must be registered in `missions.json`. Purely local and deterministic — no GitHub/remote dependency. Complements CHECK 4, which already verifies the forward direction.
+- Documented the convention for unverifiable mission fields (`branch`/`agent` = `unknown`) in `04_WORKFLOW.md`: record only verifiable values, never register inferences as facts.
+- Ledger-only and guardrail-only. No DB, Supabase, Neon, RAG, embeddings, model router, cost monitor, agent engine, routes, ENTRY, Seshat, or UI write path.
+
 ## 2026-06-17 — MCB-0008 — Brain relations map
 
 - Added `features/brain/lib/relations.ts` deriving outgoing relations, incoming backlinks, and broken references from registry `related` arrays.
