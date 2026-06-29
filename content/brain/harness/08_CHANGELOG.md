@@ -2,6 +2,15 @@
 
 Append-only. Most recent first.
 
+## 2026-06-28 — ENTRY-BRAIN-001 — ENTRY knowledge capture
+
+- Captured the ENTRY product (analyzed read-only from `D:\Dev\node-bridge-foundation`, including its `.minerva-harness/` knowledge base and code) into Minerva Core Brain as eight knowledge docs under `content/brain/projects/`: rewrote `entry.md` as the official index and added `entry-product-foundation.md`, `entry-implementation-map.md`, `entry-current-work.md`, `entry-known-issues.md`, `entry-voice-mvp.md`, `entry-sales-and-leads.md`, and `entry-next-missions.md`.
+- Every doc separates Verified from code / Verified from repo backend snapshot / Operator-provided / Inferred / Unknown-Needs-verification / Risks / Next actions. No ENTRY runtime, schema, auth, or files were modified; no secrets read; no live Supabase connection.
+- Verified ENTRY stack (Expo SDK 54 / RN 0.81 / React 19 / Supabase Postgres 17), the standard-entry + pull-based-guard model, the `create_pass_v2` reuse contract, and that Voice MVP (ENTRY-I001) is implemented client-only pending native device QA. Current ENTRY branch `feature/entry-voice-mvp`.
+- Recorded the operator-reported "Forgot my password" bug with code-verified flow + inferred (unverified) candidate causes, plus the sales/leads + competitors (Access, ISSY, SSA) knowledge.
+- No reference to a Supabase project literally named "nodebridge foundation" was found; the verified dev project is `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`). Live Supabase access was not requested or needed.
+- Regenerated `content/brain/exports/brain-context.md`. Knowledge-only; no DB, RAG, embeddings, agent engine, model router, cost monitor, routes, or UI write path in Brain.
+
 ## 2026-06-28 — MCB-0016 — Brain v0 closeout
 
 - Added `scripts/brain-export-context.mjs`: a zero-dependency ESM exporter that concatenates safe Brain content under `content/brain/**` (registries + Markdown docs) into `content/brain/exports/brain-context.md` for handoff to ChatGPT/Claude/Codex/Gemini. Reads no app code, DB, Supabase, Neon, RAG, secrets, or `.env*`/`.claude/**`; excludes `content/brain/exports/**`; stable alphabetical order with no dynamic timestamp.
