@@ -575,8 +575,8 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
 - `content/brain/loop/missions/01_todo/README.md`
 - `content/brain/loop/missions/02_active/README.md`
 - `content/brain/loop/missions/03_review/README.md`
-- `content/brain/loop/missions/03_review/mcb-0016-brain-v0-closeout.md`
 - `content/brain/loop/missions/04_done/README.md`
+- `content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md`
 - `content/brain/loop/missions/05_blocked/README.md`
 - `content/brain/loop/reports/claude/README.md`
 - `content/brain/loop/reports/claude/mcb-0016-agent-report.md`
@@ -1201,7 +1201,7 @@ Append-only. Most recent first.
 - Added `scripts/brain-export-context.mjs`: a zero-dependency ESM exporter that concatenates safe Brain content under `content/brain/**` (registries + Markdown docs) into `content/brain/exports/brain-context.md` for handoff to ChatGPT/Claude/Codex/Gemini. Reads no app code, DB, Supabase, Neon, RAG, secrets, or `.env*`/`.claude/**`; excludes `content/brain/exports/**`; stable alphabetical order with no dynamic timestamp.
 - Wrote the initial ENTRY Knowledge Pack in `content/brain/projects/entry.md`: what ENTRY is, status within Minerva, Voice MVP, residential commercial strategy, observed competitors (Access, ISSY, SSA), known colonias/leads, the pending "Forgot my password" bug, isolation principles, an explicit "Unknown / Needs verification" section, open questions, and next ENTRY missions. Unverified technical detail is isolated, not asserted as fact.
 - Registered the previously unrecorded MCB-0015 in the ledger (`missions.json` + `mcb-0015.md`): verified PR `#13`, commit `340eb00`, `agent: claude` (from the squash commit's `Co-authored-by` trailer); `branch: unknown` (deleted on merge).
-- Added loop dry-run artifacts: brief `loop/missions/03_review/mcb-0016-brain-v0-closeout.md` and `loop/reports/claude/mcb-0016-agent-report.md`, exercising the loop structure end to end (no bots, no automation).
+- Added loop dry-run artifacts: brief `loop/missions/04_done/mcb-0016-brain-v0-closeout.md` and `loop/reports/claude/mcb-0016-agent-report.md`, exercising the loop structure end to end (no bots, no automation). The brief enters master already in `04_done` so no post-merge move is needed.
 - Added the Brain v0 freeze note `09_V0_FREEZE.md`: v0 is "complete enough", content/loop work stays allowed, DB/RAG/embeddings/Neon/agent engine/model router/cost monitor and an Obsidian-style graph view stay postponed, and `features/brain/**` / `scripts/brain-*.mjs` are not touched except under an explicit mission. Focus returns to ENTRY.
 - Docs, knowledge, and one read-only script only. No DB, Supabase, Neon, RAG, embeddings, model router, cost monitor, agent engine, routes, ENTRY runtime, Seshat, `.github/workflows/**`, or UI write path.
 
@@ -1750,13 +1750,21 @@ Missions with an open PR awaiting review and merge. A reviewer (Codex/Gemini) wr
 
 Move a brief to `04_done/` after squash-merge, or back toward `02_active/`/`05_blocked/` on REQUEST CHANGES. See `../../PROTOCOL.md`.
 
-### content/brain/loop/missions/03_review/mcb-0016-brain-v0-closeout.md
+### content/brain/loop/missions/04_done/README.md
+
+# 04_done
+
+Completed, merged missions. Terminal state.
+
+A brief arrives here only after the PR is squash-merged to `master`. GitHub/Git are authority for merge state. See `../../PROTOCOL.md`.
+
+### content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md
 
 # Mission Brief
 
 **Mission ID:** `MCB-0016`
 **Title:** Brain v0 Closeout — Loop Dry Run, Context Export & ENTRY Knowledge Pack
-**Status folder:** `03_review`
+**Status folder:** `04_done`
 **Owner agent:** Claude
 **Branch:** `mcb-0016-brain-v0-closeout`
 
@@ -1781,7 +1789,7 @@ UI, routes, ENTRY runtime, Seshat, `features/entry/**`, `.github/workflows/**`, 
 - `content/brain/projects/entry.md`
 - `content/brain/missions/mcb-0015.md`
 - `content/brain/registries/missions.json`
-- `content/brain/loop/missions/03_review/mcb-0016-brain-v0-closeout.md`
+- `content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md`
 - `content/brain/loop/reports/claude/mcb-0016-agent-report.md`
 - `content/brain/harness/09_V0_FREEZE.md`
 - `content/brain/harness/08_CHANGELOG.md`
@@ -1801,15 +1809,7 @@ Stop and hand off if a step would touch anything out of scope, if a required che
 
 ## Next action
 
-Open the PR with `gh`, report checks, and wait for review + explicit merge approval. This brief moves to `04_done/` only after the PR squash-merges.
-
-### content/brain/loop/missions/04_done/README.md
-
-# 04_done
-
-Completed, merged missions. Terminal state.
-
-A brief arrives here only after the PR is squash-merged to `master`. GitHub/Git are authority for merge state. See `../../PROTOCOL.md`.
+The PR is ready to merge with `MERGE APPROVED` (merge via `gh`). This brief already lives in `04_done/` in this PR, so no post-merge file move is required — Brain v0 enters master in its final state.
 
 ### content/brain/loop/missions/05_blocked/README.md
 
@@ -1842,7 +1842,7 @@ Reports are auditable handoff, not authority. GitHub/Git own branch, diff, CI, a
   - `scripts/brain-export-context.mjs`
   - `content/brain/exports/brain-context.md` (generated)
   - `content/brain/missions/mcb-0015.md`
-  - `content/brain/loop/missions/03_review/mcb-0016-brain-v0-closeout.md`
+  - `content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md`
   - `content/brain/loop/reports/claude/mcb-0016-agent-report.md`
   - `content/brain/harness/09_V0_FREEZE.md`
 - modified:
@@ -1885,7 +1885,7 @@ None.
 
 ## Next agent request
 
-Review the PR (Codex/Gemini), then Rudy gives `MERGE APPROVED` to merge via `gh`. After merge, move this brief to `04_done/`. This is the Brain v0 freeze point; further Brain work needs an explicit mission.
+Review the PR (Codex/Gemini), then Rudy gives `MERGE APPROVED` to merge via `gh`. After `MERGE APPROVED`, merge via `gh`. No post-merge file move is required because the brief already lives in `04_done/` in this PR. This is the Brain v0 freeze point; further Brain work needs an explicit mission.
 
 ### content/brain/loop/reports/codex/README.md
 

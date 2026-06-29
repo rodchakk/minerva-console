@@ -2,7 +2,7 @@
 
 **Mission ID:** `MCB-0016`
 **Title:** Brain v0 Closeout — Loop Dry Run, Context Export & ENTRY Knowledge Pack
-**Status folder:** `03_review`
+**Status folder:** `04_done`
 **Owner agent:** Claude
 **Branch:** `mcb-0016-brain-v0-closeout`
 
@@ -27,7 +27,7 @@ UI, routes, ENTRY runtime, Seshat, `features/entry/**`, `.github/workflows/**`, 
 - `content/brain/projects/entry.md`
 - `content/brain/missions/mcb-0015.md`
 - `content/brain/registries/missions.json`
-- `content/brain/loop/missions/03_review/mcb-0016-brain-v0-closeout.md`
+- `content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md`
 - `content/brain/loop/reports/claude/mcb-0016-agent-report.md`
 - `content/brain/harness/09_V0_FREEZE.md`
 - `content/brain/harness/08_CHANGELOG.md`
@@ -47,4 +47,4 @@ Stop and hand off if a step would touch anything out of scope, if a required che
 
 ## Next action
 
-Open the PR with `gh`, report checks, and wait for review + explicit merge approval. This brief moves to `04_done/` only after the PR squash-merges.
+The PR is ready to merge with `MERGE APPROVED` (merge via `gh`). This brief already lives in `04_done/` in this PR, so no post-merge file move is required — Brain v0 enters master in its final state.

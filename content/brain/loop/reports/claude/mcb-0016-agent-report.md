@@ -11,7 +11,7 @@
   - `scripts/brain-export-context.mjs`
   - `content/brain/exports/brain-context.md` (generated)
   - `content/brain/missions/mcb-0015.md`
-  - `content/brain/loop/missions/03_review/mcb-0016-brain-v0-closeout.md`
+  - `content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md`
   - `content/brain/loop/reports/claude/mcb-0016-agent-report.md`
   - `content/brain/harness/09_V0_FREEZE.md`
 - modified:
@@ -54,4 +54,4 @@ None.
 
 ## Next agent request
 
-Review the PR (Codex/Gemini), then Rudy gives `MERGE APPROVED` to merge via `gh`. After merge, move this brief to `04_done/`. This is the Brain v0 freeze point; further Brain work needs an explicit mission.
+Review the PR (Codex/Gemini), then Rudy gives `MERGE APPROVED` to merge via `gh`. After `MERGE APPROVED`, merge via `gh`. No post-merge file move is required because the brief already lives in `04_done/` in this PR. This is the Brain v0 freeze point; further Brain work needs an explicit mission.
