@@ -2,6 +2,15 @@
 
 Append-only. Most recent first.
 
+## 2026-06-28 — MCB-0016 — Brain v0 closeout
+
+- Added `scripts/brain-export-context.mjs`: a zero-dependency ESM exporter that concatenates safe Brain content under `content/brain/**` (registries + Markdown docs) into `content/brain/exports/brain-context.md` for handoff to ChatGPT/Claude/Codex/Gemini. Reads no app code, DB, Supabase, Neon, RAG, secrets, or `.env*`/`.claude/**`; excludes `content/brain/exports/**`; stable alphabetical order with no dynamic timestamp.
+- Wrote the initial ENTRY Knowledge Pack in `content/brain/projects/entry.md`: what ENTRY is, status within Minerva, Voice MVP, residential commercial strategy, observed competitors (Access, ISSY, SSA), known colonias/leads, the pending "Forgot my password" bug, isolation principles, an explicit "Unknown / Needs verification" section, open questions, and next ENTRY missions. Unverified technical detail is isolated, not asserted as fact.
+- Registered the previously unrecorded MCB-0015 in the ledger (`missions.json` + `mcb-0015.md`): verified PR `#13`, commit `340eb00`, `agent: claude` (from the squash commit's `Co-authored-by` trailer); `branch: unknown` (deleted on merge).
+- Added loop dry-run artifacts: brief `loop/missions/03_review/mcb-0016-brain-v0-closeout.md` and `loop/reports/claude/mcb-0016-agent-report.md`, exercising the loop structure end to end (no bots, no automation).
+- Added the Brain v0 freeze note `09_V0_FREEZE.md`: v0 is "complete enough", content/loop work stays allowed, DB/RAG/embeddings/Neon/agent engine/model router/cost monitor and an Obsidian-style graph view stay postponed, and `features/brain/**` / `scripts/brain-*.mjs` are not touched except under an explicit mission. Focus returns to ENTRY.
+- Docs, knowledge, and one read-only script only. No DB, Supabase, Neon, RAG, embeddings, model router, cost monitor, agent engine, routes, ENTRY runtime, Seshat, `.github/workflows/**`, or UI write path.
+
 ## 2026-06-24 — MCB-0015 — Register MCB-0014 in mission ledger
 
 - Registered MCB-0014 in `missions.json` with mission doc `mcb-0014.md`. Verified `commit: ef6e20e` (the final squash on master); `pr` and `branch` are `unknown` because MCB-0014 closed via local squash + direct push (no reliable PR number) and its branch was deleted.
