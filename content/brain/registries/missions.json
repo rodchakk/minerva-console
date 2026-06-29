@@ -270,5 +270,22 @@
     "pr": "unknown",
     "commit": "ef6e20e",
     "phase": "workflow"
+  },
+  {
+    "id": "MCB-0015",
+    "title": "Register MCB-0014 in Mission Ledger",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Registered MCB-0014 in the Mission Ledger, closed pre-existing drift by registering MCB-0012 and MCB-0013, and clarified the MERGE APPROVED vs DIRECT PUSH APPROVED rules in the loop docs. First mission merged via GitHub CLI.",
+    "created": "2026-06-28",
+    "updated": "2026-06-28",
+    "tags": ["brain", "mission", "ledger", "workflow"],
+    "related": ["MCB-0012", "MCB-0013", "MCB-0014"],
+    "path": "content/brain/missions/mcb-0015.md",
+    "agent": "claude",
+    "branch": "unknown",
+    "pr": "#13",
+    "commit": "340eb00",
+    "phase": "ledger"
   }
 ]
