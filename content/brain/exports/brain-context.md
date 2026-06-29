@@ -604,6 +604,13 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
 - `content/brain/missions/mcb-0014.md`
 - `content/brain/missions/mcb-0015.md`
 - `content/brain/projects/INDEX.md`
+- `content/brain/projects/entry-current-work.md`
+- `content/brain/projects/entry-implementation-map.md`
+- `content/brain/projects/entry-known-issues.md`
+- `content/brain/projects/entry-next-missions.md`
+- `content/brain/projects/entry-product-foundation.md`
+- `content/brain/projects/entry-sales-and-leads.md`
+- `content/brain/projects/entry-voice-mvp.md`
 - `content/brain/projects/entry.md`
 - `content/brain/projects/minerva-web.md`
 - `content/brain/projects/seshat.md`
@@ -1195,6 +1202,15 @@ Candidate work for after MCB-0002. Items are not committed; they are options.
 # 08 — Changelog
 
 Append-only. Most recent first.
+
+## 2026-06-28 — ENTRY-BRAIN-001 — ENTRY knowledge capture
+
+- Captured the ENTRY product (analyzed read-only from `D:\Dev\node-bridge-foundation`, including its `.minerva-harness/` knowledge base and code) into Minerva Core Brain as eight knowledge docs under `content/brain/projects/`: rewrote `entry.md` as the official index and added `entry-product-foundation.md`, `entry-implementation-map.md`, `entry-current-work.md`, `entry-known-issues.md`, `entry-voice-mvp.md`, `entry-sales-and-leads.md`, and `entry-next-missions.md`.
+- Every doc separates Verified from code / Verified from repo backend snapshot / Operator-provided / Inferred / Unknown-Needs-verification / Risks / Next actions. No ENTRY runtime, schema, auth, or files were modified; no secrets read; no live Supabase connection.
+- Verified ENTRY stack (Expo SDK 54 / RN 0.81 / React 19 / Supabase Postgres 17), the standard-entry + pull-based-guard model, the `create_pass_v2` reuse contract, and that Voice MVP (ENTRY-I001) is implemented client-only pending native device QA. Current ENTRY branch `feature/entry-voice-mvp`.
+- Recorded the operator-reported "Forgot my password" bug with code-verified flow + inferred (unverified) candidate causes, plus the sales/leads + competitors (Access, ISSY, SSA) knowledge.
+- No reference to a Supabase project literally named "nodebridge foundation" was found; the verified dev project is `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`). Live Supabase access was not requested or needed.
+- Regenerated `content/brain/exports/brain-context.md`. Knowledge-only; no DB, RAG, embeddings, agent engine, model router, cost monitor, routes, or UI write path in Brain.
 
 ## 2026-06-28 — MCB-0016 — Brain v0 closeout
 
@@ -2901,99 +2917,442 @@ Long-form project documents live in this folder. Each file is referenced from th
 
 Add new files here as Markdown. Append a matching registry entry in the same commit so the Brain UI can list it.
 
+### content/brain/projects/entry-current-work.md
+
+# ENTRY — Current Work
+
+Active implementation state, current branch, and the ENTRY mission board. Captured read-only as of ENTRY-BRAIN-001. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
+
+## Verified from code (git state at capture time)
+
+- **Current branch:** `feature/entry-voice-mvp`.
+- **Working tree:** clean (no uncommitted changes) at capture.
+- **Latest commit:** `ba27ac5 ENTRY-I001 voice MVP implementation and harness`.
+- **Other local/remote branches:** `main` (default), `remotes/origin/main`, `remotes/origin/feature/sentry-mobile-observability`, `remotes/origin/security-gate-supabase-hardening`.
+- **Recent commit themes:** voice MVP, ignore Claude local settings, version auth edge functions / remove activation diagnostics, harden Supabase activation rate limits, shared edge rate-limit helper, security gate remediation, persistent edge rate-limit primitive, pg_net service-role detection for reservation pushes, harden `send-push-event` internal auth.
+
+### Work in progress (detected)
+- **ENTRY Voice MVP (ENTRY-I001)** is implemented client-only on `feature/entry-voice-mvp` and is the active line of work. New files: `lib/voice/useVoiceRecognition.ts`, `app/(tabs)/resident/create-voice.tsx`, `components/resident/VoiceTriggerButton.tsx`; updated `app/(tabs)/resident/index.tsx`, `app.json`, `package.json`/lock (`expo-speech-recognition@56.0.1`). Detail in [entry-voice-mvp.md](entry-voice-mvp.md).
+- Branch names suggest two other in-flight or recent tracks: **Sentry mobile observability** and **security-gate Supabase hardening** (the latter aligns with recent rate-limit/edge-auth commits).
+
+## Verified from repo (harness mission board — `.minerva-harness/05_MISSIONS.md`)
+
+| ID | Title | Type | Status |
+| -- | ----- | ---- | ------ |
+| ENTRY-M001 | Harness + repo reconnaissance | Recon | ✅ Done |
+| ENTRY-M002 | Hygiene + agent pointer + backend snapshot | Hygiene | ✅ Done |
+| ENTRY-D001 | ENTRY Voice — technical design | Design | ✅ Done |
+| ENTRY-I001 | ENTRY Voice — MVP implementation | Impl | ✅ Implemented — pending native device QA |
+| ENTRY-I001-CLOSEOUT | Voice MVP documentation closeout | Docs | ✅ Done |
+| ENTRY-I001-QA | Voice MVP native device QA | QA | 🔜 Next |
+| ENTRY-D002 | Facility Destinations — technical design | Design | ⏸️ Deferred (after Voice QA) |
+| ENTRY-I002 | Facility Destinations — MVP implementation | Impl | ⏸️ Deferred (needs D002) |
+
+Approved sequencing: Voice (reuses existing infra, near-zero backend change) ships before Facility Destinations (needs schema + access-resolver changes).
+
+## Operator-provided
+
+- Focus is to keep advancing ENTRY; the "Forgot my password" bug is a priority to fix (see [entry-known-issues.md](entry-known-issues.md)).
+
+## Inferred
+
+- The current dev cycle is "finish Voice MVP → QA on device → then Facility Destinations design." Observability (Sentry) and security hardening appear to run alongside as separate tracks.
+
+## Unknown / Needs verification
+
+- Whether `feature/entry-voice-mvp` has an open PR to `main`, and CI/build status there.
+- Current state of the Sentry and security-gate branches (merged? abandoned? active?).
+- Whether device QA (ENTRY-I001-QA) has started since this capture.
+
+## Risks
+
+- Voice MVP is "implemented" but unverified on a device — declaring it done before QA would be premature (a native module never exercised on-device).
+- Multiple parallel branches risk divergence from `main` if not merged/rebased.
+
+## Next actions
+
+- Confirm PR/branch status of `feature/entry-voice-mvp` and the two other branches.
+- Proceed to ENTRY-I001-QA (see [entry-next-missions.md](entry-next-missions.md)).
+
+### content/brain/projects/entry-implementation-map.md
+
+# ENTRY — Implementation Map
+
+Current technical map of ENTRY, verified from the repo and the in-repo backend snapshot. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
+
+## Verified from code
+
+### Stack
+- Mobile: Expo SDK `~54.0.33`, React Native `0.81.5`, React `19.1.0`, expo-router `~6` (file-based routing, `typedRoutes` experiment), New Architecture enabled, `expo-dev-client` (custom native build via EAS, not Expo Go). TypeScript `~5.9` strict; path alias `@/*`. (`package.json`, `app.json`, `tsconfig.json`.)
+- Backend: Supabase — Postgres 17, RLS on all tables, business logic in `SECURITY DEFINER` RPCs, Deno Edge Functions, Realtime channels, Storage bucket `entry-photos`.
+- Package manager: npm (`package-lock.json`). No eslint/jest/prettier/metro/babel config at root; no `lint`/`test`/`typecheck`/`build` npm scripts (relies on Expo defaults; EAS for builds).
+
+### Auth / session model
+- Supabase Auth; session persisted via `expo-secure-store` (native) / `localStorage` (web) in `lib/supabase.ts` (`autoRefreshToken`, `persistSession`, `detectSessionInUrl:false`).
+- `providers/AuthProvider.tsx` hydrates session, calls RPC `resolve_my_app_access` → `access_state` (`ACTIVE | DISABLED | NO_MEMBERSHIP | BLOCKED`); protected screens render only when `ACTIVE`. Derives `role` + `roleHome`; runs a realtime "access hardening" channel that revalidates on profile/membership/house changes.
+- Synthetic `@entry.local` emails + username login exist (edge functions) for residents onboarded without a real email.
+- Client uses only `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_ANON_KEY`; anon key is a publishable `sb_publishable_...` key (public by design). No service-role key or private secret committed; env injected via `eas.json` / EAS dashboard.
+
+### Edge Functions (Deno) — `supabase/functions/`
+`activate-account-by-code`, `admin-generate-recovery-code`, `claim-resident-invite`, `confirm-email-link`, `create-username-resident`, `login-with-username`, `regenerate-username-activation-code`, `request-email-link`, `send-push-event`, `validate-activation-code`, plus `_shared/edgeRateLimit.ts`. (11 functions + shared.)
+
+### Access creation (resident) — the "standard entry"
+A standard entry is a row in `visit_passes` (or `visit_groups` for multi-visitor, `authorized_frequent_visitors` for recurring staff). Resident screens (`app/(tabs)/resident/`):
+- `create-visit.tsx` → RPC `create_pass_v2` (type `VISIT`); multiple → `create_visit_group_v2`.
+- `create-delivery.tsx` → `create_pass_v2` (type `DELIVERY`).
+- `create-event.tsx` → group/event pass.
+- `create-frequent-access.tsx` → `authorized_frequent_visitors`.
+- self access → `create_self_access_pass`.
+- `create-voice.tsx` → `create_pass_v2` with `p_expiration_mode:"12H"`, `p_note:"[Voz] …"` (see [entry-voice-mvp.md](entry-voice-mvp.md)).
+
+### Guard validation (gate) — pull model
+Guard dashboard has no pushed list of authorized entries. Guard scans a QR (`guard-scanner.tsx`) or types a PIN, calls RPC `resolve_access_credential_v2(p_code, p_method)` → `allowed_action` (`CHECK_IN | CHECK_OUT | EVENT_ACCESS | SELF_ACCESS_ACTION | NONE`), captures evidence photos (Storage `entry-photos`), then a check-in RPC (`check_in_pass`, `check_in_frequent_access`, `check_in_visit_group_member_with_evidence`, `check_in_manual_entry`). `entry_logs` is an immutable audit log. Manual entries → `manual_entries`. (RPC bodies in `rpc_resolve_access_credential_v2.sql`, `supabase/migrations/`.)
+
+## Verified from repo backend snapshot (`.minerva-harness/backend-snapshot/`, originally `[db]`)
+
+### Core access tables
+`communities`, `houses`, `house_residents`, `community_members` (user↔community↔role↔is_active — the access-control table), `profiles`, `visit_passes` (the standard single entry), `visit_groups`/`visit_group_members`, `authorized_frequent_visitors`, `manual_entries`, `entry_logs` (immutable), `resident_favorites`, `community_facilities` (reservable amenities), `facility_reservations`, `community_settings`, `security_event_log`, `emergency_alerts`.
+
+### Key structural facts
+- `visit_passes.house_id` is **NOT NULL** — every standard entry is tied to a house (structural blocker for "facility as destination").
+- `visit_passes.expires_at` is **NOT NULL**; `status` default `ACTIVE`; `pass_type` is an enum.
+- No `created_method` / `voice_transcript` / `created_via` column anywhere; `visit_passes` has no metadata/JSON column (so Voice transcript goes in `note` with a `[Voz]` prefix).
+- `create_pass_v2`: server-side rate limit **20 passes/hour/resident** (`check_rpc_rate_limit`, errcode `55000`), plus `assert_no_pin_pending()`; default `p_expiration_mode='12H'`; derives `house_id` from the resident's primary house.
+- `community_facilities` + `facility_reservations` are an **amenity reservation** system (slots, pricing, approval), fully decoupled from `visit_passes` — there is no link between them today.
+- `entry_logs` has a `metadata jsonb` column; `visit_passes` does not.
+
+### Migrations
+`supabase/migrations/` exists with 7 migration files; `supabase/functions/`, `supabase/tests/` present. Many RPC bodies (e.g. `create_pass_v2`, facility RPCs) exist only in the live DB and are NOT mirrored as in-repo migrations (harness Q-B1).
+
+## Operator-provided
+
+- ENTRY maintains its own Supabase project, separate from Brain (consistent with the verified `gate-project-dev` ref).
+
+## Inferred
+
+- Because guard is pull-based and access/facilities are decoupled, voice-created passes need no guard or backend change, but "facility as destination" is a cross-subsystem schema change (not a config tweak). (Harness `03`/`04`.)
+
+## Unknown / Needs verification
+
+- Authoritative source of truth for un-mirrored RPCs (out-of-band migration history vs. manual DB management) — harness Q-B1.
+- `community_access_policies` table exists with 0 rows; intended purpose unconfirmed — harness Q-B2.
+- Exact bodies of RPCs not present in-repo (only `resolve_access_credential_v2` and a `get_resident_live_activity` patch are in root SQL files).
+
+## Risks
+
+- Schema changes are risky while RPC/migration history is partly out-of-band (Q-B1) — any destination/voice-column work must reconcile this first.
+- No automated lint/test in the repo; only `tsc --noEmit` (one known pre-existing error, harness Q-B5) and EAS builds gate quality.
+
+## Next actions
+
+- Resolve Q-B1 (migration source of truth) before any schema mission.
+- Consider adding a minimal `typecheck` script + eslint baseline (harness Q-B3/Q-B7) — ENTRY-side mission, not Brain.
+
+### content/brain/projects/entry-known-issues.md
+
+# ENTRY — Known Issues
+
+Bugs, baselines, and technical debt. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). No fixes were applied — this is knowledge capture only.
+
+## Operator-provided
+
+### BUG — "Olvidé mi contraseña" (Forgot my password) does not work
+Reported by the operator as broken and needing a fix. This is the priority bug.
+
+- **What exists in code (Verified from code):** the flow is implemented. `app/(auth)/forgot-password.tsx` collects an email and calls `supabase.auth.resetPasswordForEmail(email, { redirectTo })`, where `redirectTo` is `entry://reset-password` on native or `${window.location.origin}/reset-password` on web. `app/reset-password.tsx` handles the recovery link: it reads a `code` param, validates the recovery link (`recoveryCheckReady` / `recoveryReady` from `AuthProvider`, a `RECOVERY_LINK_GRACE_MS = 2500` grace window, and a `LINK_INVALID_MESSAGE`), then lets the user set a new password (min length 8).
+- So the screens are present and call the right Supabase APIs — the failure is **not** "the button does nothing in code."
+
+### Other operator-known bug (from repo `BUGFIXES.md`)
+- 2026-04-21: Guard SOS acknowledge ("Voy en camino") from `app/(tabs)/guard/index.tsx` failed because it queried `profiles.expo_push_token`. **Status (repo note):** fixed in working tree by routing the resident acknowledgement push through the current `user_push_tokens` delivery path. (Verify it is committed/merged.)
+
+## Inferred (candidate root causes for the password bug — NOT verified)
+
+Static code is implemented, so the likely failure is in configuration or deep-link delivery, not the screen logic. Candidates to test, in rough priority:
+
+1. **Deep link / redirect handling** — `entry://reset-password` may not be registered/handled so the recovery email link never reopens the app at `reset-password` (or the `code` param is not delivered to `useLocalSearchParams`).
+2. **Supabase redirect allowlist** — `redirectTo` URLs must be in the Supabase Auth "Redirect URLs" allowlist; if `entry://reset-password` / the web origin is not allowed, Supabase drops the redirect.
+3. **Email template / SMTP** — recovery emails may not be sent (default Supabase SMTP limits) or the template link may not carry the expected `code`/token format the screen reads.
+4. **Synthetic `@entry.local` accounts** — residents onboarded with synthetic emails / username login have no real inbox, so email-based reset cannot work for them by design; they may need the admin recovery-code path (`admin-generate-recovery-code` / `recovery-access`) instead.
+
+## Verified from repo (baseline / debt)
+
+- **Pre-existing TypeScript baseline error (harness Q-B5):** `components/ExternalLink.tsx(13,7): TS2578: Unused '@ts-expect-error' directive`. Trivial (delete the directive); left unfixed to keep missions in scope. Any *new* tsc error is from new work, not this.
+- **No lint/test tooling** (no eslint/jest/config; no `lint`/`test`/`typecheck`/`build` npm scripts) — only `tsc --noEmit` and EAS builds gate quality (Q-B3/Q-B7).
+- **Install quirk (D-012 / Q-B6):** `npm install` requires `NODE_OPTIONS=--use-system-ca` due to a TLS-intercepting proxy; do **not** use `strict-ssl=false`.
+- **Un-mirrored RPCs (Q-B1):** several RPC bodies exist only in the live DB, not in `supabase/migrations/` — a debt/risk for safe schema change.
+
+## Unknown / Needs verification
+
+- The actual reproduction and root cause of the "Forgot password" failure (which candidate above, if any).
+- Whether the SOS acknowledge fix from `BUGFIXES.md` is committed and merged to `main`.
+- Whether password reset is expected to work for synthetic-email residents at all (product decision).
+
+## Risks
+
+- Password reset is a core trust path; if broken for real-email users it blocks account recovery and erodes confidence.
+- Fixing it may touch deep-link config and Supabase Auth settings (outside the app code), which need careful, reversible changes.
+
+## Next actions
+
+- Open an ENTRY mission to reproduce and fix "Forgot my password": verify deep-link registration, Supabase redirect allowlist, and email delivery; confirm behavior for synthetic-email accounts. See [entry-next-missions.md](entry-next-missions.md).
+
+### content/brain/projects/entry-next-missions.md
+
+# ENTRY — Next Missions
+
+Prioritized, recommended next missions for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These are recommendations for the ENTRY repo/runtime (executed there, not from Brain).
+
+## Priority 1 — Fix "Forgot my password"
+**Why:** operator-reported broken; core account-recovery trust path.
+**Type:** bug fix (likely config + deep-link, not screen logic).
+**Scope:** reproduce on web + native; verify (1) `entry://reset-password` deep-link registration and `code` param delivery, (2) Supabase Auth redirect-URL allowlist, (3) recovery email delivery/template, (4) expected behavior for synthetic `@entry.local` / username accounts (may need the admin recovery-code path instead). Evidence-first; no schema change expected. See [entry-known-issues.md](entry-known-issues.md).
+
+## Priority 2 — ENTRY-I001-QA (Voice MVP native device QA)
+**Why:** Voice MVP is implemented but unverified on a real device; required before it ships.
+**Type:** QA on a native dev/EAS build (not Expo Go).
+**Scope:** run the harness checklist (`VOICE_MVP_HANDOFF.md` §7) on real Android + iOS: permission prompts (Spanish copy), manual fallback when unavailable, happy path speak→confirm→create, edited transcript respected, 12h VISIT pass with valid PIN/QR, DELIVERY mapping, `[Voz]` note present, `55000` rate-limit copy, 60s double-submit guard, guard resolves identically, and **no audio written/uploaded/logged**. Resolve Q-V2 (locale) + Q-V3 (on-device policy); then finalize Q-V7 (trigger placement). See [entry-voice-mvp.md](entry-voice-mvp.md).
+
+## Priority 3 — Restore a green TypeScript baseline (quick win)
+**Why:** removes the one known pre-existing tsc error so any new error is meaningful.
+**Type:** trivial cleanup.
+**Scope:** delete the unused `@ts-expect-error` directive in `components/ExternalLink.tsx` (harness Q-B5). Optionally add a minimal `typecheck` npm script (Q-B3/Q-B7). No deps, no behavior change.
+
+## Priority 4 — Reconcile RPC/migration source of truth
+**Why:** several RPC bodies live only in the live DB, not in `supabase/migrations/` (Q-B1); this blocks safe schema work.
+**Type:** backend hygiene / design prerequisite.
+**Scope:** determine whether there is an out-of-band migration history or manual DB management; capture the missing RPC definitions as migrations or a documented snapshot before any schema change.
+
+## Priority 5 (deferred) — ENTRY-D002 Facility / Internal Destination Access (design)
+**Why:** strategic, but blocked behind Voice QA and the `visit_passes.house_id NOT NULL` structural change.
+**Type:** design mission (no code).
+**Scope:** evaluate data-model options (nullable `house_id` + `destination_facility_id` vs polymorphic destination vs new entity); assess blast radius on `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, community scoping; answer Q-F1..Q-F6. Decide in design, not code. Deferred until after Voice MVP QA per approved sequencing.
+
+## Commercial track (parallel, non-engineering)
+- Build a per-colonia lead tracker with verified contacts and board-meeting dates; prioritize call-controlled colonias (Monserrat, Angelina) and boards with known meeting dates (Vías Paraíso). Verify Access/ISSY/SSA specifics before recording as fact. See [entry-sales-and-leads.md](entry-sales-and-leads.md).
+
+## Notes on sequencing
+
+- Voice (reuses existing infra) is sequenced before Facility Destinations (needs schema + resolver changes), per the ENTRY harness.
+- The password fix is placed first here because it is an operator-flagged trust bug independent of the Voice/Facilities track and can proceed in parallel.
+
+## Unknown / Needs verification
+
+- Whether the operator wants the password fix or Voice QA first (this doc recommends password fix P1; adjust if the operator prioritizes shipping Voice).
+- Open PR/branch status for `feature/entry-voice-mvp`, Sentry, and security-gate branches (see [entry-current-work.md](entry-current-work.md)).
+
+### content/brain/projects/entry-product-foundation.md
+
+# ENTRY — Product Foundation
+
+What ENTRY is, who uses it, the problem it solves, its value proposition, and its modules. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md) for the index.
+
+## Verified from code
+
+### What ENTRY is
+ENTRY is a Minerva Technologies mobile app for residential / community access control. Stack: Expo SDK ~54, React Native 0.81, React 19, expo-router 6, TypeScript strict; Supabase backend (Postgres 17, Auth, Edge Functions, Realtime, Storage). Store identity: app name **Entry**, bundle id `com.minervatechnologies.entry`, Expo slug `gatewise`. UI language Spanish; locale Honduras (`America/Tegucigalpa`, currency `HNL`). (`package.json`, `app.json`, harness `01_PROJECT_BRIEF`/`03_ARCHITECTURE`.)
+
+### Roles (users)
+Four roles: **Resident**, **Guard**, **Admin**, **SuperAdmin** (`lib/roles.ts`, `providers/AuthProvider.tsx`).
+
+- **Resident** — creates access authorizations for visitors, deliveries, events, recurring staff ("frequent"), and self; reserves community amenities; can trigger a panic/SOS alert.
+- **Guard** — validates people at the gate by scanning a QR or typing a PIN, captures evidence photos, registers entry/exit; handles manual (no-credential) entries and SOS alerts.
+- **Admin / SuperAdmin** — manage users, invites, reservations, community messages, identity review, recovery/recovery-access.
+
+### Problem it solves
+Replaces manual/call-based gate control (a guard phoning a resident to authorize each visitor) with a structured, auditable access system: residents pre-authorize entries that produce a QR/PIN credential, guards resolve that credential on demand and log every check-in/check-out in an immutable audit trail. (`entry_logs` immutable audit; guard pull model — `03_ARCHITECTURE`.)
+
+### Value proposition
+- For residents: self-service authorization (incl. by voice), shareable QR/PIN, recurring staff, SOS.
+- For guards: fast credential resolution + evidence capture, no manual roster needed.
+- For communities/admins: per-community tenancy, identity review, recovery, messaging, amenity reservations, and an immutable entry log.
+
+### Modules (verified from `app/` structure)
+- **Auth**: login (username or email), forgot/reset password, account activation, pending/disabled states (`app/(auth)/**`, `app/activate-account.tsx`, `app/reset-password.tsx`).
+- **Resident**: visits, deliveries, events, frequent access, self-access, my-access QR, reservations, community messages, SOS waiting, profile, support, **create-voice** (`app/(tabs)/resident/**`).
+- **Guard**: scanner, check-in, check-out, manual entry, manual checkouts, guard group, notifications, SOS (`app/(tabs)/guard/**`).
+- **Admin**: users, pending invites, create/invite resident, identity review, recovery-access, reservations, community messages, avisos (`app/(tabs)/admin/**`).
+- **Cross-cutting libs**: `lib/` — `roles`, `rpcErrorHandler`, `notificationService`, `pushNotifications`, `adminReservations`, `guardUi`, `email`, `supabase`, `voice/`.
+
+## Operator-provided
+
+- ENTRY is the product Rudy intends to keep advancing (commercial focus on residential communities). See [entry-sales-and-leads.md](entry-sales-and-leads.md).
+
+## Inferred
+
+- The "community access intelligence system" framing (beyond a "QR visitor app") is the stated strategic direction; current shipping scope is still the access-pass + guard-resolution core plus the Voice MVP. (Harness `01`/`04`.)
+
+## Unknown / Needs verification
+
+- Production rollout status (how many real communities are live) — not in repo.
+- Whether SuperAdmin is a distinct deployment surface vs. an elevated role only.
+
+## Risks
+
+- Product breadth (resident + guard + admin + reservations + messaging + SOS) is large for a small team; focus risk.
+
+## Next actions
+
+- Keep this foundation in sync when ENTRY harness `01_PROJECT_BRIEF` changes.
+- Confirm production rollout numbers with operator to make the foundation complete.
+
+### content/brain/projects/entry-sales-and-leads.md
+
+# ENTRY — Sales & Leads
+
+Commercial strategy, target communities (colonias), and observed competitors. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
+
+> Almost everything here is **Operator-provided** (from Rudy). It is business knowledge, not verified from code, and should be treated as a living sales record, not fact-checked data.
+
+## Operator-provided — strategy
+
+- Target market: residential communities ("residenciales" / colonias) that manage visitor access manually (a guard phoning residents to authorize each visitor) or with a weak incumbent system.
+- The wedge: replace call-based gate control and weak incumbent tooling with ENTRY (structured pre-authorization + QR/PIN + immutable audit + recurring staff + SOS).
+- Sales motion is per-community: reach the community board ("patronato") or the security lead, who decides adoption.
+
+## Operator-provided — known colonias / leads
+
+| Colonia | Size | Current control | Status / note |
+| ------- | ---- | --------------- | ------------- |
+| Residencial Girona | — | Uses **Access** | No administrative contact yet |
+| Residencial La Fuente | — | — | No access to the board ("patronato") yet |
+| Vías Monserrat | ~30 houses | Phone calls | — |
+| Villas Angelina | ~20–30 houses | Phone calls | — |
+| Vías Paraíso | — | Uses **Access** | Security lead mentioned a Sunday board ("patronato") meeting |
+| Residencial Santa Elena Demco | — | — | Residential under construction; investigation pending |
+
+## Operator-provided — observed competitors
+
+- **Access** — incumbent access-control system seen in several residentials (Girona, Vías Paraíso).
+- **ISSY** — observed competitor.
+- **SSA** — observed competitor.
+
+## Inferred
+
+- Call-controlled colonias (Monserrat, Angelina) are likely the easiest displacement targets (no incumbent contract to unseat); Access-using colonias (Girona, Paraíso) require beating an installed system.
+- The board ("patronato") meeting cadence (e.g. Vías Paraíso's Sunday meeting) is the natural decision gate for a pitch.
+
+## Unknown / Needs verification
+
+- House counts and current decision-maker contacts for most colonias.
+- Competitor specifics for Access / ISSY / SSA (features, pricing, contract lock-in) — not verified; do not record as fact.
+- Santa Elena Demco timeline and contact.
+- Pricing/packaging ENTRY would offer per community.
+
+## Risks
+
+- Lead data is sparse and contact-gated (several "no contact yet" / "no board access"); pipeline is early.
+- Competing against an installed incumbent (Access) is harder than greenfield call-controlled colonias.
+
+## Next actions
+
+- Build a per-colonia lead tracker (knowledge only) with verified contacts, board-meeting dates, and stage.
+- Verify competitor specifics before recording them as approved knowledge.
+- Prioritize outreach to call-controlled colonias and to boards with a known meeting date.
+
+### content/brain/projects/entry-voice-mvp.md
+
+# ENTRY — Voice MVP
+
+Status and contract of ENTRY Voice (resident-side voice access creation). Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). Sourced from `.minerva-harness/VOICE_MVP_HANDOFF.md`, `04_PRODUCT_DIRECTION.md`, `06_DECISIONS.md`, and code.
+
+## Verified from code
+
+- **Status:** ENTRY-I001 implemented the MVP, **client-only**, code-complete and typechecking (2026-06-23). **Not production-ready** until native device QA (ENTRY-I001-QA) runs — the native speech module has never been exercised on a real device.
+- **Goal:** a resident says e.g. "Pedidos Ya" and ENTRY creates a **normal standard entry** (a `visit_passes` row) via the existing `create_pass_v2` path — not a separate access system. Voice is an *additional* creation method; QR and manual creation remain.
+- **Library:** `expo-speech-recognition@56.0.1` (free native on-device engine, Expo config plugin; SDK 54 / New Arch / dev-client compatible). `app.json` has the plugin + Spanish mic/speech permission copy + `android.permission.RECORD_AUDIO`.
+- **New files:** `lib/voice/useVoiceRecognition.ts` (isolated speech hook — availability/permission/listening/transcript/normalized error; all native calls live here), `app/(tabs)/resident/create-voice.tsx` (voice screen + editable confirmation that doubles as the manual fallback + VISIT/DELIVERY selector), `components/resident/VoiceTriggerButton.tsx` (relocatable "Voz" trigger). Updated `app/(tabs)/resident/index.tsx` (1 import + 1 JSX line; **provisional** placement above the dashboard footer, Q-V7).
+- **Backend contract (exact):** `supabase.rpc("create_pass_v2", { p_community_id, p_pass_type /* default VISIT, DELIVERY if selected */, p_visitor_name: finalName, p_delivery_company: type==='DELIVERY' ? finalName : null, p_delivery_category: null, p_vehicle_plate: null, p_note: "[Voz] " + finalName, p_expiration_mode: "12H", p_expires_at: null })`. Result read as `data[0]`; id = `pass.pass_id ?? pass.id`. Navigates to existing `visit-created` / `delivery-created` success screens (PIN/QR + share).
+- **No backend / schema / guard / RLS change.** No audio stored. Handles the `55000` rate-limit error (20 passes/hour/resident) explicitly in Spanish with manual fallback; 60s identical-submit guard; disabled while in flight.
+
+## Verified from repo decisions (`06_DECISIONS.md`)
+
+- D-001 Voice creates standard entries; D-002 default validity 12h; D-003 zero variable-cost; D-004 no paid speech APIs (native on-device only); D-005 no audio storage; D-006 manual fallback required; D-009/D-011/D-014 transcript (if stored) goes in `note` as `[Voz] <final confirmed text>`, no new column; D-015 default type VISIT; D-016 client-only; D-017 pinned `expo-speech-recognition@56.0.1`; D-018 provisional locale `es-MX` + OS recognizer (`requiresOnDeviceRecognition:false`); D-019 provisional relocatable trigger placement.
+
+## Privacy / cost guarantees (Verified from code, one flagged assumption)
+
+- No audio storage (hook surfaces text only; no FileSystem/Storage writes, no audio in logs).
+- No paid APIs (device's free native recognizer); no backend speech proxy.
+- Only `note = "[Voz] " + finalConfirmedText` persisted; no raw transcript, no `voice_transcript` column.
+- "Zero variable-cost" is confirmed by design; **validate no hidden cloud round-trip during device QA** (harness flags this as an assumption, Q-V3).
+
+## Operator-provided
+
+- ENTRY Voice is a near-term product bet to differentiate ENTRY (per overall ENTRY direction).
+
+## Inferred
+
+- Because the guard is pull-based and Voice reuses `create_pass_v2`, a voice pass is indistinguishable at the gate from a button-created pass — so QA can focus on the resident flow + permissions, not guard changes.
+
+## Unknown / Needs verification (open questions)
+
+- **Q-V8** Device QA not run (full speak→create flow, permission prompts, no-audio-written verification on real iOS + Android).
+- **Q-V2** Locale provisional `es-MX`; confirm `es-HN`/`es-419`/device default + offline-language-pack behavior on device.
+- **Q-V3** On-device vs OS recognizer provisional; decide if on-device-only is required.
+- **Q-V7** Final visual placement of the Voice trigger.
+- **Q-V4** Whether to ship VISIT-only first (pending product OK).
+
+## Risks
+
+- A native module that has never run on a device may behave differently than in code review (permissions, recognizer availability, OTA insufficiency — a new native build is REQUIRED; Expo Go/OTA will report voice unavailable → manual fallback).
+- Locale/recognizer choices could affect recognition quality in Honduras Spanish.
+
+## Next actions
+
+- Run **ENTRY-I001-QA** on a native dev/EAS build using the harness QA checklist (`VOICE_MVP_HANDOFF.md` §7); resolve Q-V2/Q-V3, then finalize Q-V7. Clean rollback is documented (handoff §9; no DB rollback needed). Only after Voice QA passes, resume ENTRY-D002 (Facility Destinations). See [entry-next-missions.md](entry-next-missions.md).
+
 ### content/brain/projects/entry.md
 
 # ENTRY
 
-Residential and community access control system, and the initial ENTRY Knowledge Pack for Minerva Core Brain. This is approved, read-only knowledge and strategy. It is not ENTRY runtime, and Brain does not connect to ENTRY's database.
+Official index and summary of the ENTRY product inside Minerva Core Brain. ENTRY is captured here as read-only knowledge. Brain does not connect to the ENTRY database or execute ENTRY runtime.
 
-## What ENTRY is
+> Source repo analyzed (read-only): `D:\Dev\node-bridge-foundation` (npm package name `entry`, store id `com.minervatechnologies.entry`). The repo carries its own `.minerva-harness/` knowledge base, which is the ENTRY-side source of truth. This Brain capture (ENTRY-BRAIN-001) summarizes it without modifying it.
 
-ENTRY is a product that manages residential communities, units, staff, and user access. It manages communities, units, staff, and user access, with onboarding workflows and activity logging. It has its own Supabase project and dedicated data layer.
+## Evidence labels used across these docs
+
+- **Verified from code** — read directly from ENTRY source files (`.ts/.tsx/.sql/.json`, app structure, git).
+- **Verified from repo backend snapshot** — schema/RPC/RLS facts the ENTRY harness verified against the live dev DB and committed under `.minerva-harness/backend-snapshot/` (marked `[db]` there). Not re-verified live by Brain.
+- **Operator-provided** — facts supplied by Rudy (commercial strategy, leads, the password bug report).
+- **Inferred** — reasonable but unconfirmed.
+- **Unknown / Needs verification** — open gaps; not asserted as fact.
+
+## What ENTRY is (one paragraph)
+
+ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential / community access control, backed by Supabase (Postgres 17 + Auth + Edge Functions + Realtime + Storage). Residents create access passes (visits, deliveries, events, recurring staff, self-access) that guards validate at the gate by scanning a QR or typing a PIN; admins manage users, invites, reservations, messages, identity review and recovery. UI is Spanish (Honduras). **Verified from code.**
+
+## Knowledge pack (this capture)
+
+- [entry-product-foundation.md](entry-product-foundation.md) — what ENTRY is, users, problem, value, modules.
+- [entry-implementation-map.md](entry-implementation-map.md) — verified technical map (stack, data model, RPCs, flows).
+- [entry-current-work.md](entry-current-work.md) — active branch, WIP, mission board.
+- [entry-known-issues.md](entry-known-issues.md) — bugs incl. "Forgot password", tech debt.
+- [entry-voice-mvp.md](entry-voice-mvp.md) — ENTRY Voice status and contract.
+- [entry-sales-and-leads.md](entry-sales-and-leads.md) — commercial strategy, colonias, competitors.
+- [entry-next-missions.md](entry-next-missions.md) — prioritized recommended missions.
+
+## Isolation principles (unchanged)
+
+- Brain must not touch `features/entry/**` (in the Console repo) or the ENTRY app repo runtime.
+- ENTRY keeps its own Supabase project; Brain does not connect to the ENTRY DB.
+- Brain documents ENTRY knowledge and strategy; it does not execute ENTRY runtime.
 
 ## Status within Minerva
 
 - **Status:** Approved, active development.
-- ENTRY runtime lives under `features/entry/**` in this repo and is operated independently of Brain.
-- **Infrastructure:** its own dedicated Supabase project.
-- Minerva Console is the admin surface for ENTRY (community onboarding, activation, staffing, messaging, and backend feature controls).
+- **Current ENTRY branch:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code.**
+- **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo (harness `01_PROJECT_BRIEF`).**
 
-## Relationship to Minerva Console
+## Risks (summary; detail in sub-docs)
 
-- Minerva Console hosts both the ENTRY admin UI (`features/entry/**`, routes under `products/entry/**`) and Minerva Core Brain (`features/brain/**`, `content/brain/**`).
-- Brain and ENTRY share the repo and the Console shell, but are isolated: Brain may reference ENTRY decisions and architecture as knowledge, but must not read ENTRY operational data or import ENTRY code.
+- Voice MVP unverified on a real device (native module never exercised on-device).
+- Many RPC bodies live only in the live DB, not mirrored as in-repo migrations — schema-change risk.
+- "Forgot password" reported broken by operator; root cause not yet verified.
 
-## Voice MVP
+## Next actions (summary; detail in [entry-next-missions.md](entry-next-missions.md))
 
-- A voice-based MVP for access control is part of the ENTRY direction.
-- Detailed status (scope, readiness, integration) is not verified here — see **Unknown / Needs verification**.
-
-## Commercial strategy — residentials
-
-- Target market is residential communities ("residenciales" / colonias) that currently manage visitor access manually (phone calls to a guard) or with an incumbent system.
-- The wedge is replacing call-based gate control and weak incumbent tooling with ENTRY.
-- Sales motion is per-community: reach the community board ("patronato") or security lead, who decides adoption.
-
-## Observed competitors
-
-- **Access** — incumbent access-control system seen in several residentials.
-- **ISSY** — observed competitor.
-- **SSA** — observed competitor.
-
-> Competitive detail beyond names (features, pricing, contracts) is not verified — see **Unknown / Needs verification**.
-
-## Known colonias / leads
-
-- **Residencial Girona** — uses Access. No administrative contact yet.
-- **Residencial La Fuente** — no access to the board ("patronato") yet.
-- **Vías Monserrat** — approximately 30 houses. Access controlled by phone calls.
-- **Villas Angelina** — approximately 20–30 houses. Access controlled by phone calls.
-- **Vías Paraíso** — uses Access. Security lead indicated a Sunday board ("patronato") meeting.
-- **Residencial Santa Elena Demco** — residential under construction. Investigation pending.
-
-## Known bug (pending)
-
-- **"Forgot my password" ("Olvidé mi contraseña") does not work** and must be fixed. Reproduction details and root cause are not verified here.
-
-## Principles
-
-- Brain must not touch `features/entry/**`.
-- ENTRY keeps its own Supabase project.
-- Brain does not connect to the ENTRY database yet.
-- Brain documents ENTRY knowledge and strategy; it does not execute ENTRY runtime.
-- Brain may reference ENTRY decisions and architecture, but must not read ENTRY operational data.
-
-## Unknown / Needs verification
-
-Recorded as gaps, not facts. Do not treat any of these as verified.
-
-- Voice MVP status: scope, readiness, and how it integrates with the gate flow.
-- ENTRY database schema, tables, and RPCs — intentionally not documented here; not to be inferred.
-- Competitor specifics for Access / ISSY / SSA (features, pricing, lock-in).
-- Exact house counts and current decision-maker contacts per colonia.
-- Root cause and reproduction steps for the "Forgot my password" bug.
-- Santa Elena Demco timeline and contact.
-
-## Open questions
-
-- Which leads have a reachable board ("patronato") contact, and when do they meet?
-- What is the minimum ENTRY feature set needed to displace Access in a call-controlled colonia?
-- Is the Voice MVP a near-term differentiator or a later phase?
-
-## Next recommended ENTRY missions
-
-- Fix the "Forgot my password" flow (ENTRY runtime mission — outside Brain).
-- Verify and document Voice MVP status into an approved Brain decision once confirmed.
-- Build a per-colonia lead tracker (knowledge only) with verified contacts and stage.
-- Verify competitor specifics before recording them as approved knowledge.
-
-## Key features
-
-- Community management
-- Unit management
-- Staff and user access control
-- Onboarding workflows
-- Activity logging
+1. Verify and fix "Forgot my password".
+2. Run ENTRY-I001-QA (Voice MVP native device QA).
+3. Resume ENTRY-D002 (Facility Destinations design) only after Voice QA.
 
 ### content/brain/projects/minerva-web.md
 

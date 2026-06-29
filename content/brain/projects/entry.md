@@ -1,91 +1,51 @@
 # ENTRY
 
-Residential and community access control system, and the initial ENTRY Knowledge Pack for Minerva Core Brain. This is approved, read-only knowledge and strategy. It is not ENTRY runtime, and Brain does not connect to ENTRY's database.
+Official index and summary of the ENTRY product inside Minerva Core Brain. ENTRY is captured here as read-only knowledge. Brain does not connect to the ENTRY database or execute ENTRY runtime.
 
-## What ENTRY is
+> Source repo analyzed (read-only): `D:\Dev\node-bridge-foundation` (npm package name `entry`, store id `com.minervatechnologies.entry`). The repo carries its own `.minerva-harness/` knowledge base, which is the ENTRY-side source of truth. This Brain capture (ENTRY-BRAIN-001) summarizes it without modifying it.
 
-ENTRY is a product that manages residential communities, units, staff, and user access. It manages communities, units, staff, and user access, with onboarding workflows and activity logging. It has its own Supabase project and dedicated data layer.
+## Evidence labels used across these docs
+
+- **Verified from code** — read directly from ENTRY source files (`.ts/.tsx/.sql/.json`, app structure, git).
+- **Verified from repo backend snapshot** — schema/RPC/RLS facts the ENTRY harness verified against the live dev DB and committed under `.minerva-harness/backend-snapshot/` (marked `[db]` there). Not re-verified live by Brain.
+- **Operator-provided** — facts supplied by Rudy (commercial strategy, leads, the password bug report).
+- **Inferred** — reasonable but unconfirmed.
+- **Unknown / Needs verification** — open gaps; not asserted as fact.
+
+## What ENTRY is (one paragraph)
+
+ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential / community access control, backed by Supabase (Postgres 17 + Auth + Edge Functions + Realtime + Storage). Residents create access passes (visits, deliveries, events, recurring staff, self-access) that guards validate at the gate by scanning a QR or typing a PIN; admins manage users, invites, reservations, messages, identity review and recovery. UI is Spanish (Honduras). **Verified from code.**
+
+## Knowledge pack (this capture)
+
+- [entry-product-foundation.md](entry-product-foundation.md) — what ENTRY is, users, problem, value, modules.
+- [entry-implementation-map.md](entry-implementation-map.md) — verified technical map (stack, data model, RPCs, flows).
+- [entry-current-work.md](entry-current-work.md) — active branch, WIP, mission board.
+- [entry-known-issues.md](entry-known-issues.md) — bugs incl. "Forgot password", tech debt.
+- [entry-voice-mvp.md](entry-voice-mvp.md) — ENTRY Voice status and contract.
+- [entry-sales-and-leads.md](entry-sales-and-leads.md) — commercial strategy, colonias, competitors.
+- [entry-next-missions.md](entry-next-missions.md) — prioritized recommended missions.
+
+## Isolation principles (unchanged)
+
+- Brain must not touch `features/entry/**` (in the Console repo) or the ENTRY app repo runtime.
+- ENTRY keeps its own Supabase project; Brain does not connect to the ENTRY DB.
+- Brain documents ENTRY knowledge and strategy; it does not execute ENTRY runtime.
 
 ## Status within Minerva
 
 - **Status:** Approved, active development.
-- ENTRY runtime lives under `features/entry/**` in this repo and is operated independently of Brain.
-- **Infrastructure:** its own dedicated Supabase project.
-- Minerva Console is the admin surface for ENTRY (community onboarding, activation, staffing, messaging, and backend feature controls).
+- **Current ENTRY branch:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code.**
+- **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo (harness `01_PROJECT_BRIEF`).**
 
-## Relationship to Minerva Console
+## Risks (summary; detail in sub-docs)
 
-- Minerva Console hosts both the ENTRY admin UI (`features/entry/**`, routes under `products/entry/**`) and Minerva Core Brain (`features/brain/**`, `content/brain/**`).
-- Brain and ENTRY share the repo and the Console shell, but are isolated: Brain may reference ENTRY decisions and architecture as knowledge, but must not read ENTRY operational data or import ENTRY code.
+- Voice MVP unverified on a real device (native module never exercised on-device).
+- Many RPC bodies live only in the live DB, not mirrored as in-repo migrations — schema-change risk.
+- "Forgot password" reported broken by operator; root cause not yet verified.
 
-## Voice MVP
+## Next actions (summary; detail in [entry-next-missions.md](entry-next-missions.md))
 
-- A voice-based MVP for access control is part of the ENTRY direction.
-- Detailed status (scope, readiness, integration) is not verified here — see **Unknown / Needs verification**.
-
-## Commercial strategy — residentials
-
-- Target market is residential communities ("residenciales" / colonias) that currently manage visitor access manually (phone calls to a guard) or with an incumbent system.
-- The wedge is replacing call-based gate control and weak incumbent tooling with ENTRY.
-- Sales motion is per-community: reach the community board ("patronato") or security lead, who decides adoption.
-
-## Observed competitors
-
-- **Access** — incumbent access-control system seen in several residentials.
-- **ISSY** — observed competitor.
-- **SSA** — observed competitor.
-
-> Competitive detail beyond names (features, pricing, contracts) is not verified — see **Unknown / Needs verification**.
-
-## Known colonias / leads
-
-- **Residencial Girona** — uses Access. No administrative contact yet.
-- **Residencial La Fuente** — no access to the board ("patronato") yet.
-- **Vías Monserrat** — approximately 30 houses. Access controlled by phone calls.
-- **Villas Angelina** — approximately 20–30 houses. Access controlled by phone calls.
-- **Vías Paraíso** — uses Access. Security lead indicated a Sunday board ("patronato") meeting.
-- **Residencial Santa Elena Demco** — residential under construction. Investigation pending.
-
-## Known bug (pending)
-
-- **"Forgot my password" ("Olvidé mi contraseña") does not work** and must be fixed. Reproduction details and root cause are not verified here.
-
-## Principles
-
-- Brain must not touch `features/entry/**`.
-- ENTRY keeps its own Supabase project.
-- Brain does not connect to the ENTRY database yet.
-- Brain documents ENTRY knowledge and strategy; it does not execute ENTRY runtime.
-- Brain may reference ENTRY decisions and architecture, but must not read ENTRY operational data.
-
-## Unknown / Needs verification
-
-Recorded as gaps, not facts. Do not treat any of these as verified.
-
-- Voice MVP status: scope, readiness, and how it integrates with the gate flow.
-- ENTRY database schema, tables, and RPCs — intentionally not documented here; not to be inferred.
-- Competitor specifics for Access / ISSY / SSA (features, pricing, lock-in).
-- Exact house counts and current decision-maker contacts per colonia.
-- Root cause and reproduction steps for the "Forgot my password" bug.
-- Santa Elena Demco timeline and contact.
-
-## Open questions
-
-- Which leads have a reachable board ("patronato") contact, and when do they meet?
-- What is the minimum ENTRY feature set needed to displace Access in a call-controlled colonia?
-- Is the Voice MVP a near-term differentiator or a later phase?
-
-## Next recommended ENTRY missions
-
-- Fix the "Forgot my password" flow (ENTRY runtime mission — outside Brain).
-- Verify and document Voice MVP status into an approved Brain decision once confirmed.
-- Build a per-colonia lead tracker (knowledge only) with verified contacts and stage.
-- Verify competitor specifics before recording them as approved knowledge.
-
-## Key features
-
-- Community management
-- Unit management
-- Staff and user access control
-- Onboarding workflows
-- Activity logging
+1. Verify and fix "Forgot my password".
+2. Run ENTRY-I001-QA (Voice MVP native device QA).
+3. Resume ENTRY-D002 (Facility Destinations design) only after Voice QA.
