@@ -48,7 +48,7 @@ Then: squash-merge → `git pull` on master → delete the branch → `git mv` t
 ## What you must NOT do
 
 - Do not merge red or unreviewed PRs.
-- Do not let an agent merge — merging is yours alone.
+- Do not let an agent merge without your explicit `MERGE APPROVED` — merge approval is yours alone, even though an agent may run the merge command once you give it.
 - Do not hand-edit the diff to "help" an agent; send it back with a review instead.
 - Do not become the courier: if you find yourself pasting one agent's output into another agent's chat, stop and put it in a report file instead.
 - Do not accept "verified" claims without evidence. Unknown is fine; fake-verified is not.
@@ -74,6 +74,7 @@ You no longer have to drive Git by hand. An agent can do the mechanics; you keep
 - Each mission stays on its own branch (`mcb-####-<slug>`). No single permanent branch for everything.
 - Agents never use `git add .` — staging is by explicit paths.
 - Agents never touch `.env.local`, `.claude/settings.local.json`, or secrets.
-- Agents never merge without your explicit `MERGE APPROVED`. Until then they open the PR and stop.
+- Agents never merge without your explicit `MERGE APPROVED`. That phrase authorizes the merge via GitHub UI or `gh` only — it does **not** authorize a direct push to `master`.
+- `DIRECT PUSH APPROVED` is the separate phrase you give before any direct push to `master` (e.g. a local squash merge pushed straight to master when `gh` is unavailable). Until one of these is given, the agent opens the PR and stops.
 - You stay the merge-approval owner even when the agent runs the command.
 - After you approve and the merge lands, the agent may pull `master` and delete the local/remote branch.

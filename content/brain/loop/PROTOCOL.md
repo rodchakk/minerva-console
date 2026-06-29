@@ -14,7 +14,7 @@ Core idea: **if it is not in the repo or on the PR, it did not happen.**
 
 1. **The repo is the relay.** Coordination happens through files in `content/brain/loop/**`, not through chat copy-paste.
 2. **One writer per branch/mission.** A mission is owned by exactly one agent at a time. No two agents edit the same branch.
-3. **Rudy is merge owner.** Only Rudy merges to `master`. Agents never merge.
+3. **Rudy is merge approval owner.** Agents may execute the approved merge only through the GitHub UI or `gh` after the explicit phrase `MERGE APPROVED`. Without it, agents neither merge nor push to `master`.
 4. **GitHub is authority.** Branch existence, diffs, CI results, and merge state are whatever GitHub says — not whatever a Markdown file claims.
 5. **Markdown is the contract, not the truth.** Briefs and reports are auditable handoff. They record intent and claims; they do not override Git/CI evidence.
 
@@ -54,9 +54,9 @@ Never write "verified" next to a field you cannot back with evidence. This is th
 
 - One branch per mission, named in the brief. Convention: `mcb-####-<slug>`.
 - One agent writes per branch. If another agent must contribute, the first hands off via a report and stops.
-- Work lands through a PR. No direct pushes to `master`.
+- Work lands through a PR. No direct pushes to `master` unless Rudy explicitly says `DIRECT PUSH APPROVED`.
 - CI checks must be green before merge. Agents do not skip, disable, or weaken checks to get green.
-- Rudy reviews and squash-merges. After merge: pull `master`, delete the branch.
+- Rudy is the merge approval owner. After `MERGE APPROVED`, an agent may execute the squash-merge via GitHub UI or `gh`. After merge: pull `master`, delete the branch.
 
 ## When an agent must stop
 
@@ -94,6 +94,7 @@ Agents may run the Git mechanics for a mission so Rudy stops being the manual op
 - Each mission uses its own branch (`mcb-####-<slug>`). Never reuse one permanent branch for all work.
 - Never use `git add .`. Stage by explicit paths only.
 - Never stage or commit `.env.local`, `.claude/settings.local.json`, or any secret.
-- Never merge without explicit approval. The required phrase is `MERGE APPROVED`. Without it, prepare the PR and stop.
+- Never merge without explicit approval. `MERGE APPROVED` authorizes an agent to complete the merge through the GitHub UI or `gh` when available. It does **not** authorize direct push to `master`.
+- `DIRECT PUSH APPROVED` is the separate, explicit phrase required before any direct push to `master` (for example, a local squash merge pushed straight to master when `gh` is unavailable). Without it, prepare the PR and stop.
 - Rudy remains the decision/merge-approval owner even when an agent runs the command.
 - After an approved merge, the agent may pull `master` and delete the local and remote branch.
