@@ -48,7 +48,7 @@ Then: squash-merge → `git pull` on master → delete the branch → `git mv` t
 ## What you must NOT do
 
 - Do not merge red or unreviewed PRs.
-- Do not let an agent merge — merging is yours alone.
+- Do not let an agent merge without your explicit `MERGE APPROVED` — merge approval is yours alone, even though an agent may run the merge command once you give it.
 - Do not hand-edit the diff to "help" an agent; send it back with a review instead.
 - Do not become the courier: if you find yourself pasting one agent's output into another agent's chat, stop and put it in a report file instead.
 - Do not accept "verified" claims without evidence. Unknown is fine; fake-verified is not.
