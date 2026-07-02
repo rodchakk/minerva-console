@@ -352,7 +352,7 @@
     "path": "content/brain/missions/mcb-0019.md",
     "agent": "claude",
     "branch": "mcb-0019-role-contracts-v1",
-    "pr": "unknown",
+    "pr": "#19",
     "commit": "unknown",
     "phase": "contracts"
   }
