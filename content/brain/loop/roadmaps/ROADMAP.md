@@ -18,7 +18,7 @@ satisfied.
 
 ## MCB-0018 — Ledger Repair & Registration Runbook
 
-- **Status:** in_progress
+- **Status:** done (PR #17, commit `065c12b`)
 - **Purpose:** Repair mission-ledger drift (MCB-0016 and MCB-0017 were
   merged but unregistered); add the `close-a-mission.md` runbook so future
   missions register themselves instead of waiting for a repair mission.
