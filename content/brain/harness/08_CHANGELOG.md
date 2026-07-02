@@ -2,6 +2,36 @@
 
 Append-only. Most recent first.
 
+## 2026-07-02 — MCB-0018 — Ledger repair & registration runbook
+
+- Repaired mission-ledger drift: registered `MCB-0016` (Brain v0 Closeout, PR
+  #14, commit `61f4cac`, agent `claude`) and `MCB-0017` (Brain Agent
+  Operating Layer Readiness Audit, PR #16, commit `f1cbd2d`, agent `fable`)
+  in `content/brain/registries/missions.json`, with matching mission docs
+  `content/brain/missions/mcb-0016.md` and `mcb-0017.md`. Both branches
+  confirmed deleted from the remote (`git fetch --prune` + `gh api
+  .../branches`), so `branch` is recorded as `unknown` per convention.
+- Added `DEC-0005`: the mission ledger tracks only `MCB-*` Brain-process
+  missions; non-`MCB` product knowledge captures such as `ENTRY-BRAIN-001`
+  (PR #15, commit `98d1d34`) are documented via their content docs and this
+  changelog, not the mission ledger, unless a future decision extends the ID
+  convention. Added a short clarifying note to `04_WORKFLOW.md`.
+- Added `content/brain/loop/runbooks/close-a-mission.md`: the exact
+  post-merge checklist (confirm PR/commit from Git, update mission doc and
+  ledger, move loop brief if one exists, update changelog, run guardrails +
+  relation checks, never invent branch/agent values, never treat a stale
+  local branch ref as verified) plus guidance to self-register a mission
+  during its own PR instead of deferring to a later repair mission.
+- Added `content/brain/loop/roadmaps/ROADMAP.md`, seeded from the MCB-0017
+  audit with the MCB-0018 → MCB-0023 mission sequence (status, purpose,
+  owner, risk, dependencies, acceptance criteria) — the repo-resident answer
+  to "what's next".
+- Ledger, decision, and documentation content only. No DB, Supabase, Neon,
+  RAG, embeddings, model router, cost monitor, agent engine, routes, ENTRY
+  runtime, Seshat, `.github/workflows/**`, or UI write path. No frozen script
+  (`scripts/brain-*.mjs`) or `features/brain/**` file touched; no guardrail
+  weakened.
+
 ## 2026-06-28 — ENTRY-BRAIN-001 — ENTRY knowledge capture
 
 - Captured the ENTRY product (analyzed read-only from `D:\Dev\node-bridge-foundation`, including its `.minerva-harness/` knowledge base and code) into Minerva Core Brain as eight knowledge docs under `content/brain/projects/`: rewrote `entry.md` as the official index and added `entry-product-foundation.md`, `entry-implementation-map.md`, `entry-current-work.md`, `entry-known-issues.md`, `entry-voice-mvp.md`, `entry-sales-and-leads.md`, and `entry-next-missions.md`.

@@ -111,6 +111,15 @@ Tags help human triage and future promotion of inbox items. They are not semanti
 - Long-form documents are referenced by registry entries through `path`.
 - Tags use kebab-case.
 
+### Mission ledger scope
+
+`content/brain/registries/missions.json` tracks only `MCB-*` Brain-process
+missions — guardrails enforce the `MCB-` prefix on every ledger entry.
+Non-`MCB` product knowledge-capture PRs (for example `ENTRY-BRAIN-001`) are
+documented through their target content docs and `08_CHANGELOG.md`, not
+through the mission ledger, unless a future decision extends the ID
+convention. See `DEC-0005`.
+
 ### Unverifiable mission fields
 
 When a mission is recorded after the fact, some metadata may not be recoverable. Record only what can be verified; never register an inference as a fact.

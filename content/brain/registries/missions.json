@@ -287,5 +287,39 @@
     "pr": "#13",
     "commit": "340eb00",
     "phase": "ledger"
+  },
+  {
+    "id": "MCB-0016",
+    "title": "Brain v0 Closeout",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Brain v0 closeout: added the context export script and its output, wrote the initial ENTRY Knowledge Pack, registered MCB-0015 in the ledger, produced loop dry-run artifacts (brief + agent report), and added the Brain v0 freeze note.",
+    "created": "2026-06-28",
+    "updated": "2026-06-28",
+    "tags": ["brain", "mission", "closeout", "v0", "freeze"],
+    "related": ["MCB-0015"],
+    "path": "content/brain/missions/mcb-0016.md",
+    "agent": "claude",
+    "branch": "unknown",
+    "pr": "#14",
+    "commit": "61f4cac",
+    "phase": "closeout"
+  },
+  {
+    "id": "MCB-0017",
+    "title": "Brain Agent Operating Layer Readiness Audit",
+    "type": "mission",
+    "status": "completed",
+    "summary": "Fable readiness audit for the Agent Operating Layer; identified ledger drift, missing scoped context packs, weak role contracts, unsynchronized state, and recommended MCB-0018 onward.",
+    "created": "2026-07-02",
+    "updated": "2026-07-02",
+    "tags": ["brain", "mission", "audit", "agent-operating-layer", "roadmap"],
+    "related": ["MCB-0016"],
+    "path": "content/brain/missions/mcb-0017.md",
+    "agent": "fable",
+    "branch": "unknown",
+    "pr": "#16",
+    "commit": "f1cbd2d",
+    "phase": "audit"
   }
 ]
