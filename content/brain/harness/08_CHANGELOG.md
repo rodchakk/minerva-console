@@ -2,6 +2,34 @@
 
 Append-only. Most recent first.
 
+## 2026-07-02 — MCB-0019 — Role contracts v1
+
+- Added `content/brain/loop/contracts/` with an index (`README.md`) and seven
+  **role-based** contracts: `orchestrator.md`, `implementer.md`,
+  `reviewer-ci.md`, `adversarial-auditor.md`, `senior-architect.md`,
+  `local-triage-assistant.md`, `merge-owner.md`. Each uses the same structure
+  (Purpose / May Read / May Write / Must Verify / Must Never Do / Required
+  Handoff Artifact / Stop Conditions / Evidence Rules / Assignment Notes).
+- Contracts are **role-based, not model-based**: a mission assigns an available
+  agent/model (or a human) to a role, and a model may fill different roles in
+  different missions. Every contract's Assignment Notes states that no model is
+  permanently bound to the role. The merge-owner role is held by a human.
+- Rewrote `content/brain/loop/ROLES.md` from model-headed descriptions (GPT /
+  Claude / Codex / Gemini / Rudy) into a role-contract index that treats those
+  model names as example assignments, not permanent owners, and requires each
+  mission to name assigned role, assigned agent/model, and human merge owner
+  separately.
+- Updated the three loop templates
+  (`mission-brief.md`, `agent-report.md`, `review-report.md`) to carry
+  **Assigned role**, **Assigned agent/model**, and **Human merge owner**
+  fields instead of model-bound owner/agent/reviewer lines.
+- Added a short "Role-based mission assignment" note to `04_WORKFLOW.md` and
+  corrected the MCB-0019 entry in `ROADMAP.md` to the role-based framing.
+- Docs and contracts only. No scripts, guardrails, `features/brain/**`,
+  `.github/workflows/**`, dependencies, DB, Supabase, Neon, RAG, embeddings,
+  model router, cost monitor, agent engine, ENTRY runtime, Seshat, or UI write
+  path touched. No guardrail weakened.
+
 ## 2026-07-02 — MCB-0018 — Ledger repair & registration runbook
 
 - Repaired mission-ledger drift: registered `MCB-0016` (Brain v0 Closeout, PR

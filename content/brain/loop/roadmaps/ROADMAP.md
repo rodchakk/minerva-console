@@ -29,17 +29,22 @@ satisfied.
   MCB-0016 and MCB-0017 registered in `missions.json`; the ENTRY-BRAIN-001
   ID-convention question resolved by a decision entry; this roadmap exists.
 
-## MCB-0019 — Agent Contracts v1
+## MCB-0019 — Role Contracts v1
 
-- **Status:** planned
-- **Purpose:** Replace the thin `ROLES.md` descriptions with real per-agent
-  contracts (Reads / Writes / Verifies / Must never / Handoff artifact) for
-  GPT, Claude, Codex, Gemini, Fable, Local Model, and Rudy.
-- **Owner:** Claude (Implementer)
-- **Risk:** Low — new `loop/contracts/**` files, `ROLES.md` becomes an index.
+- **Status:** in_progress (PR open; self-registered — see MCB-0018 pattern)
+- **Purpose:** Replace the thin `ROLES.md` descriptions with real **role-based**
+  contracts (not model-bound) under `loop/contracts/`: orchestrator,
+  implementer, reviewer-ci, adversarial-auditor, senior-architect,
+  local-triage-assistant, merge-owner. A mission assigns a model/operator to a
+  role; models are not permanently bound to roles.
+- **Owner:** implementer role (a Claude/Opus model this mission).
+- **Risk:** Low — new `loop/contracts/**` files; `ROLES.md` becomes an index;
+  templates gain role/model/merge-owner fields.
 - **Dependencies:** MCB-0018.
-- **Acceptance:** every contract has all five sections; no contract weakens
-  any `PROTOCOL.md` rule; guardrails green.
+- **Acceptance:** every contract has the shared structure (Purpose / May Read /
+  May Write / Must Verify / Must Never Do / Required Handoff Artifact / Stop
+  Conditions / Evidence Rules / Assignment Notes); no contract weakens any
+  `PROTOCOL.md` rule; guardrails + relations + typecheck green.
 
 ## MCB-0020 — Scoped Context Pack Exporter
 

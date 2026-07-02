@@ -7,8 +7,14 @@ Copy this file into `missions/01_todo/` named `<mission-id>-<slug>.md`. The fold
 **Mission ID:** `MCB-XXXX`
 **Title:**
 **Status folder:** `01_todo`
-**Owner agent:** (Claude | Codex | Gemini | GPT)
+**Assigned role:** (orchestrator | implementer | reviewer-ci | adversarial-auditor | senior-architect | local-triage-assistant) — see `../contracts/`
+**Assigned agent/model:** the actual actor for this mission (e.g. a Claude model, Codex, Gemini, Fable, GPT, a future model, or a human)
+**Human merge owner:** (currently Rudy)
 **Branch:** `mcb-xxxx-<slug>`
+
+> Role vs. model: the **role** governs behavior (see the contract in
+> `../contracts/`); the **assigned agent/model** is only the current actor.
+> A model may fill different roles in different missions.
 
 ## Scope
 
