@@ -321,5 +321,22 @@
     "pr": "#16",
     "commit": "f1cbd2d",
     "phase": "audit"
+  },
+  {
+    "id": "MCB-0018",
+    "title": "Ledger Repair & Registration Runbook",
+    "type": "mission",
+    "status": "in_progress",
+    "summary": "Repairs mission-ledger drift by registering MCB-0016 and MCB-0017, records DEC-0005 on why ENTRY-BRAIN-001 is not a mission ledger entry, adds the close-a-mission runbook, and seeds the repo-resident ROADMAP.md.",
+    "created": "2026-07-02",
+    "updated": "2026-07-02",
+    "tags": ["brain", "mission", "ledger", "runbook", "roadmap"],
+    "related": ["MCB-0016", "MCB-0017", "DEC-0005"],
+    "path": "content/brain/missions/mcb-0018.md",
+    "agent": "claude",
+    "branch": "mcb-0018-ledger-repair-registration-runbook",
+    "pr": "#17",
+    "commit": "unknown",
+    "phase": "ledger"
   }
 ]

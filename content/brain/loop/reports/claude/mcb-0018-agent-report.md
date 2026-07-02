@@ -88,17 +88,22 @@ MCB-0017 go unregistered.
 - `gh api repos/rodchakk/minerva-console/branches --paginate --jq
   ".[].name"` filtered for both branch names → no match (confirmed deleted
   on GitHub, not just locally stale).
-- `npm run brain:guardrails` →
-- `npm run brain:check-relations` →
-- `npx tsc --noEmit` →
-
-(Final results recorded in the Results section below, run against the
-complete final diff before commit.)
+- `npm run brain:guardrails` → pass (run twice: once before this mission's
+  own registry entry existed, once after).
+- `npm run brain:check-relations` → pass (same two-pass run).
+- `npx tsc --noEmit` → pass, no output.
+- `gh pr create ...` → opened PR `#17`, used to fill in this mission's own
+  `pr` field in `missions.json` and `mcb-0018.md`.
 
 ## Results
 
-See below — filled in after the final check run against the complete diff
-(including the MCB-0018 self-registration commit).
+All three required checks pass against the final diff:
+
+- `npm run brain:guardrails` — **PASS**
+- `npm run brain:check-relations` — **PASS**
+- `npx tsc --noEmit` — **PASS** (no output)
+
+No check was weakened, skipped, or disabled to get to green.
 
 ## Risks
 

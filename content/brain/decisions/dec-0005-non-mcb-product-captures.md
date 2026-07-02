@@ -8,8 +8,7 @@
 - **Date:** 2026-07-02
 - **Supersedes:** none
 - **Tags:** brain, ledger, convention, ids
-- **Related:** `MCB-0017` (and `MCB-0018`, once that mission registers
-  itself in `missions.json` — see the registry entry for the current value)
+- **Related:** `MCB-0017`, `MCB-0018`
 
 ## Context
 

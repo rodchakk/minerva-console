@@ -56,7 +56,7 @@
     "created": "2026-07-02",
     "updated": "2026-07-02",
     "tags": ["brain", "ledger", "convention", "ids"],
-    "related": ["MCB-0017"],
+    "related": ["MCB-0017", "MCB-0018"],
     "path": "content/brain/decisions/dec-0005-non-mcb-product-captures.md"
   }
 ]
