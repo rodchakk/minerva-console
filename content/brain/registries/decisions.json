@@ -46,5 +46,17 @@
     "tags": ["boundary", "security", "agent-rules"],
     "related": ["DEC-0002"],
     "path": "content/brain/harness/05_AGENT_RULES.md"
+  },
+  {
+    "id": "DEC-0005",
+    "type": "decision",
+    "status": "approved",
+    "title": "Non-MCB product knowledge captures are not Brain mission ledger entries",
+    "summary": "The Brain mission ledger (missions.json) tracks only MCB-* Brain-process missions. Non-MCB product knowledge-capture PRs, such as ENTRY-BRAIN-001 (PR #15, commit 98d1d34), are documented via their content docs and the changelog but are not registered as mission ledger entries unless a future decision extends the ID convention.",
+    "created": "2026-07-02",
+    "updated": "2026-07-02",
+    "tags": ["brain", "ledger", "convention", "ids"],
+    "related": ["MCB-0017", "MCB-0018"],
+    "path": "content/brain/decisions/dec-0005-non-mcb-product-captures.md"
   }
 ]
