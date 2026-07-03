@@ -355,5 +355,22 @@
     "pr": "#19",
     "commit": "59db08e",
     "phase": "contracts"
+  },
+  {
+    "id": "MCB-0020",
+    "title": "Scoped Context Pack Exporter",
+    "type": "mission",
+    "status": "in_progress",
+    "summary": "Adds deterministic, zero-dependency scoped Brain context packs for full, mission, agent, project, review, and local handoffs while preserving the legacy monolithic context export.",
+    "created": "2026-07-03",
+    "updated": "2026-07-03",
+    "tags": ["brain", "mission", "export", "context-packs"],
+    "related": ["MCB-0017", "MCB-0018", "MCB-0019"],
+    "path": "content/brain/missions/mcb-0020.md",
+    "agent": "codex",
+    "branch": "mcb-0020-scoped-context-pack-exporter",
+    "pr": "unknown",
+    "commit": "unknown",
+    "phase": "export"
   }
 ]
