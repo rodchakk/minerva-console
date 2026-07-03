@@ -5,7 +5,7 @@
 - **Assigned agent/model:** Gemini 3.5 Flash (High)
 - **Human merge owner:** Rudy
 - **Branch:** `mcb-0022-loop-guardrails-review-evals`
-- **PR:** `unknown` (to be updated post-creation)
+- **PR:** `#25`
 - **Commit:** `unknown` (to be updated post-merge)
 
 ## Summary

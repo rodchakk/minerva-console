@@ -1333,7 +1333,7 @@ MCB-0021 - Loop State Snapshot CLI.
     "path": "content/brain/missions/mcb-0022.md",
     "agent": "gemini",
     "branch": "mcb-0022-loop-guardrails-review-evals",
-    "pr": "unknown",
+    "pr": "#25",
     "commit": "unknown",
     "phase": "loop"
   }

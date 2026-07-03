@@ -582,7 +582,7 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
     "path": "content/brain/missions/mcb-0022.md",
     "agent": "gemini",
     "branch": "mcb-0022-loop-guardrails-review-evals",
-    "pr": "unknown",
+    "pr": "#25",
     "commit": "unknown",
     "phase": "loop"
   }
@@ -3777,7 +3777,7 @@ Reports are auditable handoff, not authority. GitHub/Git own branch, diff, CI, a
 - **Assigned agent/model:** Gemini 3.5 Flash (High)
 - **Human merge owner:** Rudy
 - **Branch:** `mcb-0022-loop-guardrails-review-evals`
-- **PR:** `unknown` (to be updated post-creation)
+- **PR:** `#25`
 - **Commit:** `unknown` (to be updated post-merge)
 
 ## Summary
@@ -4172,7 +4172,7 @@ _None._
 - MCB-0019 - completed - PR #19 - commit 59db08e
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
 - MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
-- MCB-0022 - in_progress - PR unknown - commit unknown
+- MCB-0022 - in_progress - PR #25 - commit unknown
 
 ## Roadmap State
 
@@ -5728,7 +5728,7 @@ Strengthen the Brain loop with deterministic guardrails and review evaluation sc
 ## Branch / PR / Commit
 
 - Branch: `mcb-0022-loop-guardrails-review-evals`
-- PR: `unknown` (will update once opened)
+- PR: `#25`
 - Commit: `unknown` (will update once squash merged)
 
 ## Validation
