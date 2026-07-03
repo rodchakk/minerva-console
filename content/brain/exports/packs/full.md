@@ -3387,9 +3387,9 @@ Reports are auditable handoff, not authority. GitHub/Git own branch, diff, CI, a
 - **Assigned role:** implementer
 - **Assigned agent/model:** Gemini 3.5 Flash (High)
 - **Human merge owner:** Rudy
-- **Branch:** `mcb-0022-loop-guardrails-review-evals`
+- **Branch:** `unknown`
 - **PR:** `#25`
-- **Commit:** `unknown` (to be updated post-merge)
+- **Commit:** `a7d261dbc7ef685c4ada8edffa9443293d079cdd`
 
 ## Summary
 This mission implements a deterministic hardening layer around the Minerva Core Brain loop to catch process drift early. It adds loop mission folder structure validation, uniqueness checks, review report completeness checks, ledger status cross-referencing, role contract verification, and a Loop State freshness guardrail. It also enables the `"local"` inbox source for future local triage pilots, and seeds evaluation checklists to enforce quality gates on incoming work and reviews.
@@ -3566,7 +3566,7 @@ satisfied.
 
 ## MCB-0022 — Loop Guardrails & Review Evals
 
-- **Status:** in_progress
+- **Status:** done (PR #25, commit a7d261dbc7ef685c4ada8edffa9443293d079cdd)
 - **Purpose:** Close the drift loophole mechanically: add guardrail checks
   for brief-in-exactly-one-folder, review-report-exists-for-PR-review-stage,
   and contracts-exist-per-agent; add `"local"` to `INBOX_SOURCES`; seed
@@ -3757,10 +3757,10 @@ Complete the [Review Report Checklist](../evals/review-report-checklist.md).
 ## Summary
 
 - Mission ledger entries: 24
-- Ledger statuses: planned 0, in_progress 1, completed 23, blocked 0, unknown/other 0
+- Ledger statuses: planned 0, in_progress 0, completed 24, blocked 0, unknown/other 0
 - Loop folder mission files: Planned: 0; Active: 0; Review: 0; Done: 1; Blocked: 0
 - Roadmap missions: 6
-- Cross-check findings: 3
+- Cross-check findings: 2
 
 ## Folder State
 
@@ -3789,8 +3789,8 @@ _None._
 ### Counts By Status
 
 - planned: 0
-- in_progress: 1
-- completed: 23
+- in_progress: 0
+- completed: 24
 - blocked: 0
 - unknown/other: 0
 
@@ -3803,7 +3803,7 @@ _None._
 - MCB-0019 - completed - PR #19 - commit 59db08e
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
 - MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
-- MCB-0022 - in_progress - PR #25 - commit unknown
+- MCB-0022 - completed - PR #25 - commit a7d261dbc7ef685c4ada8edffa9443293d079cdd
 
 ## Roadmap State
 
@@ -3811,12 +3811,11 @@ _None._
 - MCB-0019 - Role Contracts v1 - done (PR #19, commit `59db08e`)
 - MCB-0020 - Scoped Context Pack Exporter - done (PR #21, commit `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`)
 - MCB-0021 - Loop State Snapshot CLI - done (PR #23, commit `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`)
-- MCB-0022 - Loop Guardrails & Review Evals - in_progress
+- MCB-0022 - Loop Guardrails & Review Evals - done (PR #25, commit a7d261dbc7ef685c4ada8edffa9443293d079cdd)
 - MCB-0023 - Local Triage Pilot (design-gated) - planned
 
 ## Cross-Checks
 
-- [info] MCB-0022 is in_progress in missions.json, but no active/review folder filename contains that ID.
 - [mismatch] MCB-0001 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: unknown).
 - [mismatch] MCB-0014 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: ef6e20e).
 
@@ -3824,7 +3823,7 @@ _None._
 
 Inferred from local files only; external GitHub state may differ.
 
-- MCB-0022 - Loop Guardrails & Review Evals - inferred from missions.json status in_progress.
+- MCB-0023 - Local Triage Pilot (design-gated) - inferred from first planned ROADMAP.md item.
 
 ## Recommended Next Mission
 
@@ -5429,7 +5428,7 @@ Assigned role: implementer
 
 ## Status
 
-In Progress.
+Completed.
 
 ## Summary
 
@@ -5470,9 +5469,9 @@ Strengthen the Brain loop with deterministic guardrails and review evaluation sc
 
 ## Branch / PR / Commit
 
-- Branch: `mcb-0022-loop-guardrails-review-evals`
+- Branch: `unknown`
 - PR: `#25`
-- Commit: `unknown` (will update once squash merged)
+- Commit: `a7d261dbc7ef685c4ada8edffa9443293d079cdd`
 
 ## Validation
 
@@ -6659,7 +6658,7 @@ Brain v0 static shell is live with:
     "id": "MCB-0022",
     "title": "Loop Guardrails & Review Evals",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Strengthens loop processes with deterministic guardrails (folder structure, uniqueness, review reports, status mapping, contract checks) and review eval checklists.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
@@ -6667,9 +6666,9 @@ Brain v0 static shell is live with:
     "related": ["MCB-0019", "MCB-0020", "MCB-0021"],
     "path": "content/brain/missions/mcb-0022.md",
     "agent": "gemini",
-    "branch": "mcb-0022-loop-guardrails-review-evals",
+    "branch": "unknown",
     "pr": "#25",
-    "commit": "unknown",
+    "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
   }
 ]

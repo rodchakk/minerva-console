@@ -1255,7 +1255,7 @@ satisfied.
 
 ## MCB-0022 — Loop Guardrails & Review Evals
 
-- **Status:** in_progress
+- **Status:** done (PR #25, commit a7d261dbc7ef685c4ada8edffa9443293d079cdd)
 - **Purpose:** Close the drift loophole mechanically: add guardrail checks
   for brief-in-exactly-one-folder, review-report-exists-for-PR-review-stage,
   and contracts-exist-per-agent; add `"local"` to `INBOX_SOURCES`; seed
@@ -2115,7 +2115,7 @@ MCB-0021 - Loop State Snapshot CLI.
     "id": "MCB-0022",
     "title": "Loop Guardrails & Review Evals",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Strengthens loop processes with deterministic guardrails (folder structure, uniqueness, review reports, status mapping, contract checks) and review eval checklists.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
@@ -2123,9 +2123,9 @@ MCB-0021 - Loop State Snapshot CLI.
     "related": ["MCB-0019", "MCB-0020", "MCB-0021"],
     "path": "content/brain/missions/mcb-0022.md",
     "agent": "gemini",
-    "branch": "mcb-0022-loop-guardrails-review-evals",
+    "branch": "unknown",
     "pr": "#25",
-    "commit": "unknown",
+    "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
   }
 ]
