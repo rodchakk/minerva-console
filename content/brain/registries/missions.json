@@ -343,7 +343,7 @@
     "id": "MCB-0019",
     "title": "Role Contracts v1",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Added role-based (not model-based) contracts under loop/contracts/, converted ROLES.md into a role-contract index, and updated the loop templates to separate assigned role, assigned agent/model, and human merge owner.",
     "created": "2026-07-02",
     "updated": "2026-07-02",
@@ -351,9 +351,9 @@
     "related": ["MCB-0018"],
     "path": "content/brain/missions/mcb-0019.md",
     "agent": "claude",
-    "branch": "mcb-0019-role-contracts-v1",
+    "branch": "unknown",
     "pr": "#19",
-    "commit": "unknown",
+    "commit": "59db08e",
     "phase": "contracts"
   }
 ]
