@@ -7,10 +7,10 @@
 ## Summary
 
 - Mission ledger entries: 24
-- Ledger statuses: planned 0, in_progress 1, completed 23, blocked 0, unknown/other 0
+- Ledger statuses: planned 0, in_progress 0, completed 24, blocked 0, unknown/other 0
 - Loop folder mission files: Planned: 0; Active: 0; Review: 0; Done: 1; Blocked: 0
 - Roadmap missions: 6
-- Cross-check findings: 3
+- Cross-check findings: 2
 
 ## Folder State
 
@@ -39,8 +39,8 @@ _None._
 ### Counts By Status
 
 - planned: 0
-- in_progress: 1
-- completed: 23
+- in_progress: 0
+- completed: 24
 - blocked: 0
 - unknown/other: 0
 
@@ -53,7 +53,7 @@ _None._
 - MCB-0019 - completed - PR #19 - commit 59db08e
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
 - MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
-- MCB-0022 - in_progress - PR #25 - commit unknown
+- MCB-0022 - completed - PR #25 - commit a7d261dbc7ef685c4ada8edffa9443293d079cdd
 
 ## Roadmap State
 
@@ -61,12 +61,11 @@ _None._
 - MCB-0019 - Role Contracts v1 - done (PR #19, commit `59db08e`)
 - MCB-0020 - Scoped Context Pack Exporter - done (PR #21, commit `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`)
 - MCB-0021 - Loop State Snapshot CLI - done (PR #23, commit `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`)
-- MCB-0022 - Loop Guardrails & Review Evals - in_progress
+- MCB-0022 - Loop Guardrails & Review Evals - done (PR #25, commit a7d261dbc7ef685c4ada8edffa9443293d079cdd)
 - MCB-0023 - Local Triage Pilot (design-gated) - planned
 
 ## Cross-Checks
 
-- [info] MCB-0022 is in_progress in missions.json, but no active/review folder filename contains that ID.
 - [mismatch] MCB-0001 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: unknown).
 - [mismatch] MCB-0014 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: ef6e20e).
 
@@ -74,7 +73,7 @@ _None._
 
 Inferred from local files only; external GitHub state may differ.
 
-- MCB-0022 - Loop Guardrails & Review Evals - inferred from missions.json status in_progress.
+- MCB-0023 - Local Triage Pilot (design-gated) - inferred from first planned ROADMAP.md item.
 
 ## Recommended Next Mission
 

@@ -4,9 +4,9 @@
 - **Assigned role:** implementer
 - **Assigned agent/model:** Gemini 3.5 Flash (High)
 - **Human merge owner:** Rudy
-- **Branch:** `mcb-0022-loop-guardrails-review-evals`
+- **Branch:** `unknown`
 - **PR:** `#25`
-- **Commit:** `unknown` (to be updated post-merge)
+- **Commit:** `a7d261dbc7ef685c4ada8edffa9443293d079cdd`
 
 ## Summary
 This mission implements a deterministic hardening layer around the Minerva Core Brain loop to catch process drift early. It adds loop mission folder structure validation, uniqueness checks, review report completeness checks, ledger status cross-referencing, role contract verification, and a Loop State freshness guardrail. It also enables the `"local"` inbox source for future local triage pilots, and seeds evaluation checklists to enforce quality gates on incoming work and reviews.

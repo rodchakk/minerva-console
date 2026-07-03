@@ -394,7 +394,7 @@
     "id": "MCB-0022",
     "title": "Loop Guardrails & Review Evals",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Strengthens loop processes with deterministic guardrails (folder structure, uniqueness, review reports, status mapping, contract checks) and review eval checklists.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
@@ -402,9 +402,9 @@
     "related": ["MCB-0019", "MCB-0020", "MCB-0021"],
     "path": "content/brain/missions/mcb-0022.md",
     "agent": "gemini",
-    "branch": "mcb-0022-loop-guardrails-review-evals",
+    "branch": "unknown",
     "pr": "#25",
-    "commit": "unknown",
+    "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
   }
 ]
