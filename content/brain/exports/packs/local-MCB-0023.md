@@ -414,7 +414,7 @@ satisfied.
 
 ## MCB-0021 — Loop State Snapshot CLI
 
-- **Status:** in_progress
+- **Status:** done (PR #23, commit `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`)
 - **Purpose:** Generate `loop/state/LOOP_STATE.md` from the loop folders,
   `missions.json`, and local Git — one file answering "what's active,
   blocked, in review, next" and flagging folder-vs-ledger mismatches instead
