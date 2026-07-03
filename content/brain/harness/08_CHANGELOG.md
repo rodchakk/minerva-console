@@ -2,6 +2,25 @@
 
 Append-only. Most recent first.
 
+## 2026-07-03 - MCB-0021 - Loop State Snapshot CLI
+
+- Added `scripts/brain-loop-state.mjs`, a zero-dependency local CLI that reads
+  loop mission folders, `content/brain/registries/missions.json`, and
+  `content/brain/loop/roadmaps/ROADMAP.md` to generate one deterministic
+  snapshot.
+- Generated `content/brain/loop/state/LOOP_STATE.md` with summary, folder
+  state, mission ledger state, roadmap state, cross-checks, current focus,
+  recommended next mission, and notes.
+- Added `npm run brain:loop-state`.
+- Implemented report-only mismatch checks for ledger/roadmap status drift,
+  in-progress missions without active/review folder files, review/done folder
+  status drift, missing mission docs, and completed missions missing PR/commit
+  metadata.
+- Report-only CLI mission. No dependencies, DB, Supabase, Neon, RAG,
+  embeddings, vector search, model router, cost monitor, autonomous agents,
+  schedulers, background jobs, ENTRY runtime, Seshat runtime,
+  `.github/workflows/**`, or UI write path introduced.
+
 ## 2026-07-03 - MCB-0020 - Scoped Context Pack Exporter
 
 - Added `scripts/brain-export-context-packs.mjs`, a zero-dependency sibling

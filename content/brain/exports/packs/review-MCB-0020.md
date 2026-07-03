@@ -652,7 +652,7 @@ satisfied.
 
 ## MCB-0021 — Loop State Snapshot CLI
 
-- **Status:** planned
+- **Status:** in_progress
 - **Purpose:** Generate `loop/state/LOOP_STATE.md` from the loop folders,
   `missions.json`, and local Git — one file answering "what's active,
   blocked, in review, next" and flagging folder-vs-ledger mismatches instead
@@ -1302,6 +1302,23 @@ MCB-0021 - Loop State Snapshot CLI.
     "pr": "#21",
     "commit": "0efa9e2c68e9a8e286b7c2426dd4eac7970ca564",
     "phase": "export"
+  },
+  {
+    "id": "MCB-0021",
+    "title": "Loop State Snapshot CLI",
+    "type": "mission",
+    "status": "in_progress",
+    "summary": "Adds a deterministic, zero-dependency CLI that generates a single loop state snapshot from loop mission folders, missions.json, and ROADMAP.md.",
+    "created": "2026-07-03",
+    "updated": "2026-07-03",
+    "tags": ["brain", "mission", "loop", "snapshot", "cli"],
+    "related": ["MCB-0018", "MCB-0019", "MCB-0020"],
+    "path": "content/brain/missions/mcb-0021.md",
+    "agent": "codex",
+    "branch": "mcb-0021-loop-state-snapshot-cli",
+    "pr": "unknown",
+    "commit": "unknown",
+    "phase": "loop"
   }
 ]
 ```
