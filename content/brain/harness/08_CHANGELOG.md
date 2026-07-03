@@ -2,6 +2,27 @@
 
 Append-only. Most recent first.
 
+## 2026-07-03 - MCB-0020 - Scoped Context Pack Exporter
+
+- Added `scripts/brain-export-context-packs.mjs`, a zero-dependency sibling
+  exporter that generates deterministic scoped context packs under
+  `content/brain/exports/packs/` while preserving the existing
+  `content/brain/exports/brain-context.md` exporter.
+- Generated pack types: `full`, `mission`, `agent`, `project`, `review`, and
+  `local`; single-pack CLI flags support mission/project/review IDs and agent
+  roles.
+- Added npm scripts: `brain:export-context`, `brain:export-packs`, and
+  `brain:export-pack`.
+- Implemented the local pack hard cap in code at 25,000 characters with a
+  visible truncation marker when the cap is reached.
+- Added `content/brain/exports/README.md` documenting pack purpose,
+  regeneration, generated-artifact authority, local-pack caveats, and no
+  secrets / no ENTRY or Seshat operational data.
+- Export-only mission. No dependencies, DB, Supabase, Neon, RAG, embeddings,
+  vector search, model router, cost monitor, agent engine, scheduler,
+  ENTRY runtime, Seshat runtime, `.github/workflows/**`, or UI write path
+  introduced. Existing full export behavior remains available.
+
 ## 2026-07-02 — MCB-0019 — Role contracts v1
 
 - Added `content/brain/loop/contracts/` with an index (`README.md`) and seven

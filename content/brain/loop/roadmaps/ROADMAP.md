@@ -48,18 +48,19 @@ satisfied.
 
 ## MCB-0020 — Scoped Context Pack Exporter
 
-- **Status:** planned
-- **Purpose:** Replace the all-or-nothing ~165 KB `brain-context.md` export
-  with scoped packs: full, mission, agent, project, review, and a
+- **Status:** in_progress
+- **Purpose:** Add scoped context packs alongside the all-or-nothing
+  `brain-context.md` export: full, mission, agent, project, review, and a
   size-capped local pack.
-- **Owner:** Codex (Reviewer + CI/QA — implements scripts)
+- **Owner:** implementer role (Codex this mission).
 - **Risk:** Medium — named freeze-lift on `scripts/brain-export-context.mjs`
   (or a new sibling script) and `package.json`'s scripts block; both must be
   explicitly justified in the mission brief.
 - **Dependencies:** MCB-0019 (agent packs embed the new contracts).
 - **Acceptance:** all six pack types generate deterministically; zero new
   dependencies; local pack enforces a hard size cap; today's full export
-  output is unchanged; guardrails + `tsc --noEmit` green.
+  behavior is preserved; pack docs exist; guardrails + relation checks +
+  `tsc --noEmit` green.
 
 ## MCB-0021 — Loop State Snapshot CLI
 
