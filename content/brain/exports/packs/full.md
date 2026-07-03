@@ -3361,7 +3361,7 @@ satisfied.
 
 ## MCB-0021 — Loop State Snapshot CLI
 
-- **Status:** in_progress
+- **Status:** done (PR #23, commit `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`)
 - **Purpose:** Generate `loop/state/LOOP_STATE.md` from the loop folders,
   `missions.json`, and local Git — one file answering "what's active,
   blocked, in review, next" and flagging folder-vs-ledger mismatches instead
@@ -3515,10 +3515,10 @@ doesn't know it. This runbook is the mechanical antidote.
 ## Summary
 
 - Mission ledger entries: 23
-- Ledger statuses: planned 0, in_progress 1, completed 22, blocked 0, unknown/other 0
+- Ledger statuses: planned 0, in_progress 0, completed 23, blocked 0, unknown/other 0
 - Loop folder mission files: Planned: 0; Active: 0; Review: 0; Done: 1; Blocked: 0
 - Roadmap missions: 6
-- Cross-check findings: 3
+- Cross-check findings: 2
 
 ## Folder State
 
@@ -3547,8 +3547,8 @@ _None._
 ### Counts By Status
 
 - planned: 0
-- in_progress: 1
-- completed: 22
+- in_progress: 0
+- completed: 23
 - blocked: 0
 - unknown/other: 0
 
@@ -3561,20 +3561,19 @@ _None._
 - MCB-0018 - completed - PR #17 - commit 065c12b
 - MCB-0019 - completed - PR #19 - commit 59db08e
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
-- MCB-0021 - in_progress - PR #23 - commit unknown
+- MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
 
 ## Roadmap State
 
 - MCB-0018 - Ledger Repair & Registration Runbook - done (PR #17, commit `065c12b`)
 - MCB-0019 - Role Contracts v1 - done (PR #19, commit `59db08e`)
 - MCB-0020 - Scoped Context Pack Exporter - done (PR #21, commit `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`)
-- MCB-0021 - Loop State Snapshot CLI - in_progress
+- MCB-0021 - Loop State Snapshot CLI - done (PR #23, commit `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`)
 - MCB-0022 - Loop Guardrails & Review Evals - planned
 - MCB-0023 - Local Triage Pilot (design-gated) - planned
 
 ## Cross-Checks
 
-- [info] MCB-0021 is in_progress in missions.json, but no active/review folder filename contains that ID.
 - [mismatch] MCB-0001 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: unknown).
 - [mismatch] MCB-0014 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: ef6e20e).
 
@@ -3582,11 +3581,11 @@ _None._
 
 Inferred from local files only; external GitHub state may differ.
 
-- MCB-0021 - Loop State Snapshot CLI - inferred from missions.json status in_progress.
+- MCB-0022 - Loop Guardrails & Review Evals - inferred from first planned ROADMAP.md item.
 
 ## Recommended Next Mission
 
-- MCB-0022 - Loop Guardrails & Review Evals - first planned roadmap mission after active MCB-0021.
+- MCB-0022 - Loop Guardrails & Review Evals - first planned roadmap mission.
 
 ## Notes
 
@@ -5111,7 +5110,7 @@ MCB-0021 - Loop State Snapshot CLI.
 
 ## Status
 
-In progress.
+Completed.
 
 ## Summary
 
@@ -5145,13 +5144,15 @@ Adds a deterministic, zero-dependency local CLI that generates
 
 ## Branch / PR / Commit
 
-- Branch: `mcb-0021-loop-state-snapshot-cli`
+- Branch: `unknown`
 - PR: `#23`
-- Commit: `unknown`
+- Commit: `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`
 
-> Note: The branch is the current live mission branch. PR #23 is open for this
-> mission. The final squash commit cannot be known until Rudy merges the PR, so
-> `commit` remains `unknown` during implementation.
+> Note: PR #23 was squash-merged into `master` with commit
+> `3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`
+> (`MCB-0021 loop state snapshot CLI`). The feature branch was deleted after
+> merge and `git fetch --prune origin` confirmed the remote-tracking ref was
+> removed, so `branch` is recorded as `unknown`.
 
 ## Validation
 
@@ -5166,12 +5167,12 @@ Required validation for this mission:
 
 ## Outcome
 
-In progress on branch `mcb-0021-loop-state-snapshot-cli`.
+Shipped and live in master via PR #23 (commit
+`3eb35910f58c4304099defbebe0c1e6d3fbe5ee7`).
 
 ## Next Steps
 
-Open the PR, record the PR number in the ledger/report, then hand off for
-review and merge-owner approval.
+MCB-0022 - Loop Guardrails & Review Evals.
 ```
 
 ---
@@ -6327,7 +6328,7 @@ Brain v0 static shell is live with:
     "id": "MCB-0021",
     "title": "Loop State Snapshot CLI",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Adds a deterministic, zero-dependency CLI that generates a single loop state snapshot from loop mission folders, missions.json, and ROADMAP.md.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
@@ -6335,9 +6336,9 @@ Brain v0 static shell is live with:
     "related": ["MCB-0018", "MCB-0019", "MCB-0020"],
     "path": "content/brain/missions/mcb-0021.md",
     "agent": "codex",
-    "branch": "mcb-0021-loop-state-snapshot-cli",
+    "branch": "unknown",
     "pr": "#23",
-    "commit": "unknown",
+    "commit": "3eb35910f58c4304099defbebe0c1e6d3fbe5ee7",
     "phase": "loop"
   }
 ]
