@@ -5,7 +5,9 @@ Written by the owner agent when handing off. Save as `reports/<agent>/<mission-i
 ---
 
 **Mission:** `MCB-XXXX`
-**Agent:** (Claude | Codex | Gemini | GPT)
+**Assigned role:** (implementer | orchestrator | senior-architect | …) — see `../contracts/`
+**Assigned agent/model:** the actual actor that did this work (e.g. a Claude model, Codex, Gemini, Fable, GPT, a future model, or a human)
+**Human merge owner:** (currently Rudy)
 **Branch:** `mcb-xxxx-<slug>`
 **Commit:** (hash, or `unknown` if not yet committed)
 

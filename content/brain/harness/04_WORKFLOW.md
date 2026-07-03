@@ -111,6 +111,17 @@ Tags help human triage and future promotion of inbox items. They are not semanti
 - Long-form documents are referenced by registry entries through `path`.
 - Tags use kebab-case.
 
+### Role-based mission assignment
+
+Brain missions use **role-based contracts** in
+`content/brain/loop/contracts/`. A role (orchestrator, implementer,
+reviewer-ci, adversarial-auditor, senior-architect, local-triage-assistant,
+merge-owner) defines behavior, permissions, and boundaries. The mission brief
+assigns a model/operator to a role **for that mission only** and names the
+**assigned role**, **assigned agent/model**, and **human merge owner**
+separately. Roles are stable; model assignments can change from mission to
+mission. See `content/brain/loop/ROLES.md`.
+
 ### Mission ledger scope
 
 `content/brain/registries/missions.json` tracks only `MCB-*` Brain-process

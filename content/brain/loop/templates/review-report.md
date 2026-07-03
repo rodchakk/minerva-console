@@ -1,13 +1,19 @@
 # Review Report
 
-Written by a reviewer (Codex CI/QA or Gemini adversarial). Save as `reports/<reviewer>/<mission-id>-review.md`. Review the PR and the diff on GitHub — GitHub is authority for branch/diff/CI/merge.
+Written by whoever holds the **reviewer-ci** or **adversarial-auditor** role
+for this mission (see `../contracts/`). Save as
+`reports/<actor>/<mission-id>-review.md`. Review the PR and the diff on
+GitHub — GitHub is authority for branch/diff/CI/merge.
 
 ---
 
 **Mission:** `MCB-XXXX`
-**Reviewer:** (Codex | Gemini)
+**Assigned role:** (reviewer-ci | adversarial-auditor) — see `../contracts/`
+**Assigned agent/model:** the actual actor doing this review (e.g. Codex, Gemini, a Claude model, a future model, or a human)
 **PR:** `#NN`
 **Verdict:** APPROVE | REQUEST CHANGES | COMMENT
+
+> The reviewer/auditor for a PR must not be the same actor that implemented it.
 
 ## Findings
 
