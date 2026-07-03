@@ -428,7 +428,7 @@ satisfied.
 
 ## MCB-0022 — Loop Guardrails & Review Evals
 
-- **Status:** planned
+- **Status:** in_progress
 - **Purpose:** Close the drift loophole mechanically: add guardrail checks
   for brief-in-exactly-one-folder, review-report-exists-for-PR-review-stage,
   and contracts-exist-per-agent; add `"local"` to `INBOX_SOURCES`; seed

@@ -2,6 +2,20 @@
 
 Append-only. Most recent first.
 
+## 2026-07-03 - MCB-0022 - Loop Guardrails & Review Evals
+
+- Added loop mission folder guardrails to `scripts/brain-guardrails.mjs`:
+  - CHECK 8-F: Verifies that the five core loop mission folders exist.
+  - CHECK 8-A: Verifies that no mission ID appears in more than one folder.
+  - CHECK 8-B: Verifies that any mission placed in `03_review/` has a matching review report under `content/brain/loop/reports/`.
+  - CHECKS 8-C, 8-D, 8-E: Verifies that mission folder assignments sync with their ledger statuses in `missions.json`.
+- Added role contract guardrail (CHECK 9) to `scripts/brain-guardrails.mjs`, verifying that all `Assigned role` declarations in mission docs, reports, or loop briefs map to a valid contract under `content/brain/loop/contracts/`.
+- Added LOOP_STATE freshness guardrail (CHECK 10) to `scripts/brain-guardrails.mjs`, running a new check mode in the loop state snapshot script to prevent stale or missing snapshots.
+- Added a `--check` flag to `scripts/brain-loop-state.mjs` that compares the expected snapshot against `content/brain/loop/state/LOOP_STATE.md` and exits nonzero if they differ.
+- Added `"local"` as an allowed inbox source in `scripts/brain-capture.mjs`, `scripts/brain-new-inbox-item.mjs`, and `scripts/brain-guardrails.mjs` to prepare for local model triage.
+- Seeded `content/brain/loop/evals/` with evaluation checklists (`README.md`, `review-report-checklist.md`, `agent-report-checklist.md`) and added a `review-evals.md` runbook.
+- No DB, RAG, embeddings, UI, ENTRY/Seshat runtime, GitHub workflows, or new dependencies introduced.
+
 ## 2026-07-03 - MCB-0021 - Loop State Snapshot CLI
 
 - Added `scripts/brain-loop-state.mjs`, a zero-dependency local CLI that reads
