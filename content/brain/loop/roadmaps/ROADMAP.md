@@ -31,7 +31,7 @@ satisfied.
 
 ## MCB-0019 — Role Contracts v1
 
-- **Status:** in_progress (PR open; self-registered — see MCB-0018 pattern)
+- **Status:** done (PR #19, commit `59db08e`)
 - **Purpose:** Replace the thin `ROLES.md` descriptions with real **role-based**
   contracts (not model-bound) under `loop/contracts/`: orchestrator,
   implementer, reviewer-ci, adversarial-auditor, senior-architect,
