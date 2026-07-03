@@ -2694,6 +2694,7 @@ Reports are auditable handoff, not authority. GitHub/Git own branch, diff, CI, a
 **Assigned agent/model:** Codex
 **Human merge owner:** Rudy
 **Branch:** `mcb-0020-scoped-context-pack-exporter`
+**PR:** `#21` - https://github.com/rodchakk/minerva-console/pull/21
 **Commit:** unknown
 
 ## Summary
@@ -4814,12 +4815,12 @@ packs under `content/brain/exports/packs/`.
 ## Branch / PR / Commit
 
 - Branch: `mcb-0020-scoped-context-pack-exporter`
-- PR: `unknown`
+- PR: `#21`
 - Commit: `unknown`
 
 > Note: registered during its own mission while the branch is active. The PR
-> number is unknown until the PR is opened. The squash commit is unknown until
-> after merge.
+> number was recorded after GitHub created PR #21. The squash commit is
+> unknown until after merge.
 
 ## Validation
 
@@ -5990,7 +5991,7 @@ Brain v0 static shell is live with:
     "path": "content/brain/missions/mcb-0020.md",
     "agent": "codex",
     "branch": "mcb-0020-scoped-context-pack-exporter",
-    "pr": "unknown",
+    "pr": "#21",
     "commit": "unknown",
     "phase": "export"
   }

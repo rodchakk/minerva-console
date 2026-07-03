@@ -5,6 +5,7 @@
 **Assigned agent/model:** Codex
 **Human merge owner:** Rudy
 **Branch:** `mcb-0020-scoped-context-pack-exporter`
+**PR:** `#21` - https://github.com/rodchakk/minerva-console/pull/21
 **Commit:** unknown
 
 ## Summary
