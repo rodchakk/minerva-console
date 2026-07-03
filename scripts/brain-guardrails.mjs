@@ -25,8 +25,9 @@
 // from documentation that discusses the rules themselves.
 
 import { readFileSync, existsSync, readdirSync, statSync } from "fs";
-import { join, extname, relative } from "path";
+import { join, extname, relative, basename } from "path";
 import { fileURLToPath } from "url";
+import { execSync } from "child_process";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const ROOT = join(__dirname, "..");
@@ -267,9 +268,10 @@ const INBOX_SOURCES = [
   "codex",
   "gemini",
   "human",
+  "local",
   "other",
 ];
-const MISSION_STATUSES = ["planned", "in_progress", "completed"];
+const MISSION_STATUSES = ["planned", "in_progress", "completed", "blocked"];
 const MISSION_FIELDS = [
   "path",
   "agent",
@@ -543,6 +545,220 @@ if (existsSync(MISSIONS_DIR) && existsSync(MISSIONS_REGISTRY)) {
       }
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK 8 — Loop mission folder guardrails
+// ─────────────────────────────────────────────────────────────────────────────
+
+const LOOP_FOLDERS = [
+  "content/brain/loop/missions/01_todo",
+  "content/brain/loop/missions/02_active",
+  "content/brain/loop/missions/03_review",
+  "content/brain/loop/missions/04_done",
+  "content/brain/loop/missions/05_blocked",
+];
+
+// F. Missing loop mission folders should fail guardrails.
+for (const folder of LOOP_FOLDERS) {
+  const fullPath = join(ROOT, folder);
+  if (!existsSync(fullPath) || !statSync(fullPath).isDirectory()) {
+    fail(`[CHECK 8-F] Missing loop mission folder: ${folder}`);
+  }
+}
+
+// Extract mission ID helper
+function extractMissionId(filename) {
+  const match = filename.match(/MCB-\d{4}(?:\.\d+)?/i);
+  return match ? match[0].toUpperCase() : null;
+}
+
+// A. A mission ID must not appear in more than one loop mission folder.
+const idToFolders = new Map();
+for (const folder of LOOP_FOLDERS) {
+  const fullPath = join(ROOT, folder);
+  if (!existsSync(fullPath) || !statSync(fullPath).isDirectory()) continue;
+
+  const files = readdirSync(fullPath, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => name.toLowerCase().endsWith(".md"))
+    .filter((name) => name.toLowerCase() !== "readme.md");
+
+  for (const file of files) {
+    const id = extractMissionId(file);
+    if (id) {
+      if (!idToFolders.has(id)) {
+        idToFolders.set(id, []);
+      }
+      idToFolders.get(id).push(folder);
+    }
+  }
+}
+
+for (const [id, folders] of idToFolders.entries()) {
+  if (folders.length > 1) {
+    fail(
+      `[CHECK 8-A] Mission ID ${id} appears in multiple loop mission folders: ${folders.join(", ")}`
+    );
+  }
+}
+
+// B. A file in 03_review/ must have a matching review report.
+const reportsDir = join(ROOT, "content", "brain", "loop", "reports");
+const reportFiles = existsSync(reportsDir) ? collectFiles(reportsDir, [".md"]) : [];
+
+const reviewFolder = join(ROOT, "content/brain/loop/missions/03_review");
+if (existsSync(reviewFolder) && statSync(reviewFolder).isDirectory()) {
+  const reviewFiles = readdirSync(reviewFolder, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => name.toLowerCase().endsWith(".md"))
+    .filter((name) => name.toLowerCase() !== "readme.md");
+
+  for (const file of reviewFiles) {
+    const id = extractMissionId(file);
+    if (!id) continue;
+
+    let hasMatchingReport = false;
+    for (const reportFile of reportFiles) {
+      const filename = basename(reportFile).toUpperCase();
+      const content = readFileSync(reportFile, "utf8").toUpperCase();
+
+      const containsId = filename.includes(id) || content.includes(id);
+      const containsKeyword = ["REVIEW", "REVIEWER", "ADVERSARIAL", "AUDIT"].some(kw => filename.includes(kw) || content.includes(kw));
+
+      if (containsId && containsKeyword) {
+        hasMatchingReport = true;
+        break;
+      }
+    }
+
+    if (!hasMatchingReport) {
+      fail(
+        `[CHECK 8-B] Mission in review folder (${file}) lacks a matching review report under content/brain/loop/reports/.\n` +
+          `  The report file must contain the mission ID "${id}" and one of: review, reviewer, adversarial, audit.`
+      );
+    }
+  }
+}
+
+// C, D, E. Cross-reference loop folders with their ledger statuses
+let ledgerMissions = [];
+if (existsSync(MISSIONS_REGISTRY)) {
+  try {
+    ledgerMissions = JSON.parse(readFileSync(MISSIONS_REGISTRY, "utf8"));
+  } catch {
+    // Ignore, handled in CHECK 4
+  }
+}
+
+const ledgerStatusMap = new Map();
+if (Array.isArray(ledgerMissions)) {
+  for (const m of ledgerMissions) {
+    if (m && typeof m.id === "string" && typeof m.status === "string") {
+      ledgerStatusMap.set(m.id.toUpperCase(), m.status.toLowerCase());
+    }
+  }
+}
+
+// Helper to check status
+function checkLoopFolderLedgerStatus(folder, expectedStatus, label) {
+  const folderPath = join(ROOT, folder);
+  if (!existsSync(folderPath) || !statSync(folderPath).isDirectory()) return;
+
+  const files = readdirSync(folderPath, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .filter((name) => name.toLowerCase().endsWith(".md"))
+    .filter((name) => name.toLowerCase() !== "readme.md");
+
+  for (const file of files) {
+    const id = extractMissionId(file);
+    if (!id) continue;
+
+    const actualStatus = ledgerStatusMap.get(id);
+    if (actualStatus !== expectedStatus) {
+      fail(
+        `[CHECK 8-${label}] Mission file in ${folder}/ (${file}) has ID ${id},\n` +
+          `  but its ledger status in missions.json is "${actualStatus || "unknown"}" (expected "${expectedStatus}").`
+      );
+    }
+  }
+}
+
+checkLoopFolderLedgerStatus("content/brain/loop/missions/04_done", "completed", "C");
+checkLoopFolderLedgerStatus("content/brain/loop/missions/02_active", "in_progress", "D");
+checkLoopFolderLedgerStatus("content/brain/loop/missions/03_review", "in_progress", "D");
+checkLoopFolderLedgerStatus("content/brain/loop/missions/05_blocked", "blocked", "E");
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK 9 — Role contract guardrail
+// ─────────────────────────────────────────────────────────────────────────────
+
+const pathsToScan = [
+  join(ROOT, "content/brain/missions"),
+  join(ROOT, "content/brain/loop/missions"),
+  join(ROOT, "content/brain/loop/reports"),
+];
+
+const contractDir = join(ROOT, "content/brain/loop/contracts");
+const contractFiles = existsSync(contractDir)
+  ? readdirSync(contractDir).filter(f => f.endsWith(".md") && f.toLowerCase() !== "readme.md")
+  : [];
+const validRoles = new Set(contractFiles.map(f => f.replace(/\.md$/, "")));
+
+const mdFilesToScan = pathsToScan.flatMap(dir => collectFiles(dir, [".md"]));
+const assignedRoleRegex = /^\s*(?:-\s*)?(?:\*\*)?[aA]ssigned [rR]ole:(?:\*\*)?\s*(.+)$/;
+
+for (const file of mdFilesToScan) {
+  const content = readFileSync(file, "utf8");
+  const lines = content.split(/\r?\n/);
+  lines.forEach((line, index) => {
+    const match = line.match(assignedRoleRegex);
+    if (match) {
+      const roleRaw = match[1].trim();
+      const cleanRole = roleRaw.replace(/[\*\`_]+/g, "").trim();
+      const normalized = cleanRole.toLowerCase().replace(/[\s/,\-]+/g, "-").replace(/^-|-$/g, "");
+
+      if (validRoles.has(normalized)) {
+        // Valid
+      } else {
+        const isPlaceholderOrMultiple = 
+          cleanRole.includes("|") || 
+          cleanRole.includes("(") || 
+          cleanRole.includes(")") || 
+          cleanRole.includes("/") || 
+          cleanRole.includes(",") ||
+          cleanRole.includes("…") ||
+          cleanRole.includes("...");
+
+        if (!isPlaceholderOrMultiple) {
+          fail(
+            `[CHECK 9] Role contract check failed in ${rel(file)}:${index + 1}\n` +
+              `  Declared role "${roleRaw}" (normalized: "${normalized}") has no matching contract under content/brain/loop/contracts/`
+          );
+        }
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHECK 10 — LOOP_STATE freshness guardrail
+// ─────────────────────────────────────────────────────────────────────────────
+
+try {
+  execSync(`node "${join(ROOT, "scripts", "brain-loop-state.mjs")}" --check`, { stdio: "pipe", cwd: ROOT });
+} catch (error) {
+  const stderr = error.stderr ? error.stderr.toString().trim() : "";
+  const stdout = error.stdout ? error.stdout.toString().trim() : "";
+  const detail = stderr || stdout || error.message;
+  fail(
+    `[CHECK 10] LOOP_STATE.md is missing or stale relative to source files:\n` +
+      `  ${detail}\n` +
+      `  Please run: npm run brain:loop-state`
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

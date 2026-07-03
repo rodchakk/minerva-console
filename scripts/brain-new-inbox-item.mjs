@@ -68,6 +68,7 @@ const VALID_SOURCES = [
   "codex",
   "gemini",
   "human",
+  "local",
   "other",
 ];
 const source = args.source || "human";

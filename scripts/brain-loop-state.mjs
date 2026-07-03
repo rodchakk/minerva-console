@@ -424,6 +424,22 @@ function main() {
   const findings = crossChecks({ missions, roadmapItems, folders });
   const rendered = renderSnapshot({ missions, folders, roadmapItems, findings });
 
+  const checkMode = process.argv.includes("--check");
+
+  if (checkMode) {
+    if (!existsSync(OUTPUT_FILE)) {
+      console.error(`Error: LOOP_STATE.md is missing. Run "npm run brain:loop-state" to generate it.`);
+      process.exit(1);
+    }
+    const current = readFileSync(OUTPUT_FILE, "utf8");
+    if (current !== rendered) {
+      console.error(`Error: LOOP_STATE.md differs from current expected output. Run "npm run brain:loop-state" to update it.`);
+      process.exit(1);
+    }
+    console.log("LOOP_STATE.md is up to date.");
+    process.exit(0);
+  }
+
   const outputDir = join(ROOT, "content", "brain", "loop", "state");
   if (!existsSync(outputDir)) mkdirSync(outputDir, { recursive: true });
   writeFileSync(OUTPUT_FILE, rendered, "utf8");
