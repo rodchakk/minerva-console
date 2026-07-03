@@ -551,6 +551,23 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
     "pr": "#21",
     "commit": "0efa9e2c68e9a8e286b7c2426dd4eac7970ca564",
     "phase": "export"
+  },
+  {
+    "id": "MCB-0021",
+    "title": "Loop State Snapshot CLI",
+    "type": "mission",
+    "status": "in_progress",
+    "summary": "Adds a deterministic, zero-dependency CLI that generates a single loop state snapshot from loop mission folders, missions.json, and ROADMAP.md.",
+    "created": "2026-07-03",
+    "updated": "2026-07-03",
+    "tags": ["brain", "mission", "loop", "snapshot", "cli"],
+    "related": ["MCB-0018", "MCB-0019", "MCB-0020"],
+    "path": "content/brain/missions/mcb-0021.md",
+    "agent": "codex",
+    "branch": "mcb-0021-loop-state-snapshot-cli",
+    "pr": "#23",
+    "commit": "unknown",
+    "phase": "loop"
   }
 ]
 ```
@@ -690,12 +707,15 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
 - `content/brain/loop/reports/claude/mcb-0019-agent-report.md`
 - `content/brain/loop/reports/codex/README.md`
 - `content/brain/loop/reports/codex/mcb-0020-agent-report.md`
+- `content/brain/loop/reports/codex/mcb-0021-agent-report.md`
 - `content/brain/loop/reports/fable/README.md`
 - `content/brain/loop/reports/fable/mcb-0017-readiness-audit.md`
 - `content/brain/loop/reports/gemini/README.md`
 - `content/brain/loop/reports/gpt/README.md`
 - `content/brain/loop/roadmaps/ROADMAP.md`
 - `content/brain/loop/runbooks/close-a-mission.md`
+- `content/brain/loop/state/LOOP_STATE.md`
+- `content/brain/loop/state/README.md`
 - `content/brain/loop/templates/agent-report.md`
 - `content/brain/loop/templates/mission-brief.md`
 - `content/brain/loop/templates/review-report.md`
@@ -721,6 +741,7 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
 - `content/brain/missions/mcb-0018.md`
 - `content/brain/missions/mcb-0019.md`
 - `content/brain/missions/mcb-0020.md`
+- `content/brain/missions/mcb-0021.md`
 - `content/brain/projects/INDEX.md`
 - `content/brain/projects/entry-current-work.md`
 - `content/brain/projects/entry-implementation-map.md`
@@ -1411,6 +1432,25 @@ Candidate work for after MCB-0002. Items are not committed; they are options.
 # 08 — Changelog
 
 Append-only. Most recent first.
+
+## 2026-07-03 - MCB-0021 - Loop State Snapshot CLI
+
+- Added `scripts/brain-loop-state.mjs`, a zero-dependency local CLI that reads
+  loop mission folders, `content/brain/registries/missions.json`, and
+  `content/brain/loop/roadmaps/ROADMAP.md` to generate one deterministic
+  snapshot.
+- Generated `content/brain/loop/state/LOOP_STATE.md` with summary, folder
+  state, mission ledger state, roadmap state, cross-checks, current focus,
+  recommended next mission, and notes.
+- Added `npm run brain:loop-state`.
+- Implemented report-only mismatch checks for ledger/roadmap status drift,
+  in-progress missions without active/review folder files, review/done folder
+  status drift, missing mission docs, and completed missions missing PR/commit
+  metadata.
+- Report-only CLI mission. No dependencies, DB, Supabase, Neon, RAG,
+  embeddings, vector search, model router, cost monitor, autonomous agents,
+  schedulers, background jobs, ENTRY runtime, Seshat runtime,
+  `.github/workflows/**`, or UI write path introduced.
 
 ## 2026-07-03 - MCB-0020 - Scoped Context Pack Exporter
 
@@ -3193,6 +3233,117 @@ pre-existing untracked `.codex-tmp/` and `c` paths were not touched or staged.
 
 MCB-0021 - Loop State Snapshot CLI.
 
+### content/brain/loop/reports/codex/mcb-0021-agent-report.md
+
+# MCB-0021 Codex Agent Report
+
+**Mission:** `MCB-0021`
+**Assigned role:** implementer
+**Assigned agent/model:** Codex
+**Human merge owner:** Rudy
+**Branch:** `mcb-0021-loop-state-snapshot-cli`
+**PR:** `#23` - https://github.com/rodchakk/minerva-console/pull/23
+**Commit:** unknown
+
+## Summary
+
+Implemented a deterministic, zero-dependency loop state snapshot CLI for
+Minerva Core Brain. The script reads local Brain loop folders,
+`content/brain/registries/missions.json`, and
+`content/brain/loop/roadmaps/ROADMAP.md`, then writes one generated Markdown
+snapshot at `content/brain/loop/state/LOOP_STATE.md`.
+
+## Changed files
+
+- created: `scripts/brain-loop-state.mjs`
+- created: `content/brain/loop/state/LOOP_STATE.md`
+- created: `content/brain/loop/state/README.md`
+- created: `content/brain/missions/mcb-0021.md`
+- created: `content/brain/loop/reports/codex/mcb-0021-agent-report.md`
+- modified: `package.json`
+- modified: `content/brain/registries/missions.json`
+- modified: `content/brain/harness/08_CHANGELOG.md`
+- modified: `content/brain/loop/roadmaps/ROADMAP.md`
+- modified: `content/brain/exports/brain-context.md`
+- modified: `content/brain/exports/packs/full.md`
+- modified: `content/brain/exports/packs/mission-MCB-0020.md`
+- modified: `content/brain/exports/packs/review-MCB-0020.md`
+- modified: `content/brain/exports/packs/local-MCB-0023.md`
+
+## CLI design
+
+- Pure Node.js ESM using built-in `fs`, `path`, and `url` only.
+- No environment variables, network access, machine-specific absolute paths,
+  random values, or timestamps.
+- Re-runnable and deterministic unless source files change.
+- Required high-level files (`missions.json` and `ROADMAP.md`) fail clearly
+  when missing; optional loop mission folders may be missing or empty.
+- Mismatch findings are written into the report only. The CLI does not exit
+  nonzero for state drift.
+
+## Generated file path
+
+`content/brain/loop/state/LOOP_STATE.md`
+
+## Mismatch checks implemented
+
+- Ledger completed but roadmap item not done.
+- Roadmap item done but ledger not completed.
+- Ledger `in_progress` without a matching active/review folder filename.
+- Review folder item whose ledger status is not `in_progress`.
+- Done folder item whose ledger status is not `completed`.
+- Registry mission doc path missing on disk.
+- Completed mission missing/unknown PR or commit metadata.
+
+## Npm script added
+
+- `npm run brain:loop-state` -> `node scripts/brain-loop-state.mjs`
+
+## Checks run
+
+- `npm.cmd run brain:loop-state` -> pass; wrote
+  `content/brain/loop/state/LOOP_STATE.md`.
+- `npm.cmd run brain:export-context` -> pass; wrote
+  `content/brain/exports/brain-context.md`.
+- `npm.cmd run brain:export-packs` -> pass; wrote all six default scoped
+  packs.
+- `npm.cmd run brain:guardrails` -> pass; 30 source files scanned, 6 registry
+  files validated, 24 required files checked.
+- `npm.cmd run brain:check-relations` -> pass; no broken relations across 63
+  relation references.
+- `npx.cmd tsc --noEmit` -> pass.
+
+## Exports regenerated
+
+Yes. `content/brain/exports/brain-context.md` and the six default files under
+`content/brain/exports/packs/` were regenerated after MCB-0021 registration
+and snapshot generation.
+
+## Self-registration
+
+MCB-0021 is registered in `content/brain/registries/missions.json` with
+`status: "in_progress"`, `agent: "codex"`, `phase: "loop"`, the live branch
+name, `pr: "#23"`, and `commit` as `unknown` until the PR is later
+squash-merged.
+
+## Intentionally left out
+
+- No dependency additions.
+- No database, Supabase, Neon, RAG, embeddings, vector search, model router,
+  cost monitor, autonomous agent, scheduler, background job, or UI feature.
+- No changes to `features/brain/**`, `features/entry/**`, ENTRY runtime,
+  Seshat runtime, `.github/workflows/**`, DB code, or UI write paths.
+- No Markdown parser dependency; roadmap extraction uses simple text scanning.
+
+## Scope boundaries respected
+
+Work stayed inside the mission's allowed files and regenerated exports. The
+pre-existing untracked `.codex-tmp/` and `c` paths were not touched or staged.
+
+## Recommended next mission
+
+MCB-0022 - Loop Guardrails & Review Evals.
+
 ### content/brain/loop/reports/fable/README.md
 
 # reports/fable
@@ -3590,7 +3741,7 @@ satisfied.
 
 ## MCB-0021 — Loop State Snapshot CLI
 
-- **Status:** planned
+- **Status:** in_progress
 - **Purpose:** Generate `loop/state/LOOP_STATE.md` from the loop folders,
   `missions.json`, and local Git — one file answering "what's active,
   blocked, in review, next" and flagging folder-vs-ledger mismatches instead
@@ -3724,6 +3875,115 @@ Prefer registering a mission as part of its own PR instead of deferring:
 repo or on the PR, it did not happen.* A merged mission with no ledger entry
 violates that rule from the other direction — it happened, but the repo
 doesn't know it. This runbook is the mechanical antidote.
+
+### content/brain/loop/state/LOOP_STATE.md
+
+# Minerva Core Brain Loop State
+
+- Generated by: scripts/brain-loop-state.mjs
+- Source: content/brain/loop/**, content/brain/registries/missions.json, content/brain/loop/roadmaps/ROADMAP.md
+- Authority: Git/GitHub and source files remain authority. This snapshot is generated and may lag master.
+
+## Summary
+
+- Mission ledger entries: 23
+- Ledger statuses: planned 0, in_progress 1, completed 22, blocked 0, unknown/other 0
+- Loop folder mission files: Planned: 0; Active: 0; Review: 0; Done: 1; Blocked: 0
+- Roadmap missions: 6
+- Cross-check findings: 3
+
+## Folder State
+
+### Planned - content/brain/loop/missions/01_todo
+
+_None._
+
+### Active - content/brain/loop/missions/02_active
+
+_None._
+
+### Review - content/brain/loop/missions/03_review
+
+_None._
+
+### Done - content/brain/loop/missions/04_done
+
+- content/brain/loop/missions/04_done/mcb-0016-brain-v0-closeout.md
+
+### Blocked - content/brain/loop/missions/05_blocked
+
+_None._
+
+## Mission Ledger State
+
+### Counts By Status
+
+- planned: 0
+- in_progress: 1
+- completed: 22
+- blocked: 0
+- unknown/other: 0
+
+### Recent Missions
+
+- MCB-0014 - completed - PR unknown - commit ef6e20e
+- MCB-0015 - completed - PR #13 - commit 340eb00
+- MCB-0016 - completed - PR #14 - commit 61f4cac
+- MCB-0017 - completed - PR #16 - commit f1cbd2d
+- MCB-0018 - completed - PR #17 - commit 065c12b
+- MCB-0019 - completed - PR #19 - commit 59db08e
+- MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
+- MCB-0021 - in_progress - PR #23 - commit unknown
+
+## Roadmap State
+
+- MCB-0018 - Ledger Repair & Registration Runbook - done (PR #17, commit `065c12b`)
+- MCB-0019 - Role Contracts v1 - done (PR #19, commit `59db08e`)
+- MCB-0020 - Scoped Context Pack Exporter - done (PR #21, commit `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`)
+- MCB-0021 - Loop State Snapshot CLI - in_progress
+- MCB-0022 - Loop Guardrails & Review Evals - planned
+- MCB-0023 - Local Triage Pilot (design-gated) - planned
+
+## Cross-Checks
+
+- [info] MCB-0021 is in_progress in missions.json, but no active/review folder filename contains that ID.
+- [mismatch] MCB-0001 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: unknown).
+- [mismatch] MCB-0014 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: ef6e20e).
+
+## Current Focus
+
+Inferred from local files only; external GitHub state may differ.
+
+- MCB-0021 - Loop State Snapshot CLI - inferred from missions.json status in_progress.
+
+## Recommended Next Mission
+
+- MCB-0022 - Loop Guardrails & Review Evals - first planned roadmap mission after active MCB-0021.
+
+## Notes
+
+- Re-run with `npm run brain:loop-state`.
+- This file is generated. Do not treat it as authority over Git, GitHub, missions.json, ROADMAP.md, or human review.
+- Cross-check findings are report content only; this CLI does not exit nonzero for mismatches.
+
+### content/brain/loop/state/README.md
+
+# Loop State Snapshot
+
+`LOOP_STATE.md` is a generated local report for the Minerva Core Brain loop. It
+summarizes loop mission folders, `content/brain/registries/missions.json`, and
+`content/brain/loop/roadmaps/ROADMAP.md` in one place.
+
+Regenerate it with:
+
+```bash
+npm run brain:loop-state
+```
+
+The snapshot is not authority. Git, GitHub, source files, and human review
+remain authority. Mismatch findings mean the local files disagree or lack
+expected metadata; they are prompts for review, not an automated block or
+scheduler action.
 
 ### content/brain/loop/templates/agent-report.md
 
@@ -5108,6 +5368,74 @@ Shipped and live in master via PR #21 (commit
 ## Next Steps
 
 MCB-0021 - Loop State Snapshot CLI.
+
+### content/brain/missions/mcb-0021.md
+
+# MCB-0021 - Loop State Snapshot CLI
+
+## Status
+
+In progress.
+
+## Summary
+
+Adds a deterministic, zero-dependency local CLI that generates
+`content/brain/loop/state/LOOP_STATE.md` from loop mission folders,
+`content/brain/registries/missions.json`, and
+`content/brain/loop/roadmaps/ROADMAP.md`.
+
+## Scope
+
+- Add `scripts/brain-loop-state.mjs`.
+- Add `npm run brain:loop-state`.
+- Generate `content/brain/loop/state/LOOP_STATE.md`.
+- Add short state snapshot documentation.
+- Self-register MCB-0021 in the mission ledger and update roadmap, changelog,
+  and the Codex agent report.
+- Regenerate Brain context exports after registration.
+
+## Files / Areas
+
+- `scripts/brain-loop-state.mjs`
+- `package.json`
+- `content/brain/loop/state/LOOP_STATE.md`
+- `content/brain/loop/state/README.md`
+- `content/brain/missions/mcb-0021.md`
+- `content/brain/registries/missions.json`
+- `content/brain/harness/08_CHANGELOG.md`
+- `content/brain/loop/roadmaps/ROADMAP.md`
+- `content/brain/loop/reports/codex/mcb-0021-agent-report.md`
+- `content/brain/exports/**`
+
+## Branch / PR / Commit
+
+- Branch: `mcb-0021-loop-state-snapshot-cli`
+- PR: `#23`
+- Commit: `unknown`
+
+> Note: The branch is the current live mission branch. PR #23 is open for this
+> mission. The final squash commit cannot be known until Rudy merges the PR, so
+> `commit` remains `unknown` during implementation.
+
+## Validation
+
+Required validation for this mission:
+
+- `npm run brain:loop-state`
+- `npm run brain:export-context`
+- `npm run brain:export-packs`
+- `npm run brain:guardrails`
+- `npm run brain:check-relations`
+- `npx tsc --noEmit`
+
+## Outcome
+
+In progress on branch `mcb-0021-loop-state-snapshot-cli`.
+
+## Next Steps
+
+Open the PR, record the PR number in the ledger/report, then hand off for
+review and merge-owner approval.
 
 ### content/brain/projects/INDEX.md
 

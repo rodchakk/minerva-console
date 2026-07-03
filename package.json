@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "brain:capture": "node scripts/brain-capture.mjs",
+    "brain:loop-state": "node scripts/brain-loop-state.mjs",
     "brain:export-context": "node scripts/brain-export-context.mjs",
     "brain:export-packs": "node scripts/brain-export-context-packs.mjs",
     "brain:export-pack": "node scripts/brain-export-context-packs.mjs",
