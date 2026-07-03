@@ -565,7 +565,7 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
     "path": "content/brain/missions/mcb-0021.md",
     "agent": "codex",
     "branch": "mcb-0021-loop-state-snapshot-cli",
-    "pr": "unknown",
+    "pr": "#23",
     "commit": "unknown",
     "phase": "loop"
   }
@@ -3242,7 +3242,7 @@ MCB-0021 - Loop State Snapshot CLI.
 **Assigned agent/model:** Codex
 **Human merge owner:** Rudy
 **Branch:** `mcb-0021-loop-state-snapshot-cli`
-**PR:** `unknown`
+**PR:** `#23` - https://github.com/rodchakk/minerva-console/pull/23
 **Commit:** unknown
 
 ## Summary
@@ -3323,7 +3323,7 @@ and snapshot generation.
 
 MCB-0021 is registered in `content/brain/registries/missions.json` with
 `status: "in_progress"`, `agent: "codex"`, `phase: "loop"`, the live branch
-name, and `pr` / `commit` as `unknown` until the PR is opened and later
+name, `pr: "#23"`, and `commit` as `unknown` until the PR is later
 squash-merged.
 
 ## Intentionally left out
@@ -3933,7 +3933,7 @@ _None._
 - MCB-0018 - completed - PR #17 - commit 065c12b
 - MCB-0019 - completed - PR #19 - commit 59db08e
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
-- MCB-0021 - in_progress - PR unknown - commit unknown
+- MCB-0021 - in_progress - PR #23 - commit unknown
 
 ## Roadmap State
 
@@ -5410,12 +5410,12 @@ Adds a deterministic, zero-dependency local CLI that generates
 ## Branch / PR / Commit
 
 - Branch: `mcb-0021-loop-state-snapshot-cli`
-- PR: `unknown`
+- PR: `#23`
 - Commit: `unknown`
 
-> Note: The branch is the current live mission branch. The PR number is
-> `unknown` until the PR is opened. The final squash commit cannot be known
-> until Rudy merges the PR, so `commit` remains `unknown` during implementation.
+> Note: The branch is the current live mission branch. PR #23 is open for this
+> mission. The final squash commit cannot be known until Rudy merges the PR, so
+> `commit` remains `unknown` during implementation.
 
 ## Validation
 

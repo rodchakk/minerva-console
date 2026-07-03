@@ -1316,7 +1316,7 @@ MCB-0021 - Loop State Snapshot CLI.
     "path": "content/brain/missions/mcb-0021.md",
     "agent": "codex",
     "branch": "mcb-0021-loop-state-snapshot-cli",
-    "pr": "unknown",
+    "pr": "#23",
     "commit": "unknown",
     "phase": "loop"
   }

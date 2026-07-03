@@ -5,7 +5,7 @@
 **Assigned agent/model:** Codex
 **Human merge owner:** Rudy
 **Branch:** `mcb-0021-loop-state-snapshot-cli`
-**PR:** `unknown`
+**PR:** `#23` - https://github.com/rodchakk/minerva-console/pull/23
 **Commit:** unknown
 
 ## Summary
@@ -86,7 +86,7 @@ and snapshot generation.
 
 MCB-0021 is registered in `content/brain/registries/missions.json` with
 `status: "in_progress"`, `agent: "codex"`, `phase: "loop"`, the live branch
-name, and `pr` / `commit` as `unknown` until the PR is opened and later
+name, `pr: "#23"`, and `commit` as `unknown` until the PR is later
 squash-merged.
 
 ## Intentionally left out
