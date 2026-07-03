@@ -48,7 +48,7 @@ satisfied.
 
 ## MCB-0020 — Scoped Context Pack Exporter
 
-- **Status:** in_progress
+- **Status:** done (PR #21, commit `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`)
 - **Purpose:** Add scoped context packs alongside the all-or-nothing
   `brain-context.md` export: full, mission, agent, project, review, and a
   size-capped local pack.

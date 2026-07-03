@@ -1225,7 +1225,7 @@ satisfied.
 
 ## MCB-0020 — Scoped Context Pack Exporter
 
-- **Status:** in_progress
+- **Status:** done (PR #21, commit `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`)
 - **Purpose:** Add scoped context packs alongside the all-or-nothing
   `brain-context.md` export: full, mission, agent, project, review, and a
   size-capped local pack.
@@ -1647,7 +1647,7 @@ MCB-0020 — Scoped Context Pack Exporter (per
 
 ## Status
 
-In progress.
+Completed.
 
 ## Summary
 
@@ -1681,13 +1681,15 @@ packs under `content/brain/exports/packs/`.
 
 ## Branch / PR / Commit
 
-- Branch: `mcb-0020-scoped-context-pack-exporter`
+- Branch: `unknown`
 - PR: `#21`
-- Commit: `unknown`
+- Commit: `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`
 
-> Note: registered during its own mission while the branch is active. The PR
-> number was recorded after GitHub created PR #21. The squash commit is
-> unknown until after merge.
+> Note: PR #21 was squash-merged into `master` with commit
+> `0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`
+> (`MCB-0020 scoped context pack exporter (#21)`). The feature branch was
+> deleted after merge and `git fetch --prune origin` confirmed the remote
+> tracking ref was removed, so `branch` is recorded as `unknown`.
 
 ## Validation
 
@@ -1704,12 +1706,11 @@ review, and local pack generation.
 
 ## Outcome
 
-In progress. Do not mark completed until the PR merges.
+Shipped and live in master via PR #21 (commit
+`0efa9e2c68e9a8e286b7c2426dd4eac7970ca564`).
 
 ## Next Steps
 
-Open the PR, record the PR number in the mission ledger/report if needed, and
-hand off to review. Recommended next mission after merge:
 MCB-0021 - Loop State Snapshot CLI.
 ```
 
@@ -2080,7 +2081,7 @@ MCB-0021 - Loop State Snapshot CLI.
     "id": "MCB-0020",
     "title": "Scoped Context Pack Exporter",
     "type": "mission",
-    "status": "in_progress",
+    "status": "completed",
     "summary": "Adds deterministic, zero-dependency scoped Brain context packs for full, mission, agent, project, review, and local handoffs while preserving the legacy monolithic context export.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
@@ -2088,9 +2089,9 @@ MCB-0021 - Loop State Snapshot CLI.
     "related": ["MCB-0017", "MCB-0018", "MCB-0019"],
     "path": "content/brain/missions/mcb-0020.md",
     "agent": "codex",
-    "branch": "mcb-0020-scoped-context-pack-exporter",
+    "branch": "unknown",
     "pr": "#21",
-    "commit": "unknown",
+    "commit": "0efa9e2c68e9a8e286b7c2426dd4eac7970ca564",
     "phase": "export"
   }
 ]
