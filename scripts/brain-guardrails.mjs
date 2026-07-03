@@ -271,7 +271,7 @@ const INBOX_SOURCES = [
   "local",
   "other",
 ];
-const MISSION_STATUSES = ["planned", "in_progress", "completed"];
+const MISSION_STATUSES = ["planned", "in_progress", "completed", "blocked"];
 const MISSION_FIELDS = [
   "path",
   "agent",
