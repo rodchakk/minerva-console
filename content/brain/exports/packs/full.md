@@ -58,6 +58,7 @@
 - content/brain/loop/reports/codex/README.md
 - content/brain/loop/reports/codex/mcb-0020-agent-report.md
 - content/brain/loop/reports/codex/mcb-0021-agent-report.md
+- content/brain/loop/reports/codex/mcb-0023-agent-report.md
 - content/brain/loop/reports/fable/README.md
 - content/brain/loop/reports/fable/mcb-0017-readiness-audit.md
 - content/brain/loop/reports/gemini/README.md
@@ -65,6 +66,7 @@
 - content/brain/loop/reports/gpt/README.md
 - content/brain/loop/roadmaps/ROADMAP.md
 - content/brain/loop/runbooks/close-a-mission.md
+- content/brain/loop/runbooks/local-triage-pilot.md
 - content/brain/loop/runbooks/review-evals.md
 - content/brain/loop/state/LOOP_STATE.md
 - content/brain/loop/state/README.md
@@ -95,6 +97,7 @@
 - content/brain/missions/mcb-0020.md
 - content/brain/missions/mcb-0021.md
 - content/brain/missions/mcb-0022.md
+- content/brain/missions/mcb-0023.md
 - content/brain/projects/INDEX.md
 - content/brain/projects/entry-current-work.md
 - content/brain/projects/entry-implementation-map.md
@@ -120,6 +123,7 @@
 - content/brain/templates/mission-handoff.md
 - content/brain/templates/project.md
 - content/brain/templates/prompt.md
+- content/brain/templates/triage-suggestion.md
 
 ## Pack Notes
 
@@ -926,6 +930,14 @@ Candidate work for after MCB-0002. Items are not committed; they are options.
 # 08 — Changelog
 
 Append-only. Most recent first.
+
+## 2026-07-03 - MCB-0023 - Local Triage Pilot Enablement
+
+- Created triage suggestion template (`content/brain/templates/triage-suggestion.md`) carrying the required non-authoritative warning banner.
+- Created local triage pilot runbook (`content/brain/loop/runbooks/local-triage-pilot.md`) defining the manual local model execution workflow and zero-write constraints.
+- Added a local-source banner guardrail check to `scripts/brain-guardrails.mjs` verifying that any inbox registry item with source `"local"` contains either `"NOT OFFICIAL BRAIN KNOWLEDGE"` or `"This is a raw, unprocessed item."`.
+- Registered MCB-0023 in the missions registry ledger and created the brief file.
+- No DB, RAG, embeddings, UI, ENTRY/Seshat runtime, GitHub workflows, or new dependencies introduced.
 
 ## 2026-07-03 - MCB-0022 - Loop Guardrails & Review Evals
 
@@ -3045,6 +3057,90 @@ MCB-0022 - Loop Guardrails & Review Evals.
 
 ---
 
+## Source: content/brain/loop/reports/codex/mcb-0023-agent-report.md
+
+```text
+# MCB-0023 Codex Agent Report & Handoff
+
+**Mission:** `MCB-0023`
+**Assigned role:** implementer (takeover)
+**Assigned agent/model:** Codex
+**Human merge owner:** Rudy
+**Branch:** `mcb-0023-local-triage-pilot`
+**PR:** `#27` - https://github.com/rodchakk/minerva-console/pull/27
+**Commit:** unknown
+
+## Summary
+
+This report is written by Codex upon taking over the MCB-0023 implementation. We verified the existing implementation, fixed missing metadata (PR number), regenerated loop state and context exports, tested the guardrail behavior using a temporary fixture, and prepared the PR for final review.
+
+## Changes Made
+
+- **Modified:** [missions.json](file:///d:/Dev/minerva-console/content/brain/registries/missions.json) — Updated PR number from `"unknown"` to `"#27"`.
+- **Modified:** [mcb-0023.md](file:///d:/Dev/minerva-console/content/brain/missions/mcb-0023.md) — Updated PR metadata from `unknown` to `#27`.
+- **Modified:** [LOOP_STATE.md](file:///d:/Dev/minerva-console/content/brain/loop/state/LOOP_STATE.md) — Regenerated to include PR #27.
+- **Modified:** [brain-context.md](file:///d:/Dev/minerva-console/content/brain/exports/brain-context.md) — Regenerated containing the updated MCB-0023 status/PR and templates.
+- **Modified:** [full.md](file:///d:/Dev/minerva-console/content/brain/exports/packs/full.md) — Regenerated.
+- **Modified:** [local-MCB-0023.md](file:///d:/Dev/minerva-console/content/brain/exports/packs/local-MCB-0023.md) — Regenerated.
+- **Modified:** [mission-MCB-0020.md](file:///d:/Dev/minerva-console/content/brain/exports/packs/mission-MCB-0020.md) — Regenerated.
+- **Modified:** [review-MCB-0020.md](file:///d:/Dev/minerva-console/content/brain/exports/packs/review-MCB-0020.md) — Regenerated.
+- **New:** [mcb-0023-agent-report.md](file:///d:/Dev/minerva-console/content/brain/loop/reports/codex/mcb-0023-agent-report.md) — This takeover handoff report.
+
+## Verified Facts
+
+- **Branch and PR:** The branch `mcb-0023-local-triage-pilot` is tracking PR #27 targeting `master` on the `rodchakk/minerva-console` repository. The head branch matches `e9ac5b3`.
+- **CI / Local Checks:** 
+  - `npm run brain:guardrails` runs and passes successfully.
+  - `npm run brain:check-relations` runs and passes successfully.
+  - `npx tsc --noEmit` type-checks cleanly without any errors.
+  - `node scripts/brain-loop-state.mjs --check` passes successfully.
+
+## Inferred Conclusions
+
+- None. (All recorded metrics are directly verified against local Git, scripts, and GitHub PR API).
+
+## Unknowns
+
+- **Commit hash:** The squash-merge commit hash of PR #27 is currently unknown, as the merge has not yet occurred.
+
+## Temporary Test Method (Guardrail verification)
+
+We created a scratch script [test_banner_guardrail.mjs](file:///C:/Users/rudyc/.gemini/antigravity/brain/d38c7c7b-11d8-49bf-aa8c-74a817a32d81/scratch/test_banner_guardrail.mjs) that executed the following checks:
+1. **Scenario 1 (Local-source, no banner):** Created a temporary inbox item file without the banner disclaimer and registered it in `inbox.json` with `source: "local"`. Running `brain:guardrails` threw the expected check 4 error: `must include either "NOT OFFICIAL BRAIN KNOWLEDGE" or "This is a raw, unprocessed item."`.
+2. **Scenario 2 (Local-source, literal banner):** Added `> NOT OFFICIAL BRAIN KNOWLEDGE` to the file. Running `brain:guardrails` successfully passed.
+3. **Scenario 3 (Local-source, default banner):** Added `This is a raw, unprocessed item.` to the file. Running `brain:guardrails` successfully passed.
+4. **Scenario 4 (Non-local, no banner):** Registered the same temporary item with `source: "human"`. Running `brain:guardrails` successfully passed, verifying that non-local sources are not subject to the banner check.
+All tests completed, and the test script cleaned up after execution.
+
+## Scope Verification
+
+All modified files fall strictly under the allowed MCB-0023 boundaries:
+- Suggestion template `content/brain/templates/triage-suggestion.md` (modified by previous writer, verified by Codex)
+- Runbook `content/brain/loop/runbooks/local-triage-pilot.md` (modified by previous writer, verified by Codex)
+- Guardrails `scripts/brain-guardrails.mjs` (modified by previous writer, verified by Codex)
+- Mission brief `content/brain/missions/mcb-0023.md` (updated PR #27 metadata)
+- Registry ledger `content/brain/registries/missions.json` (updated PR #27 metadata)
+- Changelog `content/brain/harness/08_CHANGELOG.md` (verified by Codex)
+- Loop state `content/brain/loop/state/LOOP_STATE.md` (regenerated)
+- Exports `content/brain/exports/**` (regenerated)
+- Codex report `content/brain/loop/reports/codex/mcb-0023-agent-report.md` (created)
+
+No DB, APIs, network configs, workflows, or runtime dependencies were introduced or touched.
+
+## Remaining Post-Merge Closeout Actions
+
+1. Rudy reviews and merges PR #27.
+2. After merge, update the commit hash of MCB-0023 in `content/brain/registries/missions.json` and change status from `"in_progress"` to `"completed"`.
+3. Update status in `content/brain/missions/mcb-0023.md` to `Completed` and insert the squash commit hash.
+4. Pull master, run `npm run brain:loop-state` to update `LOOP_STATE.md`, and delete the branch locally/remotely.
+
+## Final Verdict
+
+`READY FOR EXTERNAL REVIEW`
+```
+
+---
+
 ## Source: content/brain/loop/reports/fable/README.md
 
 ```text
@@ -3694,6 +3790,70 @@ doesn't know it. This runbook is the mechanical antidote.
 
 ---
 
+## Source: content/brain/loop/runbooks/local-triage-pilot.md
+
+````text
+# Runbook: Local Triage Pilot
+
+This runbook outlines the manual, human-operated workflow for evaluating raw inbox material using a local model as a non-authoritative triage assistant.
+
+## Core Rules & Constraints
+
+> [!IMPORTANT]
+> - **Zero Repo Access:** The local model does not edit the repository. It has no write paths, no daemon, and no automated loop.
+> - **Zero Autopilot:** The local model does not promote or approve anything, and it must never write official Brain knowledge directly.
+> - **No Auto-Promotion:** The model must not generate ready-to-run promotion CLI commands.
+> - **Evidence Integrity:** A fabricated, hallucinatory, or inaccurate quote/evidence excerpt invalidates the entire suggestion.
+> - **Mandatory Human Review:** Human operators must independently verify the raw input and model suggestion before utilizing the promotion script.
+
+---
+
+## Step-by-Step Triage Workflow
+
+### Step 1: Generate Scoped Context Packs
+First, the human operator generates the latest size-capped local context pack that contains role contracts and metadata to serve as guidelines for the local model.
+```bash
+npm run brain:export-packs
+```
+This generates the pack file under: `content/brain/exports/packs/local-MCB-0023.md`.
+
+### Step 2: Manually Run the Local Model
+The human operator executes the local model **manually outside the repository** (e.g. via local CLI, ollama, or standard chat UI), providing:
+1. The contents of the generated local context pack (`content/brain/exports/packs/local-MCB-0023.md`).
+2. The raw input text/log that needs triage.
+3. The copyable template located in `content/brain/templates/triage-suggestion.md`.
+
+Instruct the model to analyze the raw input and populate the template.
+
+### Step 3: Save the Suggestion
+Save the generated triage suggestion from the model output as a Markdown file, e.g. `suggestion.md` outside the repository or in a temp directory. Ensure the document starts with the mandatory banner:
+```markdown
+> **NOT OFFICIAL BRAIN KNOWLEDGE.** Machine-generated suggestion from a local model. Unverified. Requires human review before any promotion.
+```
+
+### Step 4: Capture the Suggestion in the Inbox
+The human operator imports the suggestion markdown file into the Brain's Git-backed inbox registry using the existing capture tool:
+```bash
+npm run brain:capture -- --title "Triage suggestion: <item>" --source local --file ./suggestion.md --tag triage-suggestion --tag mcb-0023
+```
+This writes the suggestion file to `content/brain/inbox/` and updates `content/brain/registries/inbox.json`.
+
+### Step 5: Perform Human Triage Review
+The human operator manually reviews:
+1. The original raw input.
+2. The imported model suggestion document under `content/brain/inbox/`.
+3. Checks the review checklist at the bottom of the suggestion file.
+
+### Step 6: Promote (If Appropriate)
+If the suggestion is accurate and verified by the human, promote the knowledge using the existing promotion workflow:
+```bash
+node scripts/brain-promote.mjs --inbox-id INB-#### --target decisions --id DEC-#### --title "..." --summary "..." --tags "..." --yes
+```
+If the item is noise, update its status to `archived` or run appropriate commands.
+````
+
+---
+
 ## Source: content/brain/loop/runbooks/review-evals.md
 
 ````text
@@ -3756,11 +3916,11 @@ Complete the [Review Report Checklist](../evals/review-report-checklist.md).
 
 ## Summary
 
-- Mission ledger entries: 24
-- Ledger statuses: planned 0, in_progress 0, completed 24, blocked 0, unknown/other 0
+- Mission ledger entries: 25
+- Ledger statuses: planned 0, in_progress 1, completed 24, blocked 0, unknown/other 0
 - Loop folder mission files: Planned: 0; Active: 0; Review: 0; Done: 1; Blocked: 0
 - Roadmap missions: 6
-- Cross-check findings: 2
+- Cross-check findings: 3
 
 ## Folder State
 
@@ -3789,14 +3949,13 @@ _None._
 ### Counts By Status
 
 - planned: 0
-- in_progress: 0
+- in_progress: 1
 - completed: 24
 - blocked: 0
 - unknown/other: 0
 
 ### Recent Missions
 
-- MCB-0015 - completed - PR #13 - commit 340eb00
 - MCB-0016 - completed - PR #14 - commit 61f4cac
 - MCB-0017 - completed - PR #16 - commit f1cbd2d
 - MCB-0018 - completed - PR #17 - commit 065c12b
@@ -3804,6 +3963,7 @@ _None._
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
 - MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
 - MCB-0022 - completed - PR #25 - commit a7d261dbc7ef685c4ada8edffa9443293d079cdd
+- MCB-0023 - in_progress - PR #27 - commit unknown
 
 ## Roadmap State
 
@@ -3816,6 +3976,7 @@ _None._
 
 ## Cross-Checks
 
+- [info] MCB-0023 is in_progress in missions.json, but no active/review folder filename contains that ID.
 - [mismatch] MCB-0001 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: unknown).
 - [mismatch] MCB-0014 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: ef6e20e).
 
@@ -3823,7 +3984,7 @@ _None._
 
 Inferred from local files only; external GitHub state may differ.
 
-- MCB-0023 - Local Triage Pilot (design-gated) - inferred from first planned ROADMAP.md item.
+- MCB-0023 - Local Triage Pilot Enablement - inferred from missions.json status in_progress.
 
 ## Recommended Next Mission
 
@@ -5490,6 +5651,67 @@ Strengthen the Brain loop with deterministic guardrails and review evaluation sc
 
 ---
 
+## Source: content/brain/missions/mcb-0023.md
+
+```text
+# MCB-0023 — Local Triage Pilot Enablement
+
+Assigned role: implementer
+
+## Status
+
+In Progress.
+
+## Summary
+
+Enablement layer for the local triage pilot, introducing a non-authoritative local classification suggestion template, a runbook for manual local model execution, and a guardrail checking for raw inbox file disclaimer banners.
+
+## Scope
+
+- **Design Gate:** Fable / Senior Architect / Risk Designer (PROCEED WITH CONDITIONS).
+- **Implementation Scope:**
+  - Create suggestion template (`content/brain/templates/triage-suggestion.md`).
+  - Create pilot runbook (`content/brain/loop/runbooks/local-triage-pilot.md`).
+  - Register MCB-0023 registry entry in the ledger.
+  - Add additive check to `scripts/brain-guardrails.mjs` verifying that local-source inbox files carry the proper disclaimers.
+- **Out of Scope:** No DB/RAG/embeddings/vector store, no API keys, no network calls, no daemon or automation loop, no auto-promotion, and no changes to `ROADMAP.md` or existing capture/promote scripts.
+
+## Authority Chain Preserved
+
+- The local model acts as a non-authoritative triage assistant.
+- It has zero repository access and writes no official knowledge directly.
+- The workflow is:
+  `raw input → local suggestion → inbox/triage artifact → human review → promotion script → official Brain knowledge`
+
+## Files / Areas
+
+- `content/brain/templates/triage-suggestion.md`
+- `content/brain/loop/runbooks/local-triage-pilot.md`
+- `scripts/brain-guardrails.mjs` (additive check only)
+- `content/brain/missions/mcb-0023.md`
+- `content/brain/registries/missions.json`
+- `content/brain/harness/08_CHANGELOG.md`
+- `content/brain/exports/**` (regenerated outputs)
+
+## Branch / PR / Commit
+
+- Branch: `mcb-0023-local-triage-pilot`
+- PR: `#27`
+- Commit: `unknown` (to be updated post-merge)
+
+## Validation
+
+- `npm run brain:loop-state`
+- `node scripts/brain-loop-state.mjs --check`
+- `npm run brain:export-context`
+- `npm run brain:export-packs`
+- `npm run brain:guardrails`
+- `npm run brain:check-relations`
+- `npx tsc --noEmit`
+```
+
+---
+
 ## Source: content/brain/projects/INDEX.md
 
 ```text
@@ -6670,6 +6892,23 @@ Brain v0 static shell is live with:
     "pr": "#25",
     "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
+  },
+  {
+    "id": "MCB-0023",
+    "title": "Local Triage Pilot Enablement",
+    "type": "mission",
+    "status": "in_progress",
+    "summary": "Enables the local triage pilot by introducing suggestion templates, manual pilot runbooks, and non-authoritative banner enforcement.",
+    "created": "2026-07-03",
+    "updated": "2026-07-03",
+    "tags": ["brain", "mission", "loop", "triage", "local-pilot"],
+    "related": ["MCB-0022"],
+    "path": "content/brain/missions/mcb-0023.md",
+    "agent": "gemini",
+    "branch": "mcb-0023-local-triage-pilot",
+    "pr": "#27",
+    "commit": "unknown",
+    "phase": "loop"
   }
 ]
 ```
@@ -6970,4 +7209,49 @@ What a successful response looks like. Acceptance criteria if any.
 ## Prompt body
 
 (The actual prompt text, as it will be sent to the model. Keep it self-contained.)
+```
+
+---
+
+## Source: content/brain/templates/triage-suggestion.md
+
+```text
+# Triage Suggestion
+
+> **NOT OFFICIAL BRAIN KNOWLEDGE.** Machine-generated suggestion from a local model. Unverified. Requires human review before any promotion.
+
+## Metadata
+
+- **Input:** 
+- **Source:** local
+- **Triage status:** needs_human_review
+- **Suggested category:** [decision | prompt | project-note | agent | mission-evidence | noise]
+- **Suggested destination:** [decisions | prompts | projects | agents | archive]
+- **Suggested tags:** 
+- **Confidence:** [high | medium | low]
+
+## Summary
+
+(Provide a brief summary of the raw material, its purpose, and what it relates to.)
+
+## Evidence Excerpts
+
+(Include key quotes from the input material that support the suggested classification and destination. Fabricated or hallucinatory quotes invalidate this entire suggestion.)
+
+- Excerpt 1: "..."
+- Excerpt 2: "..."
+
+## Known Unknowns
+
+(State any assumptions, ambiguities, or missing context in the raw input.)
+
+## Human Review Checklist
+
+Reviewer: [Human Name]
+Date: [YYYY-MM-DD]
+
+- [ ] **Rigor Check:** No quotes or evidence in this suggestion are fabricated or hallucinatory.
+- [ ] **Context Alignment:** The suggestion matches the true intent of the raw input.
+- [ ] **Action Plan:** Approved for promotion to [destination] / Marked as noise and archived.
+- [ ] **Target Path:** [content/brain/... if promoting]
 ```

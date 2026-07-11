@@ -53,7 +53,7 @@ _None._
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
 - MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
 - MCB-0022 - completed - PR #25 - commit a7d261dbc7ef685c4ada8edffa9443293d079cdd
-- MCB-0023 - in_progress - PR unknown - commit unknown
+- MCB-0023 - in_progress - PR #27 - commit unknown
 
 ## Roadmap State
 

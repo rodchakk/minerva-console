@@ -420,7 +420,7 @@
     "path": "content/brain/missions/mcb-0023.md",
     "agent": "gemini",
     "branch": "mcb-0023-local-triage-pilot",
-    "pr": "unknown",
+    "pr": "#27",
     "commit": "unknown",
     "phase": "loop"
   }
