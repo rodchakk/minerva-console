@@ -306,6 +306,17 @@ function validateInboxEntry(entry, entryLabel, relPath) {
     fail(`[CHECK 4] ${relPath} - ${entryLabel}.path must point to a Markdown file`);
   } else if (!existsSync(join(ROOT, entry.path))) {
     fail(`[CHECK 4] ${relPath} - ${entryLabel}.path does not exist: ${entry.path}`);
+  } else if (entry.source === "local") {
+    const fileFullPath = join(ROOT, entry.path);
+    const fileContent = readFileSync(fileFullPath, "utf8");
+    const hasLiteralBanner = fileContent.includes("NOT OFFICIAL BRAIN KNOWLEDGE");
+    const hasDefaultBanner = fileContent.includes("This is a raw, unprocessed item.");
+    if (!hasLiteralBanner && !hasDefaultBanner) {
+      fail(
+        `[CHECK 4] ${relPath} - ${entryLabel} (source: local) file content at ${entry.path}\n` +
+          `  must include either "NOT OFFICIAL BRAIN KNOWLEDGE" or "This is a raw, unprocessed item."`
+      );
+    }
   }
 }
 

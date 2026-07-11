@@ -2,6 +2,14 @@
 
 Append-only. Most recent first.
 
+## 2026-07-03 - MCB-0023 - Local Triage Pilot Enablement
+
+- Created triage suggestion template (`content/brain/templates/triage-suggestion.md`) carrying the required non-authoritative warning banner.
+- Created local triage pilot runbook (`content/brain/loop/runbooks/local-triage-pilot.md`) defining the manual local model execution workflow and zero-write constraints.
+- Added a local-source banner guardrail check to `scripts/brain-guardrails.mjs` verifying that any inbox registry item with source `"local"` contains either `"NOT OFFICIAL BRAIN KNOWLEDGE"` or `"This is a raw, unprocessed item."`.
+- Registered MCB-0023 in the missions registry ledger and created the brief file.
+- No DB, RAG, embeddings, UI, ENTRY/Seshat runtime, GitHub workflows, or new dependencies introduced.
+
 ## 2026-07-03 - MCB-0022 - Loop Guardrails & Review Evals
 
 - Added loop mission folder guardrails to `scripts/brain-guardrails.mjs`:

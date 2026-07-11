@@ -6,11 +6,11 @@
 
 ## Summary
 
-- Mission ledger entries: 24
-- Ledger statuses: planned 0, in_progress 0, completed 24, blocked 0, unknown/other 0
+- Mission ledger entries: 25
+- Ledger statuses: planned 0, in_progress 1, completed 24, blocked 0, unknown/other 0
 - Loop folder mission files: Planned: 0; Active: 0; Review: 0; Done: 1; Blocked: 0
 - Roadmap missions: 6
-- Cross-check findings: 2
+- Cross-check findings: 3
 
 ## Folder State
 
@@ -39,14 +39,13 @@ _None._
 ### Counts By Status
 
 - planned: 0
-- in_progress: 0
+- in_progress: 1
 - completed: 24
 - blocked: 0
 - unknown/other: 0
 
 ### Recent Missions
 
-- MCB-0015 - completed - PR #13 - commit 340eb00
 - MCB-0016 - completed - PR #14 - commit 61f4cac
 - MCB-0017 - completed - PR #16 - commit f1cbd2d
 - MCB-0018 - completed - PR #17 - commit 065c12b
@@ -54,6 +53,7 @@ _None._
 - MCB-0020 - completed - PR #21 - commit 0efa9e2c68e9a8e286b7c2426dd4eac7970ca564
 - MCB-0021 - completed - PR #23 - commit 3eb35910f58c4304099defbebe0c1e6d3fbe5ee7
 - MCB-0022 - completed - PR #25 - commit a7d261dbc7ef685c4ada8edffa9443293d079cdd
+- MCB-0023 - in_progress - PR #27 - commit unknown
 
 ## Roadmap State
 
@@ -66,6 +66,7 @@ _None._
 
 ## Cross-Checks
 
+- [info] MCB-0023 is in_progress in missions.json, but no active/review folder filename contains that ID.
 - [mismatch] MCB-0001 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: unknown).
 - [mismatch] MCB-0014 is completed but has missing/unknown PR or commit metadata (pr: unknown, commit: ef6e20e).
 
@@ -73,7 +74,7 @@ _None._
 
 Inferred from local files only; external GitHub state may differ.
 
-- MCB-0023 - Local Triage Pilot (design-gated) - inferred from first planned ROADMAP.md item.
+- MCB-0023 - Local Triage Pilot Enablement - inferred from missions.json status in_progress.
 
 ## Recommended Next Mission
 

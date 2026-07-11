@@ -2127,6 +2127,23 @@ MCB-0021 - Loop State Snapshot CLI.
     "pr": "#25",
     "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
+  },
+  {
+    "id": "MCB-0023",
+    "title": "Local Triage Pilot Enablement",
+    "type": "mission",
+    "status": "in_progress",
+    "summary": "Enables the local triage pilot by introducing suggestion templates, manual pilot runbooks, and non-authoritative banner enforcement.",
+    "created": "2026-07-03",
+    "updated": "2026-07-03",
+    "tags": ["brain", "mission", "loop", "triage", "local-pilot"],
+    "related": ["MCB-0022"],
+    "path": "content/brain/missions/mcb-0023.md",
+    "agent": "gemini",
+    "branch": "mcb-0023-local-triage-pilot",
+    "pr": "#27",
+    "commit": "unknown",
+    "phase": "loop"
   }
 ]
 ```
