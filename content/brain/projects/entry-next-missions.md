@@ -1,41 +1,136 @@
 # ENTRY — Next Missions
 
-Prioritized, recommended next missions for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These are recommendations for the ENTRY repo/runtime (executed there, not from Brain).
+Prioritized roadmap for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These priorities were approved by the operator on 2026-07-28. Execution belongs in the ENTRY repo/runtime, not in Brain.
 
-## Priority 1 — Fix "Forgot my password"
-**Why:** operator-reported broken; core account-recovery trust path.
-**Type:** bug fix (likely config + deep-link, not screen logic).
-**Scope:** reproduce on web + native; verify (1) `entry://reset-password` deep-link registration and `code` param delivery, (2) Supabase Auth redirect-URL allowlist, (3) recovery email delivery/template, (4) expected behavior for synthetic `@entry.local` / username accounts (may need the admin recovery-code path instead). Evidence-first; no schema change expected. See [entry-known-issues.md](entry-known-issues.md).
+## Operator-approved priority order
 
-## Priority 2 — ENTRY-I001-QA (Voice MVP native device QA)
-**Why:** Voice MVP is implemented but unverified on a real device; required before it ships.
-**Type:** QA on a native dev/EAS build (not Expo Go).
-**Scope:** run the harness checklist (`VOICE_MVP_HANDOFF.md` §7) on real Android + iOS: permission prompts (Spanish copy), manual fallback when unavailable, happy path speak→confirm→create, edited transcript respected, 12h VISIT pass with valid PIN/QR, DELIVERY mapping, `[Voz]` note present, `55000` rate-limit copy, 60s double-submit guard, guard resolves identically, and **no audio written/uploaded/logged**. Resolve Q-V2 (locale) + Q-V3 (on-device policy); then finalize Q-V7 (trigger placement). See [entry-voice-mvp.md](entry-voice-mvp.md).
+1. **Diagnose the real state of ENTRY.**
+2. **Fix existing bugs.**
+3. **QA the flows that already exist.**
+4. **Add automated tests.**
+5. **Organize the release process.**
+6. **Build pending or necessary product functions.**
+7. **Security and backups — penultimate priority.**
+8. **Separate environments — absolute last priority.**
 
-## Priority 3 — Restore a green TypeScript baseline (quick win)
-**Why:** removes the one known pre-existing tsc error so any new error is meaningful.
-**Type:** trivial cleanup.
-**Scope:** delete the unused `@ts-expect-error` directive in `components/ExternalLink.tsx` (harness Q-B5). Optionally add a minimal `typecheck` npm script (Q-B3/Q-B7). No deps, no behavior change.
+This sequence is intentionally pragmatic. ENTRY does not yet have clients, so the immediate goal is to understand, repair, validate, and finish the product before investing in environment architecture.
 
-## Priority 4 — Reconcile RPC/migration source of truth
-**Why:** several RPC bodies live only in the live DB, not in `supabase/migrations/` (Q-B1); this blocks safe schema work.
-**Type:** backend hygiene / design prerequisite.
-**Scope:** determine whether there is an out-of-band migration history or manual DB management; capture the missing RPC definitions as migrations or a documented snapshot before any schema change.
+> **Critical exception:** a confirmed severe vulnerability, active exposure, destructive permission error, or immediate risk of data loss may be corrected as soon as it is discovered. This exception does not promote the full security/backups workstream; that workstream remains penultimate.
 
-## Priority 5 (deferred) — ENTRY-D002 Facility / Internal Destination Access (design)
-**Why:** strategic, but blocked behind Voice QA and the `visit_passes.house_id NOT NULL` structural change.
-**Type:** design mission (no code).
-**Scope:** evaluate data-model options (nullable `house_id` + `destination_facility_id` vs polymorphic destination vs new entity); assess blast radius on `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, community scoping; answer Q-F1..Q-F6. Decide in design, not code. Deferred until after Voice MVP QA per approved sequencing.
+## Priority 1 — Diagnose the real state of ENTRY
 
-## Commercial track (parallel, non-engineering)
-- Build a per-colonia lead tracker with verified contacts and board-meeting dates; prioritize call-controlled colonias (Monserrat, Angelina) and boards with known meeting dates (Vías Paraíso). Verify Access/ISSY/SSA specifics before recording as fact. See [entry-sales-and-leads.md](entry-sales-and-leads.md).
+**Why:** the current code, branches, harness documentation, Supabase state, builds, and known work may have diverged.
 
-## Notes on sequencing
+**Scope:**
+- Inspect repository and branch state.
+- Compare code against the ENTRY harness and Brain capture.
+- Run TypeScript, lint, Expo Doctor, and available checks.
+- Identify broken flows, incomplete work, dangerous configuration, stale branches, and technical debt.
+- Produce an evidence-backed diagnostic and a prioritized implementation board.
 
-- Voice (reuses existing infra) is sequenced before Facility Destinations (needs schema + resolver changes), per the ENTRY harness.
-- The password fix is placed first here because it is an operator-flagged trust bug independent of the Voice/Facilities track and can proceed in parallel.
+## Priority 2 — Fix existing bugs
 
-## Unknown / Needs verification
+Start with user trust and blocking defects.
 
-- Whether the operator wants the password fix or Voice QA first (this doc recommends password fix P1; adjust if the operator prioritizes shipping Voice).
-- Open PR/branch status for `feature/entry-voice-mvp`, Sentry, and security-gate branches (see [entry-current-work.md](entry-current-work.md)).
+### First known bug — “Forgot my password”
+
+**Why:** operator-reported broken; account recovery is a core trust path.
+
+**Scope:** reproduce on web and native; verify deep-link registration, Supabase Auth redirect allowlist, recovery email/template delivery, token/code handling, and the expected recovery path for synthetic `@entry.local` or username-based accounts. Evidence first; no schema change assumed.
+
+### Other known cleanup
+
+- Restore a green TypeScript baseline by resolving the existing `components/ExternalLink.tsx` `TS2578` issue.
+- Add newly confirmed defects from the diagnostic before advancing to lower-priority work.
+
+See [entry-known-issues.md](entry-known-issues.md).
+
+## Priority 3 — QA existing flows
+
+Validate the product that already exists before adding more surface area.
+
+### Voice MVP native QA
+
+Run ENTRY-I001-QA on real Android and iOS native/dev builds, not Expo Go. Validate permissions, speech-to-confirm flow, manual fallback, pass creation, QR/PIN validity, delivery mapping, rate-limit handling, duplicate-submit protection, and the no-audio-storage privacy contract.
+
+### Core ENTRY QA
+
+Cover at minimum:
+- Registration, login, logout, activation, and password recovery.
+- Resident pass creation and expiration behavior.
+- QR and PIN validation at the guard flow.
+- Resident, guard, and administrator permissions.
+- Community isolation and expected RLS behavior.
+- Notifications and other release-critical flows found during diagnosis.
+
+## Priority 4 — Automated tests
+
+Create a practical first test suite around the highest-risk behavior rather than chasing total coverage.
+
+Initial targets:
+- User creation and authentication.
+- Password recovery.
+- Pass creation and validation.
+- QR/PIN credential resolution.
+- Role and community authorization.
+- Supabase RPC and RLS behavior.
+- Regression tests for every repaired critical bug.
+
+Tests should live in the repository and run through CI on pull requests. Device and visual automation may reduce manual work, but a small real-device QA layer will still be required.
+
+## Priority 5 — Organize the release process
+
+This is a lightweight operational checklist, not an enterprise release platform.
+
+Define:
+- What checks and QA a version must pass.
+- How app and backend changes are grouped and identified.
+- Who approves a release.
+- How mobile builds and backend changes are published.
+- How release notes are recorded.
+- What to do when a release fails, including a rollback path where technically possible.
+
+## Priority 6 — Pending or necessary functions
+
+Only after the existing system is diagnosed, repaired, tested, and releasable.
+
+Known candidates:
+- Facility / Internal Destination Access design and implementation.
+- Improvements to frequent-access identities.
+- Functions proven necessary by QA, operations, or commercial discovery.
+
+Facility Destinations remains a design-first change because it may affect schema, `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, and community scoping.
+
+## Priority 7 — Security and backups
+
+This is the penultimate planned workstream.
+
+Scope when reached:
+- Formal review of RLS, policies, roles, grants, and `SECURITY DEFINER` functions.
+- Review authentication and sensitive logging.
+- Confirm recovery options and backup ownership.
+- Establish automated backups and perform at least one restoration test.
+- Reconcile live RPC/schema definitions with versioned migrations as needed for recoverability.
+
+Routine security architecture and formal backup work do not interrupt the earlier product priorities unless the critical exception applies.
+
+## Priority 8 — Separate environments
+
+**Absolute last priority. Do not begin this work while higher priorities remain.**
+
+Future scope may include:
+- Separate development and production databases/projects.
+- Environment-specific configuration for mobile and web.
+- Versioned migrations for schema, functions, triggers, RLS, and policies.
+- Production backup copies outside the primary provider.
+- Evaluation of whether production should remain on Supabase or move elsewhere.
+
+No provider decision should be made before measuring ENTRY’s dependency on Supabase Auth, Storage, Realtime, Edge Functions, and database-specific behavior. Kubernetes is not justified for ENTRY’s current scale.
+
+## Commercial track
+
+Commercial discovery may continue independently when it does not distract from the engineering priorities: maintain the colonia lead tracker, use written/referral-based outreach, and record verified contacts, current access systems, and patronato meeting opportunities.
+
+## Source-of-truth note
+
+The detailed mission board in the ENTRY harness remains the execution-side source of truth. This Brain roadmap records the operator-approved strategic order and should guide future mission creation or reprioritization.
