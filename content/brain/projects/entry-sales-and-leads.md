@@ -112,6 +112,8 @@ evidence:
 - Residencial Los Naranjos: next to Toledo; entrance under construction; QR
   system observed.
 - Residencial Santa Isabel: near Dispensa Familiar.
+- Residencial Santa Elena Demco: residential under construction; investigation
+  pending.
 - Colonia El Carmen: priority #1.
 - Residencial La Florida.
 - Jardines del Merendón: high end; Boulevard Mackay.
