@@ -24,6 +24,7 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - [entry-known-issues.md](entry-known-issues.md) — bugs incl. "Forgot password", tech debt.
 - [entry-voice-mvp.md](entry-voice-mvp.md) — ENTRY Voice status and contract.
 - [entry-sales-and-leads.md](entry-sales-and-leads.md) — commercial strategy, colonias, competitors.
+- [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md) — official FIRST DOOR / Patronato Package v1 strategy, El Carmen field package, hypotheses, pricing notes, and delivery script.
 - [entry-next-missions.md](entry-next-missions.md) — prioritized recommended missions.
 
 ## Isolation principles (unchanged)
@@ -37,15 +38,19 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - **Status:** Approved, active development.
 - **Current ENTRY branch:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code.**
 - **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo (harness `01_PROJECT_BRIEF`).**
+- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` is the approved first formal outreach standard. Colonia El Carmen is priority prospect #1 / initial commercial lab, with delivery planned for 2026-08-04 afternoon until confirmed. **Operator-provided; decision recorded in `DEC-0006`.**
 
 ## Risks (summary; detail in sub-docs)
 
 - Voice MVP unverified on a real device (native module never exercised on-device).
 - Many RPC bodies live only in the live DB, not mirrored as in-repo migrations — schema-change risk.
 - "Forgot password" reported broken by operator; root cause not yet verified.
+- First commercial package outcome is not yet known; El Carmen size and patronato contact remain unconfirmed.
 
 ## Next actions (summary; detail in [entry-next-missions.md](entry-next-missions.md))
 
 1. Verify and fix "Forgot my password".
-2. Run ENTRY-I001-QA (Voice MVP native device QA).
-3. Resume ENTRY-D002 (Facility Destinations design) only after Voice QA.
+2. Execute FIRST DOOR field test at Colonia El Carmen and record evidence before scaling package distribution.
+3. Prepare a clean production environment for the first pilot.
+4. Run ENTRY-I001-QA (Voice MVP native device QA).
+5. Resume ENTRY-D002 (Facility Destinations design) only after Voice QA and field evidence.

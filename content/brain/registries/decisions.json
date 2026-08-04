@@ -58,5 +58,17 @@
     "tags": ["brain", "ledger", "convention", "ids"],
     "related": ["MCB-0017", "MCB-0018"],
     "path": "content/brain/decisions/dec-0005-non-mcb-product-captures.md"
+  },
+  {
+    "id": "DEC-0006",
+    "type": "decision",
+    "status": "approved",
+    "title": "ENTRY FIRST DOOR / Patronato Package v1",
+    "summary": "ENTRY abandons the loose flyer as the primary outreach instrument and adopts a formal, personalized Patronato Package. Guards remain the delivery channel and field signal; the patronato or administration is the buyer. The first objective is a short meeting, not an immediate sale.",
+    "created": "2026-08-03",
+    "updated": "2026-08-03",
+    "tags": ["entry", "sales", "patronato", "first-door", "commercial-strategy"],
+    "related": ["PRJ-0001"],
+    "path": "content/brain/decisions/dec-0006-entry-first-door-patronato-package.md"
   }
 ]
