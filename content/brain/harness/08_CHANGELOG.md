@@ -2,6 +2,14 @@
 
 Append-only. Most recent first.
 
+## 2026-08-03 - ENTRY-BRAIN-002 - FIRST DOOR commercial strategy capture
+
+- Added `DEC-0006` approving `ENTRY — FIRST DOOR / Patronato Package v1` as the official first formal outreach standard for ENTRY.
+- Created `content/brain/projects/entry-first-door-patronato-package-v1.md` with the Patronato Package v1 doctrine, El Carmen field observations, hypotheses, package structure, delivery script, internal pricing, readiness notes, and next actions.
+- Updated `entry-sales-and-leads.md` with the new commercial doctrine, lead map, Colonia El Carmen as priority #1, internal pricing, and pending validations.
+- Updated `entry.md` and `entry-next-missions.md` so the ENTRY Knowledge Pack points to FIRST DOOR and prioritizes field evidence before scaling outreach or adding speculative features.
+- No application code, Supabase, configuration, dependencies, product runtime, push, or merge changes.
+
 ## 2026-07-03 - MCB-0022 - Loop Guardrails & Review Evals
 
 - Added loop mission folder guardrails to `scripts/brain-guardrails.mjs`:
