@@ -150,6 +150,18 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
     "tags": ["brain", "ledger", "convention", "ids"],
     "related": ["MCB-0017", "MCB-0018"],
     "path": "content/brain/decisions/dec-0005-non-mcb-product-captures.md"
+  },
+  {
+    "id": "DEC-0006",
+    "type": "decision",
+    "status": "approved",
+    "title": "ENTRY FIRST DOOR / Patronato Package v1",
+    "summary": "ENTRY abandons the loose flyer as the primary outreach instrument and adopts a formal, personalized Patronato Package. Guards remain the delivery channel and field signal; the patronato or administration is the buyer. The first objective is a short meeting, not an immediate sale.",
+    "created": "2026-08-03",
+    "updated": "2026-08-03",
+    "tags": ["entry", "sales", "patronato", "first-door", "commercial-strategy"],
+    "related": ["PRJ-0001"],
+    "path": "content/brain/decisions/dec-0006-entry-first-door-patronato-package.md"
   }
 ]
 ```
@@ -687,6 +699,7 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
 - `content/brain/agents/qa-verifier.md`
 - `content/brain/decisions/INDEX.md`
 - `content/brain/decisions/dec-0005-non-mcb-product-captures.md`
+- `content/brain/decisions/dec-0006-entry-first-door-patronato-package.md`
 - `content/brain/docs/INDEX.md`
 - `content/brain/harness/00_PROJECT_CHARTER.md`
 - `content/brain/harness/01_CURRENT_STATE.md`
@@ -767,6 +780,8 @@ A single Git-backed snapshot of Minerva Core Brain, concatenated for handoff to 
 - `content/brain/missions/mcb-0022.md`
 - `content/brain/projects/INDEX.md`
 - `content/brain/projects/entry-current-work.md`
+- `content/brain/projects/entry-first-door-field-report-2026-08-04.md`
+- `content/brain/projects/entry-first-door-patronato-package-v1.md`
 - `content/brain/projects/entry-implementation-map.md`
 - `content/brain/projects/entry-known-issues.md`
 - `content/brain/projects/entry-next-missions.md`
@@ -997,6 +1012,78 @@ deliberate scoping decision, not unrepaired drift.
   Conventions so this is discoverable without re-deriving it from this
   decision doc.
 
+### content/brain/decisions/dec-0006-entry-first-door-patronato-package.md
+
+# Decision — ENTRY FIRST DOOR / Patronato Package v1
+
+## Identity
+
+- **ID:** `DEC-0006`
+- **Title:** ENTRY FIRST DOOR / Patronato Package v1
+- **Status:** `approved`
+- **Date:** 2026-08-03
+- **Supersedes:** none
+- **Tags:** entry, sales, patronato, first-door, commercial-strategy
+- **Related:** `PRJ-0001`
+
+## Context
+
+ENTRY's initial commercial approach relied mainly on leaving a flyer and a
+business card with the guard at each residential community. That motion did
+not create enough movement because the guard is not the buyer, the patronato
+is often hard to reach, loose flyers can be lost or perceived as advertising,
+and the approach depended too much on the guard explaining or selling
+something that is outside the guard's role.
+
+The founder also wants ENTRY's commercial motion to avoid improvisation or
+aggressive in-person selling. The first priority is to open a serious
+conversation with the patronato or administration.
+
+## Decision
+
+ENTRY abandons the loose flyer as the primary commercial instrument and adopts
+`ENTRY Patronato Package v1` as the first official sales standard for
+community outreach.
+
+The initiative is registered internally as `ENTRY — FIRST DOOR / Patronato
+Package v1`. The first field-specific package is `ENTRY Patronato Package —
+El Carmen v1`, also called `FIRST DOOR v1`.
+
+## Rationale
+
+- The patronato or administration is the primary buyer; the guard remains a
+  delivery channel, operational user, source of market information, and bridge
+  to the decision-maker.
+- A formal, personalized folder is more likely to be treated as a serious
+  proposal than a loose flyer.
+- The first objective is not to close a sale. It is to earn a short meeting
+  with the president and other patronato members.
+- ENTRY should be positioned as a path from manual visitor/access processes to
+  connected digital management, not as "another QR application."
+- The sales style should be consultative: understand how the community works
+  first, then demonstrate ENTRY.
+
+## Consequences
+
+- Commercial success is no longer measured by flyers delivered. It is measured
+  by meetings, demonstrations, follow-up channels, proposals requested, pilots,
+  and customers obtained.
+- ENTRY must not add speculative commercial features before field evidence is
+  gathered, except for critical bugs.
+- Communities with manual processes become the Phase 1 target segment.
+  Communities already using Access or another QR solution move to Phase 2
+  unless there is a clear follow-up path.
+- Colonia El Carmen becomes the first priority lead and initial commercial
+  laboratory: a lead with a validated problem and preliminary intent signal,
+  not yet a hot customer or probable sale.
+- The first package must not include price, a formal quote, competitor attacks,
+  Access comparisons, exaggerated promises, future features, forced pilots, or
+  pressure for an immediate decision.
+- The package may reference the official artifacts
+  `ENTRY_Patronato_Package_El_Carmen_v1.docx` and
+  `ENTRY_Patronato_Package_El_Carmen_v1.pdf`, but the Brain does not add those
+  binaries unless future repository conventions explicitly allow it.
+
 ### content/brain/docs/INDEX.md
 
 # Docs — Index
@@ -1094,6 +1181,24 @@ The protected layout (`app/(console)/layout.tsx`) calls `requireSuperadmin()` an
 ## Auth
 
 Server-enforced at the route-group boundary. `features/auth/requireSuperadmin.ts` is the single gate. Brain inherits it for free — no auth change is needed or allowed.
+
+### Minerva Console auth recovery closeout
+
+- `MINERVA-CONSOLE-AUTH-RECOVERY-001` is completed.
+- Production commit: `5422737850af823b73207956b6b9c7185593bdfd` from PR #30.
+- The previous redirect trap between `/login`, `/dashboard`, and
+  `/unauthorized` is closed.
+- `/login` resolves auth state in the page instead of relying on a blind
+  middleware redirect for authenticated users.
+- `/unauthorized` provides a real Server Action sign-out path:
+  `Sign out & return to login`.
+- Authorization states are explicit: `unauthenticated`, `authorized`,
+  `forbidden`, and `authorization_error`.
+- `app/(console)/layout.tsx` continues to protect the dashboard and all console
+  routes through `requireSuperadmin()`.
+- Owner QA in production succeeded: login worked and Minerva Console access was
+  recovered.
+- Supabase was not changed as part of the recovery or closeout.
 
 ## Data layer
 
@@ -1423,6 +1528,12 @@ Candidate work for after MCB-0002. Items are not committed; they are options.
 
 ## Near-term (still v0-shaped)
 
+- `MINERVA-SUPABASE-SUPERADMIN-RECONCILIATION-001` - proposed / pending.
+  Read-only follow-up to reconcile the live `public.is_superadmin()` definition
+  with repository migrations. Scope: inspect live definition, source of truth,
+  `SECURITY DEFINER` / `SECURITY INVOKER`, `search_path`, grants, RLS context,
+  and produce an authentic migration or documentation plan. Do not modify
+  Supabase as part of this backlog item without a separate explicit mission.
 - Markdown rendering inside Brain pages for entries that have a `path`. Add only when needed; pulls in `gray-matter` and a renderer as the first new deps.
 - "Recently updated" cross-registry list on the Overview page.
 - Tag index page that lists all unique tags and the entries that use them.
@@ -1455,6 +1566,44 @@ Candidate work for after MCB-0002. Items are not committed; they are options.
 # 08 — Changelog
 
 Append-only. Most recent first.
+
+## 2026-08-04 - MINERVA-CONSOLE-AUTH-RECOVERY-001 - Auth recovery closeout
+
+- Closed the Minerva Console auth recovery incident after owner QA succeeded
+  in production at `https://console.minervatechs.com/login`.
+- Original incident: the owner was trapped in a redirect cycle between
+  `/login`, `/dashboard`, and `/unauthorized`; `/unauthorized` did not offer a
+  real sign-out path, so changing accounts or recovering the login form was not
+  possible from that screen.
+- Implementation shipped through PR #30 and squash commit
+  `5422737850af823b73207956b6b9c7185593bdfd` on `master`.
+- Runtime change scope was limited to:
+  `app/login/page.tsx`, `app/page.tsx`, `app/unauthorized/page.tsx`,
+  `features/auth/actions.ts`, `features/auth/requireSuperadmin.ts`, and
+  `lib/supabase/middleware.ts`.
+- Result: the middleware no longer performs the blind authenticated
+  `/login -> /dashboard` redirect; `/unauthorized` has a real Server Action
+  sign-out; auth state distinguishes `unauthenticated`, `authorized`,
+  `forbidden`, and `authorization_error`; the dashboard remains protected by
+  `requireSuperadmin()`.
+- Evidence: GitHub Actions completed successfully, Vercel production deployment
+  for commit `5422737850af823b73207956b6b9c7185593bdfd` completed successfully,
+  production smoke tests returned `/login -> 200`, `/dashboard` without session
+  `-> 307 /login?next=%2Fdashboard`, and `/unauthorized` without session
+  `-> 307 /login`.
+- Owner QA: login succeeded, Minerva Console access worked, and the corrected
+  flow was declared successful. Final verdict: COMPLETED.
+- Supabase was not modified. Follow-up debt is tracked separately as
+  `MINERVA-SUPABASE-SUPERADMIN-RECONCILIATION-001` and was not started in this
+  closeout.
+
+## 2026-08-03 - ENTRY-BRAIN-002 - FIRST DOOR commercial strategy capture
+
+- Added `DEC-0006` approving `ENTRY — FIRST DOOR / Patronato Package v1` as the official first formal outreach standard for ENTRY.
+- Created `content/brain/projects/entry-first-door-patronato-package-v1.md` with the Patronato Package v1 doctrine, El Carmen field observations, hypotheses, package structure, delivery script, internal pricing, readiness notes, and next actions.
+- Updated `entry-sales-and-leads.md` with the new commercial doctrine, lead map, Colonia El Carmen as priority #1, internal pricing, and pending validations.
+- Updated `entry.md` and `entry-next-missions.md` so the ENTRY Knowledge Pack points to FIRST DOOR and prioritizes field evidence before scaling outreach or adding speculative features.
+- No application code, Supabase, configuration, dependencies, product runtime, push, or merge changes.
 
 ## 2026-07-03 - MCB-0022 - Loop Guardrails & Review Evals
 
@@ -5809,6 +5958,612 @@ Approved sequencing: Voice (reuses existing infra, near-zero backend change) shi
 - Confirm PR/branch status of `feature/entry-voice-mvp` and the two other branches.
 - Proceed to ENTRY-I001-QA (see [entry-next-missions.md](entry-next-missions.md)).
 
+### content/brain/projects/entry-first-door-field-report-2026-08-04.md
+
+# ENTRY — FIRST DOOR field report — 2026-08-04
+
+Field evidence from the first formal Patronato Package delivery for ENTRY.
+Part of the ENTRY Knowledge Pack; see [entry.md](entry.md) and
+[entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md).
+
+> Source: Operator-provided field report from Rudy on 2026-08-04 in San Pedro
+> Sula, Honduras. Treat the delivery details below as reported field evidence.
+> Keep internal-transfer promises separate from confirmed patronato receipt.
+
+## Mission
+
+- **Initiative:** ENTRY — FIRST DOOR / Patronato Package v1
+- **Community:** Colonia El Carmen
+- **Date:** 2026-08-04
+- **Status:** package delivered; patronato receipt and review not yet confirmed
+- **Current classification:** lead with a validated manual-process problem and
+  a preliminary intent signal; not yet a hot lead, probable sale, or confirmed
+  meeting
+
+## Package delivered
+
+The physical package included:
+
+- a dark-blue presentation folder;
+- an exterior label addressed to the Patronato of Colonia El Carmen;
+- the four-page `ENTRY Patronato Package — El Carmen v1`, stapled;
+- the ENTRY flyer;
+- the Minerva Technologies business card, secured with a clip.
+
+The package was prepared and delivered as the first official field test of the
+FIRST DOOR strategy.
+
+## Confirmed field outcome
+
+- The package was delivered directly to the **head of security**.
+- Rudy gave a brief explanation of ENTRY and the purpose of the proposal.
+- The head of security said he would deliver the package to the patronato.
+- Security personnel confirmed that the patronato does meet.
+- They did not know the patronato's meeting date or cadence.
+- No direct patronato contact was obtained during this visit.
+- No meeting, demo, quote request, pilot, or patronato review was confirmed.
+
+## Evidence classification
+
+### Verified from the operator's field report
+
+- Delivery to the head of security occurred on 2026-08-04.
+- A brief explanation was provided.
+- Internal delivery to the patronato was promised.
+- The patronato is reported to hold meetings, but the schedule is unknown.
+
+### Not yet verified
+
+- Whether the package physically reached a patronato member.
+- Whether the patronato reviewed the package.
+- The name and contact details of the patronato president or administration.
+- The next patronato meeting date.
+- Whether the patronato wants a meeting or demo.
+
+## FIRST DOOR outcome status
+
+Current precise outcome:
+
+> Package delivered to security leadership; internal handoff to the patronato
+> promised; patronato receipt, review, and response pending.
+
+This is meaningful progress because the package crossed the entrance and
+reached an operational authority. It must not yet be recorded as "package
+reached the patronato" until that transfer is confirmed.
+
+## Follow-up plan
+
+Recommended follow-up window:
+
+> 2026-08-09 through 2026-08-11, approximately five to seven days after the
+> delivery.
+
+Follow-up objective:
+
+1. Confirm whether the head of security delivered the package to the patronato.
+2. Ask whether the patronato reviewed it.
+3. Obtain a direct contact, meeting date, or recommended follow-up channel.
+4. Request the 20- to 30-minute presentation only if there is openness.
+
+Suggested follow-up wording:
+
+> Buenas tardes. La semana pasada entregué al jefe de seguridad una propuesta
+> de ENTRY dirigida al Patronato de Colonia El Carmen. Quería confirmar si
+> pudieron hacérsela llegar y consultar con quién podría coordinar una breve
+> presentación.
+
+Do not classify silence as rejection until a reasonable follow-up attempt is
+completed.
+
+## Additional prospect discovered en route
+
+### Colonia El Limonar
+
+- **Status:** identified prospect for future ENTRY outreach.
+- **Observed from outside:** a barrier, guard booth, and guard.
+- **QR/system observation:** no visible QR was observed from the exterior.
+- **Initial classification:** possible manually controlled community and a
+  candidate for a dedicated discovery visit.
+
+Unknown / needs verification:
+
+- whether visitor authorization uses calls, paper, another application, or a
+  mixed process;
+- number of homes;
+- patronato or administration contact;
+- patronato meeting cadence;
+- whether another digital system is already installed but not externally
+  visible.
+
+Do not record "no system" as fact. The correct current statement is only that
+no QR was observed from the exterior during the drive-by observation.
+
+## Next commercial actions
+
+1. Follow up with Colonia El Carmen in the defined five-to-seven-day window.
+2. Record the exact FIRST DOOR outcome after follow-up.
+3. Keep El Carmen as priority #1 until patronato receipt and response are known.
+4. Add Colonia El Limonar to the prospect map for a later discovery visit.
+5. Do not scale package distribution broadly until the El Carmen handoff and
+   follow-up provide usable evidence.
+
+### content/brain/projects/entry-first-door-patronato-package-v1.md
+
+# ENTRY — FIRST DOOR / Patronato Package v1
+
+Commercial initiative for ENTRY's first formal patronato outreach package.
+Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
+
+> Source: Operator-provided field and strategy handoff, promoted into Brain on
+> 2026-08-03. Treat approved decisions as official project strategy. Treat
+> field observations as observed by the founder, and keep hypotheses separate
+> until validated.
+
+## Initiative identity
+
+- **Name:** ENTRY — FIRST DOOR / Patronato Package v1
+- **Package standard:** ENTRY Patronato Package v1
+- **First field package:** ENTRY Patronato Package — El Carmen v1
+- **Alternate internal name:** FIRST DOOR v1
+- **Status:** approved as the first official field-test version
+- **Related decision:** `DEC-0006`
+
+## Approved strategic decisions
+
+- The loose flyer is no longer ENTRY's primary outreach instrument.
+- ENTRY's new standard is a formal, personalized package addressed to the
+  patronato or administration.
+- The guard remains a delivery channel, field information source, operational
+  user, and bridge to the decision-maker. The guard is not the buyer and is not
+  responsible for selling ENTRY.
+- The primary buyer is the patronato or administration.
+- The ideal first meeting includes the patronato president and other patronato
+  members; a security lead may join when useful.
+- The first package exists to obtain a 20- to 30-minute meeting, not to close a
+  sale.
+- ENTRY should not be presented as "another QR application."
+- ENTRY should be presented as a way for communities to move from manual
+  visitor and access processes to connected digital management.
+- The sales motion is consultative: understand how the community works first,
+  then show the product.
+- ENTRY complements the security team's work. It does not replace human
+  judgment or the physical gate control.
+- Early commercial success is measured by meetings, demonstrations, follow-up
+  channels, quote requests, pilots, and customers, not by flyers delivered.
+- A rejection from one community is evidence about one commercial hypothesis,
+  not evidence that ENTRY has failed.
+- Do not draw general conclusions from a single community.
+- Do not build new commercial features "just in case" before field evidence,
+  except for critical bugs.
+- Minerva Technologies is the company; ENTRY is the product.
+
+## Product conviction
+
+ENTRY exists because the founder believes in:
+
+- a more digital world;
+- ordered processes;
+- practical automation;
+- eliminating unnecessary paper;
+- connecting information correctly across residents, security, and
+  administration.
+
+Internal vision:
+
+> ENTRY exists to help communities leave manual processes behind and operate
+> with connected, organized information available when it is needed.
+
+## Initial ideal customer
+
+Priority segment:
+
+- residential communities with controlled entrances;
+- guards or security personnel;
+- visitor handling through calls, paper, or other manual processes;
+- enough traffic for manual operation to create workload;
+- interest in modernization;
+- no stable digital solution currently installed.
+
+### Attack order
+
+**Phase 1:** communities with no system or mostly manual processes.
+
+Objectives:
+
+- obtain the first implementation;
+- validate onboarding;
+- gather real operational learning;
+- create the first reference case.
+
+**Phase 2:** communities already using Access or other QR solutions.
+
+These may be approached later, but switching costs and incumbent comparison
+make them a higher-friction path before ENTRY has references.
+
+**High end:** high-end residential communities should receive an impeccable
+first presentation using the Patronato Package. They are not assumed to be the
+lowest-resistance path for the first customer.
+
+## Colonia El Carmen
+
+### Classification
+
+- **Current status:** priority prospect number 1 / initial commercial lab
+- **Correct lead classification:** lead with a validated problem and a
+  preliminary intent signal
+- **Not yet:** hot customer, probable sale, or confirmed buyer
+
+### Observed field data
+
+- Located behind the La Florida area.
+- One controlled entrance was observed.
+- A possible second entrance was not confirmed.
+- Uses a manual gate/barrier.
+- Two guards were present at the entrance.
+- Residents call the gate booth to report access.
+- Guards record entries on a sheet placed on a board.
+- Visible and considerable traffic was observed.
+- A bus route enters regularly without going through the same authorization
+  process.
+- The entrance did not appear fully finished yet.
+- No digital platform was observed.
+- Guards expressed that the manual process has difficulties.
+- Guards said there was an idea to implement a system.
+- The source of that implementation intent was not clear. The founder's read
+  was that it probably comes from the patronato.
+- Guards were kind and receptive, but did not show strong commercial
+  enthusiasm.
+- The day of the conversation was hot and operationally busy.
+
+### Commercial hypothesis
+
+The Colonia El Carmen patronato may already recognize the need to implement a
+system. ENTRY's opportunity is not to convince the community to leave another
+application, but to be considered before it chooses its first digital solution.
+
+### Size
+
+A visual review of Google Maps suggested that the community may have several
+hundred homes. No exact number is confirmed.
+
+Record only:
+
+> Size pending confirmation before quote preparation or final plan
+> classification.
+
+### Next objective
+
+Deliver the Patronato Package and request a 20- to 30-minute meeting with:
+
+- the patronato president;
+- other patronato members;
+- optionally, a security responsible.
+
+## Patronato Package — El Carmen v1
+
+### Objective
+
+Obtain a meeting. The package does not include:
+
+- price;
+- formal quote;
+- competitor attacks;
+- Access comparisons;
+- exaggerated promises;
+- future features;
+- mandatory pilot;
+- pressure for an immediate decision.
+
+### Page 1 — Cover
+
+Main elements:
+
+- MINERVA TECHNOLOGIES
+- ENTRY
+
+Title:
+
+> De procesos manuales a una gestión digital de visitantes y accesos.
+
+Identification:
+
+> Propuesta para el Patronato
+> Colonia El Carmen
+
+Supporting message:
+
+> Una solución para conectar autorizaciones, validaciones y registros en una
+> misma fuente de información.
+
+### Page 2 — Personalized letter
+
+The letter should:
+
+- mention a recent visit;
+- state that there was a brief conversation with security personnel;
+- carefully reference gate-booth communication and manual records;
+- avoid criticizing the community;
+- clarify that Minerva does not assume what must change;
+- explain that ENTRY connects authorization, validation, and record lookup;
+- request a meeting;
+- clarify that the meeting carries no commitment;
+- state that an economic proposal would be prepared only after understanding
+  the real size and needs of the community.
+
+### Page 3 — What changes with ENTRY
+
+For residents:
+
+- create and share access passes;
+- make access easier for family, providers, drivers, and deliveries;
+- share location together with the access pass;
+- manage frequent access.
+
+For security personnel:
+
+- receive and validate authorizations;
+- reduce calls and written logs when access is already authorized;
+- consult information without searching through paper sheets;
+- focus on entrance operation.
+
+For patronato / administration:
+
+- manage homes, users, and authorized personnel;
+- consult history;
+- maintain an organized source of information;
+- centralize important notices for residents.
+
+Summary flow:
+
+1. The resident authorizes.
+2. Security validates.
+3. The entrance event is recorded.
+4. The patronato can consult.
+
+Required clarification:
+
+> ENTRY complementa el trabajo del personal de seguridad. No reemplaza su
+> criterio ni el control físico de la entrada.
+
+### Page 4 — Implementation and next step
+
+Implementation should be presented as four flexible stages:
+
+1. Understand and plan.
+2. Configure ENTRY.
+3. Train and activate.
+4. Support adoption.
+
+Do not promise a rigid Day 1 / Day 2 / Day 3 rollout for a large community.
+The calendar should adjust to the community's size and dynamics.
+
+Requested next step:
+
+> Reunión de 20 a 30 minutos con el presidente y miembros del patronato.
+
+Meeting objectives:
+
+- listen to how visitor control currently works;
+- show the flow from resident, security, and patronato;
+- answer implementation, support, and investment questions;
+- determine whether there is a real fit, without commitment.
+
+## Physical presentation
+
+Package format: folder.
+
+Exterior label:
+
+> Dirigido al Patronato de Colonia El Carmen
+
+Internal order:
+
+1. Printed Patronato Package.
+2. Visual ENTRY flyer.
+3. Business card.
+
+The current flyer shows:
+
+- ENTRY;
+- modern access control;
+- mobile application;
+- web administration panel;
+- QR digital access passes;
+- history;
+- request-demo call to action;
+- QR to ENTRY's web page.
+
+The business card contains Minerva Technologies identity and founder contact.
+It must be cut and presented as a real card, not as an improvised sheet.
+
+Official contact for this campaign:
+
+- **Rod Alexander Chacón**
+- Founder
+- **Minerva Technologies**
+- Phone: **+504 3220-9818**
+- Email: **rod@minervatechs.com**
+- Web: **www.minervatechs.com**
+
+The name `Rod Alexander Chacón` was chosen because it looks more formal and
+complete than `Rod Chacón` or `Rod A. Chacón`.
+
+Official artifact names:
+
+- `ENTRY_Patronato_Package_El_Carmen_v1.docx`
+- `ENTRY_Patronato_Package_El_Carmen_v1.pdf`
+
+Do not add the binary artifacts to the repository unless that becomes an
+explicit Brain convention.
+
+## Delivery script
+
+Approved guard delivery script:
+
+> Buenas tardes. Hace unos días conversé con el personal de seguridad sobre
+> ENTRY. Preparé una propuesta formal dirigida al patronato para presentarles
+> cómo podemos ayudar a modernizar el control de accesos de la colonia. ¿Me
+> podría ayudar a entregársela al presidente o a la persona encargada del
+> patronato?
+
+If the guard asks about price:
+
+> El costo depende del tamaño y las necesidades de la comunidad. La propuesta
+> de hoy es para solicitar una reunión, entender cómo trabajan y presentarles
+> la plataforma; después podemos prepararles una cotización clara.
+
+If the guard says to leave the package:
+
+> Claro, muchas gracias. En la portada está dirigido específicamente al
+> patronato y dentro están mis datos. ¿Hay algún día en que normalmente se
+> reúnen o una fecha recomendable para venir a consultar si pudieron revisarlo?
+
+## Implementation and support posture
+
+Preparation:
+
+- meeting with patronato;
+- internal responsible person;
+- number of homes;
+- resident communication;
+- special cases;
+- activation date.
+
+Configuration:
+
+- community creation;
+- homes;
+- users;
+- administrative access.
+
+Training:
+
+- guard training;
+- flow test;
+- operational validation.
+
+Adoption:
+
+- progressive resident onboarding;
+- support for installation and use;
+- follow-up.
+
+During the initial stage, the founder is willing to answer calls, attend
+WhatsApp, solve incidents, and provide in-person support if necessary.
+
+Commercial communication should not depend on Rudy personally. The promise
+should be:
+
+> ENTRY acompaña la implementación y operación de la comunidad.
+
+Long term, the goal is to progressively automate support without removing human
+backup.
+
+## Internal pricing
+
+Do not include pricing in the first Patronato Package.
+
+Current monthly model:
+
+| Plan | Size | Price |
+| ---- | ---- | ----- |
+| ENTRY Small | Up to 30 homes | L 1,500 |
+| ENTRY Medium | 31-50 homes | L 2,500 |
+| ENTRY Large | 51-200 homes | L 5,000 |
+| ENTRY Pro | 201-300 homes | L 7,500 |
+
+Known pricing details:
+
+- Small includes up to five users per home.
+- Small includes 30 days of history.
+- Price includes software, support, and expected operating hours.
+- Initial setup cost is not yet defined.
+- Initial setup may be included or handled specially for first communities, but
+  must not be declared permanently free.
+- Before quoting El Carmen, confirm the number of homes.
+
+## Hypotheses to validate
+
+1. A formal, personalized folder increases the probability that the material
+   reaches the patronato compared with a loose flyer.
+2. Communities with manual processes are more willing to listen to ENTRY than
+   communities already using an application.
+3. A consultative meeting, listening first and demonstrating second, will work
+   better than starting immediately with a demo.
+4. Implementation support will reduce the patronato's fear of adopting the
+   platform.
+5. The message "from manual processes to digital management" will be more
+   effective than selling ENTRY as another QR application.
+
+### Measurement
+
+The first experiment is not measured by immediate sale. Possible outcomes:
+
+1. The package does not reach the patronato.
+2. The package arrives, but there is no response.
+3. A follow-up path is obtained.
+4. A meeting is obtained.
+5. A demo is obtained.
+6. An economic proposal is requested.
+7. A pilot or customer is obtained.
+
+Each outcome should be recorded as evidence.
+
+## Readiness status
+
+- ENTRY is considered technically ready for a pilot.
+- The main known technical production pending item is separating a clean
+  production environment from the development environment with test data.
+- Do not continue adding features before the first pilot except for critical
+  bugs.
+- The "forgot my password" flow remains a pending bug unless a later update
+  changes its status.
+- The website contact/demo form had an email delivery problem.
+- The founder fixed that issue before the first delivery.
+- Reported form status: resolved and ready to receive requests.
+- The domain email is active.
+- `rod@minervatechs.com` is the main email for this campaign.
+
+## Immediate next actions
+
+1. Print one test copy of the package.
+2. Verify legibility.
+3. Test every QR from paper.
+4. Confirm phone, email, and URL.
+5. Prepare the folder with the personalized label.
+6. Deliver first only in Colonia El Carmen.
+7. Ask when the patronato meets or when it is convenient to return.
+8. Record date, time, receiving guard, and any comment.
+9. Define a follow-up date before leaving the place.
+10. Do not distribute the package massively until observing the result of the
+    first experiment.
+
+Planned first test:
+
+> Colonia El Carmen — 2026-08-04 afternoon, approximately 4:00 p.m.,
+> subject to the founder's actual execution.
+
+Record this as planned until delivery is confirmed.
+
+## FIRST DOOR success criteria
+
+The mission does not require an immediate sale. Any of these outcomes counts as
+progress:
+
+- the package is identified and addressed correctly;
+- information is obtained about patronato meetings;
+- a contact or follow-up channel is obtained;
+- the patronato requests information;
+- a meeting is obtained;
+- a demonstration is obtained;
+- an economic proposal is requested;
+- a pilot is opened.
+
+Final rule:
+
+> The document does not exist to close the sale. It exists to open the first
+> door.
+
 ### content/brain/projects/entry-implementation-map.md
 
 # ENTRY — Implementation Map
@@ -5935,45 +6690,156 @@ Static code is implemented, so the likely failure is in configuration or deep-li
 
 # ENTRY — Next Missions
 
-Prioritized, recommended next missions for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These are recommendations for the ENTRY repo/runtime (executed there, not from Brain).
+Prioritized roadmap for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These priorities were approved by the operator on 2026-07-28. Execution belongs in the ENTRY repo/runtime, not in Brain.
 
-## Priority 1 — Fix "Forgot my password"
-**Why:** operator-reported broken; core account-recovery trust path.
-**Type:** bug fix (likely config + deep-link, not screen logic).
-**Scope:** reproduce on web + native; verify (1) `entry://reset-password` deep-link registration and `code` param delivery, (2) Supabase Auth redirect-URL allowlist, (3) recovery email delivery/template, (4) expected behavior for synthetic `@entry.local` / username accounts (may need the admin recovery-code path instead). Evidence-first; no schema change expected. See [entry-known-issues.md](entry-known-issues.md).
+## Operator-approved priority order
 
-## Priority 2 — ENTRY-I001-QA (Voice MVP native device QA)
-**Why:** Voice MVP is implemented but unverified on a real device; required before it ships.
-**Type:** QA on a native dev/EAS build (not Expo Go).
-**Scope:** run the harness checklist (`VOICE_MVP_HANDOFF.md` §7) on real Android + iOS: permission prompts (Spanish copy), manual fallback when unavailable, happy path speak→confirm→create, edited transcript respected, 12h VISIT pass with valid PIN/QR, DELIVERY mapping, `[Voz]` note present, `55000` rate-limit copy, 60s double-submit guard, guard resolves identically, and **no audio written/uploaded/logged**. Resolve Q-V2 (locale) + Q-V3 (on-device policy); then finalize Q-V7 (trigger placement). See [entry-voice-mvp.md](entry-voice-mvp.md).
+1. **Diagnose the real state of ENTRY.**
+2. **Fix existing bugs.**
+3. **QA the flows that already exist.**
+4. **Add automated tests.**
+5. **Organize the release process.**
+6. **Build pending or necessary product functions.**
+7. **Security and backups — penultimate priority.**
+8. **Separate environments — absolute last priority.**
 
-## Priority 3 — Restore a green TypeScript baseline (quick win)
-**Why:** removes the one known pre-existing tsc error so any new error is meaningful.
-**Type:** trivial cleanup.
-**Scope:** delete the unused `@ts-expect-error` directive in `components/ExternalLink.tsx` (harness Q-B5). Optionally add a minimal `typecheck` npm script (Q-B3/Q-B7). No deps, no behavior change.
+This sequence is intentionally pragmatic. ENTRY does not yet have clients, so the immediate goal is to understand, repair, validate, and finish the product before investing in environment architecture.
 
-## Priority 4 — Reconcile RPC/migration source of truth
-**Why:** several RPC bodies live only in the live DB, not in `supabase/migrations/` (Q-B1); this blocks safe schema work.
-**Type:** backend hygiene / design prerequisite.
-**Scope:** determine whether there is an out-of-band migration history or manual DB management; capture the missing RPC definitions as migrations or a documented snapshot before any schema change.
+> **Critical exception:** a confirmed severe vulnerability, active exposure, destructive permission error, or immediate risk of data loss may be corrected as soon as it is discovered. This exception does not promote the full security/backups workstream; that workstream remains penultimate.
 
-## Priority 5 (deferred) — ENTRY-D002 Facility / Internal Destination Access (design)
-**Why:** strategic, but blocked behind Voice QA and the `visit_passes.house_id NOT NULL` structural change.
-**Type:** design mission (no code).
-**Scope:** evaluate data-model options (nullable `house_id` + `destination_facility_id` vs polymorphic destination vs new entity); assess blast radius on `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, community scoping; answer Q-F1..Q-F6. Decide in design, not code. Deferred until after Voice MVP QA per approved sequencing.
+## Priority 1 — Diagnose the real state of ENTRY
 
-## Commercial track (parallel, non-engineering)
-- Build a per-colonia lead tracker with verified contacts and board-meeting dates; prioritize call-controlled colonias (Monserrat, Angelina) and boards with known meeting dates (Vías Paraíso). Verify Access/ISSY/SSA specifics before recording as fact. See [entry-sales-and-leads.md](entry-sales-and-leads.md).
+**Why:** the current code, branches, harness documentation, Supabase state, builds, and known work may have diverged.
 
-## Notes on sequencing
+**Scope:**
+- Inspect repository and branch state.
+- Compare code against the ENTRY harness and Brain capture.
+- Run TypeScript, lint, Expo Doctor, and available checks.
+- Identify broken flows, incomplete work, dangerous configuration, stale branches, and technical debt.
+- Produce an evidence-backed diagnostic and a prioritized implementation board.
 
-- Voice (reuses existing infra) is sequenced before Facility Destinations (needs schema + resolver changes), per the ENTRY harness.
-- The password fix is placed first here because it is an operator-flagged trust bug independent of the Voice/Facilities track and can proceed in parallel.
+## Priority 2 — Fix existing bugs
 
-## Unknown / Needs verification
+Start with user trust and blocking defects.
 
-- Whether the operator wants the password fix or Voice QA first (this doc recommends password fix P1; adjust if the operator prioritizes shipping Voice).
-- Open PR/branch status for `feature/entry-voice-mvp`, Sentry, and security-gate branches (see [entry-current-work.md](entry-current-work.md)).
+### First known bug — “Forgot my password”
+
+**Why:** operator-reported broken; account recovery is a core trust path.
+
+**Scope:** reproduce on web and native; verify deep-link registration, Supabase Auth redirect allowlist, recovery email/template delivery, token/code handling, and the expected recovery path for synthetic `@entry.local` or username-based accounts. Evidence first; no schema change assumed.
+
+### Other known cleanup
+
+- Restore a green TypeScript baseline by resolving the existing `components/ExternalLink.tsx` `TS2578` issue.
+- Add newly confirmed defects from the diagnostic before advancing to lower-priority work.
+
+See [entry-known-issues.md](entry-known-issues.md).
+
+## Priority 3 — QA existing flows
+
+Validate the product that already exists before adding more surface area.
+
+### Voice MVP native QA
+
+Run ENTRY-I001-QA on real Android and iOS native/dev builds, not Expo Go. Validate permissions, speech-to-confirm flow, manual fallback, pass creation, QR/PIN validity, delivery mapping, rate-limit handling, duplicate-submit protection, and the no-audio-storage privacy contract.
+
+### Core ENTRY QA
+
+Cover at minimum:
+- Registration, login, logout, activation, and password recovery.
+- Resident pass creation and expiration behavior.
+- QR and PIN validation at the guard flow.
+- Resident, guard, and administrator permissions.
+- Community isolation and expected RLS behavior.
+- Notifications and other release-critical flows found during diagnosis.
+
+## Priority 4 — Automated tests
+
+Create a practical first test suite around the highest-risk behavior rather than chasing total coverage.
+
+Initial targets:
+- User creation and authentication.
+- Password recovery.
+- Pass creation and validation.
+- QR/PIN credential resolution.
+- Role and community authorization.
+- Supabase RPC and RLS behavior.
+- Regression tests for every repaired critical bug.
+
+Tests should live in the repository and run through CI on pull requests. Device and visual automation may reduce manual work, but a small real-device QA layer will still be required.
+
+## Priority 5 — Organize the release process
+
+This is a lightweight operational checklist, not an enterprise release platform.
+
+Define:
+- What checks and QA a version must pass.
+- How app and backend changes are grouped and identified.
+- Who approves a release.
+- How mobile builds and backend changes are published.
+- How release notes are recorded.
+- What to do when a release fails, including a rollback path where technically possible.
+
+## Priority 6 — Pending or necessary functions
+
+Only after the existing system is diagnosed, repaired, tested, and releasable.
+
+Known candidates:
+- Facility / Internal Destination Access design and implementation.
+- Improvements to frequent-access identities.
+- Functions proven necessary by QA, operations, or commercial discovery.
+
+Facility Destinations remains a design-first change because it may affect schema, `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, and community scoping.
+
+## Priority 7 — Security and backups
+
+This is the penultimate planned workstream.
+
+Scope when reached:
+- Formal review of RLS, policies, roles, grants, and `SECURITY DEFINER` functions.
+- Review authentication and sensitive logging.
+- Confirm recovery options and backup ownership.
+- Establish automated backups and perform at least one restoration test.
+- Reconcile live RPC/schema definitions with versioned migrations as needed for recoverability.
+
+Routine security architecture and formal backup work do not interrupt the earlier product priorities unless the critical exception applies.
+
+## Priority 8 — Separate environments
+
+**Absolute last priority. Do not begin this work while higher priorities remain.**
+
+Future scope may include:
+- Separate development and production databases/projects.
+- Environment-specific configuration for mobile and web.
+- Versioned migrations for schema, functions, triggers, RLS, and policies.
+- Production backup copies outside the primary provider.
+- Evaluation of whether production should remain on Supabase or move elsewhere.
+
+No provider decision should be made before measuring ENTRY’s dependency on Supabase Auth, Storage, Realtime, Edge Functions, and database-specific behavior. Kubernetes is not justified for ENTRY’s current scale.
+
+## Commercial track
+
+FIRST DOOR / Patronato Package v1 continues as a parallel commercial validation track and does not reorder the engineering priorities.
+
+Current field state:
+
+- The first package was delivered to the head of security at Colonia El Carmen on 2026-08-04.
+- The head of security said he would forward it to the patronato.
+- Patronato receipt, review, direct contact, and meeting remain unconfirmed.
+- Security personnel reported that the patronato does meet, but the date or cadence is unknown.
+- Colonia El Limonar was identified as a new prospect after observing a barrier, guard booth, and guard; no exterior QR was observed, and its real process remains unknown.
+
+Next commercial action:
+
+- Follow up with Colonia El Carmen approximately five to seven days after delivery, preferably during 2026-08-09 through 2026-08-11, to confirm the internal handoff and request a direct presentation path.
+- Record the exact FIRST DOOR outcome before scaling package distribution.
+- Keep the colonia lead tracker current and schedule a later discovery visit for Colonia El Limonar.
+
+See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), and [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md).
+
+## Source-of-truth note
+
+The detailed mission board in the ENTRY harness remains the execution-side source of truth. This Brain roadmap records the operator-approved strategic order and should guide future mission creation or reprioritization.
 
 ### content/brain/projects/entry-product-foundation.md
 
@@ -6034,55 +6900,248 @@ Replaces manual/call-based gate control (a guard phoning a resident to authorize
 
 # ENTRY — Sales & Leads
 
-Commercial strategy, target communities (colonias), and observed competitors. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
+Commercial strategy, target communities (colonias), outreach doctrine, and lead
+map. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
 
-> Almost everything here is **Operator-provided** (from Rudy). It is business knowledge, not verified from code, and should be treated as a living sales record, not fact-checked data.
+> Most information here is **Operator-provided** by Rudy. Treat it as business
+> knowledge and field notes, not code-verified data. Keep decisions,
+> observations, hypotheses, and pending validations separate.
 
-## Operator-provided — strategy
+## Official commercial strategy
 
-- Target market: residential communities ("residenciales" / colonias) that manage visitor access manually (a guard phoning residents to authorize each visitor) or with a weak incumbent system.
-- The wedge: replace call-based gate control and weak incumbent tooling with ENTRY (structured pre-authorization + QR/PIN + immutable audit + recurring staff + SOS).
-- Sales motion is per-community: reach the community board ("patronato") or the security lead, who decides adoption.
+ENTRY's initial loose-flyer motion is no longer the primary outreach standard.
+The approved commercial initiative is:
 
-## Operator-provided — known colonias / leads
+> ENTRY — FIRST DOOR / Patronato Package v1
 
-| Colonia | Size | Current control | Status / note |
-| ------- | ---- | --------------- | ------------- |
-| Residencial Girona | — | Uses **Access** | No administrative contact yet |
-| Residencial La Fuente | — | — | No access to the board ("patronato") yet |
-| Vías Monserrat | ~30 houses | Phone calls | — |
-| Villas Angelina | ~20–30 houses | Phone calls | — |
-| Vías Paraíso | — | Uses **Access** | Security lead mentioned a Sunday board ("patronato") meeting |
-| Residencial Santa Elena Demco | — | — | Residential under construction; investigation pending |
+See [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md)
+and decision `DEC-0006`.
 
-## Operator-provided — observed competitors
+## Approved commercial doctrine
 
-- **Access** — incumbent access-control system seen in several residentials (Girona, Vías Paraíso).
-- **ISSY** — observed competitor.
-- **SSA** — observed competitor.
+- ENTRY is not presented as "another QR application."
+- ENTRY helps communities move from manual visitor/access processes to digital
+  management.
+- First, understand how the community works. Then propose and demonstrate a
+  solution.
+- The sales style is consultative: listen first, demonstrate second.
+- The guard is a critical user, market sensor, and delivery bridge, but not the
+  decision-maker.
+- The buyer is the patronato or administration.
+- The ideal meeting includes the patronato president and other patronato
+  members.
+- ENTRY complements security personnel. It does not replace their judgment or
+  physical gate control.
+- Initial success is measured by meetings, demos, follow-up paths, quote
+  requests, pilots, and customers, not by flyers delivered.
+- A rejection from one residential community validates or invalidates a
+  commercial hypothesis for that case; it is not a global verdict on ENTRY.
+- Do not generalize from one community.
+- Do not develop commercial features "just in case" before evidence, except
+  for critical bugs.
+- Minerva Technologies is the company; ENTRY is the product.
+- The founder's mission is to eliminate unnecessary manual processes and solve
+  the access-control problem completely, not partially.
 
-## Inferred
+## Product conviction
 
-- Call-controlled colonias (Monserrat, Angelina) are likely the easiest displacement targets (no incumbent contract to unseat); Access-using colonias (Girona, Paraíso) require beating an installed system.
-- The board ("patronato") meeting cadence (e.g. Vías Paraíso's Sunday meeting) is the natural decision gate for a pitch.
+ENTRY is grounded in a belief in practical digitization, ordered processes,
+automation, eliminating unnecessary paper, and connecting information across
+residents, security, and administration.
 
-## Unknown / Needs verification
+Internal statement:
 
-- House counts and current decision-maker contacts for most colonias.
-- Competitor specifics for Access / ISSY / SSA (features, pricing, contract lock-in) — not verified; do not record as fact.
-- Santa Elena Demco timeline and contact.
-- Pricing/packaging ENTRY would offer per community.
+> ENTRY exists to help communities leave manual processes behind and operate
+> with connected, organized information available when it is needed.
 
-## Risks
+## Initial ideal customer
 
-- Lead data is sparse and contact-gated (several "no contact yet" / "no board access"); pipeline is early.
-- Competing against an installed incumbent (Access) is harder than greenfield call-controlled colonias.
+Priority segment:
 
-## Next actions
+- residential communities with controlled entrances;
+- guards or security staff;
+- visits handled by calls, paper, or manual processes;
+- enough traffic for the manual process to create workload;
+- interest in modernizing;
+- no stable digital solution already installed.
 
-- Build a per-colonia lead tracker (knowledge only) with verified contacts, board-meeting dates, and stage.
-- Verify competitor specifics before recording them as approved knowledge.
-- Prioritize outreach to call-controlled colonias and to boards with a known meeting date.
+### Attack order
+
+- **Phase 1:** communities with no system or manual processes. Goal: first
+  implementation, onboarding validation, real learning, and a first reference
+  case.
+- **Phase 2:** communities with existing systems such as Access or other QR
+  products. Switching friction is higher, so these are not the first focus
+  before ENTRY has operational evidence and references.
+- **High end:** should receive the formal Patronato Package from the first
+  contact, but are not assumed to be the lowest-resistance path for the first
+  customer.
+
+## FIRST DOOR measurement
+
+The first experiment is not measured by immediate sale. Results to record as
+evidence:
+
+1. Package does not reach the patronato.
+2. Package reaches the patronato, but no response.
+3. Follow-up path obtained.
+4. Meeting obtained.
+5. Demo obtained.
+6. Economic proposal requested.
+7. Pilot or customer obtained.
+
+## Lead map
+
+### Visited / with information
+
+| Community | Current control | Status / note |
+| --------- | --------------- | ------------- |
+| Colonia El Carmen | Manual calls and paper log observed | Priority #1. Patronato Package delivered to the head of security on 2026-08-04; he said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed. Size pending confirmation before quote or plan classification. |
+| Residencial Girona | Uses Access | No direct administration contact. Reconsider later with the new formal package. |
+| Residencial La Fuente | Unknown | No direct contact. Pending new round. |
+| Vías Monserrat | No application observed; approx. 30 homes from prior info | Pending new round. |
+| Villas Angelina | Calls | Pending new round. |
+| Vías Paraíso | Uses Access | Patronato usually meets on Sundays. Security responsible requested documentation. Lead has a concrete follow-up path. |
+| Residencial Magnolia | Uses Access | Flyer and card were left. Guard said he would deliver the information to the patronato. Pending follow-up with formal package. |
+| El Barrial | High end; current system unknown | Prior attempts were made, including through a founder friend. Patronato has delayed responses. Include in a new round with the formal package. |
+| Los Álamos | Historical prospect; later information says it took another service | Keep as closed/lost or low priority according to Brain convention. |
+
+### Identified / pending
+
+- Residencial Toledo.
+- Residencial Los Naranjos: next to Toledo; entrance under construction; QR
+  system observed.
+- Residencial Santa Isabel: near Dispensa Familiar.
+- Residencial Santa Elena Demco: residential under construction; investigation
+  pending.
+- Colonia El Carmen: priority #1; package delivered to security leadership,
+  patronato handoff pending confirmation.
+- Colonia El Limonar: barrier, guard booth, and guard observed during a drive-by
+  on 2026-08-04; no exterior QR observed. Current process, size, and patronato
+  contact remain unknown.
+- Residencial La Florida.
+- Jardines del Merendón: high end; Boulevard Mackay.
+- Merendón Hills: high end.
+- Valle del Sol: near Villas del Sol.
+
+## Colonia El Carmen field snapshot
+
+Observed before delivery:
+
+- behind the La Florida area;
+- one controlled entrance observed;
+- possible second entrance not confirmed;
+- manual barrier;
+- two guards at the entrance;
+- residents call the gate booth to report access;
+- guards write entries on a sheet over a board;
+- visible and considerable traffic;
+- bus route enters regularly without the same authorization process;
+- entrance did not appear fully finished;
+- no digital platform observed;
+- guards said the manual process has difficulties;
+- guards said there was an idea to implement a system;
+- source of the implementation intent was unclear; founder read is that it
+  probably comes from the patronato;
+- guards were kind and receptive, without strong commercial enthusiasm;
+- conversation happened on a hot, operationally busy day.
+
+Hypothesis:
+
+> The patronato may already recognize the need for a system. ENTRY's
+> opportunity is to be considered before the community chooses its first
+> digital solution.
+
+### FIRST DOOR delivery outcome — 2026-08-04
+
+- The complete Patronato Package was delivered directly to the head of
+  security.
+- Rudy gave a brief explanation of ENTRY and the purpose of the proposal.
+- The head of security said he would deliver the package to the patronato.
+- Security personnel confirmed that the patronato does meet.
+- They did not know the patronato's meeting date or cadence.
+- No direct patronato contact, meeting, demo, quote request, or confirmed review
+  was obtained during the visit.
+
+Current precise outcome:
+
+> Package delivered to security leadership; internal handoff to the patronato
+> promised; patronato receipt, review, and response pending.
+
+Recommended follow-up:
+
+> Return or contact the gate approximately five to seven days after delivery,
+> preferably during 2026-08-09 through 2026-08-11, to confirm whether the
+> package reached the patronato and request a direct presentation path.
+
+See [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md)
+for the detailed evidence record.
+
+## Colonia El Limonar field snapshot
+
+Observed during the route to El Carmen on 2026-08-04:
+
+- barrier;
+- guard booth;
+- guard present;
+- no visible exterior QR observed.
+
+Initial classification:
+
+> Identified prospect and possible manually controlled community; dedicated
+> discovery visit required.
+
+Do not record that El Limonar has no digital system. The only verified exterior
+observation is that no QR was visible during the drive-by.
+
+## Internal pricing
+
+Pricing is not included in the first Patronato Package.
+
+| Plan | Size | Price |
+| ---- | ---- | ----- |
+| ENTRY Small | Up to 30 homes | L 1,500 |
+| ENTRY Medium | 31-50 homes | L 2,500 |
+| ENTRY Large | 51-200 homes | L 5,000 |
+| ENTRY Pro | 201-300 homes | L 7,500 |
+
+Known details:
+
+- Small includes up to five users per home.
+- Small includes 30 days of history.
+- Price includes software, support, and expected operating hours.
+- Initial setup cost is not yet defined.
+- Initial setup may be included or handled specially for early communities,
+  but must not be declared permanently free.
+- Confirm El Carmen's number of homes before preparing a quote.
+
+## Known commercial/technical readiness notes
+
+- ENTRY is considered technically ready for a pilot.
+- Main known technical production pending item: separate a clean production
+  environment from the development environment with test data.
+- Do not add new features before the first pilot except for critical bugs.
+- "Forgot my password" remains a pending bug unless updated later.
+- The website contact/demo form previously had an issue where emails were not
+  arriving.
+- The founder reported that the contact/demo form issue was fixed before the
+  first package delivery and is ready to receive requests.
+- The domain email is active.
+- `rod@minervatechs.com` is the primary campaign email.
+
+## Unknown / needs verification
+
+- Confirmed number of homes for Colonia El Carmen.
+- Whether Colonia El Carmen has a second entrance.
+- Name/contact of the patronato president or administration contact.
+- Date and cadence of the El Carmen patronato meetings.
+- Whether the head of security delivered the package to a patronato member.
+- Whether the patronato reviewed the package or wants a presentation.
+- Current visitor-control process, size, and patronato contact for Colonia El
+  Limonar.
+- Setup fee policy for regular customers.
+- Competitor specifics for Access / ISSY / SSA: features, pricing, contract
+  lock-in. Do not record as fact until verified.
 
 ### content/brain/projects/entry-voice-mvp.md
 
@@ -6147,7 +7206,7 @@ Official index and summary of the ENTRY product inside Minerva Core Brain. ENTRY
 
 - **Verified from code** — read directly from ENTRY source files (`.ts/.tsx/.sql/.json`, app structure, git).
 - **Verified from repo backend snapshot** — schema/RPC/RLS facts the ENTRY harness verified against the live dev DB and committed under `.minerva-harness/backend-snapshot/` (marked `[db]` there). Not re-verified live by Brain.
-- **Operator-provided** — facts supplied by Rudy (commercial strategy, leads, the password bug report).
+- **Operator-provided** — facts supplied by Rudy (commercial strategy, leads, bugs, field reports, and priority decisions).
 - **Inferred** — reasonable but unconfirmed.
 - **Unknown / Needs verification** — open gaps; not asserted as fact.
 
@@ -6155,7 +7214,7 @@ Official index and summary of the ENTRY product inside Minerva Core Brain. ENTRY
 
 ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential / community access control, backed by Supabase (Postgres 17 + Auth + Edge Functions + Realtime + Storage). Residents create access passes (visits, deliveries, events, recurring staff, self-access) that guards validate at the gate by scanning a QR or typing a PIN; admins manage users, invites, reservations, messages, identity review and recovery. UI is Spanish (Honduras). **Verified from code.**
 
-## Knowledge pack (this capture)
+## Knowledge pack
 
 - [entry-product-foundation.md](entry-product-foundation.md) — what ENTRY is, users, problem, value, modules.
 - [entry-implementation-map.md](entry-implementation-map.md) — verified technical map (stack, data model, RPCs, flows).
@@ -6163,31 +7222,52 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - [entry-known-issues.md](entry-known-issues.md) — bugs incl. "Forgot password", tech debt.
 - [entry-voice-mvp.md](entry-voice-mvp.md) — ENTRY Voice status and contract.
 - [entry-sales-and-leads.md](entry-sales-and-leads.md) — commercial strategy, colonias, competitors.
-- [entry-next-missions.md](entry-next-missions.md) — prioritized recommended missions.
+- [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md) — official FIRST DOOR / Patronato Package v1 strategy, El Carmen field package, hypotheses, pricing notes, and delivery script.
+- [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md) — first field delivery outcome at Colonia El Carmen and the newly identified Colonia El Limonar prospect.
+- [entry-next-missions.md](entry-next-missions.md) — operator-approved priority roadmap and recommended missions.
 
 ## Isolation principles (unchanged)
 
-- Brain must not touch `features/entry/**` (in the Console repo) or the ENTRY app repo runtime.
-- ENTRY keeps its own Supabase project; Brain does not connect to the ENTRY DB.
+- Brain must not touch `features/entry/**` in the Console repo or the ENTRY app runtime.
+- ENTRY keeps its own Supabase project; Brain does not connect to the ENTRY database.
 - Brain documents ENTRY knowledge and strategy; it does not execute ENTRY runtime.
 
 ## Status within Minerva
 
 - **Status:** Approved, active development.
-- **Current ENTRY branch:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code.**
-- **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo (harness `01_PROJECT_BRIEF`).**
+- **Current ENTRY branch at last code capture:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code at capture time.**
+- **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo harness at capture time.**
+- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` is the approved first formal outreach standard. The first package was delivered to the head of security at Colonia El Carmen on 2026-08-04; he said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed. **Operator-provided; decision recorded in `DEC-0006`; field detail in the 2026-08-04 report.**
+- **New prospect:** Colonia El Limonar was identified during the El Carmen route. A barrier, guard booth, and guard were observed; no exterior QR was observed. Current process and patronato contact remain unknown. **Operator-provided.**
+
+## Current strategic priority order
+
+Approved by the operator on 2026-07-28:
+
+1. Diagnose the real state of ENTRY.
+2. Fix existing bugs.
+3. QA existing flows.
+4. Add automated tests.
+5. Organize the release process.
+6. Build pending or necessary functions.
+7. Security and backups — penultimate.
+8. Separate environments — absolute last.
+
+A confirmed severe vulnerability, active exposure, destructive permission problem, or immediate risk of data loss may be corrected early. This does not move the full security/backups workstream from its penultimate position.
 
 ## Risks (summary; detail in sub-docs)
 
-- Voice MVP unverified on a real device (native module never exercised on-device).
-- Many RPC bodies live only in the live DB, not mirrored as in-repo migrations — schema-change risk.
-- "Forgot password" reported broken by operator; root cause not yet verified.
+- Voice MVP remains unverified on real devices at the last capture.
+- Several RPC bodies may live only in the live development database rather than versioned migrations.
+- “Forgot password” is operator-reported broken; root cause remains to be verified.
+- The documented state may have diverged from the code, branches, builds, and live backend; diagnosis is therefore the first priority.
+- El Carmen's package reached security leadership, but patronato receipt and review are still unconfirmed; direct contact, meeting cadence, and community size remain unknown.
 
-## Next actions (summary; detail in [entry-next-missions.md](entry-next-missions.md))
+## Next action
 
-1. Verify and fix "Forgot my password".
-2. Run ENTRY-I001-QA (Voice MVP native device QA).
-3. Resume ENTRY-D002 (Facility Destinations design) only after Voice QA.
+Run an evidence-backed ENTRY diagnostic before selecting the next implementation mission. Use the result to confirm bugs and current branch/backend state, then follow the roadmap in [entry-next-missions.md](entry-next-missions.md). FIRST DOOR continues as a parallel commercial validation track: follow up with Colonia El Carmen approximately five to seven days after the 2026-08-04 delivery to confirm the internal handoff and seek a direct presentation path. It does not reorder the technical roadmap.
+
+Environment separation, provider migration, staging architecture, and production database selection must not begin while higher-priority work remains.
 
 ### content/brain/projects/minerva-web.md
 

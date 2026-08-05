@@ -33,6 +33,24 @@ The protected layout (`app/(console)/layout.tsx`) calls `requireSuperadmin()` an
 
 Server-enforced at the route-group boundary. `features/auth/requireSuperadmin.ts` is the single gate. Brain inherits it for free — no auth change is needed or allowed.
 
+### Minerva Console auth recovery closeout
+
+- `MINERVA-CONSOLE-AUTH-RECOVERY-001` is completed.
+- Production commit: `5422737850af823b73207956b6b9c7185593bdfd` from PR #30.
+- The previous redirect trap between `/login`, `/dashboard`, and
+  `/unauthorized` is closed.
+- `/login` resolves auth state in the page instead of relying on a blind
+  middleware redirect for authenticated users.
+- `/unauthorized` provides a real Server Action sign-out path:
+  `Sign out & return to login`.
+- Authorization states are explicit: `unauthenticated`, `authorized`,
+  `forbidden`, and `authorization_error`.
+- `app/(console)/layout.tsx` continues to protect the dashboard and all console
+  routes through `requireSuperadmin()`.
+- Owner QA in production succeeded: login worked and Minerva Console access was
+  recovered.
+- Supabase was not changed as part of the recovery or closeout.
+
 ## Data layer
 
 Feature-folder pattern under `features/<product>/<domain>/{queries,actions,detailQueries}.ts`. ENTRY uses Supabase RPCs and Server Actions. Brain v0 uses none of this.
