@@ -96,7 +96,7 @@ evidence:
 
 | Community | Current control | Status / note |
 | --------- | --------------- | ------------- |
-| Colonia El Carmen | Manual calls and paper log observed | Priority #1. Lead with validated problem and preliminary intent signal. Not yet hot customer or probable sale. Size pending confirmation before quote or plan classification. |
+| Colonia El Carmen | Manual calls and paper log observed | Priority #1. Patronato Package delivered to the head of security on 2026-08-04; he said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed. Size pending confirmation before quote or plan classification. |
 | Residencial Girona | Uses Access | No direct administration contact. Reconsider later with the new formal package. |
 | Residencial La Fuente | Unknown | No direct contact. Pending new round. |
 | Vías Monserrat | No application observed; approx. 30 homes from prior info | Pending new round. |
@@ -114,7 +114,11 @@ evidence:
 - Residencial Santa Isabel: near Dispensa Familiar.
 - Residencial Santa Elena Demco: residential under construction; investigation
   pending.
-- Colonia El Carmen: priority #1.
+- Colonia El Carmen: priority #1; package delivered to security leadership,
+  patronato handoff pending confirmation.
+- Colonia El Limonar: barrier, guard booth, and guard observed during a drive-by
+  on 2026-08-04; no exterior QR observed. Current process, size, and patronato
+  contact remain unknown.
 - Residencial La Florida.
 - Jardines del Merendón: high end; Boulevard Mackay.
 - Merendón Hills: high end.
@@ -122,7 +126,7 @@ evidence:
 
 ## Colonia El Carmen field snapshot
 
-Observed:
+Observed before delivery:
 
 - behind the La Florida area;
 - one controlled entrance observed;
@@ -148,18 +152,47 @@ Hypothesis:
 > opportunity is to be considered before the community chooses its first
 > digital solution.
 
-Next objective:
+### FIRST DOOR delivery outcome — 2026-08-04
 
-> Deliver `ENTRY Patronato Package — El Carmen v1` and request a 20- to
-> 30-minute meeting with the patronato president, other patronato members, and
-> optionally a security responsible.
+- The complete Patronato Package was delivered directly to the head of
+  security.
+- Rudy gave a brief explanation of ENTRY and the purpose of the proposal.
+- The head of security said he would deliver the package to the patronato.
+- Security personnel confirmed that the patronato does meet.
+- They did not know the patronato's meeting date or cadence.
+- No direct patronato contact, meeting, demo, quote request, or confirmed review
+  was obtained during the visit.
 
-Planned first test:
+Current precise outcome:
 
-> Colonia El Carmen — 2026-08-04 afternoon, approximately 4:00 p.m., subject
-> to the founder's actual execution.
+> Package delivered to security leadership; internal handoff to the patronato
+> promised; patronato receipt, review, and response pending.
 
-Record this as planned until confirmed.
+Recommended follow-up:
+
+> Return or contact the gate approximately five to seven days after delivery,
+> preferably during 2026-08-09 through 2026-08-11, to confirm whether the
+> package reached the patronato and request a direct presentation path.
+
+See [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md)
+for the detailed evidence record.
+
+## Colonia El Limonar field snapshot
+
+Observed during the route to El Carmen on 2026-08-04:
+
+- barrier;
+- guard booth;
+- guard present;
+- no visible exterior QR observed.
+
+Initial classification:
+
+> Identified prospect and possible manually controlled community; dedicated
+> discovery visit required.
+
+Do not record that El Limonar has no digital system. The only verified exterior
+observation is that no QR was visible during the drive-by.
 
 ## Internal pricing
 
@@ -201,9 +234,11 @@ Known details:
 - Confirmed number of homes for Colonia El Carmen.
 - Whether Colonia El Carmen has a second entrance.
 - Name/contact of the patronato president or administration contact.
-- Date and cadence of patronato meetings for most communities.
-- Whether the El Carmen package was delivered on 2026-08-04.
-- Which FIRST DOOR outcome occurred after delivery.
+- Date and cadence of the El Carmen patronato meetings.
+- Whether the head of security delivered the package to a patronato member.
+- Whether the patronato reviewed the package or wants a presentation.
+- Current visitor-control process, size, and patronato contact for Colonia El
+  Limonar.
 - Setup fee policy for regular customers.
 - Competitor specifics for Access / ISSY / SSA: features, pricing, contract
   lock-in. Do not record as fact until verified.
