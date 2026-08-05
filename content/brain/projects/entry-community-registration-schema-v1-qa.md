@@ -20,7 +20,7 @@ Mandatory context read:
 
 - `content/brain/harness/ENTRY_COMMUNITY_ONBOARDING_ANALYSIS.md`
 - `content/brain/projects/entry-community-onboarding-phase-0-reconciliation.md`
-- `content/brain/decisions/dec-0006-entry-community-registration-foundation.md`
+- `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - `content/brain/projects/entry-community-registration-foundation-contract.md`
 - `content/brain/projects/entry-community-registration-schema-v1.md`
 - `supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql`
@@ -61,7 +61,7 @@ Diff commands requested were executed. Because the three `ENTRY-ONB-001` artifac
 
 ## 5. Decisions Maintained
 
-- DEC-0006 remains binding.
+- DEC-0007 remains binding.
 - Minerva Console owns Community Registration v1.
 - ENTRY mobile is unchanged.
 - Public capture stays in `community_registration_*` tables.
