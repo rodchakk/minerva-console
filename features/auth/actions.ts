@@ -28,7 +28,10 @@ export async function loginAction(
   const { data, error: roleError } = await supabase.rpc("is_superadmin");
 
   if (roleError) {
-    return { message: "Signed in, but we could not verify permissions yet." };
+    console.error("[auth] superadmin authorization check failed after login", {
+      code: roleError.code,
+    });
+    redirect("/unauthorized?reason=authorization_error");
   }
 
   redirect(data === true ? "/dashboard" : "/unauthorized");
@@ -36,6 +39,16 @@ export async function loginAction(
 
 export async function signOutAction() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+
+  if (error) {
+    console.error("[auth] sign out failed", {
+      name: error.name,
+      status: error.status,
+      code: error.code,
+    });
+    redirect("/unauthorized?reason=sign_out_error");
+  }
+
   redirect("/login");
 }

@@ -49,12 +49,8 @@ export async function updateSession(request: NextRequest) {
     return copyCookies(response, NextResponse.redirect(redirectUrl));
   }
 
-  if (user && pathname === "/login") {
-    const redirectUrl = request.nextUrl.clone();
-    redirectUrl.pathname = "/dashboard";
-    redirectUrl.search = "";
-    return copyCookies(response, NextResponse.redirect(redirectUrl));
-  }
+  // Note: /login handles authenticated users via getAuthContext() in page.tsx
+  // to avoid redirecting non-superadmin users into a /dashboard -> /unauthorized loop.
 
   return response;
 }
