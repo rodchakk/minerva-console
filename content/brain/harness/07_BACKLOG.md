@@ -4,6 +4,12 @@ Candidate work for after MCB-0002. Items are not committed; they are options.
 
 ## Near-term (still v0-shaped)
 
+- `MINERVA-SUPABASE-SUPERADMIN-RECONCILIATION-001` - proposed / pending.
+  Read-only follow-up to reconcile the live `public.is_superadmin()` definition
+  with repository migrations. Scope: inspect live definition, source of truth,
+  `SECURITY DEFINER` / `SECURITY INVOKER`, `search_path`, grants, RLS context,
+  and produce an authentic migration or documentation plan. Do not modify
+  Supabase as part of this backlog item without a separate explicit mission.
 - Markdown rendering inside Brain pages for entries that have a `path`. Add only when needed; pulls in `gray-matter` and a renderer as the first new deps.
 - "Recently updated" cross-registry list on the Overview page.
 - Tag index page that lists all unique tags and the entries that use them.
