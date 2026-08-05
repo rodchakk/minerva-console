@@ -129,7 +129,23 @@ No provider decision should be made before measuring ENTRY’s dependency on Sup
 
 ## Commercial track
 
-FIRST DOOR / Patronato Package v1 may continue as a parallel commercial validation track when it does not distract from the engineering priorities: execute the Colonia El Carmen FIRST DOOR test, record evidence before scaling package distribution, maintain the colonia lead tracker, use written/referral-based outreach, and record verified contacts, current access systems, patronato meeting opportunities, package delivery dates, receiving guard, follow-up path, and FIRST DOOR outcome level. See [entry-sales-and-leads.md](entry-sales-and-leads.md) and [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md).
+FIRST DOOR / Patronato Package v1 continues as a parallel commercial validation track and does not reorder the engineering priorities.
+
+Current field state:
+
+- The first package was delivered to the head of security at Colonia El Carmen on 2026-08-04.
+- The head of security said he would forward it to the patronato.
+- Patronato receipt, review, direct contact, and meeting remain unconfirmed.
+- Security personnel reported that the patronato does meet, but the date or cadence is unknown.
+- Colonia El Limonar was identified as a new prospect after observing a barrier, guard booth, and guard; no exterior QR was observed, and its real process remains unknown.
+
+Next commercial action:
+
+- Follow up with Colonia El Carmen approximately five to seven days after delivery, preferably during 2026-08-09 through 2026-08-11, to confirm the internal handoff and request a direct presentation path.
+- Record the exact FIRST DOOR outcome before scaling package distribution.
+- Keep the colonia lead tracker current and schedule a later discovery visit for Colonia El Limonar.
+
+See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), and [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md).
 
 ## Source-of-truth note
 
