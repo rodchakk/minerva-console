@@ -19,6 +19,7 @@
 6. Schema v1 QA: `content/brain/projects/entry-community-registration-schema-v1-qa.md`
 7. Migracion: `supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql`
 8. Validador: `scripts/entry-onb-001-validate-schema.mjs`
+9. Activation queue live contract: `content/brain/projects/entry-resident-activation-queue-live-contract.md`
 
 ## Estado de misiones
 
@@ -27,6 +28,8 @@
 - `ENTRY-ONB-001-QA`: completed.
 - `ENTRY-ONB-001-CLOSEOUT`: current.
 - `ENTRY-ONB-002`: next, not started.
+- `ENTRY-ONB-004`: blocked at Step 0 pending live activation queue contract capture.
+- `ENTRY-ONB-004-UNBLOCK`: current.
 
 ## Gates
 
@@ -34,3 +37,4 @@
 - PostgreSQL engine validation pendiente.
 - Sin push/PR/deployment.
 - Backend todavia no implementado.
+- Estado vigente: `BLOCKED FOR APPLY`.
