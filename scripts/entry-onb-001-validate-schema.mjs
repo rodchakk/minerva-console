@@ -1,8 +1,18 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
-const migrationPath = resolve(
-  "supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql",
+function resolveMigrationBySuffix(suffix) {
+  const matches = readdirSync(resolve("supabase/migrations")).filter((name) =>
+    name.endsWith(suffix),
+  );
+  if (matches.length !== 1) {
+    throw new Error(`Expected exactly one migration ending in ${suffix}; found ${matches.length}`);
+  }
+  return resolve("supabase/migrations", matches[0]);
+}
+
+const migrationPath = resolveMigrationBySuffix(
+  "_create_entry_community_registration_schema_v1.sql",
 );
 
 const sql = readFileSync(migrationPath, "utf8");

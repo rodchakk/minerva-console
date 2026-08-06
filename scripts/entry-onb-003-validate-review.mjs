@@ -2,14 +2,39 @@ import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { execFileSync } from "node:child_process";
 
-const migrationName =
-  "20260805000300_create_entry_community_registration_review_v1.sql";
-const migrationPath = resolve("supabase/migrations", migrationName);
-const schemaV1Path = resolve(
-  "supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql",
+function migrationNameBySuffix(suffix, source = readdirSync(resolve("supabase/migrations"))) {
+  const matches = source.filter((name) => name.endsWith(suffix));
+  if (matches.length !== 1) {
+    throw new Error(`Expected exactly one migration ending in ${suffix}; found ${matches.length}`);
+  }
+  return matches[0];
+}
+
+function migrationPathBySuffix(suffix) {
+  return resolve("supabase/migrations", migrationNameBySuffix(suffix));
+}
+
+function headMigrationBySuffix(suffix) {
+  const headFiles = execFileSync("git", [
+    "ls-tree",
+    "-r",
+    "--name-only",
+    "HEAD",
+    "supabase/migrations",
+  ], { encoding: "utf8" })
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((path) => path.replace(/^supabase\/migrations\//, ""));
+  return `supabase/migrations/${migrationNameBySuffix(suffix, headFiles)}`;
+}
+
+const migrationSuffix = "_create_entry_community_registration_review_v1.sql";
+const migrationPath = migrationPathBySuffix(migrationSuffix);
+const schemaV1Path = migrationPathBySuffix(
+  "_create_entry_community_registration_schema_v1.sql",
 );
-const backendV1Path = resolve(
-  "supabase/migrations/20260805000200_create_entry_community_registration_backend_v1.sql",
+const backendV1Path = migrationPathBySuffix(
+  "_create_entry_community_registration_backend_v1.sql",
 );
 
 const sql = readFileSync(migrationPath, "utf8");
@@ -17,11 +42,11 @@ const schemaV1 = readFileSync(schemaV1Path, "utf8");
 const backendV1 = readFileSync(backendV1Path, "utf8");
 const schemaV1Head = execFileSync("git", [
   "show",
-  "HEAD:supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql",
+  `HEAD:${headMigrationBySuffix("_create_entry_community_registration_schema_v1.sql")}`,
 ], { encoding: "utf8" });
 const backendV1Head = execFileSync("git", [
   "show",
-  "HEAD:supabase/migrations/20260805000200_create_entry_community_registration_backend_v1.sql",
+  `HEAD:${headMigrationBySuffix("_create_entry_community_registration_backend_v1.sql")}`,
 ], { encoding: "utf8" });
 
 const failures = [];
@@ -43,7 +68,7 @@ function normalizeSql(value) {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
 }
 
-if (!readdirSync(resolve("supabase/migrations")).includes(migrationName)) {
+if (!readdirSync(resolve("supabase/migrations")).includes(migrationNameBySuffix(migrationSuffix))) {
   fail("Missing ENTRY-ONB-003 review migration");
 }
 

@@ -21,7 +21,7 @@ The backend passed structural QA after limited hardening. It remains `BLOCKED FO
 - `content/brain/projects/entry-community-registration-schema-v1.md`
 - `content/brain/projects/entry-community-registration-schema-v1-qa.md`
 - `content/brain/projects/entry-community-registration-backend-v1.md`
-- `supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql`
+- `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
 - `supabase/migrations/20260805000200_create_entry_community_registration_backend_v1.sql`
 - `scripts/entry-onb-001-validate-schema.mjs`
 - `scripts/entry-onb-002-validate-backend.mjs`

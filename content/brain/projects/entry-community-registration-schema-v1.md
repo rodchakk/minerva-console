@@ -4,7 +4,7 @@
 **Date:** 2026-08-05  
 **Branch/worktree:** `codex/entry-onb-001-schema` at `.worktrees/entry-onb-001`  
 **Base:** local stable `master`, commit `60589e5a5538915dbb58a5c96ab501e1201c2bfe`  
-**Migration:** `supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql`  
+**Migration:** `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
 **Status:** local design and migration only; not applied.
 
 ## 1. Summary

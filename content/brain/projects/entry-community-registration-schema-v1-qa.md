@@ -23,7 +23,7 @@ Mandatory context read:
 - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - `content/brain/projects/entry-community-registration-foundation-contract.md`
 - `content/brain/projects/entry-community-registration-schema-v1.md`
-- `supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql`
+- `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
 - `scripts/entry-onb-001-validate-schema.mjs`
 
 Diff commands requested were executed. Because the three `ENTRY-ONB-001` artifacts are untracked in the isolated worktree, `git diff --stat` and `git diff --check` report no tracked diff. The new-file content was inspected directly and with `git diff --no-index`.
@@ -140,7 +140,7 @@ RLS is not forced. The initial posture is deny-by-default for Data API roles whi
 - `git diff --stat`
 - `git diff --check`
 - `git diff --no-index --stat NUL <new-file>` for each new artifact
-- `git diff --no-index --check NUL supabase/migrations/20260805000100_create_entry_community_registration_schema_v1.sql`
+- `git diff --no-index --check NUL supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
 - `rg` checks for forbidden legacy lane references and DML/DDL danger patterns
 - `node scripts/entry-onb-001-validate-schema.mjs`
 - Tool availability checks for `psql`, `supabase`, Docker, Python and SQL parser packages
