@@ -11,7 +11,7 @@
 
 `READY TO COMMIT ENTRY-ONB-002`.
 
-The backend passed structural QA after limited hardening. It remains `BLOCKED FOR APPLY` until both schema v1 and backend v1 migrations are executed in a disposable PostgreSQL/Supabase environment with catalog, grant, RLS, and negative concurrency validation.
+The backend passed structural QA after limited hardening. The hosted-dev apply blocker is resolved; catalog, grant, RLS, runtime, and negative concurrency validation remain pending.
 
 ## 2. Files Inspected
 
@@ -22,7 +22,7 @@ The backend passed structural QA after limited hardening. It remains `BLOCKED FO
 - `content/brain/projects/entry-community-registration-schema-v1-qa.md`
 - `content/brain/projects/entry-community-registration-backend-v1.md`
 - `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
-- `supabase/migrations/20260805000200_create_entry_community_registration_backend_v1.sql`
+- `supabase/migrations/20260806233000_create_entry_community_registration_backend_v1.sql`
 - `scripts/entry-onb-001-validate-schema.mjs`
 - `scripts/entry-onb-002-validate-backend.mjs`
 
@@ -153,13 +153,11 @@ Executed:
 
 ## 21. Limitations
 
-SQL was not executed by PostgreSQL. Syntax and runtime behavior remain static-reviewed only. Concurrency, RLS, grants, catalog ownership, and negative data tests still require a disposable engine.
+SQL was later applied to hosted dev during ENTRY-ONB-005. Runtime behavior, concurrency, RLS, grants, catalog ownership, and negative data tests still require hosted-dev validation.
 
 ## 22. PostgreSQL Gate
 
-`BLOCKED FOR APPLY`.
-
-No safe disposable PostgreSQL/Supabase engine was available. Do not apply either migration until the engine gate validates v1, then v2, then negative tests.
+Hosted-dev apply is resolved. Do not approve runtime until hosted-dev catalog validation and negative tests pass.
 
 ## 23. Readiness
 

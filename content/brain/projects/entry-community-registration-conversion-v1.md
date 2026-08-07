@@ -5,8 +5,8 @@
 **Worktree:** `D:\Dev\minerva-console\.worktrees\entry-onb-004`
 **Branch:** `codex/entry-onb-004-activation-conversion`
 **Baseline:** `00d31f12ed23375a22a1d8e31825ed0deba5df8c` (`00d31f1`)
-**Migration:** `supabase/migrations/20260806000100_create_entry_community_registration_conversion_v1.sql`
-**Status:** local implementation pending QA; `BLOCKED FOR APPLY`.
+**Migration:** `supabase/migrations/20260806235000_create_entry_community_registration_conversion_v1.sql`
+**Status:** applied to hosted dev; runtime tests pending.
 
 ## 1. Summary
 
@@ -15,6 +15,10 @@ Community Registration unit into `public.resident_activation_queue` rows. The
 conversion is internal, audited, idempotent by source resident, multi-tenant,
 and stops at RAQ. It does not generate PINs, send messages, create Auth users,
 or write active profile/membership/house-resident tables.
+
+Transport closeout reconciled the migration filename to the hosted-dev
+canonical timestamp `20260806235000` after successful individual apply. SQL
+content was preserved byte-for-byte; runtime validation remains pending.
 
 ## 2. Baseline
 
@@ -217,8 +221,7 @@ pre-apply gate.
 
 ## 27. Gate PostgreSQL
 
-`BLOCKED FOR APPLY`. Before applying, run migrations 001-004 in a disposable
-PostgreSQL/Supabase environment and execute the 26 mission cases, including
+Hosted-dev apply is complete. Before runtime approval, execute the 26 mission cases, including
 retry, RAQ reuse, active-user conflict, concurrent conversion, service-role
 only, no PINs, and no active table writes.
 

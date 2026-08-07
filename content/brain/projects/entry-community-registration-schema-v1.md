@@ -5,11 +5,13 @@
 **Branch/worktree:** `codex/entry-onb-001-schema` at `.worktrees/entry-onb-001`  
 **Base:** local stable `master`, commit `60589e5a5538915dbb58a5c96ab501e1201c2bfe`  
 **Migration:** `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
-**Status:** local design and migration only; not applied.
+**Status:** applied to hosted dev; runtime tests pending.
 
 ## 1. Summary
 
 `ENTRY-ONB-001` creates the local schema proposal for Community Registration / Pre-Onboarding. The schema captures public, unreviewed household data in new `community_registration_*` tables and preserves history until a later reviewed backend mission prepares approved residents for `resident_activation_queue`.
+
+Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806232141` after successful apply. Runtime validation remains pending.
 
 **DECIDED:** no public submission data is written directly to active user tables or final activation rows.  
 **DECIDED:** `resident_activation_queue` remains the future output boundary.  
@@ -24,7 +26,7 @@
 | Data separation. | DECIDED | New `community_registration_*` tables hold registration state. |
 | Activation lane. | DECIDED | Residents include nullable `activation_queue_id` only for future conversion traceability. |
 | Legacy lane isolated. | DECIDED | Migration contains no references to legacy invite/code objects or Edge Functions. |
-| Forward-only migrations. | DECIDED | One new local migration, not applied. |
+| Forward-only migrations. | DECIDED | One migration, applied to hosted dev as `20260806232141`. |
 | RLS deny-by-default. | DECIDED | RLS enabled on all new tables; no direct access policies are created. |
 
 ## 3. Entity Diagram
@@ -370,8 +372,8 @@ Every `SECURITY DEFINER` function must set `search_path`, validate tenant, narro
 
 ## 18. Risks
 
-- Supabase CLI is not installed in this environment, so the migration filename was created manually using the repository timestamp convention.
-- The migration is not applied; SQL syntax is static-reviewed only here.
+- Initial local authoring did not have Supabase CLI available, so the first migration filename was created manually using the repository timestamp convention.
+- Hosted-dev apply is complete; runtime tests are still pending.
 - Effective resident limit enforcement requires future RPCs.
 - Some state consistency rules require transactional functions, not only constraints.
 - Additional support indexes on existing `houses` and `resident_activation_queue` are included for tenant-safe composite FKs and should be reviewed before production application.

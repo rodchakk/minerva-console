@@ -5,7 +5,7 @@
 **Worktree:** `D:\Dev\minerva-console\.worktrees\entry-onb-004`
 **Branch:** `codex/entry-onb-004-activation-conversion`
 **Baseline:** `00d31f12ed23375a22a1d8e31825ed0deba5df8c`
-**Verdict:** `READY TO COMMIT ENTRY-ONB-004`; `BLOCKED FOR APPLY`.
+**Verdict:** `READY TO COMMIT ENTRY-ONB-004`; hosted-dev apply resolved; runtime tests pending.
 
 ## 0. Integrity Audit Summary
 
@@ -156,17 +156,13 @@ not available on PATH, so the engine gate remains pending.
 
 ## 14. Limitations
 
-No PostgreSQL engine was available yet in this pass. The migration has not been
-applied to local, staging, or live Supabase. Concurrency, constraints, function
-ownership, grants, and trigger interactions still require the disposable engine
-gate.
+The migration has now been applied to hosted dev through the ENTRY-ONB-005
+transport closeout. Concurrency, constraints, function ownership, grants, and
+trigger interactions still require runtime validation.
 
 ## 15. Gate Status
 
-`BLOCKED FOR APPLY`.
-
-The required engine plan is to apply migrations 001, 002, 003, and 004 in a
-disposable PostgreSQL/Supabase environment, inspect the catalog, verify grants,
-then execute the mission cases for new insert, retry, RAQ reuse, active-user
-detection, ambiguity, concurrent conversion, campaign finalization, tenant
-isolation, service-role-only access, and no PIN/Auth/user-table writes.
+Hosted-dev apply is resolved. The remaining gate is to inspect the catalog,
+verify grants, then execute the mission cases for new insert, retry, RAQ reuse,
+active-user detection, ambiguity, concurrent conversion, campaign finalization,
+tenant isolation, service-role-only access, and no PIN/Auth/user-table writes.

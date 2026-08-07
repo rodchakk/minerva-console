@@ -4,12 +4,14 @@
 **Date:** 2026-08-05
 **Branch/worktree:** `codex/entry-onb-002-backend-core` at `.worktrees/entry-onb-002`
 **Base:** `ff1ccd67dcc11e32f9b5fc753419e8e3307ff1d1` (`ff1ccd6`)
-**Migration:** `supabase/migrations/20260805000200_create_entry_community_registration_backend_v1.sql`
-**Status:** local migration and static validation only; not applied.
+**Migration:** `supabase/migrations/20260806233000_create_entry_community_registration_backend_v1.sql`
+**Status:** applied to hosted dev; runtime tests pending.
 
 ## 1. Summary
 
-`ENTRY-ONB-002` adds the transactional backend core for the initial Community Registration household cycle. The implementation is database-only: no UI, no route handlers, no seed data, no live Supabase action, no ENTRY mobile change, and no conversion to `resident_activation_queue`.
+`ENTRY-ONB-002` adds the transactional backend core for the initial Community Registration household cycle. The implementation is database-only: no UI, no route handlers, no seed data, no ENTRY mobile change, and no conversion to `resident_activation_queue`.
+
+Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806233000` after successful individual apply. SQL content was preserved byte-for-byte; runtime validation remains pending.
 
 The backend keeps public registration access behind future server-side callers. All RPCs are `SECURITY DEFINER`, set `search_path`, assert `auth.role() = 'service_role'`, revoke execution from `PUBLIC`, `anon`, and `authenticated`, and grant only to `service_role`.
 
@@ -183,14 +185,14 @@ Not executed: PostgreSQL application, catalog inspection, role-policy runtime ch
 
 ## 17. Limitations
 
-- `BLOCKED FOR APPLY` until the v1 and v2 migrations run successfully in a disposable PostgreSQL/Supabase environment.
+- Hosted-dev migration apply is complete; runtime validation remains pending.
 - No production rows, seed rows, or live Supabase changes were created.
 - Public route rate limiting, CAPTCHA, QR, email/WhatsApp delivery, patronato review, internal review, conversion, and activation remain out of scope.
 - Phone normalization is intentionally permissive for Honduran data and may need country-specific refinement later.
 
 ## 18. Pre-Apply Gate
 
-Before any apply, run both migrations against a disposable PostgreSQL/Supabase environment, inspect the catalog, verify grants/RLS, and execute negative tests for invalid tenant, invalid token, limit exceeded, duplicate submission, duplicate resubmission, reset during edit, and closed campaign behavior.
+Before runtime approval, inspect the hosted-dev catalog, verify grants/RLS, and execute negative tests for invalid tenant, invalid token, limit exceeded, duplicate submission, duplicate resubmission, reset during edit, and closed campaign behavior.
 
 ## 19. Deferred Decisions
 

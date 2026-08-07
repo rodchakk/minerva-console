@@ -10,7 +10,7 @@
 
 `CHANGES REQUIRED`.
 
-The schema is materially stronger after QA hardening, and no remaining structural contradiction was found in the reviewed design. However, the migration was not executed or parsed by a PostgreSQL engine because this environment has no `psql`, Supabase CLI, Docker, Python, PGlite, or SQL parser package available. Static validation passed, but engine-level syntax validation remains required before authorizing the migration as the base for the next backend mission.
+The schema is materially stronger after QA hardening, and no remaining structural contradiction was found in the reviewed design. The original QA pass did not execute or parse the migration by a PostgreSQL engine because that environment had no `psql`, Supabase CLI, Docker, Python, PGlite, or SQL parser package available. The migration has since been applied to hosted dev during ENTRY-ONB-005; runtime validation remains pending.
 
 No live Supabase DDL or DML was executed.
 
@@ -93,7 +93,7 @@ Diff commands requested were executed. Because the three `ENTRY-ONB-001` artifac
 | tokens.`(submission_id, campaign_unit_id, campaign_id)` | submissions.`(id, campaign_unit_id, campaign_id)` | Migration unique `cr_submissions_id_unit_campaign_unique`. | `RESTRICT` | default `NO ACTION` | Edit token must belong to exact submission/unit/campaign. |
 | events scope FKs | campaigns, units, submissions, tokens | Migration/live keys above. | `RESTRICT` | default `NO ACTION` | Audit rows cannot silently point across tenants or lose scope. |
 
-The support indexes are local migration changes only. They were not applied to live Supabase.
+The support indexes were local migration changes during QA. They have since been applied to hosted dev during ENTRY-ONB-005.
 
 ## 8. State Validation
 
@@ -149,8 +149,8 @@ Static validator coverage includes the 20 required QA themes where they are enfo
 
 ## 12. Test Limitations
 
-- The migration was not applied to any database.
-- PostgreSQL syntax was not engine-validated.
+- The migration was not applied to any database during the original QA pass.
+- PostgreSQL syntax was not engine-validated during the original QA pass.
 - No negative insert/update tests were run because no disposable database engine is available.
 - No live Supabase DDL/DML was executed.
 - No TypeScript types were regenerated because no approved schema application occurred.

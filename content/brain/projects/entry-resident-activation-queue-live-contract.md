@@ -600,7 +600,7 @@ Local context:
 - `content/brain/projects/entry-community-registration-schema-v1.md`
 - `content/brain/projects/entry-community-registration-backend-v1.md`
 - `content/brain/projects/entry-community-registration-review-v1.md`
-- Migrations `20260805000100`, `20260805000200`, `20260805000300`.
+- Migrations `20260806232141`, `20260806233000`, `20260806234000`.
 
 No PII-bearing rows were queried or copied.
 
@@ -622,8 +622,7 @@ No PII-bearing rows were queried or copied.
 The live activation queue contract is sufficiently captured for `ENTRY-ONB-004`
 design to resume without inventing fields.
 
-`BLOCKED FOR APPLY` remains in force. No migration should be applied until a
-disposable PostgreSQL/Supabase engine validates the full migration chain and
-the future conversion migration.
+The apply blocker is resolved for hosted dev. Runtime tests remain pending for
+the full migration chain and conversion behavior.
 
 `READY TO RESUME ENTRY-ONB-004`

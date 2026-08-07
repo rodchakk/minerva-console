@@ -5,19 +5,19 @@
 **Worktree:** `D:\Dev\minerva-console\.worktrees\entry-onb-003`
 **Branch:** `codex/entry-onb-003-review-confirmation`
 **Base:** `a81de65db33fc61d0b93e6734a9d27805aeb8c7c`
-**Verdict:** `CHANGES APPLIED - STATIC QA COMPLETE - BLOCKED FOR APPLY`
+**Verdict:** `CHANGES APPLIED - STATIC QA COMPLETE - HOSTED DEV APPLY RESOLVED - RUNTIME TESTS PENDING`
 
 ## 1. Verdict
 
-`CHANGES APPLIED - STATIC QA COMPLETE - BLOCKED FOR APPLY`.
+`CHANGES APPLIED - STATIC QA COMPLETE - HOSTED DEV APPLY RESOLVED - RUNTIME TESTS PENDING`.
 
-The local review/confirmation backend was audited and hardened for stricter state-machine and patronato confirmation requirements. It remains blocked for any apply until a real PostgreSQL/Supabase engine validates syntax, catalog objects, grants, RLS posture and negative transactional behavior.
+The local review/confirmation backend was audited and hardened for stricter state-machine and patronato confirmation requirements. Hosted-dev apply is resolved; catalog objects, grants, RLS posture and negative transactional behavior still require runtime validation.
 
 No live Supabase DDL or DML was executed.
 
 ## 2. Files Added
 
-- `supabase/migrations/20260805000300_create_entry_community_registration_review_v1.sql`
+- `supabase/migrations/20260806234000_create_entry_community_registration_review_v1.sql`
 - `scripts/entry-onb-003-validate-review.mjs`
 - `content/brain/projects/entry-community-registration-review-v1.md`
 - `content/brain/projects/entry-community-registration-review-v1-qa.md`
@@ -32,7 +32,7 @@ No live Supabase DDL or DML was executed.
 - `content/brain/projects/entry-community-registration-backend-v1.md`
 - `content/brain/projects/entry-community-registration-backend-v1-qa.md`
 - `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
-- `supabase/migrations/20260805000200_create_entry_community_registration_backend_v1.sql`
+- `supabase/migrations/20260806233000_create_entry_community_registration_backend_v1.sql`
 - `scripts/entry-onb-001-validate-schema.mjs`
 - `scripts/entry-onb-002-validate-backend.mjs`
 
@@ -124,15 +124,12 @@ Helpers `_cr_validate_observation_v1`, `_cr_replace_current_review_v1`, and `_cr
 
 ## 9. Limitations
 
-The SQL was not executed by PostgreSQL. Static checks cannot prove syntax, trigger behavior, lock behavior, constraint timing, function ownership or runtime concurrency.
-
-The migration was not applied locally, to staging, or to live Supabase.
+The SQL was later applied to hosted dev during ENTRY-ONB-005. Runtime checks still need to prove trigger behavior, lock behavior, constraint timing, function ownership and concurrency.
 
 ## 10. Required Engine Gate
 
-Before apply:
+Before runtime approval:
 
-- execute migrations 001, 002 and 003 in a disposable PostgreSQL/Supabase environment;
 - inspect created tables, constraints, indexes, RLS and function grants;
 - verify function owners and `SECURITY DEFINER` blast radius;
 - run negative tests for expired/revoked patronato token, cross-campaign token use, stale reviewed submission confirmation, correction versus confirmation race, incomplete campaign confirmation, and confirmed-unit reset rejection;
@@ -140,6 +137,6 @@ Before apply:
 
 ## 11. Status
 
-`BLOCKED FOR APPLY`.
+Hosted-dev apply is resolved; runtime tests remain pending.
 
-No push, PR, deployment, migration application, Supabase live change, ENTRY mobile change or next mission work was performed.
+No push, PR, deployment, ENTRY mobile change or next mission work was performed in this QA pass.

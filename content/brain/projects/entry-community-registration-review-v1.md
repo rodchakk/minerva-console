@@ -4,16 +4,18 @@
 **Date:** 2026-08-05
 **Branch/worktree:** `codex/entry-onb-003-review-confirmation` at `.worktrees/entry-onb-003`
 **Base:** `a81de65db33fc61d0b93e6734a9d27805aeb8c7c` (`a81de65`)
-**Migration:** `supabase/migrations/20260805000300_create_entry_community_registration_review_v1.sql`
-**Status:** local migration and static validation only; not applied.
+**Migration:** `supabase/migrations/20260806234000_create_entry_community_registration_review_v1.sql`
+**Status:** applied to hosted dev; runtime tests pending.
 
 ## 1. Summary
 
-`ENTRY-ONB-003` adds the transactional review, observation and patronato confirmation backend for Community Registration. It does not create UI, route handlers, Server Actions, mobile changes, seeds, users, activation queue rows or live Supabase changes.
+`ENTRY-ONB-003` adds the transactional review, observation and patronato confirmation backend for Community Registration. It does not create UI, route handlers, Server Actions, mobile changes, seeds, users, activation queue rows or ENTRY mobile changes.
+
+Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806234000` after successful individual apply. SQL content was preserved byte-for-byte; runtime validation remains pending.
 
 The migration stays forward-only after schema v1 and backend v1. Earlier migrations are not edited.
 
-The project remains `BLOCKED FOR APPLY` until schema v1, backend v1 and review v1 are executed and tested in a disposable PostgreSQL/Supabase environment.
+The hosted-dev apply gate is resolved for schema v1, backend v1 and review v1. Runtime tests remain pending.
 
 ## 2. Compatibility Check
 
@@ -159,8 +161,6 @@ Automatic reversal of confirmed units is deliberately not implemented. If a conf
 
 Conversion to `resident_activation_queue` remains out of scope.
 
-## 11. Pre-Apply Gate
+## 11. Runtime Gate
 
-`BLOCKED FOR APPLY`.
-
-Before any migration is applied, run schema v1, backend v1 and review v1 in a disposable PostgreSQL/Supabase environment, inspect the catalog, verify grants/RLS/function ownership, and run negative tests for invalid token scope, expired token, stale reviewed submission, correction/confirmation races, incomplete campaign confirmation and confirmed-unit reset/edit behavior.
+Hosted-dev apply is complete. Before runtime approval, inspect the catalog, verify grants/RLS/function ownership, and run negative tests for invalid token scope, expired token, stale reviewed submission, correction/confirmation races, incomplete campaign confirmation and confirmed-unit reset/edit behavior.
