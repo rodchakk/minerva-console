@@ -101,6 +101,11 @@ Known candidates:
 
 Facility Destinations remains a design-first change because it may affect schema, `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, and community scoping.
 
+The El Limonar field observation of a posted physical list of authorized people,
+apparently connected to construction work, is relevant evidence for the existing
+frequent-access concept. Its exact operational meaning is still unconfirmed and
+must not by itself trigger new product scope.
+
 ## Priority 7 — Security and backups
 
 This is the penultimate planned workstream.
@@ -133,19 +138,20 @@ FIRST DOOR / Patronato Package v1 continues as a parallel commercial validation 
 
 Current field state:
 
-- The first package was delivered to the head of security at Colonia El Carmen on 2026-08-04.
-- The head of security said he would forward it to the patronato.
-- Patronato receipt, review, direct contact, and meeting remain unconfirmed.
-- Security personnel reported that the patronato does meet, but the date or cadence is unknown.
-- Colonia El Limonar was identified as a new prospect after observing a barrier, guard booth, and guard; no exterior QR was observed, and its real process remains unknown.
+- **Colonia El Carmen:** first Patronato Package delivered to the head of security on 2026-08-04. He said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed.
+- **Residencial El Limonar:** now a qualified lead / FIRST DOOR #2. Security confirmed that residents announce visits by calls and WhatsApp, visitor records are kept on paper, and the barrier is manual. Security stated that the community wants to implement a system, subject to patronato discussion, and identified **Antonio Flores** as patronato president.
+- A personalized El Limonar package was delivered at the gate on 2026-08-07. The guard on duty called the prior security contact, who confirmed the package could be left. Delivery to Antonio Flores or another patronato member remains unconfirmed.
+- Additional El Limonar observations: visible paper visitor sheet and a posted list of authorized people, apparently related to construction work. The list may indicate a recurrent-access need, but its exact purpose is unconfirmed.
+- No El Limonar patronato meeting date or cadence is currently known.
 
-Next commercial action:
+Next commercial actions:
 
-- Follow up with Colonia El Carmen approximately five to seven days after delivery, preferably during 2026-08-09 through 2026-08-11, to confirm the internal handoff and request a direct presentation path.
-- Record the exact FIRST DOOR outcome before scaling package distribution.
-- Keep the colonia lead tracker current and schedule a later discovery visit for Colonia El Limonar.
+- Follow up with Colonia El Carmen according to its existing follow-up window to confirm patronato handoff and seek a direct presentation path.
+- Follow up with Residencial El Limonar approximately **2026-08-12 through 2026-08-14** to confirm whether the package reached Antonio Flores or another patronato member, ask whether a patronato meeting date is known, and obtain a direct follow-up channel or presentation date.
+- Do not treat the El Limonar package as received by the patronato until that internal handoff is confirmed.
+- Continue building a structured San Pedro Sula residential-community map and move each community through explicit commercial stages rather than treating every visit as an immediate sales attempt.
 
-See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), and [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md).
+See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md), and [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md).
 
 ## Source-of-truth note
 

@@ -97,6 +97,7 @@ evidence:
 | Community | Current control | Status / note |
 | --------- | --------------- | ------------- |
 | Colonia El Carmen | Manual calls and paper log observed | Priority #1. Patronato Package delivered to the head of security on 2026-08-04; he said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed. Size pending confirmation before quote or plan classification. |
+| Residencial El Limonar | Residents announce visits by calls and WhatsApp; paper visitor records; manual barrier | Qualified lead / FIRST DOOR #2. Security says the community wants to implement a system, subject to patronato discussion. Patronato president identified as Antonio Flores. Personalized package delivered at the gate on 2026-08-07 after confirmation from the previous security contact. Patronato receipt and meeting date remain unconfirmed. |
 | Residencial Girona | Uses Access | No direct administration contact. Reconsider later with the new formal package. |
 | Residencial La Fuente | Unknown | No direct contact. Pending new round. |
 | Vías Monserrat | No application observed; approx. 30 homes from prior info | Pending new round. |
@@ -116,9 +117,6 @@ evidence:
   pending.
 - Colonia El Carmen: priority #1; package delivered to security leadership,
   patronato handoff pending confirmation.
-- Colonia El Limonar: barrier, guard booth, and guard observed during a drive-by
-  on 2026-08-04; no exterior QR observed. Current process, size, and patronato
-  contact remain unknown.
 - Residencial La Florida.
 - Jardines del Merendón: high end; Boulevard Mackay.
 - Merendón Hills: high end.
@@ -177,22 +175,67 @@ Recommended follow-up:
 See [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md)
 for the detailed evidence record.
 
-## Colonia El Limonar field snapshot
+## Residencial El Limonar field snapshot
 
-Observed during the route to El Carmen on 2026-08-04:
+Initial external observation on 2026-08-04:
 
+- controlled-looking entrance;
 - barrier;
 - guard booth;
 - guard present;
 - no visible exterior QR observed.
 
-Initial classification:
+Dedicated discovery later confirmed:
 
-> Identified prospect and possible manually controlled community; dedicated
-> discovery visit required.
+- residents announce visits through phone calls and WhatsApp;
+- visitor information is recorded on paper;
+- the entrance barrier is manual;
+- security stated that the community wants to implement a system;
+- implementation must be discussed by the patronato;
+- patronato president identified as **Antonio Flores**;
+- no patronato meeting date or cadence was obtained.
 
-Do not record that El Limonar has no digital system. The only verified exterior
-observation is that no QR was visible during the drive-by.
+Additional physical observations during package delivery:
+
+- a paper visitor log / visit sheet was visible;
+- a posted sheet listed a group of people with authorized access;
+- the authorization list appeared related to construction work, but its exact
+  purpose was not confirmed.
+
+Treat the posted list only as possible evidence of recurrent/frequent access
+being managed manually. Do not assert its purpose until confirmed by the
+community.
+
+### FIRST DOOR #2 package — 2026-08-07
+
+A personalized package was prepared for Residencial El Limonar and addressed to
+Antonio Flores and the members of the patronato. The physical package included:
+
+- dark-blue folder labeled `Patronato El Limonar`;
+- four-page ENTRY proposal, stapled;
+- ENTRY flyer;
+- Minerva Technologies business card secured to the flyer.
+
+At delivery, only one guard was present. The guard called the security contact
+from the previous conversation; that contact confirmed the package could be
+left. Rudy then delivered the complete package at the gate.
+
+Current precise outcome:
+
+> Qualified lead. Patronato Package delivered at the security gate after
+> confirmation from the previous security contact; delivery to Antonio Flores
+> or another patronato member, patronato review, and meeting remain unconfirmed.
+
+Recommended follow-up window:
+
+> 2026-08-12 through 2026-08-14.
+
+Primary follow-up objective: confirm whether the package reached Antonio Flores
+or another patronato member, identify the next patronato meeting if possible,
+and obtain a direct follow-up channel or presentation date.
+
+See [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md)
+for the dedicated evidence record.
 
 ## Internal pricing
 
@@ -214,6 +257,8 @@ Known details:
 - Initial setup may be included or handled specially for early communities,
   but must not be declared permanently free.
 - Confirm El Carmen's number of homes before preparing a quote.
+- Confirm El Limonar's number of homes and active entrances before preparing a
+  quote.
 
 ## Known commercial/technical readiness notes
 
@@ -233,12 +278,20 @@ Known details:
 
 - Confirmed number of homes for Colonia El Carmen.
 - Whether Colonia El Carmen has a second entrance.
-- Name/contact of the patronato president or administration contact.
+- Name/contact of the El Carmen patronato president or administration contact.
 - Date and cadence of the El Carmen patronato meetings.
-- Whether the head of security delivered the package to a patronato member.
-- Whether the patronato reviewed the package or wants a presentation.
-- Current visitor-control process, size, and patronato contact for Colonia El
-  Limonar.
+- Whether the El Carmen head of security delivered the package to a patronato
+  member.
+- Whether the El Carmen patronato reviewed the package or wants a presentation.
+- Whether Antonio Flores or another El Limonar patronato member has physically
+  received the 2026-08-07 package.
+- Date and cadence of the El Limonar patronato meetings.
+- Direct phone, WhatsApp, or email contact for Antonio Flores.
+- Exact number of homes and active entrances in Residencial El Limonar.
+- Exact purpose and lifecycle of the posted El Limonar authorization list.
+- Whether El Limonar uses any additional digital tool behind the observed
+  manual process.
+- Whether El Limonar wants a meeting, demo, quote, or pilot.
 - Setup fee policy for regular customers.
 - Competitor specifics for Access / ISSY / SSA: features, pricing, contract
   lock-in. Do not record as fact until verified.
