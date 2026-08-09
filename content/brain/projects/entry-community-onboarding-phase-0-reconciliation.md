@@ -1,8 +1,8 @@
 # ENTRY Community Registration - Phase 0 Reconciliation
 
-**Fecha de corte:** 2026-08-05  
-**Tipo:** analisis tecnico y arquitectonico formal, read-only.  
-**Alcance:** Minerva Console, ENTRY mobile y Supabase vivo `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`).  
+**Fecha de corte:** 2026-08-05
+**Tipo:** analisis tecnico y arquitectonico formal, read-only.
+**Alcance:** Minerva Console, ENTRY mobile y Supabase vivo `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`).
 **Restricciones cumplidas:** no se implemento codigo, no se modifico Supabase, no se ejecuto migracion, no se cambio RLS, grants, Auth, Edge Functions, ramas, commits, PRs ni deployments.
 
 ## 1. Veredicto ejecutivo

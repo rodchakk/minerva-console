@@ -1,7 +1,7 @@
 # ENTRY Community Registration / Pre-Onboarding Analysis
 
-**Fecha:** 2026-08-05  
-**Alcance:** inspeccion, analisis y diseno tecnico. No se implemento codigo de producto, migraciones, RLS, Supabase, rutas ni componentes.  
+**Fecha:** 2026-08-05
+**Alcance:** inspeccion, analisis y diseno tecnico. No se implemento codigo de producto, migraciones, RLS, Supabase, rutas ni componentes.
 **Ubicacion elegida:** `content/brain/harness/ENTRY_COMMUNITY_ONBOARDING_ANALYSIS.md`. La solicitud sugirio `.minerva-harness/ENTRY_COMMUNITY_ONBOARDING_ANALYSIS.md`, pero en este repo no existe `.minerva-harness/`; el harness oficial de Minerva Core Brain vive bajo `content/brain/harness/`, definido como conocimiento Git-backed en `content/brain/harness/02_ARCHITECTURE.md`.
 
 ## 1. Resumen ejecutivo

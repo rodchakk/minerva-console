@@ -1,9 +1,9 @@
 # ENTRY Community Registration Schema v1
 
-**Mission:** `ENTRY-ONB-001`  
-**Date:** 2026-08-05  
-**Branch/worktree:** `codex/entry-onb-001-schema` at `.worktrees/entry-onb-001`  
-**Base:** local stable `master`, commit `60589e5a5538915dbb58a5c96ab501e1201c2bfe`  
+**Mission:** `ENTRY-ONB-001`
+**Date:** 2026-08-05
+**Branch/worktree:** `codex/entry-onb-001-schema` at `.worktrees/entry-onb-001`
+**Base:** local stable `master`, commit `60589e5a5538915dbb58a5c96ab501e1201c2bfe`
 **Migration:** `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
 **Status:** applied to hosted dev; runtime validated under `ENTRY-ONB-005`.
 
@@ -13,8 +13,8 @@
 
 Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806232141` after successful apply. Runtime validation passed under `ENTRY-ONB-005`.
 
-**DECIDED:** no public submission data is written directly to active user tables or final activation rows.  
-**DECIDED:** `resident_activation_queue` remains the future output boundary.  
+**DECIDED:** no public submission data is written directly to active user tables or final activation rows.
+**DECIDED:** `resident_activation_queue` remains the future output boundary.
 **DECIDED:** no dependency is added to the legacy invite/code lane.
 
 ## 2. Applied Decisions

@@ -1,9 +1,9 @@
 # ENTRY Community Registration Foundation Contract
 
-**Mission:** `ENTRY-ONB-000`  
-**Date:** 2026-08-05  
-**Status:** foundation approved  
-**Verdict:** `READY FOR ENTRY-ONB-001`  
+**Mission:** `ENTRY-ONB-000`
+**Date:** 2026-08-05
+**Status:** foundation approved
+**Verdict:** `READY FOR ENTRY-ONB-001`
 **Scope:** architectural contract only. No product implementation, no Supabase writes, no migrations, no route/component changes.
 
 ## 1. Summary

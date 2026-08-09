@@ -1,9 +1,9 @@
 # ENTRY Community Registration Schema v1 QA
 
-**Mission:** `ENTRY-ONB-001-QA`  
-**Date:** 2026-08-05  
-**Worktree:** `.worktrees/entry-onb-001`  
-**Branch:** `codex/entry-onb-001-schema`  
+**Mission:** `ENTRY-ONB-001-QA`
+**Date:** 2026-08-05
+**Worktree:** `.worktrees/entry-onb-001`
+**Branch:** `codex/entry-onb-001-schema`
 **Verdict:** `CHANGES REQUIRED`
 
 ## 1. Verdict
