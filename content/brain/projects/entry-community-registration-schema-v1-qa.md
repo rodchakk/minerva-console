@@ -10,7 +10,7 @@
 
 `CHANGES REQUIRED`.
 
-The schema is materially stronger after QA hardening, and no remaining structural contradiction was found in the reviewed design. The original QA pass did not execute or parse the migration by a PostgreSQL engine because that environment had no `psql`, Supabase CLI, Docker, Python, PGlite, or SQL parser package available. The migration has since been applied to hosted dev during ENTRY-ONB-005; runtime validation remains pending.
+The schema is materially stronger after QA hardening, and no remaining structural contradiction was found in the reviewed design. The original QA pass did not execute or parse the migration by a PostgreSQL engine because that environment had no `psql`, Supabase CLI, Docker, Python, PGlite, or SQL parser package available. The migration has since been applied to hosted dev and runtime validated during `ENTRY-ONB-005`.
 
 No live Supabase DDL or DML was executed.
 

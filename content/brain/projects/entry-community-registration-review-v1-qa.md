@@ -5,13 +5,15 @@
 **Worktree:** `D:\Dev\minerva-console\.worktrees\entry-onb-003`
 **Branch:** `codex/entry-onb-003-review-confirmation`
 **Base:** `a81de65db33fc61d0b93e6734a9d27805aeb8c7c`
-**Verdict:** `CHANGES APPLIED - STATIC QA COMPLETE - HOSTED DEV APPLY RESOLVED - RUNTIME TESTS PENDING`
+**Verdict:** `CHANGES APPLIED - STATIC QA COMPLETE - HOSTED DEV APPLY RESOLVED - RUNTIME VALIDATED`
 
 ## 1. Verdict
 
-`CHANGES APPLIED - STATIC QA COMPLETE - HOSTED DEV APPLY RESOLVED - RUNTIME TESTS PENDING`.
+`CHANGES APPLIED - STATIC QA COMPLETE - HOSTED DEV APPLY RESOLVED - RUNTIME VALIDATED`.
 
-The local review/confirmation backend was audited and hardened for stricter state-machine and patronato confirmation requirements. Hosted-dev apply is resolved; catalog objects, grants, RLS posture and negative transactional behavior still require runtime validation.
+The local review/confirmation backend was audited and hardened for stricter
+state-machine and patronato confirmation requirements. Hosted-dev apply is
+resolved, and runtime validation passed under `ENTRY-ONB-005`.
 
 No live Supabase DDL or DML was executed.
 

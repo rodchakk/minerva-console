@@ -622,7 +622,8 @@ No PII-bearing rows were queried or copied.
 The live activation queue contract is sufficiently captured for `ENTRY-ONB-004`
 design to resume without inventing fields.
 
-The apply blocker is resolved for hosted dev. Runtime tests remain pending for
-the full migration chain and conversion behavior.
+The apply blocker is resolved for hosted dev. Runtime tests passed for the full
+Community Registration migration chain and conversion behavior under
+`ENTRY-ONB-005`, after hotfixes `005` and `006`.
 
-`READY TO RESUME ENTRY-ONB-004`
+`ENTRY-ONB-005 - HOSTED RUNTIME PASS`

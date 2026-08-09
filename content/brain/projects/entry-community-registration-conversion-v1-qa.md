@@ -5,7 +5,7 @@
 **Worktree:** `D:\Dev\minerva-console\.worktrees\entry-onb-004`
 **Branch:** `codex/entry-onb-004-activation-conversion`
 **Baseline:** `00d31f12ed23375a22a1d8e31825ed0deba5df8c`
-**Verdict:** `READY TO COMMIT ENTRY-ONB-004`; hosted-dev apply resolved; runtime tests pending.
+**Verdict:** `READY TO COMMIT ENTRY-ONB-004`; hosted-dev apply resolved; runtime validated under `ENTRY-ONB-005`.
 
 ## 0. Integrity Audit Summary
 
@@ -157,12 +157,14 @@ not available on PATH, so the engine gate remains pending.
 ## 14. Limitations
 
 The migration has now been applied to hosted dev through the ENTRY-ONB-005
-transport closeout. Concurrency, constraints, function ownership, grants, and
-trigger interactions still require runtime validation.
+transport closeout. Runtime validation later passed after two minimal
+classifier hotfixes: `20260806235500` fixed `min(uuid)` queue candidate
+selection, and `20260806235600` fixed the lowercase `resident` enum literal.
 
 ## 15. Gate Status
 
-Hosted-dev apply is resolved. The remaining gate is to inspect the catalog,
-verify grants, then execute the mission cases for new insert, retry, RAQ reuse,
-active-user detection, ambiguity, concurrent conversion, campaign finalization,
-tenant isolation, service-role-only access, and no PIN/Auth/user-table writes.
+Hosted-dev apply and runtime validation are resolved. The full
+`ENTRY-ONB-005` harness passed 75 assertions, produced the expected temporary
+RAQ delta `+2`, produced zero protected-table deltas, rolled back, and had an
+independent post-runtime baseline verification with zero residual runtime
+fixtures.

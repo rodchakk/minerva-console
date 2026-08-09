@@ -6,7 +6,7 @@
 **Branch:** `codex/entry-onb-004-activation-conversion`
 **Baseline:** `00d31f12ed23375a22a1d8e31825ed0deba5df8c` (`00d31f1`)
 **Migration:** `supabase/migrations/20260806235000_create_entry_community_registration_conversion_v1.sql`
-**Status:** applied to hosted dev; runtime tests pending.
+**Status:** applied to hosted dev; runtime validated under `ENTRY-ONB-005`.
 
 ## 1. Summary
 
@@ -18,7 +18,9 @@ or write active profile/membership/house-resident tables.
 
 Transport closeout reconciled the migration filename to the hosted-dev
 canonical timestamp `20260806235000` after successful individual apply. SQL
-content was preserved byte-for-byte; runtime validation remains pending.
+content was preserved byte-for-byte. Hosted runtime validation later passed
+after two minimal classifier hotfix migrations: `20260806235500` for
+`min(uuid)` and `20260806235600` for the `public.user_role` resident literal.
 
 ## 2. Baseline
 
@@ -132,6 +134,10 @@ The classifier reads `auth.users`, `profiles`, `community_members`, and
 or a bare existing Auth email blocks. Phone-only active identity is treated as
 ambiguous in v1.
 
+Runtime hotfix `20260806235600` preserves this rule while comparing
+`community_members.role` to `RESIDENT` as `public.user_role`, matching the live
+enum contract.
+
 ## 16. Normalization
 
 Email is `lower(trim(email))`. Unit matching uses live `normalize_unit_label`.
@@ -216,20 +222,20 @@ blocking conversion status.
 ## 26. Tests
 
 Static validation is implemented in
-`scripts/entry-onb-004-validate-conversion.mjs`. Engine execution remains the
-pre-apply gate.
+`scripts/entry-onb-004-validate-conversion.mjs`. Hosted runtime validation is
+complete through `supabase/tests/entry-onb-005-runtime.sql`.
 
 ## 27. Gate PostgreSQL
 
-Hosted-dev apply is complete. Before runtime approval, execute the 26 mission cases, including
-retry, RAQ reuse, active-user conflict, concurrent conversion, service-role
-only, no PINs, and no active table writes.
+Hosted-dev apply and runtime approval are complete. The runtime harness passed
+75 assertions after hotfixes `005` and `006`, with expected temporary RAQ delta
+`+2`, zero protected-table deltas, rollback, and independent post-runtime
+baseline verification.
 
 ## 28. Residual Risks
 
 The legacy Excel importer can race because it does not use the new advisory
-identity lock. PostgreSQL syntax and runtime behavior still need engine
-validation. Phone-only identity remains deliberately conservative.
+identity lock. Phone-only identity remains deliberately conservative.
 
 ## 29. Deferred Decisions
 

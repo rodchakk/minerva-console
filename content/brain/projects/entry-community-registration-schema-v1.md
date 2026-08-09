@@ -5,13 +5,13 @@
 **Branch/worktree:** `codex/entry-onb-001-schema` at `.worktrees/entry-onb-001`  
 **Base:** local stable `master`, commit `60589e5a5538915dbb58a5c96ab501e1201c2bfe`  
 **Migration:** `supabase/migrations/20260806232141_create_entry_community_registration_schema_v1.sql`
-**Status:** applied to hosted dev; runtime tests pending.
+**Status:** applied to hosted dev; runtime validated under `ENTRY-ONB-005`.
 
 ## 1. Summary
 
 `ENTRY-ONB-001` creates the local schema proposal for Community Registration / Pre-Onboarding. The schema captures public, unreviewed household data in new `community_registration_*` tables and preserves history until a later reviewed backend mission prepares approved residents for `resident_activation_queue`.
 
-Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806232141` after successful apply. Runtime validation remains pending.
+Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806232141` after successful apply. Runtime validation passed under `ENTRY-ONB-005`.
 
 **DECIDED:** no public submission data is written directly to active user tables or final activation rows.  
 **DECIDED:** `resident_activation_queue` remains the future output boundary.  

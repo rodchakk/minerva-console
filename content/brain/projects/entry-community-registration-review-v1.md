@@ -5,17 +5,18 @@
 **Branch/worktree:** `codex/entry-onb-003-review-confirmation` at `.worktrees/entry-onb-003`
 **Base:** `a81de65db33fc61d0b93e6734a9d27805aeb8c7c` (`a81de65`)
 **Migration:** `supabase/migrations/20260806234000_create_entry_community_registration_review_v1.sql`
-**Status:** applied to hosted dev; runtime tests pending.
+**Status:** applied to hosted dev; runtime validated under `ENTRY-ONB-005`.
 
 ## 1. Summary
 
 `ENTRY-ONB-003` adds the transactional review, observation and patronato confirmation backend for Community Registration. It does not create UI, route handlers, Server Actions, mobile changes, seeds, users, activation queue rows or ENTRY mobile changes.
 
-Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806234000` after successful individual apply. SQL content was preserved byte-for-byte; runtime validation remains pending.
+Transport closeout reconciled the migration filename to the hosted-dev canonical timestamp `20260806234000` after successful individual apply. SQL content was preserved byte-for-byte. Runtime validation passed under `ENTRY-ONB-005`.
 
 The migration stays forward-only after schema v1 and backend v1. Earlier migrations are not edited.
 
-The hosted-dev apply gate is resolved for schema v1, backend v1 and review v1. Runtime tests remain pending.
+The hosted-dev apply and runtime gates are resolved for schema v1, backend v1
+and review v1 under `ENTRY-ONB-005`.
 
 ## 2. Compatibility Check
 
