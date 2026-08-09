@@ -1,51 +1,297 @@
 # ENTRY — Sales & Leads
 
-Commercial strategy, target communities (colonias), and observed competitors. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
+Commercial strategy, target communities (colonias), outreach doctrine, and lead
+map. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
 
-> Almost everything here is **Operator-provided** (from Rudy). It is business knowledge, not verified from code, and should be treated as a living sales record, not fact-checked data.
+> Most information here is **Operator-provided** by Rudy. Treat it as business
+> knowledge and field notes, not code-verified data. Keep decisions,
+> observations, hypotheses, and pending validations separate.
 
-## Operator-provided — strategy
+## Official commercial strategy
 
-- Target market: residential communities ("residenciales" / colonias) that manage visitor access manually (a guard phoning residents to authorize each visitor) or with a weak incumbent system.
-- The wedge: replace call-based gate control and weak incumbent tooling with ENTRY (structured pre-authorization + QR/PIN + immutable audit + recurring staff + SOS).
-- Sales motion is per-community: reach the community board ("patronato") or the security lead, who decides adoption.
+ENTRY's initial loose-flyer motion is no longer the primary outreach standard.
+The approved commercial initiative is:
 
-## Operator-provided — known colonias / leads
+> ENTRY — FIRST DOOR / Patronato Package v1
 
-| Colonia | Size | Current control | Status / note |
-| ------- | ---- | --------------- | ------------- |
-| Residencial Girona | — | Uses **Access** | No administrative contact yet |
-| Residencial La Fuente | — | — | No access to the board ("patronato") yet |
-| Vías Monserrat | ~30 houses | Phone calls | — |
-| Villas Angelina | ~20–30 houses | Phone calls | — |
-| Vías Paraíso | — | Uses **Access** | Security lead mentioned a Sunday board ("patronato") meeting |
-| Residencial Santa Elena Demco | — | — | Residential under construction; investigation pending |
+See [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md)
+and decision `DEC-0006`.
 
-## Operator-provided — observed competitors
+## Approved commercial doctrine
 
-- **Access** — incumbent access-control system seen in several residentials (Girona, Vías Paraíso).
-- **ISSY** — observed competitor.
-- **SSA** — observed competitor.
+- ENTRY is not presented as "another QR application."
+- ENTRY helps communities move from manual visitor/access processes to digital
+  management.
+- First, understand how the community works. Then propose and demonstrate a
+  solution.
+- The sales style is consultative: listen first, demonstrate second.
+- The guard is a critical user, market sensor, and delivery bridge, but not the
+  decision-maker.
+- The buyer is the patronato or administration.
+- The ideal meeting includes the patronato president and other patronato
+  members.
+- ENTRY complements security personnel. It does not replace their judgment or
+  physical gate control.
+- Initial success is measured by meetings, demos, follow-up paths, quote
+  requests, pilots, and customers, not by flyers delivered.
+- A rejection from one residential community validates or invalidates a
+  commercial hypothesis for that case; it is not a global verdict on ENTRY.
+- Do not generalize from one community.
+- Do not develop commercial features "just in case" before evidence, except
+  for critical bugs.
+- Minerva Technologies is the company; ENTRY is the product.
+- The founder's mission is to eliminate unnecessary manual processes and solve
+  the access-control problem completely, not partially.
 
-## Inferred
+## Product conviction
 
-- Call-controlled colonias (Monserrat, Angelina) are likely the easiest displacement targets (no incumbent contract to unseat); Access-using colonias (Girona, Paraíso) require beating an installed system.
-- The board ("patronato") meeting cadence (e.g. Vías Paraíso's Sunday meeting) is the natural decision gate for a pitch.
+ENTRY is grounded in a belief in practical digitization, ordered processes,
+automation, eliminating unnecessary paper, and connecting information across
+residents, security, and administration.
 
-## Unknown / Needs verification
+Internal statement:
 
-- House counts and current decision-maker contacts for most colonias.
-- Competitor specifics for Access / ISSY / SSA (features, pricing, contract lock-in) — not verified; do not record as fact.
-- Santa Elena Demco timeline and contact.
-- Pricing/packaging ENTRY would offer per community.
+> ENTRY exists to help communities leave manual processes behind and operate
+> with connected, organized information available when it is needed.
 
-## Risks
+## Initial ideal customer
 
-- Lead data is sparse and contact-gated (several "no contact yet" / "no board access"); pipeline is early.
-- Competing against an installed incumbent (Access) is harder than greenfield call-controlled colonias.
+Priority segment:
 
-## Next actions
+- residential communities with controlled entrances;
+- guards or security staff;
+- visits handled by calls, paper, or manual processes;
+- enough traffic for the manual process to create workload;
+- interest in modernizing;
+- no stable digital solution already installed.
 
-- Build a per-colonia lead tracker (knowledge only) with verified contacts, board-meeting dates, and stage.
-- Verify competitor specifics before recording them as approved knowledge.
-- Prioritize outreach to call-controlled colonias and to boards with a known meeting date.
+### Attack order
+
+- **Phase 1:** communities with no system or manual processes. Goal: first
+  implementation, onboarding validation, real learning, and a first reference
+  case.
+- **Phase 2:** communities with existing systems such as Access or other QR
+  products. Switching friction is higher, so these are not the first focus
+  before ENTRY has operational evidence and references.
+- **High end:** should receive the formal Patronato Package from the first
+  contact, but are not assumed to be the lowest-resistance path for the first
+  customer.
+
+## FIRST DOOR measurement
+
+The first experiment is not measured by immediate sale. Results to record as
+evidence:
+
+1. Package does not reach the patronato.
+2. Package reaches the patronato, but no response.
+3. Follow-up path obtained.
+4. Meeting obtained.
+5. Demo obtained.
+6. Economic proposal requested.
+7. Pilot or customer obtained.
+
+## Lead map
+
+### Visited / with information
+
+| Community | Current control | Status / note |
+| --------- | --------------- | ------------- |
+| Colonia El Carmen | Manual calls and paper log observed | Priority #1. Patronato Package delivered to the head of security on 2026-08-04; he said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed. Size pending confirmation before quote or plan classification. |
+| Residencial El Limonar | Residents announce visits by calls and WhatsApp; paper visitor records; manual barrier | Qualified lead / FIRST DOOR #2. Security says the community wants to implement a system, subject to patronato discussion. Patronato president identified as Antonio Flores. Personalized package delivered at the gate on 2026-08-07 after confirmation from the previous security contact. Patronato receipt and meeting date remain unconfirmed. |
+| Residencial Girona | Uses Access | No direct administration contact. Reconsider later with the new formal package. |
+| Residencial La Fuente | Unknown | No direct contact. Pending new round. |
+| Vías Monserrat | No application observed; approx. 30 homes from prior info | Pending new round. |
+| Villas Angelina | Calls | Pending new round. |
+| Vías Paraíso | Uses Access | Patronato usually meets on Sundays. Security responsible requested documentation. Lead has a concrete follow-up path. |
+| Residencial Magnolia | Uses Access | Flyer and card were left. Guard said he would deliver the information to the patronato. Pending follow-up with formal package. |
+| El Barrial | High end; current system unknown | Prior attempts were made, including through a founder friend. Patronato has delayed responses. Include in a new round with the formal package. |
+| Los Álamos | Historical prospect; later information says it took another service | Keep as closed/lost or low priority according to Brain convention. |
+
+### Identified / pending
+
+- Residencial Toledo.
+- Residencial Los Naranjos: next to Toledo; entrance under construction; QR
+  system observed.
+- Residencial Santa Isabel: near Dispensa Familiar.
+- Residencial Santa Elena Demco: residential under construction; investigation
+  pending.
+- Colonia El Carmen: priority #1; package delivered to security leadership,
+  patronato handoff pending confirmation.
+- Residencial La Florida.
+- Jardines del Merendón: high end; Boulevard Mackay.
+- Merendón Hills: high end.
+- Valle del Sol: near Villas del Sol.
+
+## Colonia El Carmen field snapshot
+
+Observed before delivery:
+
+- behind the La Florida area;
+- one controlled entrance observed;
+- possible second entrance not confirmed;
+- manual barrier;
+- two guards at the entrance;
+- residents call the gate booth to report access;
+- guards write entries on a sheet over a board;
+- visible and considerable traffic;
+- bus route enters regularly without the same authorization process;
+- entrance did not appear fully finished;
+- no digital platform observed;
+- guards said the manual process has difficulties;
+- guards said there was an idea to implement a system;
+- source of the implementation intent was unclear; founder read is that it
+  probably comes from the patronato;
+- guards were kind and receptive, without strong commercial enthusiasm;
+- conversation happened on a hot, operationally busy day.
+
+Hypothesis:
+
+> The patronato may already recognize the need for a system. ENTRY's
+> opportunity is to be considered before the community chooses its first
+> digital solution.
+
+### FIRST DOOR delivery outcome — 2026-08-04
+
+- The complete Patronato Package was delivered directly to the head of
+  security.
+- Rudy gave a brief explanation of ENTRY and the purpose of the proposal.
+- The head of security said he would deliver the package to the patronato.
+- Security personnel confirmed that the patronato does meet.
+- They did not know the patronato's meeting date or cadence.
+- No direct patronato contact, meeting, demo, quote request, or confirmed review
+  was obtained during the visit.
+
+Current precise outcome:
+
+> Package delivered to security leadership; internal handoff to the patronato
+> promised; patronato receipt, review, and response pending.
+
+Recommended follow-up:
+
+> Return or contact the gate approximately five to seven days after delivery,
+> preferably during 2026-08-09 through 2026-08-11, to confirm whether the
+> package reached the patronato and request a direct presentation path.
+
+See [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md)
+for the detailed evidence record.
+
+## Residencial El Limonar field snapshot
+
+Initial external observation on 2026-08-04:
+
+- controlled-looking entrance;
+- barrier;
+- guard booth;
+- guard present;
+- no visible exterior QR observed.
+
+Dedicated discovery later confirmed:
+
+- residents announce visits through phone calls and WhatsApp;
+- visitor information is recorded on paper;
+- the entrance barrier is manual;
+- security stated that the community wants to implement a system;
+- implementation must be discussed by the patronato;
+- patronato president identified as **Antonio Flores**;
+- no patronato meeting date or cadence was obtained.
+
+Additional physical observations during package delivery:
+
+- a paper visitor log / visit sheet was visible;
+- a posted sheet listed a group of people with authorized access;
+- the authorization list appeared related to construction work, but its exact
+  purpose was not confirmed.
+
+Treat the posted list only as possible evidence of recurrent/frequent access
+being managed manually. Do not assert its purpose until confirmed by the
+community.
+
+### FIRST DOOR #2 package — 2026-08-07
+
+A personalized package was prepared for Residencial El Limonar and addressed to
+Antonio Flores and the members of the patronato. The physical package included:
+
+- dark-blue folder labeled `Patronato El Limonar`;
+- four-page ENTRY proposal, stapled;
+- ENTRY flyer;
+- Minerva Technologies business card secured to the flyer.
+
+At delivery, only one guard was present. The guard called the security contact
+from the previous conversation; that contact confirmed the package could be
+left. Rudy then delivered the complete package at the gate.
+
+Current precise outcome:
+
+> Qualified lead. Patronato Package delivered at the security gate after
+> confirmation from the previous security contact; delivery to Antonio Flores
+> or another patronato member, patronato review, and meeting remain unconfirmed.
+
+Recommended follow-up window:
+
+> 2026-08-12 through 2026-08-14.
+
+Primary follow-up objective: confirm whether the package reached Antonio Flores
+or another patronato member, identify the next patronato meeting if possible,
+and obtain a direct follow-up channel or presentation date.
+
+See [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md)
+for the dedicated evidence record.
+
+## Internal pricing
+
+Pricing is not included in the first Patronato Package.
+
+| Plan | Size | Price |
+| ---- | ---- | ----- |
+| ENTRY Small | Up to 30 homes | L 1,500 |
+| ENTRY Medium | 31-50 homes | L 2,500 |
+| ENTRY Large | 51-200 homes | L 5,000 |
+| ENTRY Pro | 201-300 homes | L 7,500 |
+
+Known details:
+
+- Small includes up to five users per home.
+- Small includes 30 days of history.
+- Price includes software, support, and expected operating hours.
+- Initial setup cost is not yet defined.
+- Initial setup may be included or handled specially for early communities,
+  but must not be declared permanently free.
+- Confirm El Carmen's number of homes before preparing a quote.
+- Confirm El Limonar's number of homes and active entrances before preparing a
+  quote.
+
+## Known commercial/technical readiness notes
+
+- ENTRY is considered technically ready for a pilot.
+- Main known technical production pending item: separate a clean production
+  environment from the development environment with test data.
+- Do not add new features before the first pilot except for critical bugs.
+- "Forgot my password" remains a pending bug unless updated later.
+- The website contact/demo form previously had an issue where emails were not
+  arriving.
+- The founder reported that the contact/demo form issue was fixed before the
+  first package delivery and is ready to receive requests.
+- The domain email is active.
+- `rod@minervatechs.com` is the primary campaign email.
+
+## Unknown / needs verification
+
+- Confirmed number of homes for Colonia El Carmen.
+- Whether Colonia El Carmen has a second entrance.
+- Name/contact of the El Carmen patronato president or administration contact.
+- Date and cadence of the El Carmen patronato meetings.
+- Whether the El Carmen head of security delivered the package to a patronato
+  member.
+- Whether the El Carmen patronato reviewed the package or wants a presentation.
+- Whether Antonio Flores or another El Limonar patronato member has physically
+  received the 2026-08-07 package.
+- Date and cadence of the El Limonar patronato meetings.
+- Direct phone, WhatsApp, or email contact for Antonio Flores.
+- Exact number of homes and active entrances in Residencial El Limonar.
+- Exact purpose and lifecycle of the posted El Limonar authorization list.
+- Whether El Limonar uses any additional digital tool behind the observed
+  manual process.
+- Whether El Limonar wants a meeting, demo, quote, or pilot.
+- Setup fee policy for regular customers.
+- Competitor specifics for Access / ISSY / SSA: features, pricing, contract
+  lock-in. Do not record as fact until verified.

@@ -10,10 +10,18 @@ const infoCards = [
 ];
 
 export default async function LoginPage() {
-  const { user, isSuperadmin } = await getAuthContext();
+  const context = await getAuthContext();
 
-  if (user) {
-    redirect(isSuperadmin ? "/dashboard" : "/unauthorized");
+  if (context.status === "authorized") {
+    redirect("/dashboard");
+  }
+
+  if (context.status === "forbidden") {
+    redirect("/unauthorized");
+  }
+
+  if (context.status === "authorization_error") {
+    redirect("/unauthorized?reason=authorization_error");
   }
 
   return (

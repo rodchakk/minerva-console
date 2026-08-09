@@ -2,6 +2,44 @@
 
 Append-only. Most recent first.
 
+## 2026-08-04 - MINERVA-CONSOLE-AUTH-RECOVERY-001 - Auth recovery closeout
+
+- Closed the Minerva Console auth recovery incident after owner QA succeeded
+  in production at `https://console.minervatechs.com/login`.
+- Original incident: the owner was trapped in a redirect cycle between
+  `/login`, `/dashboard`, and `/unauthorized`; `/unauthorized` did not offer a
+  real sign-out path, so changing accounts or recovering the login form was not
+  possible from that screen.
+- Implementation shipped through PR #30 and squash commit
+  `5422737850af823b73207956b6b9c7185593bdfd` on `master`.
+- Runtime change scope was limited to:
+  `app/login/page.tsx`, `app/page.tsx`, `app/unauthorized/page.tsx`,
+  `features/auth/actions.ts`, `features/auth/requireSuperadmin.ts`, and
+  `lib/supabase/middleware.ts`.
+- Result: the middleware no longer performs the blind authenticated
+  `/login -> /dashboard` redirect; `/unauthorized` has a real Server Action
+  sign-out; auth state distinguishes `unauthenticated`, `authorized`,
+  `forbidden`, and `authorization_error`; the dashboard remains protected by
+  `requireSuperadmin()`.
+- Evidence: GitHub Actions completed successfully, Vercel production deployment
+  for commit `5422737850af823b73207956b6b9c7185593bdfd` completed successfully,
+  production smoke tests returned `/login -> 200`, `/dashboard` without session
+  `-> 307 /login?next=%2Fdashboard`, and `/unauthorized` without session
+  `-> 307 /login`.
+- Owner QA: login succeeded, Minerva Console access worked, and the corrected
+  flow was declared successful. Final verdict: COMPLETED.
+- Supabase was not modified. Follow-up debt is tracked separately as
+  `MINERVA-SUPABASE-SUPERADMIN-RECONCILIATION-001` and was not started in this
+  closeout.
+
+## 2026-08-03 - ENTRY-BRAIN-002 - FIRST DOOR commercial strategy capture
+
+- Added `DEC-0006` approving `ENTRY — FIRST DOOR / Patronato Package v1` as the official first formal outreach standard for ENTRY.
+- Created `content/brain/projects/entry-first-door-patronato-package-v1.md` with the Patronato Package v1 doctrine, El Carmen field observations, hypotheses, package structure, delivery script, internal pricing, readiness notes, and next actions.
+- Updated `entry-sales-and-leads.md` with the new commercial doctrine, lead map, Colonia El Carmen as priority #1, internal pricing, and pending validations.
+- Updated `entry.md` and `entry-next-missions.md` so the ENTRY Knowledge Pack points to FIRST DOOR and prioritizes field evidence before scaling outreach or adding speculative features.
+- No application code, Supabase, configuration, dependencies, product runtime, push, or merge changes.
+
 ## 2026-07-03 - MCB-0022 - Loop Guardrails & Review Evals
 
 - Added loop mission folder guardrails to `scripts/brain-guardrails.mjs`:
