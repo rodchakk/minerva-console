@@ -9,7 +9,23 @@ function copyCookies(source: NextResponse, target: NextResponse) {
   return target;
 }
 
+function protectPublicRegistrationResponse(response: NextResponse) {
+  response.headers.set("Cache-Control", "no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const isPublicRegistrationRoute =
+    pathname === "/entry/register" || pathname.startsWith("/entry/register/");
+
+  if (isPublicRegistrationRoute) {
+    return protectPublicRegistrationResponse(NextResponse.next({ request }));
+  }
+
   let response = NextResponse.next({
     request,
   });
@@ -35,7 +51,6 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const pathname = request.nextUrl.pathname;
   const isPublicRoute =
     pathname === "/login" ||
     pathname === "/unauthorized" ||
