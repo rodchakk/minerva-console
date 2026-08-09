@@ -7,6 +7,7 @@ import {
   readCampaignAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/accessState";
 import { resolveCommunityRegistrationCampaign } from "@/features/entry/communityRegistration/public/gateway";
+import { UnitLookupForm } from "@/features/entry/communityRegistration/public/UnitLookupForm";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -120,15 +121,7 @@ export default async function EntryRegisterPage(
           </p>
         )}
 
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4">
-          <p className="text-sm font-semibold text-emerald-100">
-            Acceso validado
-          </p>
-          <p className="mt-2 text-sm leading-6 text-emerald-50/80">
-            La conexion segura con ENTRY esta lista. La seleccion de vivienda y
-            el formulario de residentes se implementaran en la siguiente etapa.
-          </p>
-        </div>
+        <UnitLookupForm slug={slug} />
       </div>
     </PublicRegistrationFrame>
   );
