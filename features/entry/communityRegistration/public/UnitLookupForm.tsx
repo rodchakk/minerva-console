@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { HouseholdDraftForm } from "./HouseholdDraftForm";
 
 type LookupResult =
   | {
@@ -36,6 +37,11 @@ const NEUTRAL_UNAVAILABLE_MESSAGE =
 export function UnitLookupForm({ slug }: { slug: string }) {
   const [unitLabel, setUnitLabel] = useState("");
   const [state, setState] = useState<LookupState>({ status: "idle" });
+
+  function resetLookup() {
+    setUnitLabel("");
+    setState({ status: "idle" });
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -93,6 +99,16 @@ export function UnitLookupForm({ slug }: { slug: string }) {
 
   const isChecking = state.status === "checking";
 
+  if (state.status === "success") {
+    return (
+      <HouseholdDraftForm
+        onChangeUnit={resetLookup}
+        residentLimit={state.result.residentLimit}
+        unitLabel={state.result.unitLabel}
+      />
+    );
+  }
+
   return (
     <div className="space-y-5">
       <div>
@@ -134,24 +150,6 @@ export function UnitLookupForm({ slug }: { slug: string }) {
       </form>
 
       <div aria-live="polite">
-        {state.status === "success" ? (
-          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4">
-            <p className="text-sm font-semibold text-emerald-100">
-              Vivienda encontrada
-            </p>
-            <p className="mt-2 text-lg font-semibold text-white">
-              {state.result.unitLabel}
-            </p>
-            <p className="mt-2 text-sm leading-6 text-emerald-50/80">
-              Puedes registrar hasta {state.result.residentLimit} residentes en
-              esta vivienda.
-            </p>
-            <p className="mt-3 text-xs leading-5 text-emerald-50/65">
-              La informacion de residentes se agregara en la siguiente etapa.
-            </p>
-          </div>
-        ) : null}
-
         {state.status === "unavailable" ? (
           <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
             <p className="text-sm font-semibold text-amber-100">
