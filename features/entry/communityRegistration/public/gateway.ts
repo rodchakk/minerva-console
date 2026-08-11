@@ -35,6 +35,30 @@ export type PublicRegistrationSubmission =
       submitted: true;
     };
 
+export type PublicRegistrationEditResident = {
+  email: string | null;
+  fullName: string;
+  isOwnerReference: boolean;
+  phone: string | null;
+  position: number;
+  relationshipToHouse: "owner" | "tenant" | "family" | "other" | "unknown";
+};
+
+export type PublicRegistrationEdit =
+  | {
+      available: false;
+    }
+  | {
+      available: true;
+      effectiveResidentLimit: number;
+      expiresAt: string;
+      publicInstructions: string | null;
+      publicSlug: string;
+      publicTitle: string;
+      residents: PublicRegistrationEditResident[];
+      unitLabel: string;
+    };
+
 type CampaignRpcResult = {
   available?: boolean;
   closes_at?: string | null;
@@ -54,6 +78,35 @@ type SubmissionRpcResult = {
   accepted?: boolean;
   error_code?: string | null;
 };
+
+type EditRpcResident = {
+  email?: string | null;
+  full_name?: string | null;
+  is_owner_reference?: boolean | null;
+  phone?: string | null;
+  position?: number | null;
+  relationship_to_house?: string | null;
+};
+
+type EditRpcResult = {
+  campaign?: {
+    public_instructions?: string | null;
+    public_slug?: string | null;
+    public_title?: string | null;
+  } | null;
+  effective_resident_limit?: number | null;
+  expires_at?: string | null;
+  residents?: EditRpcResident[] | null;
+  unit_label?: string | null;
+};
+
+const EDIT_RELATIONSHIPS = new Set([
+  "owner",
+  "tenant",
+  "family",
+  "other",
+  "unknown",
+]);
 
 export async function resolveCommunityRegistrationCampaign(input: {
   publicSlug: string;
@@ -202,4 +255,88 @@ export async function submitCommunityRegistrationHousehold(input: {
   }
 
   return { reason: "try_again", submitted: false };
+}
+
+export async function resolveCommunityRegistrationEdit(input: {
+  editTokenHash: string;
+}): Promise<PublicRegistrationEdit> {
+  if (!input.editTokenHash) {
+    return { available: false };
+  }
+
+  let data: unknown;
+  let error: unknown;
+
+  try {
+    const supabase = createAdminClient();
+    const response = await supabase.rpc("resolve_community_registration_edit_v1", {
+      p_edit_token_hash: input.editTokenHash,
+    });
+    data = response.data;
+    error = response.error;
+  } catch {
+    return { available: false };
+  }
+
+  if (error || !data || typeof data !== "object") {
+    return { available: false };
+  }
+
+  const result = data as EditRpcResult;
+  const publicSlug = result.campaign?.public_slug?.trim() ?? "";
+  const publicTitle =
+    result.campaign?.public_title?.trim() || "Correccion de registro";
+  const unitLabel = result.unit_label?.trim() ?? "";
+  const effectiveResidentLimit = Number(result.effective_resident_limit ?? 0);
+  const expiresAt = result.expires_at ?? "";
+  const residents = Array.isArray(result.residents) ? result.residents : [];
+
+  if (
+    !publicSlug ||
+    !unitLabel ||
+    !expiresAt ||
+    !Number.isFinite(effectiveResidentLimit) ||
+    effectiveResidentLimit <= 0 ||
+    residents.length < 1
+  ) {
+    return { available: false };
+  }
+
+  const mappedResidents: PublicRegistrationEditResident[] = [];
+
+  for (const resident of residents) {
+    const fullName = resident.full_name?.trim() ?? "";
+    const position = Number(resident.position ?? 0);
+    const relationship = resident.relationship_to_house?.trim().toLowerCase() ?? "";
+
+    if (
+      !fullName ||
+      !Number.isInteger(position) ||
+      position <= 0 ||
+      !EDIT_RELATIONSHIPS.has(relationship)
+    ) {
+      return { available: false };
+    }
+
+    mappedResidents.push({
+      email: resident.email?.trim() || null,
+      fullName,
+      isOwnerReference: resident.is_owner_reference === true,
+      phone: resident.phone?.trim() || null,
+      position,
+      relationshipToHouse:
+        relationship as PublicRegistrationEditResident["relationshipToHouse"],
+    });
+  }
+
+  return {
+    available: true,
+    effectiveResidentLimit,
+    expiresAt,
+    publicInstructions: result.campaign?.public_instructions ?? null,
+    publicSlug,
+    publicTitle,
+    residents: mappedResidents.sort((left, right) => left.position - right.position),
+    unitLabel,
+  };
 }

@@ -25,6 +25,14 @@ type ValidResidentDraft = ResidentDraft & {
   position: number;
 };
 
+export type InitialHouseholdResidentDraft = {
+  email?: string | null;
+  fullName: string;
+  isOwnerReference: boolean;
+  phone?: string | null;
+  relationshipToHouse: Exclude<Relationship, ""> | "unknown";
+};
+
 const MIN_RESIDENTS = 1;
 const NAME_MAX_LENGTH = 160;
 const EMAIL_MAX_LENGTH = 254;
@@ -57,6 +65,23 @@ function createResidentDraft(id: number): ResidentDraft {
     isOwnerReference: false,
     phone: "",
     relationship: "",
+  };
+}
+
+function createResidentDraftFromInitial(
+  resident: InitialHouseholdResidentDraft,
+  id: number,
+): ResidentDraft {
+  return {
+    email: resident.email ?? "",
+    fullName: resident.fullName,
+    id,
+    isOwnerReference: resident.isOwnerReference,
+    phone: resident.phone ?? "",
+    relationship:
+      resident.relationshipToHouse === "unknown"
+        ? ""
+        : resident.relationshipToHouse,
   };
 }
 
@@ -178,20 +203,30 @@ function joinErrorIds(residentId: number, errors?: ResidentErrors) {
 }
 
 export function HouseholdDraftForm({
+  finalAction = "submit",
+  initialResidents,
+  introText,
+  onChangeUnit,
   residentLimit,
   slug,
   unitLabel,
-  onChangeUnit,
 }: {
+  finalAction?: "local-review" | "submit";
+  initialResidents?: InitialHouseholdResidentDraft[];
+  introText?: string;
   residentLimit: number;
   slug: string;
   unitLabel: string;
-  onChangeUnit: () => void;
+  onChangeUnit?: () => void;
 }) {
-  const [nextResidentId, setNextResidentId] = useState(2);
-  const [residents, setResidents] = useState<ResidentDraft[]>([
-    createResidentDraft(1),
-  ]);
+  const initialDrafts =
+    initialResidents && initialResidents.length > 0
+      ? initialResidents.map((resident, index) =>
+          createResidentDraftFromInitial(resident, index + 1),
+        )
+      : [createResidentDraft(1)];
+  const [nextResidentId, setNextResidentId] = useState(initialDrafts.length + 1);
+  const [residents, setResidents] = useState<ResidentDraft[]>(initialDrafts);
   const [errors, setErrors] = useState<Record<number, ResidentErrors>>({});
   const [reviewResidents, setReviewResidents] = useState<ValidResidentDraft[]>(
     [],
@@ -279,6 +314,8 @@ export function HouseholdDraftForm({
   }
 
   function requestUnitChange() {
+    if (!onChangeUnit) return;
+
     if (hasDraftContent || residents.length > MIN_RESIDENTS) {
       setConfirmingUnitChange(true);
       return;
@@ -363,16 +400,18 @@ export function HouseholdDraftForm({
         <p className="mt-2 text-sm leading-6 text-emerald-50/80">
           Puedes registrar hasta {residentLimit} residentes.
         </p>
-        <button
-          className="mt-3 text-sm font-semibold text-emerald-50 underline decoration-emerald-200/50 underline-offset-4 transition hover:text-white"
-          onClick={requestUnitChange}
-          type="button"
-        >
-          Cambiar vivienda
-        </button>
+        {onChangeUnit ? (
+          <button
+            className="mt-3 text-sm font-semibold text-emerald-50 underline decoration-emerald-200/50 underline-offset-4 transition hover:text-white"
+            onClick={requestUnitChange}
+            type="button"
+          >
+            Cambiar vivienda
+          </button>
+        ) : null}
       </div>
 
-      {confirmingUnitChange ? (
+      {confirmingUnitChange && onChangeUnit ? (
         <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-4">
           <p className="text-sm font-semibold text-amber-100">
             Cambiar vivienda borrara este borrador.
@@ -466,8 +505,9 @@ export function HouseholdDraftForm({
 
           <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
             <p className="text-sm leading-6 text-[var(--text-muted)]">
-              Al enviar este registro, la informacion de residentes se compartira
-              con la administracion de tu residencial para su revision.
+              {finalAction === "local-review"
+                ? "Los cambios podran enviarse en el siguiente paso. Esta revision local todavia no actualiza el registro."
+                : "Al enviar este registro, la informacion de residentes se compartira con la administracion de tu residencial para su revision."}
             </p>
           </div>
 
@@ -500,11 +540,17 @@ export function HouseholdDraftForm({
             </button>
             <button
               className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-violet-300/25 bg-violet-500/20 px-4 text-sm font-semibold text-white transition hover:border-violet-200/40 hover:bg-violet-500/28 disabled:cursor-not-allowed disabled:opacity-60"
-              disabled={isSubmitting}
-              onClick={handleFinalSubmit}
+              disabled={finalAction === "local-review" || isSubmitting}
+              onClick={
+                finalAction === "local-review" ? undefined : handleFinalSubmit
+              }
               type="button"
             >
-              {isSubmitting ? "Enviando..." : "Enviar registro"}
+              {finalAction === "local-review"
+                ? "Envio disponible en el siguiente paso"
+                : isSubmitting
+                  ? "Enviando..."
+                  : "Enviar registro"}
             </button>
           </div>
         </section>
@@ -515,8 +561,8 @@ export function HouseholdDraftForm({
               Residentes de la vivienda
             </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Agrega la informacion de las personas que viven en esta casa. El
-              borrador se mantiene solo en esta pantalla.
+              {introText ??
+                "Agrega la informacion de las personas que viven en esta casa. El borrador se mantiene solo en esta pantalla."}
             </p>
           </div>
 
