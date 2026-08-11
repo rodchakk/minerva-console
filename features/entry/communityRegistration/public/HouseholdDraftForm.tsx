@@ -234,7 +234,12 @@ export function HouseholdDraftForm({
     [],
   );
   const [submitError, setSubmitError] = useState<
-    "access_unavailable" | "try_again" | "unavailable" | null
+    | "access_unavailable"
+    | "rate_limited"
+    | "service_unavailable"
+    | "try_again"
+    | "unavailable"
+    | null
   >(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<"edit" | "review" | "success">("edit");
@@ -383,7 +388,12 @@ export function HouseholdDraftForm({
 
       const result = (await response.json().catch(() => null)) as
         | {
-            error?: "access_unavailable" | "try_again" | "unavailable";
+            error?:
+              | "access_unavailable"
+              | "rate_limited"
+              | "service_unavailable"
+              | "try_again"
+              | "unavailable";
             submitted?: boolean;
           }
         | null;
@@ -399,6 +409,10 @@ export function HouseholdDraftForm({
 
       if (result?.error === "access_unavailable") {
         setSubmitError("access_unavailable");
+      } else if (result?.error === "rate_limited") {
+        setSubmitError("rate_limited");
+      } else if (result?.error === "service_unavailable") {
+        setSubmitError("service_unavailable");
       } else {
         setSubmitError(
           result?.error === "unavailable" ? "unavailable" : "try_again",
@@ -546,6 +560,10 @@ export function HouseholdDraftForm({
                 <p className="mt-2 text-sm leading-6 text-amber-50/80">
                   {submitError === "access_unavailable"
                     ? "Este enlace de correccion ya no esta disponible."
+                    : submitError === "rate_limited"
+                    ? "Has realizado demasiados intentos. Espera un momento e intentalo nuevamente."
+                    : submitError === "service_unavailable"
+                    ? "No pudimos procesar la solicitud en este momento. Intentalo nuevamente."
                     : submitError === "unavailable"
                     ? "No pudimos completar el registro. Verifica el enlace o comunicate con la administracion."
                     : isCorrectionSubmit

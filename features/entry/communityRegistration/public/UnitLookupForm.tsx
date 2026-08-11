@@ -28,11 +28,18 @@ type LookupState =
       status: "unavailable";
     }
   | {
+      status: "rate_limited" | "service_unavailable";
+    }
+  | {
       status: "error";
     };
 
 const NEUTRAL_UNAVAILABLE_MESSAGE =
   "No pudimos habilitar esta vivienda para el registro. Verifica el numero ingresado o comunicate con la administracion de tu residencial.";
+const RATE_LIMITED_MESSAGE =
+  "Has realizado demasiados intentos. Espera un momento e intentalo nuevamente.";
+const SERVICE_UNAVAILABLE_MESSAGE =
+  "No pudimos procesar la solicitud en este momento. Intentalo nuevamente.";
 
 export function UnitLookupForm({ slug }: { slug: string }) {
   const [unitLabel, setUnitLabel] = useState("");
@@ -71,6 +78,16 @@ export function UnitLookupForm({ slug }: { slug: string }) {
 
       if (response.status === 401) {
         window.location.assign(`/entry/register/${encodeURIComponent(slug)}`);
+        return;
+      }
+
+      if (response.status === 429) {
+        setState({ status: "rate_limited" });
+        return;
+      }
+
+      if (response.status === 503) {
+        setState({ status: "service_unavailable" });
         return;
       }
 
@@ -158,6 +175,20 @@ export function UnitLookupForm({ slug }: { slug: string }) {
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-50/80">
               {NEUTRAL_UNAVAILABLE_MESSAGE}
+            </p>
+          </div>
+        ) : null}
+
+        {state.status === "rate_limited" ||
+        state.status === "service_unavailable" ? (
+          <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+            <p className="text-sm font-semibold text-amber-100">
+              No pudimos verificar la vivienda
+            </p>
+            <p className="mt-2 text-sm leading-6 text-amber-50/80">
+              {state.status === "rate_limited"
+                ? RATE_LIMITED_MESSAGE
+                : SERVICE_UNAVAILABLE_MESSAGE}
             </p>
           </div>
         ) : null}

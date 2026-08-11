@@ -7,6 +7,11 @@ import {
   readCorrectionAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/correctionAccessState";
 import { resolveCommunityRegistrationEdit } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  enforceCorrectionPageReadRateLimit,
+  isRateLimitDenied,
+  rateLimitMessage,
+} from "@/features/entry/communityRegistration/public/rateLimit";
 import { HouseholdDraftForm } from "@/features/entry/communityRegistration/public/HouseholdDraftForm";
 
 export const dynamic = "force-dynamic";
@@ -71,6 +76,19 @@ function UnavailableCorrectionState() {
   );
 }
 
+function TemporarilyUnavailableCorrectionState({ message }: { message: string }) {
+  return (
+    <PublicCorrectionFrame>
+      <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+        <p className="text-base font-semibold text-amber-100">
+          Correccion temporalmente no disponible
+        </p>
+        <p className="mt-2 text-sm leading-6 text-amber-50/80">{message}</p>
+      </div>
+    </PublicCorrectionFrame>
+  );
+}
+
 type EntryCorrectionPageProps = {
   params: Promise<{ slug: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
@@ -104,6 +122,19 @@ export default async function EntryCorrectionPage(
 
   if (!correctionState) {
     return <UnavailableCorrectionState />;
+  }
+
+  const rateLimitDecision = await enforceCorrectionPageReadRateLimit({
+    editTokenHash: correctionState.editTokenHash,
+    slug,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return (
+      <TemporarilyUnavailableCorrectionState
+        message={rateLimitMessage(rateLimitDecision)}
+      />
+    );
   }
 
   const correction = await resolveCommunityRegistrationEdit({

@@ -7,6 +7,11 @@ import {
   readCampaignAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/accessState";
 import { resolveCommunityRegistrationCampaign } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  enforceCampaignPageReadRateLimit,
+  isRateLimitDenied,
+  rateLimitMessage,
+} from "@/features/entry/communityRegistration/public/rateLimit";
 import { UnitLookupForm } from "@/features/entry/communityRegistration/public/UnitLookupForm";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +74,19 @@ function UnavailableState() {
   );
 }
 
+function TemporarilyUnavailableState({ message }: { message: string }) {
+  return (
+    <PublicRegistrationFrame>
+      <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+        <p className="text-base font-semibold text-amber-100">
+          Registro temporalmente no disponible
+        </p>
+        <p className="mt-2 text-sm leading-6 text-amber-50/80">{message}</p>
+      </div>
+    </PublicRegistrationFrame>
+  );
+}
+
 export default async function EntryRegisterPage(
   props: PageProps<"/entry/register/[slug]">,
 ) {
@@ -96,6 +114,16 @@ export default async function EntryRegisterPage(
 
   if (!accessState) {
     return <UnavailableState />;
+  }
+
+  const rateLimitDecision = await enforceCampaignPageReadRateLimit({
+    rateLimitSessionId: accessState.rateLimitSessionId,
+    slug,
+    tokenHash: accessState.tokenHash,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return <TemporarilyUnavailableState message={rateLimitMessage(rateLimitDecision)} />;
   }
 
   const campaign = await resolveCommunityRegistrationCampaign({

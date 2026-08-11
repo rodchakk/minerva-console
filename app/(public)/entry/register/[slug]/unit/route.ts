@@ -6,6 +6,11 @@ import {
 } from "@/features/entry/communityRegistration/public/accessState";
 import { lookupCommunityRegistrationUnit } from "@/features/entry/communityRegistration/public/gateway";
 import {
+  enforceUnitLookupRateLimit,
+  isRateLimitDenied,
+  rateLimitJsonResponse,
+} from "@/features/entry/communityRegistration/public/rateLimit";
+import {
   hasSameOriginBoundary,
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
@@ -61,6 +66,16 @@ export async function POST(
 
   if (!accessState) {
     return jsonResponse({ available: false }, 401);
+  }
+
+  const rateLimitDecision = await enforceUnitLookupRateLimit(request, {
+    rateLimitSessionId: accessState.rateLimitSessionId,
+    slug,
+    tokenHash: accessState.tokenHash,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return rateLimitJsonResponse(rateLimitDecision);
   }
 
   const unitLabel = await readUnitLabel(request);

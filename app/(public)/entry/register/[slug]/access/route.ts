@@ -2,12 +2,19 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   CAMPAIGN_ACCESS_MAX_AGE_SECONDS,
   createCampaignAccessCookieValue,
+  createCampaignRateLimitSessionId,
   getCampaignAccessCookieName,
   getCampaignAccessCookiePath,
   hashRegistrationToken,
   normalizePublicSlug,
+  readCampaignAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/accessState";
 import { resolveCommunityRegistrationCampaign } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  enforceCampaignAccessRateLimit,
+  isRateLimitDenied,
+  rateLimitJsonResponse,
+} from "@/features/entry/communityRegistration/public/rateLimit";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +63,14 @@ export async function GET(
   }
 
   const tokenHash = hashRegistrationToken(token);
+  const rateLimitDecision = await enforceCampaignAccessRateLimit(request, {
+    slug,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return rateLimitJsonResponse(rateLimitDecision);
+  }
+
   const campaign = await resolveCommunityRegistrationCampaign({
     publicSlug: slug,
     tokenHash,
@@ -69,10 +84,22 @@ export async function GET(
     headers: registrationHeaders(),
     status: 303,
   });
+  const existingAccessState = readCampaignAccessCookieValue({
+    cookieValue: request.cookies.get(getCampaignAccessCookieName(slug))?.value,
+    slug,
+  });
+  const rateLimitSessionId =
+    existingAccessState?.tokenHash === tokenHash
+      ? existingAccessState.rateLimitSessionId
+      : createCampaignRateLimitSessionId();
 
   response.cookies.set({
     name: getCampaignAccessCookieName(slug),
-    value: createCampaignAccessCookieValue({ slug, tokenHash }),
+    value: createCampaignAccessCookieValue({
+      rateLimitSessionId,
+      slug,
+      tokenHash,
+    }),
     httpOnly: true,
     maxAge: CAMPAIGN_ACCESS_MAX_AGE_SECONDS,
     path: getCampaignAccessCookiePath(slug),

@@ -10,6 +10,11 @@ import {
   resubmitCommunityRegistrationHousehold,
 } from "@/features/entry/communityRegistration/public/gateway";
 import {
+  enforceCorrectionSubmissionRateLimit,
+  isRateLimitDenied,
+  rateLimitJsonResponse,
+} from "@/features/entry/communityRegistration/public/rateLimit";
+import {
   hasSameOriginBoundary,
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
@@ -30,6 +35,8 @@ type PublicCorrectionSubmissionResponse =
         | "access_unavailable"
         | "invalid_request"
         | "payload_too_large"
+        | "rate_limited"
+        | "service_unavailable"
         | "try_again";
       submitted: false;
     };
@@ -133,6 +140,15 @@ export async function POST(
 
   if (!correctionState) {
     return correctionAccessUnavailable(slug);
+  }
+
+  const rateLimitDecision = await enforceCorrectionSubmissionRateLimit({
+    editTokenHash: correctionState.editTokenHash,
+    slug,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return rateLimitJsonResponse(rateLimitDecision, { includeSubmitted: true });
   }
 
   const correction = await resolveCommunityRegistrationEdit({

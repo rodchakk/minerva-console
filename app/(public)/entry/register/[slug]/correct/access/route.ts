@@ -9,6 +9,11 @@ import {
   hashCorrectionToken,
 } from "@/features/entry/communityRegistration/public/correctionAccessState";
 import { resolveCommunityRegistrationEdit } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  enforceCorrectionAccessRateLimit,
+  isRateLimitDenied,
+  rateLimitJsonResponse,
+} from "@/features/entry/communityRegistration/public/rateLimit";
 import { registrationHeaders } from "@/features/entry/communityRegistration/public/requestSecurity";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +55,15 @@ export async function GET(
   }
 
   const editTokenHash = hashCorrectionToken(token);
+  const rateLimitDecision = await enforceCorrectionAccessRateLimit(request, {
+    editTokenHash,
+    slug,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return rateLimitJsonResponse(rateLimitDecision);
+  }
+
   const correction = await resolveCommunityRegistrationEdit({ editTokenHash });
 
   if (

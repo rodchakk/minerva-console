@@ -1,11 +1,12 @@
 import "server-only";
 
-import { createHash, createHmac, timingSafeEqual } from "crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 
 export const CAMPAIGN_ACCESS_MAX_AGE_SECONDS = 60 * 60 * 2;
 
 type CampaignAccessPayload = {
   issuedAt: number;
+  rateLimitSessionId: string;
   slug: string;
   tokenHash: string;
   v: 1;
@@ -59,6 +60,10 @@ export function hashRegistrationToken(token: string) {
   return createHash("sha256").update(token.trim(), "utf8").digest("hex");
 }
 
+export function createCampaignRateLimitSessionId() {
+  return randomBytes(32).toString("base64url");
+}
+
 export function getCampaignAccessCookieName(slug: string) {
   const slugHash = createHash("sha256")
     .update(normalizePublicSlug(slug), "utf8")
@@ -73,11 +78,13 @@ export function getCampaignAccessCookiePath(slug: string) {
 }
 
 export function createCampaignAccessCookieValue(input: {
+  rateLimitSessionId: string;
   slug: string;
   tokenHash: string;
 }) {
   const payload: CampaignAccessPayload = {
     issuedAt: Date.now(),
+    rateLimitSessionId: input.rateLimitSessionId,
     slug: normalizePublicSlug(input.slug),
     tokenHash: input.tokenHash,
     v: 1,
@@ -105,6 +112,12 @@ export function readCampaignAccessCookieValue(input: {
       return null;
     }
     if (typeof payload.issuedAt !== "number") return null;
+    if (
+      typeof payload.rateLimitSessionId !== "string" ||
+      payload.rateLimitSessionId.length < 32
+    ) {
+      return null;
+    }
 
     const ageSeconds = (Date.now() - payload.issuedAt) / 1000;
     if (ageSeconds < 0 || ageSeconds > CAMPAIGN_ACCESS_MAX_AGE_SECONDS) {
@@ -112,6 +125,7 @@ export function readCampaignAccessCookieValue(input: {
     }
 
     return {
+      rateLimitSessionId: payload.rateLimitSessionId,
       slug: payload.slug,
       tokenHash: payload.tokenHash,
     };

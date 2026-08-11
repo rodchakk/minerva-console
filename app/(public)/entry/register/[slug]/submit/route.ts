@@ -6,6 +6,11 @@ import {
 } from "@/features/entry/communityRegistration/public/accessState";
 import { submitCommunityRegistrationHousehold } from "@/features/entry/communityRegistration/public/gateway";
 import {
+  enforceInitialSubmissionRateLimit,
+  isRateLimitDenied,
+  rateLimitJsonResponse,
+} from "@/features/entry/communityRegistration/public/rateLimit";
+import {
   hasSameOriginBoundary,
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
@@ -26,6 +31,8 @@ type PublicSubmissionResponse =
         | "access_required"
         | "invalid_request"
         | "payload_too_large"
+        | "rate_limited"
+        | "service_unavailable"
         | "try_again"
         | "unavailable";
       submitted: false;
@@ -100,6 +107,16 @@ export async function POST(
 
   if (!accessState) {
     return submissionResponse({ error: "access_required", submitted: false }, 401);
+  }
+
+  const rateLimitDecision = await enforceInitialSubmissionRateLimit({
+    rateLimitSessionId: accessState.rateLimitSessionId,
+    slug,
+    tokenHash: accessState.tokenHash,
+  });
+
+  if (isRateLimitDenied(rateLimitDecision)) {
+    return rateLimitJsonResponse(rateLimitDecision, { includeSubmitted: true });
   }
 
   const jsonBody = await readJsonBody(request);
