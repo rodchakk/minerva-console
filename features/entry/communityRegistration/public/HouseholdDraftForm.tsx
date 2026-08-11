@@ -33,6 +33,8 @@ export type InitialHouseholdResidentDraft = {
   relationshipToHouse: Exclude<Relationship, ""> | "unknown";
 };
 
+type FinalAction = "correction-submit" | "local-review" | "submit";
+
 const MIN_RESIDENTS = 1;
 const NAME_MAX_LENGTH = 160;
 const EMAIL_MAX_LENGTH = 254;
@@ -211,7 +213,7 @@ export function HouseholdDraftForm({
   slug,
   unitLabel,
 }: {
-  finalAction?: "local-review" | "submit";
+  finalAction?: FinalAction;
   initialResidents?: InitialHouseholdResidentDraft[];
   introText?: string;
   residentLimit: number;
@@ -232,7 +234,7 @@ export function HouseholdDraftForm({
     [],
   );
   const [submitError, setSubmitError] = useState<
-    "try_again" | "unavailable" | null
+    "access_unavailable" | "try_again" | "unavailable" | null
   >(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<"edit" | "review" | "success">("edit");
@@ -244,6 +246,7 @@ export function HouseholdDraftForm({
     () => residents.some((resident) => hasResidentContent(resident)),
     [residents],
   );
+  const isCorrectionSubmit = finalAction === "correction-submit";
 
   function updateResident(
     residentId: number,
@@ -347,12 +350,16 @@ export function HouseholdDraftForm({
     setSubmitError(null);
 
     try {
+      const submissionResidents =
+        buildHouseholdSubmissionResidents(reviewResidents);
       const response = await fetch(
-        `/entry/register/${encodeURIComponent(slug)}/submit`,
+        `/entry/register/${encodeURIComponent(slug)}${
+          isCorrectionSubmit ? "/correct" : ""
+        }/submit`,
         {
           body: JSON.stringify({
-            residents: buildHouseholdSubmissionResidents(reviewResidents),
-            unitLabel,
+            residents: submissionResidents,
+            ...(isCorrectionSubmit ? {} : { unitLabel }),
           }),
           cache: "no-store",
           credentials: "same-origin",
@@ -365,12 +372,20 @@ export function HouseholdDraftForm({
       );
 
       if (response.status === 401) {
+        if (isCorrectionSubmit) {
+          setSubmitError("access_unavailable");
+          return;
+        }
+
         window.location.assign(`/entry/register/${encodeURIComponent(slug)}`);
         return;
       }
 
       const result = (await response.json().catch(() => null)) as
-        | { error?: "try_again" | "unavailable"; submitted?: boolean }
+        | {
+            error?: "access_unavailable" | "try_again" | "unavailable";
+            submitted?: boolean;
+          }
         | null;
 
       if (response.ok && result?.submitted === true) {
@@ -382,7 +397,13 @@ export function HouseholdDraftForm({
         return;
       }
 
-      setSubmitError(result?.error === "unavailable" ? "unavailable" : "try_again");
+      if (result?.error === "access_unavailable") {
+        setSubmitError("access_unavailable");
+      } else {
+        setSubmitError(
+          result?.error === "unavailable" ? "unavailable" : "try_again",
+        );
+      }
     } catch {
       setSubmitError("try_again");
     } finally {
@@ -446,11 +467,12 @@ export function HouseholdDraftForm({
               className="text-xl font-semibold text-white"
               id="household-success-title"
             >
-              Registro enviado
+              {isCorrectionSubmit ? "Cambios enviados" : "Registro enviado"}
             </h2>
             <p className="mt-2 text-sm leading-6 text-emerald-50/80">
-              Tu informacion fue enviada correctamente a la administracion de tu
-              residencial.
+              {isCorrectionSubmit
+                ? "Tu informacion actualizada fue enviada correctamente."
+                : "Tu informacion fue enviada correctamente a la administracion de tu residencial."}
             </p>
           </div>
         </section>
@@ -507,6 +529,8 @@ export function HouseholdDraftForm({
             <p className="text-sm leading-6 text-[var(--text-muted)]">
               {finalAction === "local-review"
                 ? "Los cambios podran enviarse en el siguiente paso. Esta revision local todavia no actualiza el registro."
+                : isCorrectionSubmit
+                  ? "Al enviar estos cambios, la informacion actualizada se compartira con la administracion de tu residencial para su revision."
                 : "Al enviar este registro, la informacion de residentes se compartira con la administracion de tu residencial para su revision."}
             </p>
           </div>
@@ -515,11 +539,17 @@ export function HouseholdDraftForm({
             {submitError ? (
               <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
                 <p className="text-sm font-semibold text-amber-100">
-                  No pudimos enviar el registro
+                  {isCorrectionSubmit
+                    ? "No pudimos enviar los cambios"
+                    : "No pudimos enviar el registro"}
                 </p>
                 <p className="mt-2 text-sm leading-6 text-amber-50/80">
-                  {submitError === "unavailable"
+                  {submitError === "access_unavailable"
+                    ? "Este enlace de correccion ya no esta disponible."
+                    : submitError === "unavailable"
                     ? "No pudimos completar el registro. Verifica el enlace o comunicate con la administracion."
+                    : isCorrectionSubmit
+                      ? "No pudimos confirmar si los cambios se guardaron. No se reintentara automaticamente; actualiza o abre de nuevo el enlace oficial para verificar si sigue disponible antes de intentarlo otra vez."
                     : "No pudimos confirmar si el registro se guardo. No se reintentara automaticamente; verifica con la administracion antes de enviarlo otra vez."}
                 </p>
               </div>
@@ -549,8 +579,12 @@ export function HouseholdDraftForm({
               {finalAction === "local-review"
                 ? "Envio disponible en el siguiente paso"
                 : isSubmitting
-                  ? "Enviando..."
-                  : "Enviar registro"}
+                  ? isCorrectionSubmit
+                    ? "Enviando cambios..."
+                    : "Enviando..."
+                  : isCorrectionSubmit
+                    ? "Enviar cambios"
+                    : "Enviar registro"}
             </button>
           </div>
         </section>

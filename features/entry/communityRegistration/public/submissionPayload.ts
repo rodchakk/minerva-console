@@ -28,9 +28,22 @@ export type HouseholdSubmissionBody = {
   unitLabel: string;
 };
 
+export type HouseholdCorrectionSubmissionBody = {
+  residents: HouseholdSubmissionResident[];
+};
+
 type ParseSubmissionResult =
   | {
       body: HouseholdSubmissionBody;
+      ok: true;
+    }
+  | {
+      ok: false;
+    };
+
+type ParseCorrectionSubmissionResult =
+  | {
+      body: HouseholdCorrectionSubmissionBody;
       ok: true;
     }
   | {
@@ -120,19 +133,10 @@ export function buildHouseholdSubmissionResidents(
   });
 }
 
-export function parseHouseholdSubmissionBody(
-  body: unknown,
-): ParseSubmissionResult {
-  if (!isRecord(body)) return { ok: false };
-
-  const unitLabel = typeof body.unitLabel === "string" ? body.unitLabel.trim() : "";
-  if (!unitLabel || countCharacters(unitLabel) > MAX_UNIT_LABEL_LENGTH) {
-    return { ok: false };
-  }
-
-  if (!Array.isArray(body.residents)) return { ok: false };
-  if (body.residents.length < 1) {
-    return { ok: false };
+function parseHouseholdResidents(value: unknown) {
+  if (!Array.isArray(value)) return null;
+  if (value.length < 1) {
+    return null;
   }
 
   const seenPositions = new Set<number>();
@@ -140,25 +144,25 @@ export function parseHouseholdSubmissionBody(
   let ownerReferenceCount = 0;
   const residents: HouseholdSubmissionResident[] = [];
 
-  for (const item of body.residents) {
-    if (!isRecord(item) || !hasOnlyResidentKeys(item)) return { ok: false };
+  for (const item of value) {
+    if (!isRecord(item) || !hasOnlyResidentKeys(item)) return null;
 
     const position = item.position;
     if (
       typeof position !== "number" ||
       !Number.isInteger(position) ||
       position <= 0 ||
-      position > body.residents.length ||
+      position > value.length ||
       seenPositions.has(position)
     ) {
-      return { ok: false };
+      return null;
     }
     seenPositions.add(position);
 
     const fullName =
       typeof item.full_name === "string" ? normalizeName(item.full_name) : "";
     if (!fullName || countCharacters(fullName) > NAME_MAX_LENGTH) {
-      return { ok: false };
+      return null;
     }
 
     const relationship =
@@ -166,17 +170,17 @@ export function parseHouseholdSubmissionBody(
         ? item.relationship_to_house.trim().toLowerCase()
         : "";
     if (!ALLOWED_RELATIONSHIPS.has(relationship)) {
-      return { ok: false };
+      return null;
     }
 
     if (typeof item.is_owner_reference !== "boolean") {
-      return { ok: false };
+      return null;
     }
 
     if (item.is_owner_reference) {
       ownerReferenceCount += 1;
       if (relationship !== "owner" || ownerReferenceCount > 1) {
-        return { ok: false };
+        return null;
       }
     }
 
@@ -189,16 +193,16 @@ export function parseHouseholdSubmissionBody(
     };
 
     if ("email" in item) {
-      if (typeof item.email !== "string") return { ok: false };
+      if (typeof item.email !== "string") return null;
       const email = normalizeEmail(item.email);
-      if (!email || !isValidEmail(email)) return { ok: false };
+      if (!email || !isValidEmail(email)) return null;
       resident.email = email;
     }
 
     if ("phone" in item) {
-      if (typeof item.phone !== "string") return { ok: false };
+      if (typeof item.phone !== "string") return null;
       const phone = normalizePhone(item.phone);
-      if (!phone || !isValidPhone(phone)) return { ok: false };
+      if (!phone || !isValidPhone(phone)) return null;
       resident.phone = phone;
     }
 
@@ -208,17 +212,50 @@ export function parseHouseholdSubmissionBody(
       resident.phone ?? "",
     ].join("|");
     if (seenResidentKeys.has(duplicateKey)) {
-      return { ok: false };
+      return null;
     }
     seenResidentKeys.add(duplicateKey);
 
     residents.push(resident);
   }
 
+  return residents;
+}
+
+export function parseHouseholdSubmissionBody(
+  body: unknown,
+): ParseSubmissionResult {
+  if (!isRecord(body)) return { ok: false };
+
+  const unitLabel = typeof body.unitLabel === "string" ? body.unitLabel.trim() : "";
+  if (!unitLabel || countCharacters(unitLabel) > MAX_UNIT_LABEL_LENGTH) {
+    return { ok: false };
+  }
+
+  const residents = parseHouseholdResidents(body.residents);
+  if (!residents) return { ok: false };
+
   return {
     body: {
       residents,
       unitLabel,
+    },
+    ok: true,
+  };
+}
+
+export function parseHouseholdCorrectionSubmissionBody(
+  body: unknown,
+): ParseCorrectionSubmissionResult {
+  if (!isRecord(body)) return { ok: false };
+  if (Object.keys(body).some((key) => key !== "residents")) return { ok: false };
+
+  const residents = parseHouseholdResidents(body.residents);
+  if (!residents) return { ok: false };
+
+  return {
+    body: {
+      residents,
     },
     ok: true,
   };

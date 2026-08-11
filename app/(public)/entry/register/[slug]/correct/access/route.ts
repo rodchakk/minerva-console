@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { normalizePublicSlug } from "@/features/entry/communityRegistration/public/accessState";
 import {
+  clearCorrectionAccessCookieOptions,
   createCorrectionAccessCookieValue,
   getCorrectionAccessCookieName,
   getCorrectionAccessCookiePath,
@@ -30,15 +31,7 @@ function redirectWithoutCorrectionAccess(request: NextRequest, slug: string) {
   );
 
   if (normalizedSlug) {
-    response.cookies.set({
-      name: getCorrectionAccessCookieName(normalizedSlug),
-      value: "",
-      httpOnly: true,
-      maxAge: 0,
-      path: getCorrectionAccessCookiePath(normalizedSlug),
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-    });
+    response.cookies.set(clearCorrectionAccessCookieOptions(normalizedSlug));
   }
 
   return response;

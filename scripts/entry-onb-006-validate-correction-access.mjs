@@ -82,7 +82,8 @@ assert(
 assert(
   "invalid access fails closed and clears correction cookie",
   /redirectWithoutCorrectionAccess/.test(accessRoute) &&
-    /maxAge: 0/.test(accessRoute) &&
+    /clearCorrectionAccessCookieOptions/.test(accessRoute) &&
+    /maxAge: 0/.test(correctionState) &&
     /UnavailableCorrectionState/.test(correctionPage),
 );
 
@@ -110,7 +111,7 @@ assert(
   "prefilled residents feed reusable household draft form",
   /initialResidents/.test(form) &&
     /createResidentDraftFromInitial/.test(form) &&
-    /finalAction="local-review"/.test(correctionPage),
+    /finalAction="correction-submit"/.test(correctionPage),
 );
 
 assert(
@@ -126,9 +127,8 @@ assert(
 );
 
 assert(
-  "local review only, no resubmit RPC route or fake success",
-  /Los cambios podran enviarse en el siguiente paso/.test(form) &&
-    /Envio disponible en el siguiente paso/.test(form) &&
+  "correction page delegates submission and does not call resubmit RPC directly",
+  /Enviar cambios/.test(form) &&
     !/resubmit_community_registration_household_v1/.test(correctionPage) &&
     !/resubmit_community_registration_household_v1/.test(form),
 );

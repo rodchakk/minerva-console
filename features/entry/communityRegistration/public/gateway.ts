@@ -35,6 +35,15 @@ export type PublicRegistrationSubmission =
       submitted: true;
     };
 
+export type PublicCorrectionSubmission =
+  | {
+      reason: "access_unavailable" | "try_again";
+      submitted: false;
+    }
+  | {
+      submitted: true;
+    };
+
 export type PublicRegistrationEditResident = {
   email: string | null;
   fullName: string;
@@ -77,6 +86,10 @@ type UnitLookupRpcResult = {
 type SubmissionRpcResult = {
   accepted?: boolean;
   error_code?: string | null;
+};
+
+type CorrectionSubmissionRpcResult = {
+  accepted?: boolean;
 };
 
 type EditRpcResident = {
@@ -339,4 +352,63 @@ export async function resolveCommunityRegistrationEdit(input: {
     residents: mappedResidents.sort((left, right) => left.position - right.position),
     unitLabel,
   };
+}
+
+function isUnavailableCorrectionError(error: unknown) {
+  if (!error || typeof error !== "object") return false;
+
+  const values = Object.values(error as Record<string, unknown>)
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+
+  return /ENTRY_CR_(INVALID_TOKEN|TOKEN_EXPIRED|INVALID_STATE|CAMPAIGN_UNAVAILABLE)/.test(
+    values,
+  );
+}
+
+export async function resubmitCommunityRegistrationHousehold(input: {
+  editTokenHash: string;
+  residents: HouseholdSubmissionResident[];
+}): Promise<PublicCorrectionSubmission> {
+  if (!input.editTokenHash || input.residents.length < 1) {
+    return { reason: "access_unavailable", submitted: false };
+  }
+
+  let data: unknown;
+  let error: unknown;
+
+  try {
+    const supabase = createAdminClient();
+    const response = await supabase.rpc(
+      "resubmit_community_registration_household_v1",
+      {
+        p_edit_token_hash: input.editTokenHash,
+        p_residents: input.residents,
+      },
+    );
+    data = response.data;
+    error = response.error;
+  } catch {
+    return { reason: "try_again", submitted: false };
+  }
+
+  if (error) {
+    return {
+      reason: isUnavailableCorrectionError(error)
+        ? "access_unavailable"
+        : "try_again",
+      submitted: false,
+    };
+  }
+
+  if (!data || typeof data !== "object") {
+    return { reason: "try_again", submitted: false };
+  }
+
+  const result = data as CorrectionSubmissionRpcResult;
+  if (result.accepted === true) {
+    return { submitted: true };
+  }
+
+  return { reason: "try_again", submitted: false };
 }

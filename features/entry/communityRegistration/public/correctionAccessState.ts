@@ -63,6 +63,18 @@ export function getCorrectionAccessCookiePath(slug: string) {
   return `/entry/register/${encodeURIComponent(normalizePublicSlug(slug))}/correct`;
 }
 
+export function clearCorrectionAccessCookieOptions(slug: string) {
+  return {
+    name: getCorrectionAccessCookieName(slug),
+    value: "",
+    httpOnly: true,
+    maxAge: 0,
+    path: getCorrectionAccessCookiePath(slug),
+    sameSite: "lax" as const,
+    secure: process.env.NODE_ENV === "production",
+  };
+}
+
 export function getCorrectionAccessMaxAgeSeconds(expiresAt: string) {
   const expiresAtMs = Date.parse(expiresAt);
   if (!Number.isFinite(expiresAtMs)) return 0;

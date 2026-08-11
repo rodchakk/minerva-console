@@ -126,13 +126,13 @@ export default async function EntryCorrectionPage(
           </p>
         ) : (
           <p className="text-sm leading-6 text-[var(--text-muted)]">
-            Actualiza la informacion de tu vivienda. Los cambios se revisaran
-            localmente en este paso antes de habilitar el envio.
+            Actualiza la informacion de tu vivienda. Revisa los cambios antes
+            de enviarlos a la administracion.
           </p>
         )}
 
         <HouseholdDraftForm
-          finalAction="local-review"
+          finalAction="correction-submit"
           initialResidents={correction.residents.map((resident) => ({
             email: resident.email,
             fullName: resident.fullName,
@@ -140,7 +140,7 @@ export default async function EntryCorrectionPage(
             phone: resident.phone,
             relationshipToHouse: resident.relationshipToHouse,
           }))}
-          introText="Actualiza la informacion de las personas registradas para esta vivienda. El borrador se mantiene solo en esta pantalla."
+          introText="Actualiza la informacion de las personas registradas para esta vivienda. El envio solo ocurre despues de revisar los cambios."
           residentLimit={correction.effectiveResidentLimit}
           slug={slug}
           unitLabel={correction.unitLabel}
