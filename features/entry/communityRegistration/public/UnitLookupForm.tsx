@@ -104,6 +104,7 @@ export function UnitLookupForm({ slug }: { slug: string }) {
       <HouseholdDraftForm
         onChangeUnit={resetLookup}
         residentLimit={state.result.residentLimit}
+        slug={slug}
         unitLabel={state.result.unitLabel}
       />
     );

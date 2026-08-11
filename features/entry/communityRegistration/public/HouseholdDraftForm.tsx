@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { buildHouseholdSubmissionResidents } from "./submissionPayload";
 
 type Relationship = "" | "owner" | "tenant" | "family" | "other";
 
@@ -178,10 +179,12 @@ function joinErrorIds(residentId: number, errors?: ResidentErrors) {
 
 export function HouseholdDraftForm({
   residentLimit,
+  slug,
   unitLabel,
   onChangeUnit,
 }: {
   residentLimit: number;
+  slug: string;
   unitLabel: string;
   onChangeUnit: () => void;
 }) {
@@ -193,7 +196,11 @@ export function HouseholdDraftForm({
   const [reviewResidents, setReviewResidents] = useState<ValidResidentDraft[]>(
     [],
   );
-  const [step, setStep] = useState<"edit" | "review">("edit");
+  const [submitError, setSubmitError] = useState<
+    "try_again" | "unavailable" | null
+  >(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [step, setStep] = useState<"edit" | "review" | "success">("edit");
   const [confirmingUnitChange, setConfirmingUnitChange] = useState(false);
 
   const isAtLimit = residents.length >= residentLimit;
@@ -230,6 +237,7 @@ export function HouseholdDraftForm({
       }),
     );
     setStep("edit");
+    setSubmitError(null);
   }
 
   function setOwnerReference(residentId: number, checked: boolean) {
@@ -243,6 +251,7 @@ export function HouseholdDraftForm({
       })),
     );
     setStep("edit");
+    setSubmitError(null);
   }
 
   function addResident() {
@@ -251,6 +260,7 @@ export function HouseholdDraftForm({
     setResidents((current) => [...current, createResidentDraft(nextResidentId)]);
     setNextResidentId((current) => current + 1);
     setStep("edit");
+    setSubmitError(null);
   }
 
   function removeResident(residentId: number) {
@@ -265,6 +275,7 @@ export function HouseholdDraftForm({
       return nextErrors;
     });
     setStep("edit");
+    setSubmitError(null);
   }
 
   function requestUnitChange() {
@@ -288,7 +299,58 @@ export function HouseholdDraftForm({
     }
 
     setReviewResidents(result.validResidents);
+    setSubmitError(null);
     setStep("review");
+  }
+
+  async function handleFinalSubmit() {
+    if (isSubmitting || reviewResidents.length < MIN_RESIDENTS) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+
+    try {
+      const response = await fetch(
+        `/entry/register/${encodeURIComponent(slug)}/submit`,
+        {
+          body: JSON.stringify({
+            residents: buildHouseholdSubmissionResidents(reviewResidents),
+            unitLabel,
+          }),
+          cache: "no-store",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+          method: "POST",
+        },
+      );
+
+      if (response.status === 401) {
+        window.location.assign(`/entry/register/${encodeURIComponent(slug)}`);
+        return;
+      }
+
+      const result = (await response.json().catch(() => null)) as
+        | { error?: "try_again" | "unavailable"; submitted?: boolean }
+        | null;
+
+      if (response.ok && result?.submitted === true) {
+        setResidents([createResidentDraft(1)]);
+        setNextResidentId(2);
+        setReviewResidents([]);
+        setErrors({});
+        setStep("success");
+        return;
+      }
+
+      setSubmitError(result?.error === "unavailable" ? "unavailable" : "try_again");
+    } catch {
+      setSubmitError("try_again");
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -338,7 +400,22 @@ export function HouseholdDraftForm({
         </div>
       ) : null}
 
-      {step === "review" ? (
+      {step === "success" ? (
+        <section className="space-y-5" aria-labelledby="household-success-title">
+          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4">
+            <h2
+              className="text-xl font-semibold text-white"
+              id="household-success-title"
+            >
+              Registro enviado
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-emerald-50/80">
+              Tu informacion fue enviada correctamente a la administracion de tu
+              residencial.
+            </p>
+          </div>
+        </section>
+      ) : step === "review" ? (
         <section className="space-y-5" aria-labelledby="household-review-title">
           <div>
             <h2
@@ -389,17 +466,47 @@ export function HouseholdDraftForm({
 
           <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
             <p className="text-sm leading-6 text-[var(--text-muted)]">
-              Envio del registro disponible en el siguiente paso.
+              Al enviar este registro, la informacion de residentes se compartira
+              con la administracion de tu residencial para su revision.
             </p>
           </div>
 
-          <button
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.07]"
-            onClick={() => setStep("edit")}
-            type="button"
-          >
-            Editar informacion
-          </button>
+          <div aria-live="polite">
+            {submitError ? (
+              <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+                <p className="text-sm font-semibold text-amber-100">
+                  No pudimos enviar el registro
+                </p>
+                <p className="mt-2 text-sm leading-6 text-amber-50/80">
+                  {submitError === "unavailable"
+                    ? "No pudimos completar el registro. Verifica el enlace o comunicate con la administracion."
+                    : "No pudimos confirmar si el registro se guardo. No se reintentara automaticamente; verifica con la administracion antes de enviarlo otra vez."}
+                </p>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <button
+              className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
+              onClick={() => {
+                setSubmitError(null);
+                setStep("edit");
+              }}
+              type="button"
+            >
+              Editar informacion
+            </button>
+            <button
+              className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-violet-300/25 bg-violet-500/20 px-4 text-sm font-semibold text-white transition hover:border-violet-200/40 hover:bg-violet-500/28 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={isSubmitting}
+              onClick={handleFinalSubmit}
+              type="button"
+            >
+              {isSubmitting ? "Enviando..." : "Enviar registro"}
+            </button>
+          </div>
         </section>
       ) : (
         <form className="space-y-5" noValidate onSubmit={handleReview}>

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { HouseholdSubmissionResident } from "./submissionPayload";
 
 export type PublicRegistrationCampaign =
   | {
@@ -25,6 +26,15 @@ export type PublicRegistrationUnitLookup =
       unitLabel: string;
     };
 
+export type PublicRegistrationSubmission =
+  | {
+      reason: "try_again" | "unavailable";
+      submitted: false;
+    }
+  | {
+      submitted: true;
+    };
+
 type CampaignRpcResult = {
   available?: boolean;
   closes_at?: string | null;
@@ -38,6 +48,11 @@ type UnitLookupRpcResult = {
   can_start?: boolean;
   effective_resident_limit?: number | null;
   unit_label?: string | null;
+};
+
+type SubmissionRpcResult = {
+  accepted?: boolean;
+  error_code?: string | null;
 };
 
 export async function resolveCommunityRegistrationCampaign(input: {
@@ -130,4 +145,61 @@ export async function lookupCommunityRegistrationUnit(input: {
     residentLimit,
     unitLabel: returnedUnitLabel,
   };
+}
+
+export async function submitCommunityRegistrationHousehold(input: {
+  publicSlug: string;
+  residents: HouseholdSubmissionResident[];
+  tokenHash: string;
+  unitLabel: string;
+}): Promise<PublicRegistrationSubmission> {
+  const unitLabel = input.unitLabel.trim();
+
+  if (
+    !input.publicSlug ||
+    !input.tokenHash ||
+    !unitLabel ||
+    input.residents.length < 1
+  ) {
+    return { reason: "unavailable", submitted: false };
+  }
+
+  let data: unknown;
+  let error: unknown;
+
+  try {
+    const supabase = createAdminClient();
+    const response = await supabase.rpc(
+      "submit_community_registration_household_v1",
+      {
+        p_campaign_token_hash: input.tokenHash,
+        p_public_slug: input.publicSlug,
+        p_residents: input.residents,
+        p_technical_metadata: {},
+        p_unit_label: unitLabel,
+      },
+    );
+    data = response.data;
+    error = response.error;
+  } catch {
+    return { reason: "try_again", submitted: false };
+  }
+
+  if (error || !data || typeof data !== "object") {
+    return { reason: "try_again", submitted: false };
+  }
+
+  const result = data as SubmissionRpcResult;
+  if (result.accepted === true) {
+    return { submitted: true };
+  }
+
+  if (
+    result.error_code === "ENTRY_CR_CAMPAIGN_UNAVAILABLE" ||
+    result.error_code === "ENTRY_CR_UNIT_UNAVAILABLE"
+  ) {
+    return { reason: "unavailable", submitted: false };
+  }
+
+  return { reason: "try_again", submitted: false };
 }

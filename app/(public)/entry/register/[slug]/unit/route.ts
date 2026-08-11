@@ -1,64 +1,25 @@
-import { NextResponse, type NextRequest } from "next/server";
+import type { NextRequest } from "next/server";
 import {
   getCampaignAccessCookieName,
   normalizePublicSlug,
   readCampaignAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/accessState";
 import { lookupCommunityRegistrationUnit } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  hasSameOriginBoundary,
+  jsonRegistrationResponse,
+} from "@/features/entry/communityRegistration/public/requestSecurity";
 
 export const dynamic = "force-dynamic";
 
 const MAX_UNIT_LABEL_LENGTH = 120;
-
-function registrationHeaders() {
-  return {
-    "Cache-Control": "no-store, max-age=0",
-    Pragma: "no-cache",
-    "Referrer-Policy": "no-referrer",
-    "X-Robots-Tag": "noindex, nofollow",
-  };
-}
 
 function jsonResponse(body: { available: false } | {
   available: true;
   residentLimit: number;
   unitLabel: string;
 }, status = 200) {
-  return NextResponse.json(body, {
-    headers: registrationHeaders(),
-    status,
-  });
-}
-
-function hasSameOriginBoundary(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (!origin) return false;
-
-  try {
-    const requestOrigin = new URL(origin).origin;
-    const forwardedProto = request.headers.get("x-forwarded-proto");
-    const forwardedHost = request.headers.get("x-forwarded-host");
-    const host = forwardedHost ?? request.headers.get("host");
-    const protocol = forwardedProto ?? request.nextUrl.protocol.replace(/:$/, "");
-    const allowedOrigins = new Set([request.nextUrl.origin]);
-
-    if (host) {
-      allowedOrigins.add(`${protocol}://${host}`);
-    }
-
-    if (!allowedOrigins.has(requestOrigin)) {
-      return false;
-    }
-  } catch {
-    return false;
-  }
-
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite && !["same-origin", "same-site", "none"].includes(fetchSite)) {
-    return false;
-  }
-
-  return true;
+  return jsonRegistrationResponse(body, status);
 }
 
 async function readUnitLabel(request: NextRequest) {
