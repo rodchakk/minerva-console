@@ -96,8 +96,9 @@ evidence:
 
 | Community | Current control | Status / note |
 | --------- | --------------- | ------------- |
-| Colonia El Carmen | Manual calls and paper log observed | Priority #1. Patronato Package delivered to the head of security on 2026-08-04; he said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed. Size pending confirmation before quote or plan classification. |
-| Residencial El Limonar | Residents announce visits by calls and WhatsApp; paper visitor records; manual barrier | Qualified lead / FIRST DOOR #2. Security says the community wants to implement a system, subject to patronato discussion. Patronato president identified as Antonio Flores. Personalized package delivered at the gate on 2026-08-07 after confirmation from the previous security contact. Patronato receipt and meeting date remain unconfirmed. |
+| Colonia El Carmen | Manual calls and paper log observed | Priority #1. Patronato Package delivered 2026-08-04. On 2026-08-12 security confirmed that it reached the patronato. Reaction/review remains unknown. Security will ask again; Rudy requested permission-based direct contact. Next follow-up: 2026-08-14. |
+| Residencial El Limonar | Residents announce visits by calls and WhatsApp; paper visitor records; manual barrier | Qualified lead / FIRST DOOR #2. Patronato president identified as Antonio Flores. Package delivered 2026-08-07; on 2026-08-12 security confirmed patronato receipt. Security contact planned to raise ENTRY directly with Antonio Flores that day. Outcome unknown. Next follow-up: 2026-08-14. |
+| Residencial Andalucía | Residents call; paper visitor log; manual barrier; no visitor-management system according to security | Investigated / qualified discovery lead. Security estimated ~80 homes. Another vendor previously approached the community but nothing was finalized. Waldina identified by first name as the person involved with this topic; exact role/surname unknown. Security said she will be at the entrance 2026-08-15 after 5:00 p.m. No package delivered yet. |
 | Residencial Girona | Uses Access | No direct administration contact. Reconsider later with the new formal package. |
 | Residencial La Fuente | Unknown | No direct contact. Pending new round. |
 | Vías Monserrat | No application observed; approx. 30 homes from prior info | Pending new round. |
@@ -115,8 +116,6 @@ evidence:
 - Residencial Santa Isabel: near Dispensa Familiar.
 - Residencial Santa Elena Demco: residential under construction; investigation
   pending.
-- Colonia El Carmen: priority #1; package delivered to security leadership,
-  patronato handoff pending confirmation.
 - Residencial La Florida.
 - Jardines del Merendón: high end; Boulevard Mackay.
 - Merendón Hills: high end.
@@ -161,19 +160,23 @@ Hypothesis:
 - No direct patronato contact, meeting, demo, quote request, or confirmed review
   was obtained during the visit.
 
+### Follow-up — 2026-08-12
+
+- Security confirmed that the package **was delivered to the patronato**.
+- Security did not know the patronato's reaction or whether the proposal had
+  been reviewed.
+- Rudy asked security to ask again and requested that a patronato contact number
+  be shared only if the relevant person agrees.
+- Security asked Rudy to return on **Friday, 2026-08-14**.
+
 Current precise outcome:
 
-> Package delivered to security leadership; internal handoff to the patronato
-> promised; patronato receipt, review, and response pending.
-
-Recommended follow-up:
-
-> Return or contact the gate approximately five to seven days after delivery,
-> preferably during 2026-08-09 through 2026-08-11, to confirm whether the
-> package reached the patronato and request a direct presentation path.
+> Package receipt by the patronato is now confirmed by security; review,
+> response, direct contact, and meeting remain pending. Next follow-up:
+> 2026-08-14.
 
 See [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md)
-for the detailed evidence record.
+and [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md).
 
 ## Residencial El Limonar field snapshot
 
@@ -220,22 +223,55 @@ At delivery, only one guard was present. The guard called the security contact
 from the previous conversation; that contact confirmed the package could be
 left. Rudy then delivered the complete package at the gate.
 
+### Follow-up — 2026-08-12
+
+- Security confirmed that the package **did reach the patronato**.
+- No patronato reaction, direct contact, meeting, demo, quote request, or review
+  result was known at the time.
+- The security contact said he expected to meet with **Antonio Flores that same
+  day** and would raise ENTRY during that conversation.
+- Rudy proposed returning on **Friday, 2026-08-14**, and security agreed.
+
 Current precise outcome:
 
-> Qualified lead. Patronato Package delivered at the security gate after
-> confirmation from the previous security contact; delivery to Antonio Flores
-> or another patronato member, patronato review, and meeting remain unconfirmed.
-
-Recommended follow-up window:
-
-> 2026-08-12 through 2026-08-14.
-
-Primary follow-up objective: confirm whether the package reached Antonio Flores
-or another patronato member, identify the next patronato meeting if possible,
-and obtain a direct follow-up channel or presentation date.
+> Qualified lead. Patronato receipt is now confirmed by security. Security
+> planned to raise ENTRY directly with Antonio Flores on 2026-08-12; outcome of
+> that conversation remains unknown. Next follow-up: 2026-08-14.
 
 See [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md)
-for the dedicated evidence record.
+and [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md).
+
+## Residencial Andalucía field snapshot
+
+Discovery visit on 2026-08-12:
+
+- controlled residential entrance;
+- guard booth / security post;
+- guard present;
+- physical barrier/tranca operated manually;
+- security stated that the community has **no visitor-management system**;
+- residents call to announce visits;
+- visitor information is recorded on paper;
+- security estimated approximately **80 homes**;
+- another company previously approached the community with a system, but
+  nothing was finalized;
+- security identified **Waldina** (first name only) as the person who handles or
+  is involved with this topic;
+- exact role and surname remain unknown;
+- security said Waldina would be at the entrance on **Saturday, 2026-08-15,
+  after 5:00 p.m.** and that Rudy could return to speak with her.
+
+No Patronato Package was delivered during this discovery visit.
+
+Current precise outcome:
+
+> Investigated / qualified discovery lead with a named follow-up person and a
+> concrete return window. Next action: speak with Waldina on 2026-08-15 after
+> 5:00 p.m. to clarify her role, what the community needs, what happened with
+> the prior vendor, who decides, and whether to schedule an ENTRY demo or formal
+> meeting.
+
+See [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md).
 
 ## Internal pricing
 
@@ -259,6 +295,8 @@ Known details:
 - Confirm El Carmen's number of homes before preparing a quote.
 - Confirm El Limonar's number of homes and active entrances before preparing a
   quote.
+- Andalucía's ~80-home count is security-provided and should be confirmed with
+  administration/patronato before a quote.
 
 ## Known commercial/technical readiness notes
 
@@ -280,11 +318,9 @@ Known details:
 - Whether Colonia El Carmen has a second entrance.
 - Name/contact of the El Carmen patronato president or administration contact.
 - Date and cadence of the El Carmen patronato meetings.
-- Whether the El Carmen head of security delivered the package to a patronato
-  member.
 - Whether the El Carmen patronato reviewed the package or wants a presentation.
-- Whether Antonio Flores or another El Limonar patronato member has physically
-  received the 2026-08-07 package.
+- Outcome of the 2026-08-12 El Limonar security-contact conversation with
+  Antonio Flores.
 - Date and cadence of the El Limonar patronato meetings.
 - Direct phone, WhatsApp, or email contact for Antonio Flores.
 - Exact number of homes and active entrances in Residencial El Limonar.
@@ -292,6 +328,12 @@ Known details:
 - Whether El Limonar uses any additional digital tool behind the observed
   manual process.
 - Whether El Limonar wants a meeting, demo, quote, or pilot.
+- Waldina's full name, exact role, and decision authority in Residencial
+  Andalucía.
+- Confirmed home count for Residencial Andalucía.
+- What the prior Andalucía vendor proposed and why it did not proceed.
+- Who makes the final system decision in Residencial Andalucía.
+- Whether Andalucía wants a demo, formal meeting, package, quote, or pilot.
 - Setup fee policy for regular customers.
 - Competitor specifics for Access / ISSY / SSA: features, pricing, contract
   lock-in. Do not record as fact until verified.
