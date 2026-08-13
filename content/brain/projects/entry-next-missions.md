@@ -136,22 +136,26 @@ No provider decision should be made before measuring ENTRY’s dependency on Sup
 
 FIRST DOOR / Patronato Package v1 continues as a parallel commercial validation track and does not reorder the engineering priorities.
 
-Current field state:
+Current field state after 2026-08-12:
 
-- **Colonia El Carmen:** first Patronato Package delivered to the head of security on 2026-08-04. He said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed.
-- **Residencial El Limonar:** now a qualified lead / FIRST DOOR #2. Security confirmed that residents announce visits by calls and WhatsApp, visitor records are kept on paper, and the barrier is manual. Security stated that the community wants to implement a system, subject to patronato discussion, and identified **Antonio Flores** as patronato president.
-- A personalized El Limonar package was delivered at the gate on 2026-08-07. The guard on duty called the prior security contact, who confirmed the package could be left. Delivery to Antonio Flores or another patronato member remains unconfirmed.
-- Additional El Limonar observations: visible paper visitor sheet and a posted list of authorized people, apparently related to construction work. The list may indicate a recurrent-access need, but its exact purpose is unconfirmed.
-- No El Limonar patronato meeting date or cadence is currently known.
+- **Colonia El Carmen:** first Patronato Package delivered to the head of security on 2026-08-04. On 2026-08-12 security confirmed that the package reached the patronato. Security did not know the reaction/review result. Rudy asked security to ask again and requested a direct contact number only with the relevant person's permission. Next follow-up: **2026-08-14**.
+- **Residencial El Limonar:** qualified lead / FIRST DOOR #2. Security previously confirmed calls + WhatsApp, paper visitor records, manual barrier, interest in implementing a system, and Antonio Flores as patronato president. On 2026-08-12 security confirmed patronato receipt of the 2026-08-07 package. The security contact said he expected to meet Antonio Flores that day and would raise ENTRY directly. Outcome remains unknown. Next follow-up: **2026-08-14**.
+- **Residencial Andalucía:** investigated / qualified discovery lead added on 2026-08-12. Security reported no visitor-management system, resident phone calls for visitor announcements, paper records, manual barrier, and approximately 80 homes. Another vendor previously approached the community but nothing was finalized. Waldina was identified by first name as the person who handles or is involved with this topic; exact role and surname remain unknown. Security said she will be at the entrance on **2026-08-15 after 5:00 p.m.** No package was delivered.
 
 Next commercial actions:
 
-- Follow up with Colonia El Carmen according to its existing follow-up window to confirm patronato handoff and seek a direct presentation path.
-- Follow up with Residencial El Limonar approximately **2026-08-12 through 2026-08-14** to confirm whether the package reached Antonio Flores or another patronato member, ask whether a patronato meeting date is known, and obtain a direct follow-up channel or presentation date.
-- Do not treat the El Limonar package as received by the patronato until that internal handoff is confirmed.
-- Continue building a structured San Pedro Sula residential-community map and move each community through explicit commercial stages rather than treating every visit as an immediate sales attempt.
+- **2026-08-14 — El Carmen:** confirm patronato reaction, seek direct contact, and ask for a concrete presentation path if there is interest.
+- **2026-08-14 — El Limonar:** ask what happened when security raised ENTRY with Antonio Flores; seek direct contact, patronato meeting timing, or a presentation/demo date.
+- **2026-08-15 after 5:00 p.m. — Andalucía:** speak with Waldina. Confirm her role, current process, desired outcome, prior vendor proposal/failure reason, final decision-maker, and whether ENTRY should advance to demo, meeting, or package.
+- Do not prepare an Andalucía Patronato Package before the Waldina discovery unless new evidence changes the plan.
+- Continue building the San Pedro Sula lead map through explicit stages: mapped → observed → investigated → qualified → package → follow-up → meeting → demo → proposal → pilot/customer.
 
-See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md), and [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md).
+Current commercial learning:
+
+- At both El Carmen and El Limonar, FIRST DOOR has now passed the **gate-to-patronato handoff** step according to security. The current test is whether patronato receipt can be converted into direct contact, a meeting, or a demo.
+- Andalucía shows the value of discovery before formal package delivery: one field stop produced verified manual-process evidence, approximate size, prior-vendor evidence, a named follow-up person, and a specific return window.
+
+See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md), [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md), and [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md).
 
 ## Source-of-truth note
 
