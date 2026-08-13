@@ -27,6 +27,7 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md) — official FIRST DOOR / Patronato Package v1 strategy, El Carmen field package, hypotheses, pricing notes, and delivery script.
 - [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md) — first field delivery outcome at Colonia El Carmen and the initial discovery of Residencial El Limonar.
 - [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md) — dedicated El Limonar discovery, qualified-lead evidence, personalized package, delivery outcome, manual visitor-control observations, and follow-up plan.
+- [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md) — El Carmen and El Limonar patronato-receipt follow-ups plus the new Residencial Andalucía discovery and next actions.
 - [entry-next-missions.md](entry-next-missions.md) — operator-approved priority roadmap and recommended missions.
 
 ## Isolation principles (unchanged)
@@ -40,8 +41,9 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - **Status:** Approved, active development.
 - **Current ENTRY branch at last code capture:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code at capture time.**
 - **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo harness at capture time.**
-- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` is the approved first formal outreach standard. The El Carmen package was delivered to the head of security on 2026-08-04 and remains pending confirmed patronato receipt/review. **Operator-provided; decision recorded in `DEC-0006`.**
-- **Residencial El Limonar:** now classified as a qualified lead / FIRST DOOR #2. Security reported that residents announce visits by calls and WhatsApp, visitor information is kept on paper, the barrier is manual, and the community wants to implement a system subject to patronato discussion. Security identified **Antonio Flores** as patronato president. A personalized Patronato Package was delivered at the gate on 2026-08-07 after confirmation from the prior security contact; patronato receipt, review, and meeting remain unconfirmed. **Operator-provided; detailed in the 2026-08-07 El Limonar field report.**
+- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` is the approved first formal outreach standard. On 2026-08-12 security confirmed that the El Carmen package had reached the patronato. Review/reaction, direct contact, and meeting remain unconfirmed; next follow-up is 2026-08-14. **Operator-provided.**
+- **Residencial El Limonar:** qualified lead / FIRST DOOR #2. On 2026-08-12 security confirmed that the package had reached the patronato. The security contact said he expected to meet Antonio Flores that day and would raise ENTRY directly; the outcome remains unknown. Next follow-up is 2026-08-14. **Operator-provided.**
+- **Residencial Andalucía:** investigated / qualified discovery lead added on 2026-08-12. Security reported no visitor-management system, resident calls, paper visitor records, manual barrier, and approximately 80 homes. Another vendor had previously approached the community without a finalized outcome. Waldina was identified by first name as the person involved with this topic and is expected at the entrance on 2026-08-15 after 5:00 p.m. **Operator-provided.**
 
 ## Current strategic priority order
 
@@ -64,13 +66,14 @@ A confirmed severe vulnerability, active exposure, destructive permission proble
 - Several RPC bodies may live only in the live development database rather than versioned migrations.
 - “Forgot password” is operator-reported broken; root cause remains to be verified.
 - The documented state may have diverged from the code, branches, builds, and live backend; diagnosis is therefore the first priority.
-- El Carmen's package reached security leadership, but patronato receipt and review are still unconfirmed; direct contact, meeting cadence, and community size remain unknown.
-- El Limonar has stronger field evidence and an identified patronato president, but the 2026-08-07 package has only been confirmed at the security gate. Delivery to Antonio Flores or another patronato member, meeting timing, exact community size, and direct contact remain unknown.
+- El Carmen patronato receipt is now confirmed by security, but patronato reaction, direct contact, meeting cadence, community size, and presentation interest remain unknown.
+- El Limonar patronato receipt is now confirmed by security and ENTRY was expected to be raised directly with Antonio Flores on 2026-08-12, but the result of that conversation, meeting timing, exact community size, and direct contact remain unknown.
+- Andalucía has a concrete discovery path but Waldina's exact role, the prior vendor failure reason, final decision-maker, confirmed home count, and actual interest in an ENTRY meeting/demo remain unknown.
 
 ## Next action
 
 Run an evidence-backed ENTRY diagnostic before selecting the next implementation mission. Use the result to confirm bugs and current branch/backend state, then follow the roadmap in [entry-next-missions.md](entry-next-missions.md).
 
-FIRST DOOR continues as a parallel commercial validation track. Follow up with El Carmen according to its existing window, and follow up with Residencial El Limonar approximately 2026-08-12 through 2026-08-14 to confirm whether the package reached Antonio Flores or another patronato member and to seek a direct presentation path. This does not reorder the technical roadmap.
+FIRST DOOR continues as a parallel commercial validation track. On **2026-08-14**, follow up with El Carmen and El Limonar to obtain patronato reaction, direct contact, or a meeting/demo path. On **2026-08-15 after 5:00 p.m.**, return to Residencial Andalucía to speak with Waldina, clarify her role and the prior vendor outcome, identify the decision-maker, and determine whether ENTRY should advance to a demo, meeting, or formal package.
 
 Environment separation, provider migration, staging architecture, and production database selection must not begin while higher-priority work remains.
