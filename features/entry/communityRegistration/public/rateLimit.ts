@@ -51,6 +51,14 @@ type EntryRateLimitCheck = {
   policy: EntryRateLimitPolicy;
 };
 
+type EntryRateLimitInfrastructureFailure =
+  | "missing_network_identity"
+  | "missing_runtime_configuration"
+  | "redis_timeout"
+  | "redis_authentication"
+  | "redis_network"
+  | "redis_exception";
+
 type EntryRateLimitDecision =
   | {
       allowed: true;
@@ -80,6 +88,84 @@ const limiterCache = new Map<string, Ratelimit>();
 function readHeader(source: HeaderSource, name: string) {
   const headers = "headers" in source ? source.headers : source;
   return headers.get(name);
+}
+
+function logRateLimitInfrastructureFailure(
+  failure: EntryRateLimitInfrastructureFailure,
+) {
+  console.warn(`entry_cr_rate_limit_failure=${failure}`);
+}
+
+function infrastructureUnavailable(
+  failure: EntryRateLimitInfrastructureFailure,
+): EntryRateLimitDecision {
+  logRateLimitInfrastructureFailure(failure);
+  return { allowed: false, reason: "infrastructure_unavailable", status: 503 };
+}
+
+function readErrorField(error: unknown, field: "code" | "message" | "name") {
+  if (!error || typeof error !== "object" || !(field in error)) return "";
+  const value = (error as Record<string, unknown>)[field];
+  return typeof value === "string" ? value.toLowerCase() : "";
+}
+
+function readErrorStatus(error: unknown) {
+  if (!error || typeof error !== "object") return "";
+  const status =
+    "status" in error
+      ? error.status
+      : "statusCode" in error
+        ? error.statusCode
+        : null;
+
+  return typeof status === "number" || typeof status === "string"
+    ? String(status).toLowerCase()
+    : "";
+}
+
+function errorSearchText(error: unknown, depth = 0): string {
+  if (depth > 2) return "";
+
+  const current = [
+    readErrorField(error, "code"),
+    readErrorField(error, "message"),
+    readErrorField(error, "name"),
+    readErrorStatus(error),
+  ];
+
+  const cause =
+    error && typeof error === "object" && "cause" in error
+      ? error.cause
+      : null;
+
+  return [...current, errorSearchText(cause, depth + 1)].join(" ");
+}
+
+function classifyRedisInfrastructureFailure(
+  error: unknown,
+): EntryRateLimitInfrastructureFailure {
+  const text = errorSearchText(error);
+
+  if (
+    /\b(401|403)\b/.test(text) ||
+    /wrongpass|unauthorized|forbidden|invalid token|authentication/.test(text)
+  ) {
+    return "redis_authentication";
+  }
+
+  if (/timeout|timed out|etimedout|abort/.test(text)) {
+    return "redis_timeout";
+  }
+
+  if (
+    /invalid url|malformed url|fetch failed|network|connect|connection|econn|enotfound|eai_again|dns|socket|tls|certificate/.test(
+      text,
+    )
+  ) {
+    return "redis_network";
+  }
+
+  return "redis_exception";
 }
 
 function isVercelRuntime(env: RuntimeEnv = process.env) {
@@ -262,21 +348,27 @@ async function enforceEntryRateLimitChecks(
   checks: Array<EntryRateLimitCheck | null>,
 ): Promise<EntryRateLimitDecision> {
   if (checks.some((check) => check === null)) {
-    return { allowed: false, reason: "infrastructure_unavailable", status: 503 };
+    return infrastructureUnavailable("missing_network_identity");
   }
 
   const config = getRuntimeConfiguration();
   if (!config.configured) {
     return config.localBypass
       ? { allowed: true, localBypass: true }
-      : { allowed: false, reason: "infrastructure_unavailable", status: 503 };
+      : infrastructureUnavailable("missing_runtime_configuration");
   }
 
   const environment = getRateLimitEnvironmentNamespace();
-  const redis = getRedis({
-    redisToken: config.redisToken,
-    redisUrl: config.redisUrl,
-  });
+  let redis: Redis;
+
+  try {
+    redis = getRedis({
+      redisToken: config.redisToken,
+      redisUrl: config.redisUrl,
+    });
+  } catch (error) {
+    return infrastructureUnavailable(classifyRedisInfrastructureFailure(error));
+  }
 
   for (const check of checks as EntryRateLimitCheck[]) {
     const digest = deriveRateLimitDigest({
@@ -294,11 +386,7 @@ async function enforceEntryRateLimitChecks(
     try {
       const result = await limiter.limit(digest);
       if (result.reason === "timeout") {
-        return {
-          allowed: false,
-          reason: "infrastructure_unavailable",
-          status: 503,
-        };
+        return infrastructureUnavailable("redis_timeout");
       }
 
       if (!result.success) {
@@ -309,12 +397,8 @@ async function enforceEntryRateLimitChecks(
           status: 429,
         };
       }
-    } catch {
-      return {
-        allowed: false,
-        reason: "infrastructure_unavailable",
-        status: 503,
-      };
+    } catch (error) {
+      return infrastructureUnavailable(classifyRedisInfrastructureFailure(error));
     }
   }
 
