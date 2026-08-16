@@ -2,6 +2,35 @@
 
 Append-only. Most recent first.
 
+## 2026-08-16 - ENTRY-ONB-006 - Production rate-limit verification closeout
+
+- Closed `ENTRY-ONB-006` after production Community Registration rate limiting
+  was verified on `master` commit
+  `6687e7e792f667f2f49e52c688279528cfdba14d`.
+- Public Community Registration flow PR #35 is merged. PR #37 added safe
+  rate-limit failure diagnostics and is intentionally retained in production.
+- The production Redis authentication issue was resolved by correcting the
+  Upstash REST token outside this repository.
+- Campaign access quota proof: from one stable shell/network identity, a
+  brand-new synthetic slug/token context returned non-429 responses for
+  requests 1-10 under the 10 requests / 10 minutes policy, then `429` on
+  request 11.
+- Correction access quota proof: from the same stable shell/network identity,
+  a second synthetic slug/token context returned non-429 responses for
+  requests 1-6 under the 6 requests / 10 minutes policy, then `429` on request
+  7.
+- `Retry-After` was present on both quota responses.
+- Production runtime logs showed zero
+  `entry_cr_rate_limit_failure=` occurrences after the credential correction.
+- Safety verification found no Supabase writes, no resident records, no
+  household records, `resident_activation_queue` untouched, and only Redis
+  rate-limit counters created.
+- Final status: `RATE LIMITING - PRODUCTION VERIFIED`;
+  `ENTRY-ONB-006 - PRODUCTION RUNTIME BLOCKER CLEARED`.
+- Closeout documentation only. No code, Vercel env, Upstash configuration,
+  Supabase state, migrations, redeploy, or policy changes were made in this
+  closeout branch.
+
 ## 2026-08-04 - MINERVA-CONSOLE-AUTH-RECOVERY-001 - Auth recovery closeout
 
 - Closed the Minerva Console auth recovery incident after owner QA succeeded
