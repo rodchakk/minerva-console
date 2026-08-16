@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-005 - HOSTED RUNTIME PASS`.
+- **Estado actual:** `ENTRY-ONB-006 - PRODUCTION RUNTIME VERIFIED`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -47,6 +47,7 @@
 - `ENTRY-ONB-004-UNBLOCK`: completed.
 - `ENTRY-ONB-004`: completed; baseline `ac25878`.
 - `ENTRY-ONB-005`: hosted runtime pass; UI work unblocked.
+- `ENTRY-ONB-006`: completed; production runtime blocker cleared.
 
 ## Gates
 
@@ -59,4 +60,20 @@
 - Hosted runtime validation paso con 75 assertions, RAQ delta temporal `+2`, cero deltas en tablas protegidas y rollback verificado.
 - Sin push/PR/deployment.
 - Backend de conversion implementado, auditado y commiteado en baseline `ac25878`.
-- Estado vigente: `ENTRY-ONB-005 - HOSTED RUNTIME PASS`; UI work unblocked.
+- Public flow PR #35 merged in commit `5b86d2e`.
+- Current production code state includes master
+  `6687e7e792f667f2f49e52c688279528cfdba14d`.
+- PR #37 diagnostic observability is merged and intentionally retained.
+- Production Redis authentication issue resolved after credential correction.
+- Production rate limiting verified from one stable shell/network identity:
+  campaign access allowed requests 1-10 for the 10/10 minute policy and
+  returned `429` on request 11; correction access allowed requests 1-6 for the
+  6/10 minute policy and returned `429` on request 7.
+- `Retry-After` was present on both quota responses.
+- Production runtime logs showed zero
+  `entry_cr_rate_limit_failure=` occurrences after credential correction.
+- Production verification created no Supabase writes, no resident records, no
+  household records, and left `resident_activation_queue` untouched. Only
+  Redis rate-limit counters were created.
+- Estado vigente: `ENTRY-ONB-006 - PRODUCTION RUNTIME VERIFIED`; runtime
+  blocker cleared.
