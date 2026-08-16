@@ -137,15 +137,28 @@ assert(
 assert(
   "limiter timeout fails closed",
   /timeout: RATE_LIMIT_TIMEOUT_MS/.test(rateLimit) &&
-    /result\.reason === "timeout"[\s\S]*infrastructure_unavailable/.test(
+    /result\.reason === "timeout"[\s\S]*infrastructureUnavailable\("redis_timeout"\)/.test(
       rateLimit,
     ),
 );
 assert(
   "Redis/network exceptions fail closed",
-  /catch\s*\{[\s\S]*reason: "infrastructure_unavailable"[\s\S]*status: 503/.test(
+  /catch \(error\) \{[\s\S]*infrastructureUnavailable\(classifyRedisInfrastructureFailure\(error\)\)/.test(
     rateLimit,
-  ),
+  ) &&
+    /function infrastructureUnavailable[\s\S]*reason: "infrastructure_unavailable"[\s\S]*status: 503/.test(
+      rateLimit,
+    ),
+);
+assert(
+  "infrastructure failures emit safe diagnostic categories",
+  /entry_cr_rate_limit_failure=\$\{failure\}/.test(rateLimit) &&
+    /infrastructureUnavailable\("missing_network_identity"\)/.test(rateLimit) &&
+    /infrastructureUnavailable\("missing_runtime_configuration"\)/.test(
+      rateLimit,
+    ) &&
+    /infrastructureUnavailable\("redis_timeout"\)/.test(rateLimit) &&
+    /classifyRedisInfrastructureFailure/.test(rateLimit),
 );
 assert(
   "actual quota denial returns 429 with Retry-After",
