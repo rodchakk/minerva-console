@@ -2,6 +2,8 @@ import fs from "node:fs";
 
 const migrationPath =
   "supabase/migrations/20260817040516_create_entry_community_registration_review_ui_hardening_v1.sql";
+const resubmitHotfixPath =
+  "supabase/migrations/20260817043002_fix_cr_resubmit_resolves_pending_correction.sql";
 const actionPath = "features/entry/communityRegistration/review/actions.ts";
 const queryPath = "features/entry/communityRegistration/review/queries.ts";
 const workspacePath =
@@ -33,6 +35,7 @@ function assert(name, ok) {
 }
 
 const migration = read(migrationPath);
+const resubmitHotfix = read(resubmitHotfixPath);
 const actions = read(actionPath);
 const queries = read(queryPath);
 const workspace = read(workspacePath);
@@ -48,8 +51,13 @@ const resolveEdit = functionBody(
   migration,
   "resolve_community_registration_edit_v1",
 );
+const resubmit = functionBody(
+  resubmitHotfix,
+  "resubmit_community_registration_household_v1",
+);
 
 assert("forward-only ONB-008 hardening migration exists", migration.length > 0);
+assert("forward-only ONB-008 resubmit hotfix exists", resubmitHotfix.length > 0);
 
 assert(
   "review workspace is reachable from Community Registration card",
@@ -150,18 +158,10 @@ assert(
 assert(
   "rotation RPC is service-role-only and unavailable to public roles",
   /_cr_service_role_only_v1\(\)/.test(rotateEdit) &&
-    /revoke all on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) from public/.test(
-      migration,
-    ) &&
-    /revoke all on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) from anon/.test(
-      migration,
-    ) &&
-    /revoke all on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) from authenticated/.test(
-      migration,
-    ) &&
-    /grant execute on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) to service_role/.test(
-      migration,
-    ),
+    /revoke all on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) from public/.test(migration) &&
+    /revoke all on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) from anon/.test(migration) &&
+    /revoke all on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) from authenticated/.test(migration) &&
+    /grant execute on function public\.rotate_community_registration_edit_access_v1\(uuid, text, timestamptz, uuid, text\) to service_role/.test(migration),
 );
 
 assert(
@@ -177,9 +177,7 @@ assert(
 assert(
   "authorized public gateway maps correction observation",
   /correction_observation\?: string \| null/.test(gateway) &&
-    /correctionObservation = result\.correction_observation\?\.trim\(\) \|\| null/.test(
-      gateway,
-    ) &&
+    /correctionObservation = result\.correction_observation\?\.trim\(\) \|\| null/.test(gateway) &&
     /correctionObservation,/.test(gateway),
 );
 
@@ -187,6 +185,31 @@ assert(
   "resident correction page visibly explains requested correction",
   /correction\.correctionObservation/.test(correctionPage) &&
     /Observacion de la administracion/.test(correctionPage),
+);
+
+assert(
+  "successful resubmit resolves current correction inside the same transaction",
+  /_cr_replace_current_review_v1\(v_unit\.id\)/.test(resubmit) &&
+    resubmit.indexOf("_cr_replace_current_review_v1(v_unit.id)") <
+      resubmit.indexOf("update public.community_registration_access_tokens") &&
+    !/\bexception\b/i.test(resubmit),
+);
+
+assert(
+  "resubmit hotfix repairs stale pending corrections only when a newer submission exists",
+  /decision = 'correction_requested'/.test(resubmitHotfix) &&
+    /resolution_status = 'pending'/.test(resubmitHotfix) &&
+    /newer_submission\.version_number > reviewed_submission\.version_number/.test(resubmitHotfix) &&
+    /resolution_status = 'resolved'/.test(resubmitHotfix),
+);
+
+assert(
+  "resubmit remains service-role-only after hotfix",
+  /_cr_service_role_only_v1\(\)/.test(resubmit) &&
+    /revoke all on function public\.resubmit_community_registration_household_v1\(text, jsonb\) from public/.test(resubmitHotfix) &&
+    /revoke all on function public\.resubmit_community_registration_household_v1\(text, jsonb\) from anon/.test(resubmitHotfix) &&
+    /revoke all on function public\.resubmit_community_registration_household_v1\(text, jsonb\) from authenticated/.test(resubmitHotfix) &&
+    /grant execute on function public\.resubmit_community_registration_household_v1\(text, jsonb\) to service_role/.test(resubmitHotfix),
 );
 
 assert(
@@ -199,6 +222,6 @@ assert(
 assert(
   "ONB-008 does not introduce ENTRY mobile dependencies",
   !/entry-mobile|expo-router|react-native|app\/\(tabs\)/i.test(
-    `${migration}\n${actions}\n${queries}\n${workspace}\n${route}`,
+    `${migration}\n${resubmitHotfix}\n${actions}\n${queries}\n${workspace}\n${route}`,
   ),
 );
