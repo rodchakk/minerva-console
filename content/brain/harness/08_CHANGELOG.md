@@ -2,6 +2,26 @@
 
 Append-only. Most recent first.
 
+## 2026-08-16 - ENTRY-ONB-007 - Campaign launch UI ready for review
+
+- Added a visible Resident registration card to the community detail page.
+- Added an internal launch flow for creating a Community Registration campaign,
+  selecting existing units, generating a server-side capability token, hashing
+  it before the backend call, and showing the public registration link only in
+  the immediate success state.
+- Reused `create_community_registration_campaign_v1(...)` and
+  `add_community_registration_units_v1(...)`; no schema migration was added.
+- Progress counts submitted units as statuses `submitted`, `edit_enabled`,
+  `needs_correction`, `reviewed`, `confirmed`, or `processed`; `unregistered`
+  does not count.
+- Added a focused static validator for the launch UI and token guardrails.
+- No Supabase live test campaign, Production/env/Upstash changes, rate-limit
+  changes, ENTRY mobile changes, review UI, patronato UI, or conversion UI.
+- Follow-up finding only, not fixed here: newly created/incomplete community
+  may surface as Needs attention instead of Pending setup.
+- Follow-up finding only, not fixed here: Assign resident admin may be offered
+  when zero eligible residents/users exist.
+
 ## 2026-08-16 - ENTRY-ONB-006 - Production rate-limit verification closeout
 
 - Closed `ENTRY-ONB-006` after production Community Registration rate limiting
