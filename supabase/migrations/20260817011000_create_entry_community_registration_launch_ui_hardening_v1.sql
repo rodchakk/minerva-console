@@ -163,7 +163,7 @@ begin
     perform public._cr_raise_v1('ENTRY_CR_CAMPAIGN_UNAVAILABLE');
   end if;
 
-  if v_campaign.status not in ('open', 'paused', 'review', 'confirmed') then
+  if v_campaign.status <> 'open' then
     perform public._cr_raise_v1('ENTRY_CR_INVALID_STATE', 'P0409');
   end if;
 

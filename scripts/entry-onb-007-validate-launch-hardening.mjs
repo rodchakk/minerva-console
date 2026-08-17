@@ -70,6 +70,16 @@ assert(
 );
 
 assert(
+  "rotation RPC permits campaign-access replacement only for open campaigns",
+  /if v_campaign\.status <> 'open' then[\s\S]*ENTRY_CR_INVALID_STATE[\s\S]*P0409/.test(
+    rotate,
+  ) &&
+    !/v_campaign\.status not in \('open', 'paused', 'review', 'confirmed'\)/.test(
+      rotate,
+    ),
+);
+
+assert(
   "rotation revokes active campaign access then inserts replacement in one RPC",
   /token_type = 'campaign_access'[\s\S]*status = 'active'/.test(rotate) &&
     /set status = 'revoked'[\s\S]*revoked_at = now\(\)/.test(rotate) &&
@@ -123,6 +133,15 @@ assert(
 );
 
 assert(
+  "replacement UI is exposed only for an open campaign",
+  /canReplaceLink\s*=\s*campaign\?\.status\.trim\(\)\.toLowerCase\(\)\s*===\s*"open"/.test(
+    card,
+  ) &&
+    /canReplaceLink && campaign \?/.test(card) &&
+    !/\) : campaign \? \([\s\S]*Replace registration link/.test(card),
+);
+
+assert(
   "no plaintext token persistence or logging in admin launch/replacement code",
   !/localStorage|sessionStorage|cookies\.set|console\.(log|info|warn|error|debug)/.test(
     `${actions}\n${card}`,
@@ -146,6 +165,7 @@ assert(
 assert(
   "case C lost-response recovery is exposed only as replacement link action",
   /Replace registration link/.test(card) &&
+    /canReplaceLink/.test(card) &&
     /replaceCommunityRegistrationLink/.test(actions) &&
     /rotate_community_registration_campaign_access_v1/.test(actions),
 );
@@ -175,4 +195,12 @@ assert(
   "case G cross-community unit validation stays delegated to approved backend",
   /add_community_registration_units_v1\(/.test(launch) &&
     !/insert into public\.community_registration_units/i.test(launch),
+);
+
+assert(
+  "non-open operational statuses cannot reach successful replacement through UI/backend contract",
+  /if v_campaign\.status <> 'open' then/.test(rotate) &&
+    /ENTRY_CR_INVALID_STATE/.test(rotate) &&
+    /canReplaceLink/.test(card) &&
+    !/paused', 'review', 'confirmed/.test(rotate),
 );

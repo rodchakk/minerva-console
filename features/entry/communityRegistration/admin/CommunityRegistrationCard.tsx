@@ -426,6 +426,7 @@ export function CommunityRegistrationCard({
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const progressTotal = campaign ? totalCampaignUnitCount : totalUnits;
   const canStart = !hasOperationalCampaign && units.length > 0;
+  const canReplaceLink = campaign?.status.trim().toLowerCase() === "open";
   const submittedStatusText = useMemo(
     () => submittedStatuses.join(", "),
     [submittedStatuses],
@@ -504,7 +505,7 @@ export function CommunityRegistrationCard({
           >
             Start registration campaign
           </Button>
-        ) : campaign ? (
+        ) : canReplaceLink && campaign ? (
           <Button
             type="button"
             variant="secondary"
