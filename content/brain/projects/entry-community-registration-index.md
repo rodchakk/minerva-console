@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-007 - RUNTIME VALIDATED / READY FOR FINAL PR REVIEW`.
+- **Estado actual:** `ENTRY-ONB-007 - CLOSED / MERGED / PRODUCTION WEB DEPLOYED`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -39,6 +39,7 @@
 25. Migracion hardening launch UI: `supabase/migrations/20260817014957_create_entry_community_registration_launch_ui_hardening_v1.sql`
 26. Validador launch UI: `scripts/entry-onb-007-validate-campaign-launch-ui.mjs`
 27. Validador launch hardening: `scripts/entry-onb-007-validate-launch-hardening.mjs`
+28. ONB-007 post-merge closeout: `content/brain/projects/entry-community-registration-onb-007-post-merge-closeout.md`
 
 ## Estado de misiones
 
@@ -52,10 +53,11 @@
 - `ENTRY-ONB-004`: completed; baseline `ac25878`.
 - `ENTRY-ONB-005`: hosted runtime pass; UI work unblocked.
 - `ENTRY-ONB-006`: completed; production runtime blocker cleared.
-- `ENTRY-ONB-007`: runtime validated and ready for final PR review; internal campaign
-  launch UI added to the community detail page with atomic launch and
-  replacement-link recovery; code review, `gate-project-dev` PostgreSQL 17
-  engine validation, and PR #39 Preview runtime walkthrough passed.
+- `ENTRY-ONB-007`: CLOSED; PR #39 squash-merged to `master` as
+  `f3c95a784f5356427fba1797ea851a095897b88d`; production Minerva Console
+  deployment reached `READY`. Code review, `gate-project-dev` PostgreSQL 17
+  engine validation, PR Preview runtime walkthrough, link rotation, real Casa 1
+  submission, and `1 / 5` progress refresh all passed.
 
 ## Gates
 
@@ -85,7 +87,6 @@
   Redis rate-limit counters were created.
 - Estado vigente: `ENTRY-ONB-006 - PRODUCTION RUNTIME VERIFIED`; runtime
   blocker cleared.
-- Estado vigente: `ENTRY-ONB-007 - RUNTIME VALIDATED / READY FOR FINAL PR REVIEW`.
 - ONB-007 SQL engine validation passed on `gate-project-dev`
   (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17. Validation was first performed
   transactionally and rolled back cleanly, then the exact approved migration was
@@ -102,8 +103,6 @@
 - No SQL-engine test campaigns remained. Supabase security/performance
   advisors were reviewed; existing project-level advisor debt remains, but no
   new ONB-007-specific blocker was identified.
-- Production/seshat was not touched. ENTRY mobile, Vercel env, Upstash, rate
-  limits, and secrets were not changed.
 - ONB-007 runtime walkthrough passed on PR #39 Preview for commit `c68043a`
   using `gate-project-dev` and test community `Residencial Prueba CR`.
   Internal launch rendered correctly, launch created one open campaign with
@@ -124,7 +123,20 @@
   Preview branches; values/secrets and Production variables were not changed.
   The same PR commit was redeployed, after which `/access` returned `303` and
   the public campaign page returned `200`.
-- Runtime safety closeout: Production/seshat was not touched; ENTRY mobile was
-  not touched; no production migration was applied; no Upstash credential value,
-  `ENTRY_CR_RATE_LIMIT_SECRET`, rate-limit policy, or rate-limit code was
-  changed.
+- PR #39 was squash-merged to `master` as
+  `f3c95a784f5356427fba1797ea851a095897b88d`.
+- Vercel production deployment for that squash commit reached `READY` and
+  `console.minervatechs.com` served the merged build. No new Vercel runtime
+  errors were observed in the post-deploy smoke window.
+- Production Minerva Console wiring was verified against Supabase
+  `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`). Its migration history contains
+  the complete Community Registration chain through `20260817014957`, so no
+  additional ONB-007 database migration was required after merge.
+- Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) is separate from ENTRY
+  Community Registration and does not contain `communities` or
+  `community_registration_*` tables; it was not modified.
+- Runtime safety closeout: ENTRY mobile was not touched; no post-merge database
+  migration was applied; no Production Upstash credential value or
+  `ENTRY_CR_RATE_LIMIT_SECRET` value was changed or rotated; existing advisor,
+  Brain guardrail, and full-lint debt remain separate follow-up work.
+- Estado vigente: `ENTRY-ONB-007 - CLOSED / MERGED / PRODUCTION WEB DEPLOYED`.
