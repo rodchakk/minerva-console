@@ -5,7 +5,9 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
   launchCommunityRegistrationCampaign,
+  replaceCommunityRegistrationLink,
   type LaunchCommunityRegistrationCampaignResult,
+  type ReplaceCommunityRegistrationLinkResult,
 } from "@/features/entry/communityRegistration/admin/actions";
 import type {
   CommunityRegistrationAdminCampaign,
@@ -25,6 +27,7 @@ type CommunityRegistrationCardProps = {
 };
 
 const initialState: LaunchCommunityRegistrationCampaignResult | null = null;
+const initialReplaceState: ReplaceCommunityRegistrationLinkResult | null = null;
 
 function statusLabel(status: string) {
   const normalized = status.trim().toLowerCase();
@@ -295,6 +298,119 @@ function LaunchDialog({
   );
 }
 
+function ReplaceLinkDialog({
+  campaign,
+  communityId,
+  onClose,
+}: {
+  campaign: CommunityRegistrationAdminCampaign;
+  communityId: string;
+  onClose: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(
+    replaceCommunityRegistrationLink,
+    initialReplaceState,
+  );
+
+  if (state?.success) {
+    return (
+      <Overlay>
+        <div className="flex w-full max-w-xl flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+                Resident registration
+              </p>
+              <h3 className="mt-2 text-xl font-semibold text-white">
+                Replacement link ready
+              </h3>
+            </div>
+            <Badge tone="success">Replaced</Badge>
+          </div>
+
+          <div>
+            <label
+              htmlFor="replacement-registration-link"
+              className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]"
+            >
+              Registration link
+            </label>
+            <input
+              id="replacement-registration-link"
+              readOnly
+              value={state.data.registrationUrl}
+              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 font-mono text-xs text-white outline-none"
+            />
+          </div>
+
+          <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+            Copy or open this secure replacement link now. The previous
+            registration link has been invalidated, and this plaintext
+            capability will not be redisplayed after reload.
+          </p>
+
+          <div className="flex flex-wrap justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Done
+            </Button>
+            <a href={state.data.registrationUrl} target="_blank" rel="noreferrer">
+              <Button type="button" variant="secondary">
+                Open registration
+              </Button>
+            </a>
+            <CopyLinkButton url={state.data.registrationUrl} />
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay>
+      <form
+        action={formAction}
+        className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+      >
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+            Resident registration
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-white">
+            Replace registration link
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+            {campaign.publicTitle}
+          </p>
+        </div>
+
+        <input type="hidden" name="campaign_id" value={campaign.id} />
+        <input type="hidden" name="community_id" value={communityId} />
+
+        <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          Creating a replacement link invalidates the previous registration
+          link. Use this only when the current plaintext link is unavailable or
+          should no longer be used.
+        </p>
+
+        {state && !state.success ? (
+          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+            {state.error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Replacing..." : "Replace registration link"}
+          </Button>
+        </div>
+      </form>
+    </Overlay>
+  );
+}
+
 export function CommunityRegistrationCard({
   campaign,
   communityId,
@@ -307,6 +423,7 @@ export function CommunityRegistrationCard({
   units,
 }: CommunityRegistrationCardProps) {
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
+  const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const progressTotal = campaign ? totalCampaignUnitCount : totalUnits;
   const canStart = !hasOperationalCampaign && units.length > 0;
   const submittedStatusText = useMemo(
@@ -387,6 +504,14 @@ export function CommunityRegistrationCard({
           >
             Start registration campaign
           </Button>
+        ) : campaign ? (
+          <Button
+            type="button"
+            variant="secondary"
+            onClick={() => setShowReplaceDialog(true)}
+          >
+            Replace registration link
+          </Button>
         ) : null}
       </div>
 
@@ -396,6 +521,14 @@ export function CommunityRegistrationCard({
           communityName={communityName}
           onClose={() => setShowLaunchDialog(false)}
           units={units}
+        />
+      ) : null}
+
+      {showReplaceDialog && campaign ? (
+        <ReplaceLinkDialog
+          campaign={campaign}
+          communityId={communityId}
+          onClose={() => setShowReplaceDialog(false)}
         />
       ) : null}
     </section>

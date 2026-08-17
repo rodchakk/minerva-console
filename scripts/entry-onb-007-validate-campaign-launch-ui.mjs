@@ -3,6 +3,8 @@ import fs from "node:fs";
 const files = {
   actions: "features/entry/communityRegistration/admin/actions.ts",
   card: "features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx",
+  hardeningMigration:
+    "supabase/migrations/20260817011000_create_entry_community_registration_launch_ui_hardening_v1.sql",
   page: "app/(console)/products/entry/communities/[communityId]/page.tsx",
   queries: "features/entry/communityRegistration/admin/queries.ts",
   accessState: "features/entry/communityRegistration/public/accessState.ts",
@@ -51,9 +53,15 @@ const checks = [
     ),
   ],
   [
-    "hash used for backend campaign call",
+    "hash used for backend launch call",
     /hashRegistrationToken\(plaintextToken\)/.test(source.actions) &&
-      /p_campaign_token_hash: campaignTokenHash/.test(source.actions),
+      /p_campaign_token_hash: campaignTokenHash/.test(source.actions) &&
+      /launch_community_registration_campaign_v1/.test(source.actions),
+  ],
+  [
+    "launch action no longer performs create/add as separate RPC calls",
+    !/create_community_registration_campaign_v1/.test(source.actions) &&
+      !/add_community_registration_units_v1/.test(source.actions),
   ],
   [
     "public URL uses slug access route",
@@ -68,6 +76,28 @@ const checks = [
         read("supabase/migrations/20260806233000_create_entry_community_registration_backend_v1.sql"),
       ) &&
       /!hasOperationalCampaign/.test(source.card),
+  ],
+  [
+    "replacement link recovery action is available for existing campaigns",
+    /Replace registration link/.test(source.card) &&
+      /replaceCommunityRegistrationLink/.test(source.actions) &&
+      /rotate_community_registration_campaign_access_v1/.test(source.actions),
+  ],
+  [
+    "replacement flow warns that previous link is invalidated",
+    /invalidates the previous registration\s+link/.test(source.card) &&
+      /previous\s+registration link has been invalidated/.test(source.card),
+  ],
+  [
+    "atomic and rotation RPCs exist in forward-only hardening migration",
+    /launch_community_registration_campaign_v1/.test(source.hardeningMigration) &&
+      /rotate_community_registration_campaign_access_v1/.test(
+        source.hardeningMigration,
+      ) &&
+      /create_community_registration_campaign_v1\(/.test(
+        source.hardeningMigration,
+      ) &&
+      /add_community_registration_units_v1\(/.test(source.hardeningMigration),
   ],
   [
     "submitted progress calculation is deterministic",

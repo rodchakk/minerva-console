@@ -2,7 +2,8 @@
 
 **Mission:** `ENTRY-ONB-007`
 
-**Status:** implementation PR prepared; do not merge until review.
+**Status:** implementation PR prepared; hardening added for PR review; do not
+merge until review.
 
 ## Scope
 
@@ -19,25 +20,40 @@ It does not belong on:
 - Community Users;
 - the original Create Community wizard.
 
-## Backend Reuse
+## Backend Boundary
 
-The existing backend capabilities are sufficient for this slice:
+Initial PR review found that a two-network-RPC launch could strand a community
+if campaign creation succeeded but unit attachment failed. The hardened slice
+adds one forward-only migration:
 
-- `create_community_registration_campaign_v1(...)`
-- `add_community_registration_units_v1(...)`
+- `supabase/migrations/20260817011000_create_entry_community_registration_launch_ui_hardening_v1.sql`
 
-No schema migration is required.
+The migration adds two service-role-only RPCs:
 
-The RPCs are service-role only. The admin action first verifies the Console
-operator with `requireSuperadmin()`, then calls the existing RPCs through the
-service-role client and passes the authenticated operator ID as actor metadata.
+- `launch_community_registration_campaign_v1(uuid, uuid[], text, text, text, text, integer, timestamptz, timestamptz, text, jsonb, uuid)`
+- `rotate_community_registration_campaign_access_v1(uuid, text, uuid)`
+
+`launch_community_registration_campaign_v1(...)` composes the previously
+approved `create_community_registration_campaign_v1(...)` and
+`add_community_registration_units_v1(...)` inside one PostgreSQL function call.
+If unit validation or attachment fails, the exception is not caught, so the
+campaign row and campaign access hash roll back with the unit work.
+
+`rotate_community_registration_campaign_access_v1(...)` locks the campaign,
+revokes active `campaign_access` tokens, inserts one replacement active hash,
+verifies exactly one active campaign access token remains, and returns only
+safe metadata.
+
+The admin actions still verify the Console operator with `requireSuperadmin()`,
+then call these RPCs through the service-role client and pass the authenticated
+operator ID as actor metadata.
 
 ## Token Lifecycle
 
 The plaintext campaign capability is generated server-side with secure random
 bytes and immediately hashed with the approved campaign-token hashing helper.
 
-Only the hash is sent to `create_community_registration_campaign_v1(...)`.
+Only the hash is sent to `launch_community_registration_campaign_v1(...)`.
 
 The plaintext capability is returned to the authenticated operator only in the
 immediate Server Action success response so the launch modal can render:
@@ -47,9 +63,12 @@ immediate Server Action success response so the launch modal can render:
 The plaintext token is not stored in Supabase, localStorage, sessionStorage,
 Brain, diagnostics or logs.
 
-After reload, the same plaintext link cannot be safely redisplayed with the
-current architecture because the database intentionally stores token hashes
-only and no token rotation/regeneration UI exists in this slice.
+After reload, the same plaintext link cannot be redisplayed because the
+database intentionally stores token hashes only. If the response is lost or the
+operator failed to copy the link, the Community Detail card offers `Replace
+registration link`, which generates a new plaintext capability server-side,
+hashes it, calls the replacement RPC, invalidates previous campaign-access
+links, and shows the new plaintext link only in the immediate success state.
 
 ## Campaign Progress
 
@@ -67,13 +86,14 @@ The admin card counts a unit as submitted when its
 
 ## Transaction Boundary
 
-Campaign creation and unit attachment are two existing RPC calls. Each RPC is
-transactional individually, but the UI layer does not have a single database
-transaction spanning both calls.
+Campaign creation, campaign access hash insertion, and selected unit attachment
+now happen inside one database RPC invocation. A launch either commits with the
+selected units attached or rolls back without creating an operational campaign.
 
-If campaign creation succeeds and unit attachment fails, the action returns a
-specific operator error and withholds the registration link. It does not invent
-destructive rollback behavior outside the approved backend.
+The registration link is not exposed unless the atomic launch RPC succeeds.
+Replacement link generation is also a single database RPC invocation: old
+active campaign access is revoked and the replacement active hash is inserted
+together, or the previous active link remains valid after rollback.
 
 ## Explicit Non-Scope
 
@@ -82,10 +102,20 @@ This mission does not build:
 - review UI;
 - patronato confirmation UI;
 - conversion management UI;
-- token rotation/regeneration UI;
 - ENTRY mobile changes;
-- Supabase migrations;
 - Vercel/env/Upstash changes.
+
+## Validation
+
+Focused validators:
+
+- `scripts/entry-onb-007-validate-campaign-launch-ui.mjs`
+- `scripts/entry-onb-007-validate-launch-hardening.mjs`
+
+The hardening validator maps the review cases A-G to static assertions for
+atomic launch, rollback behavior, lost-response replacement, replacement
+rollback, service-role boundaries, and delegated cross-community unit
+validation.
 
 ## Follow-Up Findings
 

@@ -16,6 +16,7 @@ export type LaunchCommunityRegistrationCampaignResult =
       success: true;
       data: {
         campaignId: string;
+        mode: "launch";
         publicSlug: string;
         registrationUrl: string;
         selectedUnitCount: number;
@@ -26,8 +27,28 @@ export type LaunchCommunityRegistrationCampaignResult =
   | {
       code:
         | "active_campaign_exists"
-        | "add_units_failed"
         | "invalid_input"
+        | "unauthorized"
+        | "unknown";
+      error: string;
+      success: false;
+    };
+
+export type ReplaceCommunityRegistrationLinkResult =
+  | {
+      success: true;
+      data: {
+        campaignId: string;
+        mode: "replace";
+        publicSlug: string;
+        registrationUrl: string;
+        revokedPreviousCount: number;
+      };
+    }
+  | {
+      code:
+        | "invalid_input"
+        | "invalid_state"
         | "unauthorized"
         | "unknown";
       error: string;
@@ -102,6 +123,38 @@ function mapCampaignError(error: { code?: string | null; message?: string | null
   };
 }
 
+function mapReplacementError(error: {
+  code?: string | null;
+  message?: string | null;
+}): ReplaceCommunityRegistrationLinkResult {
+  const message = error.message ?? "";
+
+  if (error.code === "42501" || /ENTRY_CR_UNAUTHORIZED|unauthorized/i.test(message)) {
+    return {
+      code: "unauthorized",
+      error: "Access denied. Superadmin permission required.",
+      success: false,
+    };
+  }
+
+  if (
+    error.code === "P0409" ||
+    /ENTRY_CR_INVALID_STATE|ENTRY_CR_CAMPAIGN_UNAVAILABLE/.test(message)
+  ) {
+    return {
+      code: "invalid_state",
+      error: "This registration campaign cannot replace its link right now.",
+      success: false,
+    };
+  }
+
+  return {
+    code: "unknown",
+    error: "Could not replace the registration link. Please try again.",
+    success: false,
+  };
+}
+
 export async function launchCommunityRegistrationCampaign(
   _previousState: LaunchCommunityRegistrationCampaignResult | null,
   formData: FormData,
@@ -135,7 +188,7 @@ export async function launchCommunityRegistrationCampaign(
   const supabase = createAdminClient();
 
   const { data: campaignData, error: campaignError } = await supabase.rpc(
-    "create_community_registration_campaign_v1",
+    "launch_community_registration_campaign_v1",
     {
       p_actor_user_id: auth.user.id,
       p_campaign_token_hash: campaignTokenHash,
@@ -147,6 +200,8 @@ export async function launchCommunityRegistrationCampaign(
       p_public_instructions: publicInstructions || null,
       p_public_slug: publicSlug,
       p_public_title: publicTitle,
+      p_house_ids: selectedUnitIds,
+      p_unit_overrides: {},
     },
   );
 
@@ -166,22 +221,69 @@ export async function launchCommunityRegistrationCampaign(
     };
   }
 
-  const { error: unitsError } = await supabase.rpc(
-    "add_community_registration_units_v1",
+  revalidatePath(`/products/entry/communities/${communityId}`);
+
+  const baseUrl = await getRegistrationBaseUrl();
+  const path = `/entry/register/${encodeURIComponent(
+    returnedSlug,
+  )}/access?token=${encodeURIComponent(plaintextToken)}`;
+
+  return {
+    data: {
+      campaignId,
+      mode: "launch",
+      publicSlug: returnedSlug,
+      registrationUrl: `${baseUrl}${path}`,
+      selectedUnitCount: selectedUnitIds.length,
+      status: "open",
+      submittedUnitCount: 0,
+    },
+    success: true,
+  };
+}
+
+export async function replaceCommunityRegistrationLink(
+  _previousState: ReplaceCommunityRegistrationLinkResult | null,
+  formData: FormData,
+): Promise<ReplaceCommunityRegistrationLinkResult> {
+  const auth = await requireSuperadmin();
+
+  const campaignId = getFormString(formData, "campaign_id");
+  const communityId = getFormString(formData, "community_id");
+
+  if (!campaignId || !communityId) {
+    return {
+      code: "invalid_input",
+      error: "Campaign information is missing.",
+      success: false,
+    };
+  }
+
+  const plaintextToken = makeCampaignToken();
+  const campaignTokenHash = hashRegistrationToken(plaintextToken);
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc(
+    "rotate_community_registration_campaign_access_v1",
     {
       p_actor_user_id: auth.user.id,
       p_campaign_id: campaignId,
-      p_house_ids: selectedUnitIds,
-      p_unit_overrides: {},
+      p_campaign_token_hash: campaignTokenHash,
     },
   );
 
-  if (unitsError) {
-    revalidatePath(`/products/entry/communities/${communityId}`);
+  if (error) {
+    return mapReplacementError(error);
+  }
+
+  const result = (data ?? {}) as Record<string, unknown>;
+  const returnedCampaignId = coerceString(result.campaign_id) || campaignId;
+  const returnedSlug = coerceString(result.public_slug);
+
+  if (!returnedSlug) {
     return {
-      code: "add_units_failed",
-      error:
-        "Campaign was created, but selected units could not be attached. Do not share the link; review the campaign before continuing.",
+      code: "unknown",
+      error: "The link was replaced, but the campaign slug was not returned.",
       success: false,
     };
   }
@@ -195,12 +297,11 @@ export async function launchCommunityRegistrationCampaign(
 
   return {
     data: {
-      campaignId,
+      campaignId: returnedCampaignId,
+      mode: "replace",
       publicSlug: returnedSlug,
       registrationUrl: `${baseUrl}${path}`,
-      selectedUnitCount: selectedUnitIds.length,
-      status: "open",
-      submittedUnitCount: 0,
+      revokedPreviousCount: Number(result.revoked_previous_count ?? 0),
     },
     success: true,
   };

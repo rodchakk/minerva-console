@@ -2,6 +2,22 @@
 
 Append-only. Most recent first.
 
+## 2026-08-16 - ENTRY-ONB-007 - Campaign launch hardening for review
+
+- Added a forward-only hardening migration with service-role-only
+  `launch_community_registration_campaign_v1(...)` and
+  `rotate_community_registration_campaign_access_v1(...)`.
+- Atomic launch now composes the approved create-campaign and add-units RPCs
+  inside one database transaction boundary, so a unit-attachment failure rolls
+  back the campaign and access-token hash.
+- Added replacement-link recovery for existing operational campaigns. The
+  replacement flow generates plaintext only server-side, sends only the hash to
+  Supabase, revokes prior active campaign-access links, inserts one replacement
+  active hash, and shows plaintext only in the immediate success state.
+- Added focused static validation for the partial-launch/recovery review cases.
+- No Production data, live Supabase campaign, ENTRY mobile, Vercel/env/Upstash,
+  rate-limit behavior, or unrelated Brain/lint debt changed.
+
 ## 2026-08-16 - ENTRY-ONB-007 - Campaign launch UI ready for review
 
 - Added a visible Resident registration card to the community detail page.
