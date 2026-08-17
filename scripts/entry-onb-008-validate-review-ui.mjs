@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
 const migrationPath =
-  "supabase/migrations/20260817032000_create_entry_community_registration_review_ui_hardening_v1.sql";
+  "supabase/migrations/20260817040516_create_entry_community_registration_review_ui_hardening_v1.sql";
 const actionPath = "features/entry/communityRegistration/review/actions.ts";
 const queryPath = "features/entry/communityRegistration/review/queries.ts";
 const workspacePath =
