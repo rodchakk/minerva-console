@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -427,6 +428,7 @@ export function CommunityRegistrationCard({
   const progressTotal = campaign ? totalCampaignUnitCount : totalUnits;
   const canStart = !hasOperationalCampaign && units.length > 0;
   const canReplaceLink = campaign?.status.trim().toLowerCase() === "open";
+  const canOpenReview = Boolean(campaign && submittedUnitCount > 0);
   const submittedStatusText = useMemo(
     () => submittedStatuses.join(", "),
     [submittedStatuses],
@@ -505,14 +507,25 @@ export function CommunityRegistrationCard({
           >
             Start registration campaign
           </Button>
-        ) : canReplaceLink && campaign ? (
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={() => setShowReplaceDialog(true)}
-          >
-            Replace registration link
-          </Button>
+        ) : campaign ? (
+          <div className="flex flex-wrap gap-2">
+            {canOpenReview ? (
+              <Link
+                href={`/products/entry/communities/${communityId}/registration`}
+              >
+                <Button type="button">Review registrations</Button>
+              </Link>
+            ) : null}
+            {canReplaceLink ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowReplaceDialog(true)}
+              >
+                Replace registration link
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </div>
 

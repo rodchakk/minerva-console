@@ -162,6 +162,17 @@ export default async function EntryCorrectionPage(
           </p>
         )}
 
+        {correction.correctionObservation ? (
+          <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+              Observacion de la administracion
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-amber-50/90">
+              {correction.correctionObservation}
+            </p>
+          </div>
+        ) : null}
+
         <HouseholdDraftForm
           finalAction="correction-submit"
           initialResidents={correction.residents.map((resident) => ({

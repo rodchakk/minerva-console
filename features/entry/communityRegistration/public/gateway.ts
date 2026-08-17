@@ -59,6 +59,7 @@ export type PublicRegistrationEdit =
     }
   | {
       available: true;
+      correctionObservation: string | null;
       effectiveResidentLimit: number;
       expiresAt: string;
       publicInstructions: string | null;
@@ -107,6 +108,7 @@ type EditRpcResult = {
     public_slug?: string | null;
     public_title?: string | null;
   } | null;
+  correction_observation?: string | null;
   effective_resident_limit?: number | null;
   expires_at?: string | null;
   residents?: EditRpcResident[] | null;
@@ -302,6 +304,7 @@ export async function resolveCommunityRegistrationEdit(input: {
   const unitLabel = result.unit_label?.trim() ?? "";
   const effectiveResidentLimit = Number(result.effective_resident_limit ?? 0);
   const expiresAt = result.expires_at ?? "";
+  const correctionObservation = result.correction_observation?.trim() || null;
   const residents = Array.isArray(result.residents) ? result.residents : [];
 
   if (
@@ -344,6 +347,7 @@ export async function resolveCommunityRegistrationEdit(input: {
 
   return {
     available: true,
+    correctionObservation,
     effectiveResidentLimit,
     expiresAt,
     publicInstructions: result.campaign?.public_instructions ?? null,
