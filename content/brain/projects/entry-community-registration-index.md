@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-007 - CAMPAIGN LAUNCH UI HARDENED FOR REVIEW`.
+- **Estado actual:** `ENTRY-ONB-007 - CAMPAIGN LAUNCH UI DEV SQL VALIDATED`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -36,7 +36,7 @@
 22. Hotfix 005: `supabase/migrations/20260806235500_hotfix_cr_unit_conversion_queue_uuid_aggregate.sql`
 23. Hotfix 006: `supabase/migrations/20260806235600_hotfix_cr_unit_conversion_user_role_enum_literal.sql`
 24. Campaign launch UI: `content/brain/projects/entry-community-registration-campaign-launch-ui.md`
-25. Migracion hardening launch UI: `supabase/migrations/20260817011000_create_entry_community_registration_launch_ui_hardening_v1.sql`
+25. Migracion hardening launch UI: `supabase/migrations/20260817014957_create_entry_community_registration_launch_ui_hardening_v1.sql`
 26. Validador launch UI: `scripts/entry-onb-007-validate-campaign-launch-ui.mjs`
 27. Validador launch hardening: `scripts/entry-onb-007-validate-launch-hardening.mjs`
 
@@ -54,7 +54,8 @@
 - `ENTRY-ONB-006`: completed; production runtime blocker cleared.
 - `ENTRY-ONB-007`: implementation hardened for review; internal campaign
   launch UI added to the community detail page with atomic launch and
-  replacement-link recovery.
+  replacement-link recovery; code review and `gate-project-dev` PostgreSQL 17
+  engine validation passed.
 
 ## Gates
 
@@ -84,5 +85,22 @@
   Redis rate-limit counters were created.
 - Estado vigente: `ENTRY-ONB-006 - PRODUCTION RUNTIME VERIFIED`; runtime
   blocker cleared.
-- Estado vigente: `ENTRY-ONB-007 - CAMPAIGN LAUNCH UI HARDENED FOR REVIEW`;
-  no Supabase live test campaign created and no production writes performed.
+- Estado vigente: `ENTRY-ONB-007 - CAMPAIGN LAUNCH UI DEV SQL VALIDATED`.
+- ONB-007 SQL engine validation passed on `gate-project-dev`
+  (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17. Validation was first performed
+  transactionally and rolled back cleanly, then the exact approved migration was
+  permanently applied to `gate-project-dev` only. Supabase recorded version
+  `20260817014957`; post-DDL verification confirmed both RPCs exist with the
+  intended grants.
+- ONB-007 engine tests covered successful atomic launch; complete campaign,
+  units, and single active `campaign_access`; cross-community unit failure
+  rollback; successful campaign-access replacement; old-link invalidation;
+  replacement-token public resolve; failed replacement rollback preserving
+  previous active access; non-open campaign replacement rejection with `P0409`;
+  authenticated caller rejection with `42501`; service-role-only execution
+  grants; and `campaign_access_replaced` event/constraint compatibility.
+- No SQL-engine test campaigns remained. Supabase security/performance
+  advisors were reviewed; existing project-level advisor debt remains, but no
+  new ONB-007-specific blocker was identified.
+- Production/seshat was not touched. ENTRY mobile, Vercel env, Upstash, rate
+  limits, and secrets were not changed.

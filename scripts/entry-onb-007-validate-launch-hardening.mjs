@@ -1,7 +1,7 @@
 import fs from "node:fs";
 
 const migrationPath =
-  "supabase/migrations/20260817011000_create_entry_community_registration_launch_ui_hardening_v1.sql";
+  "supabase/migrations/20260817014957_create_entry_community_registration_launch_ui_hardening_v1.sql";
 const actionPath = "features/entry/communityRegistration/admin/actions.ts";
 const cardPath =
   "features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx";

@@ -2,8 +2,8 @@
 
 **Mission:** `ENTRY-ONB-007`
 
-**Status:** implementation PR prepared; hardening added for PR review; do not
-merge until review.
+**Status:** implementation PR prepared; hardening code review and dev SQL
+engine validation passed; do not merge until review.
 
 ## Scope
 
@@ -26,7 +26,7 @@ Initial PR review found that a two-network-RPC launch could strand a community
 if campaign creation succeeded but unit attachment failed. The hardened slice
 adds one forward-only migration:
 
-- `supabase/migrations/20260817011000_create_entry_community_registration_launch_ui_hardening_v1.sql`
+- `supabase/migrations/20260817014957_create_entry_community_registration_launch_ui_hardening_v1.sql`
 
 The migration adds two service-role-only RPCs:
 
@@ -116,6 +116,27 @@ The hardening validator maps the review cases A-G to static assertions for
 atomic launch, rollback behavior, lost-response replacement, replacement
 rollback, service-role boundaries, and delegated cross-community unit
 validation.
+
+SQL engine validation passed against Supabase project `gate-project-dev`
+(`ytzvislhvrcdtkbtpbmu`) on PostgreSQL 17. Validation was first performed
+transactionally and rolled back cleanly. The engine tests covered successful
+atomic launch; complete campaign, unit, and single active `campaign_access`
+state; cross-community unit failure rollback; successful campaign-access
+replacement; old-link invalidation; replacement-token public resolve; failed
+replacement rollback preserving previous active access; non-open campaign
+replacement rejection with `P0409`; authenticated caller rejection with
+`42501`; service-role-only execution grants; and
+`campaign_access_replaced` event/constraint compatibility.
+
+After transactional validation passed, the exact approved migration was
+permanently applied to `gate-project-dev` only. Supabase recorded migration
+version `20260817014957`. Post-DDL verification confirmed both RPCs exist with
+the intended grants. No test campaigns from the SQL engine tests remained.
+Supabase security/performance advisors were reviewed; existing project-level
+advisor debt remains, but no new ONB-007-specific blocker was identified.
+
+Production/seshat was not touched. ENTRY mobile was not touched. Vercel env,
+Upstash, rate limits, and secrets were not changed.
 
 ## Follow-Up Findings
 

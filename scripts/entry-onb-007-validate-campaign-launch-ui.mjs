@@ -4,7 +4,7 @@ const files = {
   actions: "features/entry/communityRegistration/admin/actions.ts",
   card: "features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx",
   hardeningMigration:
-    "supabase/migrations/20260817011000_create_entry_community_registration_launch_ui_hardening_v1.sql",
+    "supabase/migrations/20260817014957_create_entry_community_registration_launch_ui_hardening_v1.sql",
   page: "app/(console)/products/entry/communities/[communityId]/page.tsx",
   queries: "features/entry/communityRegistration/admin/queries.ts",
   accessState: "features/entry/communityRegistration/public/accessState.ts",

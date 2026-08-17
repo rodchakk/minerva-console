@@ -2,6 +2,31 @@
 
 Append-only. Most recent first.
 
+## 2026-08-16 - ENTRY-ONB-007 - Dev SQL engine validation recorded
+
+- Renamed the repository hardening migration to match the permanently applied
+  `gate-project-dev` Supabase migration version:
+  `20260817014957_create_entry_community_registration_launch_ui_hardening_v1`.
+- SQL content was unchanged from the reviewed ONB-007 migration.
+- Real PostgreSQL engine validation passed on Supabase project
+  `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17. Validation was
+  first performed transactionally and rolled back cleanly.
+- Engine tests covered successful atomic launch; complete campaign, units, and
+  single active `campaign_access`; cross-community unit failure rollback;
+  successful campaign-access replacement; old-link invalidation;
+  replacement-token public resolve; failed replacement rollback preserving
+  previous active access; non-open campaign replacement rejection with `P0409`;
+  authenticated caller rejection with `42501`; service-role-only execution
+  grants; and `campaign_access_replaced` event/constraint compatibility.
+- After transactional validation passed, the exact approved migration was
+  permanently applied to `gate-project-dev` only. Post-DDL verification
+  confirmed both RPCs exist with the intended grants.
+- No SQL-engine test campaigns remained. Supabase security/performance
+  advisors were reviewed; existing project-level advisor debt remains, but no
+  new ONB-007-specific blocker was identified.
+- Production/seshat was not touched. ENTRY mobile, Vercel env, Upstash, rate
+  limits, and secrets were not changed.
+
 ## 2026-08-16 - ENTRY-ONB-007 - Campaign launch hardening for review
 
 - Added a forward-only hardening migration with service-role-only
