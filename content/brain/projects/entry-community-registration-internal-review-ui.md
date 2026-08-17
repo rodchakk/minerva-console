@@ -2,38 +2,40 @@
 
 **Mission:** `ENTRY-ONB-008`
 
-**Status:** implementation in review; PostgreSQL engine gate passed and hardening migration applied to `gate-project-dev`; Preview runtime walkthrough pending.
+**Status:** runtime validated on PR #41 Preview; dev SQL migrations applied; ready for final PR review.
 
 ## Goal
 
 `ENTRY-ONB-008` adds the first internal Minerva Console workflow for reviewing household submissions collected through Community Registration before Patronato confirmation.
 
-The operator flow is:
+The validated operator flow is:
 
 ```text
 open campaign
-  -> inspect submitted households
+  -> inspect submitted household
   -> start review
-  -> mark household reviewed
+  -> mark reviewed
      OR request correction
-  -> if correction requested, create temporary correction link
+  -> create temporary correction link
+  -> replace correction link if plaintext is lost
   -> resident corrects and resubmits
-  -> review the new submission again
+  -> new submission returns to submitted
+  -> ENTRY reviews the new version again
 ```
 
 Patronato confirmation UI and conversion management UI remain later work.
 
 ## Console Placement
 
-The Community Detail `Resident registration` card links submitted campaigns to:
+The Community Detail `Resident registration` card links to:
 
 `/products/entry/communities/<communityId>/registration`
 
-The review workspace shows campaign review status and summary counts, all participating units and their registration state, resident count per unit, household resident details for a selected submitted unit, the current correction observation when pending, and internal review actions allowed by the existing backend state machine.
+The review workspace shows campaign review status and summary counts, all participating units, current household status, resident count, current submission version, resident details for the selected household, current correction observation when pending, and the internal actions allowed by the backend state machine.
 
-## Existing Backend Reused
+## Backend Reused
 
-This mission reuses the runtime-validated `ENTRY-ONB-003` review backend:
+This mission reuses the existing ONB-003 review backend, including:
 
 - `start_community_registration_review_v1`
 - `get_community_registration_review_summary_v1`
@@ -45,127 +47,150 @@ This mission reuses the runtime-validated `ENTRY-ONB-003` review backend:
 - `resolve_community_registration_edit_v1`
 - `resubmit_community_registration_household_v1`
 
-All internal reads and mutations remain behind `requireSuperadmin()` and the service-role Supabase client.
+Internal reads/actions remain superadmin-gated and use the service-role Supabase client.
 
-## Starting Review
+## Review State
 
-Review decisions are unavailable while the campaign remains `open`. The operator must explicitly choose `Start review`, delegating to `start_community_registration_review_v1(...)`:
+Review decisions are disabled while a campaign remains `open`. `Start review` transitions:
 
 ```text
 open -> review
 ```
 
-This stops new general public household submissions while existing authorized correction access remains valid during `review`.
+This stops new general public household submissions while existing authorized resident correction access remains valid.
 
-## Internal Unit Review
-
-A `submitted` unit can be marked reviewed:
+A submitted unit can transition:
 
 ```text
 submitted -> reviewed
 ```
 
-ENTRY may instead request a correction from a `submitted` or `reviewed` unit. The operator must provide an observation of 1-1000 characters. The existing backend moves the unit to `needs_correction`.
+ENTRY may request a correction from a `submitted` or `reviewed` unit. The operator must provide a bounded observation of 1-1000 characters.
 
-## Correction-Link Lifecycle
+## Correction Capability Lifecycle
 
-Correction access remains capability-based and hash-only. For the first correction link, the server action generates 32 secure random bytes as a base64url capability, hashes it using the existing SHA-256 correction-token helper, passes only the hash to `enable_community_registration_edit_v1(...)`, and displays the plaintext URL only in the immediate authenticated action result.
+Correction capabilities remain hash-only. The server generates 32 random bytes as base64url plaintext, hashes the capability before Supabase, and displays plaintext only in the immediate authenticated action result.
 
-Correction links expire after **72 hours** in this v1 UI. Plaintext capability values are not stored in Supabase, Brain, localStorage, sessionStorage, cookies or application logs.
+Correction links expire after 72 hours in this v1 UI.
+
+The plaintext token is not persisted in Supabase, Brain, localStorage, sessionStorage, cookies, or application logs.
 
 ## Lost-Link Recovery Hardening
 
-Inspection found a recovery gap: after `enable_community_registration_edit_v1(...)` succeeds, a lost HTTP response would leave the household `edit_enabled` while the plaintext link was unrecoverable.
-
-`ENTRY-ONB-008` therefore adds the forward-only hardening migration:
+Migration:
 
 `supabase/migrations/20260817040516_create_entry_community_registration_review_ui_hardening_v1.sql`
 
-The timestamp matches the canonical migration version recorded by Supabase on `gate-project-dev`.
+Supabase canonical version:
+
+`20260817040516_create_entry_community_registration_review_ui_hardening_v1`
 
 The migration adds:
 
 `rotate_community_registration_edit_access_v1(uuid, text, timestamptz, uuid, text)`
 
-The replacement RPC is `SECURITY DEFINER` with fixed `search_path`, requires service-role execution and a validated internal actor, locks campaign/unit/current edit-enabled submission, accepts only an `edit_enabled` household in an available `open` or `review` campaign, revokes prior active `resident_edit` capabilities, inserts the replacement hash in the same transaction, emits `resident_edit_access_replaced`, and returns safe metadata only. It intentionally has no exception handler, so insertion failure rolls back the preceding revocation.
+The RPC is service-role-only, locks campaign/unit/current edit-enabled submission, revokes prior active `resident_edit` capabilities, inserts one replacement hash atomically, emits `resident_edit_access_replaced`, and returns safe metadata only. The UI exposes `Replace correction link` only for an `edit_enabled` household.
 
-The UI exposes `Replace correction link` only for an `edit_enabled` household.
+The same migration also extends `resolve_community_registration_edit_v1(text)` so a valid edit capability can return the current pending correction observation scoped to that same household/submission. The authorized correction page displays it under `Observacion de la administracion`.
 
-## Resident Correction Observation
+## Resubmission Correction-Closeout Hotfix
 
-The previous correction page allowed editing but did not tell the resident what ENTRY requested them to correct.
+The PR Preview walkthrough found one real backend defect after the first successful resident resubmission.
 
-The migration replaces `resolve_community_registration_edit_v1(text)` without changing its capability boundary. For a valid edit token, it additionally returns only the current pending `correction_requested` observation scoped to the same campaign unit and submission. The public gateway maps this as `correctionObservation`, and the authorized correction page renders it under `Observacion de la administracion`.
+Observed pre-fix behavior:
 
-No observation is exposed through general campaign access or unauthenticated unit lookup.
+- resident correction created submission Version 2;
+- the edit capability was consumed;
+- the unit returned to `submitted`;
+- but the Version 1 `correction_requested` review remained `is_current = true` / `resolution_status = pending`.
+
+That caused the internal review workspace to continue counting/showing an observation that the resident had already acted on.
+
+Forward-only hotfix:
+
+`supabase/migrations/20260817043002_fix_cr_resubmit_resolves_pending_correction.sql`
+
+Supabase canonical version:
+
+`20260817043002_fix_cr_resubmit_resolves_pending_correction`
+
+The hotfix replaces `resubmit_community_registration_household_v1(...)` so a successful resubmission calls `_cr_replace_current_review_v1(...)` inside the same database transaction before consuming the edit token and returning the unit to `submitted`. A later database failure therefore rolls back the review resolution too.
+
+It also contains a generic one-time reconciliation for stale pending correction reviews that already have a newer submission version for the same unit. No environment-specific IDs are hardcoded.
 
 ## Security Boundaries
 
-- Console review routes require the existing authenticated superadmin gate.
-- Database RPCs execute through the service-role client only.
-- New rotation RPC is revoked from `PUBLIC`, `anon` and `authenticated`, and granted to `service_role`.
-- Resident PII is read only for the internal selected-unit review view or a valid household-scoped correction capability.
-- No plaintext capability is written to the database or logs.
-- No auth user, profile, community member, house resident or activation queue write is introduced.
+- Console review routes require the authenticated superadmin gate.
+- New correction rotation remains service-role-only.
+- `resubmit_community_registration_household_v1(text,jsonb)` remains revoked from PUBLIC/anon/authenticated and executable by service role only.
+- Resident PII is read only for internal review or a valid household-scoped correction capability.
+- No auth user, profile, community member, house resident, activation queue, Vercel env, Upstash, rate-limit, or ENTRY mobile change is introduced.
+
+## PostgreSQL Engine Validation
+
+Authorized validation ran against Supabase `gate-project-dev` / PostgreSQL 17.
+
+The original hardening migration passed a transactional `BEGIN ... ROLLBACK` test covering:
+
+- `open -> review`;
+- `submitted -> reviewed -> needs_correction -> edit_enabled`;
+- correction observation resolution;
+- correction-link rotation;
+- old-link invalidation;
+- duplicate-hash replacement rollback preserving the active replacement;
+- unauthorized direct caller rejection with `42501`;
+- `resident_edit_access_replaced` audit compatibility.
+
+The exact migration was then permanently applied to `gate-project-dev` only as `20260817040516` and re-tested transactionally against the installed version.
+
+The resubmission hotfix was also tested transactionally before permanent dev apply. The test created a temporary correction against the current household, resubmitted a Version 3 inside the transaction, verified the correction became resolved and no active edit token remained, then rolled back. Cleanup proof confirmed the real household remained Version 2 and the test token/data did not persist.
+
+The exact hotfix was then applied to `gate-project-dev` as `20260817043002`. Post-apply checks confirmed the real Version 2 remained intact, resident count remained 2, pending corrections became 0, the prior correction became resolved, service-role execution remained granted, and authenticated execution remained blocked.
+
+## PR #41 Preview Runtime Walkthrough - PASSED
+
+Dedicated community: `Residencial Prueba CR`.
+
+Runtime evidence:
+
+1. Community Detail showed `1 / 5` submitted and exposed `Review registrations`.
+2. Review workspace loaded one submitted unit with two residents and four unsubmitted units.
+3. `Start review` successfully persisted campaign `open -> review` and emitted one `campaign_review_started` event.
+4. Casa 1 internal detail loaded the current submission and two residents.
+5. Casa 1 was marked reviewed.
+6. ENTRY requested a correction with an operator observation; Casa 1 transitioned to `needs_correction` and the observation was stored as current/pending.
+7. `Create correction link` transitioned Casa 1/submission to `edit_enabled` with exactly one active `resident_edit` capability.
+8. The resident correction page showed the same household, existing residents, and the exact authorized correction observation.
+9. `Replace correction link` left exactly one active token and one revoked token and emitted one `resident_edit_access_replaced` event.
+10. Reloading the old correction link returned `Enlace no disponible`.
+11. The replacement link allowed editing only Casa 1. The second resident phone was changed as a test and the resident submitted the correction.
+12. Resubmission created Version 2, consumed the correction token, returned the unit to `submitted`, and preserved two residents.
+13. The walkthrough exposed the stale-pending-correction defect described above; hotfix `20260817043002` was implemented, engine-tested and applied to dev.
+14. Reloading the workspace after the hotfix showed Casa 1 `Submitted`, Version 2, two residents, `0 pending observations`, `Needs correction = 0`, and `Correction open = 0`.
+15. Version 2 was marked reviewed. Final database state: unit `reviewed`, current submission `reviewed`, latest version 2, two residents, zero pending corrections, zero active edit tokens.
+
+No Patronato confirmation or conversion was performed.
 
 ## Validation
 
-Focused static validator:
+Focused validator:
 
 `scripts/entry-onb-008-validate-review-ui.mjs`
 
-PR #41 pre-SQL CI on the initial implementation head passed TypeScript, production Build, Brain/layout lint and Vercel Preview. Full lint remained informationally red only on known unrelated React-hook debt. Brain guardrails remained red on the pre-existing `DEC-0007 -> ENTRY-ONB-000` registry relation.
+The validator covers review route/action wiring, token hashing, rotation locking/atomicity/grants, correction observation scoping, resident observation rendering, resubmission correction resolution, stale-pending reconciliation, service-role grants, no plaintext persistence/logging, and no ENTRY mobile dependency.
 
-### PostgreSQL engine gate - PASSED
+Prior PR CI passed TypeScript, production Build, Brain/layout lint and Vercel Preview. Full lint remained informationally red only on known unrelated debt; Brain guardrails remained red on the pre-existing `DEC-0007 -> ENTRY-ONB-000` relation. The final hotfix/documentation head must pass the same targeted gates before merge.
 
-Authorized validation was executed against Supabase `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17.
+## Current Remote State
 
-The migration was first exercised transactionally with a final `ROLLBACK`. The real dedicated test campaign (`Residencial Prueba CR`, Casa 1) was driven through:
-
-```text
-open -> review
-submitted -> reviewed -> needs_correction -> edit_enabled
-```
-
-Engine assertions verified:
-
-- new rotation RPC compiles;
-- `service_role` execute grant and PUBLIC/anon/authenticated revocation;
-- correction observation is returned only through the authorized edit-token resolver;
-- two existing Casa 1 residents resolve correctly;
-- replacement revokes the previous active edit token and leaves exactly one active replacement;
-- old edit capability becomes invalid;
-- replacement capability resolves with the same scoped observation;
-- intentional duplicate-hash replacement fails while preserving the previous active replacement, proving rollback of the preceding revocation;
-- authenticated direct caller is rejected with `42501`;
-- exactly one `resident_edit_access_replaced` audit event is emitted during the test transaction.
-
-The rollback proof confirmed the campaign returned to `open`, Casa 1 and its submission returned to `submitted`, no test review remained, no test edit token remained, and the temporary pre-apply DDL did not persist.
-
-### Permanent dev apply - PASSED
-
-The exact reviewed migration was then permanently applied to `gate-project-dev` only. Supabase recorded:
-
-`20260817040516_create_entry_community_registration_review_ui_hardening_v1`
-
-Post-DDL checks confirmed the rotation RPC exists, `service_role` can execute it, authenticated/anon cannot, the event constraint includes `resident_edit_access_replaced`, the test campaign remained `open`, Casa 1 remained `submitted`, and the apply itself created no edit tokens.
-
-A second transactional functional test was then run against the **installed** migration and rolled back. Review/correction/edit/rotation/invalid-old-link/failed-rotation rollback/unauthorized-caller/audit behavior all passed again. Final cleanup checks confirmed campaign/unit/submission restoration and zero test reviews/tokens.
-
-## Remote State After SQL Gate
-
-- hardening migration is permanently applied to `gate-project-dev` only;
-- production was not touched;
-- `seshat` was not touched;
-- `Residencial Prueba CR` remains `open` after rollback validation;
-- Casa 1 remains `submitted` with its prior two residents;
-- no ONB-008 correction token or review row remains from validation;
-- ENTRY mobile, Vercel env, Upstash, rate limits and secrets were not changed.
-
-## Next Gate
-
-Run the PR #41 Vercel Preview walkthrough against `gate-project-dev`: enter the internal review workspace, start review, inspect Casa 1, mark reviewed/request correction, generate a correction link, verify the resident sees the requested observation, exercise replacement-link recovery, resubmit, and confirm the workspace reflects the new submitted version. Use only the dedicated test community and stop before Patronato confirmation or conversion.
+- campaign remains `review` in the dedicated dev test community;
+- Casa 1 is `reviewed` on Version 2 with two residents;
+- pending corrections = 0;
+- active resident edit tokens = 0;
+- both ONB-008 migrations are applied to `gate-project-dev` only;
+- Production and `seshat` were not modified;
+- ENTRY mobile, Vercel env, Upstash, rate limits and secret values were not changed.
 
 ## Explicit Non-Scope
 
-This mission does not implement Patronato review/confirmation UI, campaign confirmation UI, conversion management UI, activation queue UI changes, ENTRY mobile changes, Vercel environment changes, Upstash/rate-limit changes, credential/secret rotation, or unrelated Brain/full-lint/dependency debt.
+This mission does not implement Patronato review/confirmation UI, campaign confirmation UI, conversion management UI, activation queue UI changes, ENTRY mobile changes, Vercel environment changes, Upstash/rate-limit changes, credential rotation, or unrelated Brain/full-lint/dependency debt.
