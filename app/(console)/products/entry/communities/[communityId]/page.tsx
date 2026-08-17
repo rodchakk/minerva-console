@@ -9,6 +9,8 @@ import { CommunityFacilitiesDrawer } from "@/features/entry/communities/Communit
 import { CommunityOnboardingReadinessPanel } from "@/features/entry/communities/CommunityOnboardingReadinessPanel";
 import { CommunityUsersDrawer } from "@/features/entry/communities/CommunityUsersDrawer";
 import { CommunityUnitsDrawer } from "@/features/entry/communities/CommunityUnitsDrawer";
+import { CommunityRegistrationCard } from "@/features/entry/communityRegistration/admin/CommunityRegistrationCard";
+import { getCommunityRegistrationAdminState } from "@/features/entry/communityRegistration/admin/queries";
 import { getCommunityAdminActivityPreview } from "@/features/entry/communities/activityQueries";
 import {
   getCommunityDetailPreviews,
@@ -306,12 +308,18 @@ export default async function CommunitySetupPage(
 
   if (!community) notFound();
 
-  const [previews, adminActivity, onboardingDetail] = await Promise.all([
+  const [
+    previews,
+    adminActivity,
+    onboardingDetail,
+    registrationState,
+  ] = await Promise.all([
     getCommunityDetailPreviews(community.id, {
       allowMessages: community.allowMessages,
     }),
     getCommunityAdminActivityPreview(community.id, 50),
     getCommunityOnboardingDetail(community.id),
+    getCommunityRegistrationAdminState(community.id),
   ]);
 
   const primaryAction = getPrimaryAction(community);
@@ -340,6 +348,11 @@ export default async function CommunitySetupPage(
       href: `/products/entry/activation?community_id=${community.id}`,
       label: "Open activation queue",
       note: "Review pending activations.",
+    },
+    {
+      href: "#resident-registration",
+      label: "Resident registration",
+      note: "Launch and monitor public resident registration.",
     },
     {
       href: `/products/entry/settings?community_id=${community.id}`,
@@ -582,6 +595,18 @@ export default async function CommunitySetupPage(
               </div>
             )}
           </section>
+
+          <CommunityRegistrationCard
+            campaign={registrationState.campaign}
+            communityId={community.id}
+            communityName={community.name}
+            hasOperationalCampaign={registrationState.hasOperationalCampaign}
+            submittedStatuses={registrationState.submittedStatuses}
+            submittedUnitCount={registrationState.submittedUnitCount}
+            totalCampaignUnitCount={registrationState.totalCampaignUnitCount}
+            totalUnits={community.totalUnits}
+            units={registrationState.units}
+          />
 
           <div className="grid gap-4 lg:grid-cols-3">
             <SummaryCard

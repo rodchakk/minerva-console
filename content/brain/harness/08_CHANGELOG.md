@@ -2,6 +2,106 @@
 
 Append-only. Most recent first.
 
+## 2026-08-16 - ENTRY-ONB-007 - Runtime walkthrough passed
+
+- Runtime walkthrough passed on the PR #39 Vercel Preview deployment for commit
+  `c68043a`, connected to Supabase project `gate-project-dev`
+  (`ytzvislhvrcdtkbtpbmu`) and test community `Residencial Prueba CR`.
+- Internal launch UI rendered on Community Detail with no active campaign,
+  `0 / 5 units submitted`, `5 participating units`, modal default title
+  `Registro de residentes - Residencial Prueba CR`, resident limit `3`, and
+  Casa 1 through Casa 5 selected.
+- Real launch created an open campaign with five participating units, default
+  resident limit `3`, and exactly one active `campaign_access`. The plaintext
+  registration URL appeared only in the immediate success state and was not
+  redisplayed after reload.
+- Registration-link replacement succeeded for the open campaign: exactly one
+  active `campaign_access` remained, exactly one previous access was revoked,
+  exactly one `campaign_access_replaced` audit event existed, the new
+  capability reached public registration, and the old revoked capability
+  resolved to `Enlace no disponible`.
+- Public unit lookup through the replacement capability succeeded for Casa 1;
+  the resident form rendered with `Puedes registrar hasta 3 residentes.`
+- Before submission testing, Casa 1 through Casa 5 were confirmed
+  `unregistered` with zero submissions and zero residents. The operator then
+  completed one end-to-end public submission through the newly generated
+  registration capability. Casa 1 transitioned to `submitted` with
+  `submission_count = 1` and `resident_count = 2`; Casa 2 through Casa 5
+  remained `unregistered` with zero submissions and zero residents. This adds
+  runtime evidence that ONB-007 campaign launch/link generation interoperates
+  with the existing public registration submission flow.
+- Preview runtime config finding: the first public-access attempt returned
+  `503` because Preview runtime variables were scoped to the obsolete
+  ONB-006 branch. Existing Preview variable branch scope was broadened to all
+  Preview branches only; values/secrets and Production variables were not
+  changed. The same PR commit was redeployed, after which `/access` returned
+  `303` and the public campaign page returned `200`.
+- Production/seshat was not touched. ENTRY mobile was not touched. No
+  production migration was applied. No Upstash credential value or
+  `ENTRY_CR_RATE_LIMIT_SECRET` value was changed or rotated. No rate-limit
+  policy or code was changed.
+
+## 2026-08-16 - ENTRY-ONB-007 - Dev SQL engine validation recorded
+
+- Renamed the repository hardening migration to match the permanently applied
+  `gate-project-dev` Supabase migration version:
+  `20260817014957_create_entry_community_registration_launch_ui_hardening_v1`.
+- SQL content was unchanged from the reviewed ONB-007 migration.
+- Real PostgreSQL engine validation passed on Supabase project
+  `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17. Validation was
+  first performed transactionally and rolled back cleanly.
+- Engine tests covered successful atomic launch; complete campaign, units, and
+  single active `campaign_access`; cross-community unit failure rollback;
+  successful campaign-access replacement; old-link invalidation;
+  replacement-token public resolve; failed replacement rollback preserving
+  previous active access; non-open campaign replacement rejection with `P0409`;
+  authenticated caller rejection with `42501`; service-role-only execution
+  grants; and `campaign_access_replaced` event/constraint compatibility.
+- After transactional validation passed, the exact approved migration was
+  permanently applied to `gate-project-dev` only. Post-DDL verification
+  confirmed both RPCs exist with the intended grants.
+- No SQL-engine test campaigns remained. Supabase security/performance
+  advisors were reviewed; existing project-level advisor debt remains, but no
+  new ONB-007-specific blocker was identified.
+- Production/seshat was not touched. ENTRY mobile, Vercel env, Upstash, rate
+  limits, and secrets were not changed.
+
+## 2026-08-16 - ENTRY-ONB-007 - Campaign launch hardening for review
+
+- Added a forward-only hardening migration with service-role-only
+  `launch_community_registration_campaign_v1(...)` and
+  `rotate_community_registration_campaign_access_v1(...)`.
+- Atomic launch now composes the approved create-campaign and add-units RPCs
+  inside one database transaction boundary, so a unit-attachment failure rolls
+  back the campaign and access-token hash.
+- Added replacement-link recovery for existing operational campaigns. The
+  replacement flow generates plaintext only server-side, sends only the hash to
+  Supabase, revokes prior active campaign-access links, inserts one replacement
+  active hash, and shows plaintext only in the immediate success state.
+- Added focused static validation for the partial-launch/recovery review cases.
+- No Production data, live Supabase campaign, ENTRY mobile, Vercel/env/Upstash,
+  rate-limit behavior, or unrelated Brain/lint debt changed.
+
+## 2026-08-16 - ENTRY-ONB-007 - Campaign launch UI ready for review
+
+- Added a visible Resident registration card to the community detail page.
+- Added an internal launch flow for creating a Community Registration campaign,
+  selecting existing units, generating a server-side capability token, hashing
+  it before the backend call, and showing the public registration link only in
+  the immediate success state.
+- Reused `create_community_registration_campaign_v1(...)` and
+  `add_community_registration_units_v1(...)`; no schema migration was added.
+- Progress counts submitted units as statuses `submitted`, `edit_enabled`,
+  `needs_correction`, `reviewed`, `confirmed`, or `processed`; `unregistered`
+  does not count.
+- Added a focused static validator for the launch UI and token guardrails.
+- No Supabase live test campaign, Production/env/Upstash changes, rate-limit
+  changes, ENTRY mobile changes, review UI, patronato UI, or conversion UI.
+- Follow-up finding only, not fixed here: newly created/incomplete community
+  may surface as Needs attention instead of Pending setup.
+- Follow-up finding only, not fixed here: Assign resident admin may be offered
+  when zero eligible residents/users exist.
+
 ## 2026-08-16 - ENTRY-ONB-006 - Production rate-limit verification closeout
 
 - Closed `ENTRY-ONB-006` after production Community Registration rate limiting
