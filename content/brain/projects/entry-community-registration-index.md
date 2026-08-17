@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-007 - CLOSED / MERGED / PRODUCTION WEB DEPLOYED`.
+- **Estado actual:** `ENTRY-ONB-008 - IMPLEMENTATION IN REVIEW / REMOTE SQL GATE PENDING`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -40,6 +40,9 @@
 26. Validador launch UI: `scripts/entry-onb-007-validate-campaign-launch-ui.mjs`
 27. Validador launch hardening: `scripts/entry-onb-007-validate-launch-hardening.mjs`
 28. ONB-007 post-merge closeout: `content/brain/projects/entry-community-registration-onb-007-post-merge-closeout.md`
+29. Internal review UI: `content/brain/projects/entry-community-registration-internal-review-ui.md`
+30. Migracion review UI hardening: `supabase/migrations/20260817032000_create_entry_community_registration_review_ui_hardening_v1.sql`
+31. Validador review UI: `scripts/entry-onb-008-validate-review-ui.mjs`
 
 ## Estado de misiones
 
@@ -58,6 +61,12 @@
   deployment reached `READY`. Code review, `gate-project-dev` PostgreSQL 17
   engine validation, PR Preview runtime walkthrough, link rotation, real Casa 1
   submission, and `1 / 5` progress refresh all passed.
+- `ENTRY-ONB-008`: implementation in review on branch
+  `codex/entry-onb-008-internal-review-ui`. Internal campaign review, household
+  inspection, reviewed/correction actions, recoverable resident correction
+  links, and authorized correction-observation display are implemented. New SQL
+  hardening has not been applied remotely; PostgreSQL engine/runtime gate is
+  pending explicit authorization.
 
 ## Gates
 
@@ -139,4 +148,8 @@
   migration was applied; no Production Upstash credential value or
   `ENTRY_CR_RATE_LIMIT_SECRET` value was changed or rotated; existing advisor,
   Brain guardrail, and full-lint debt remain separate follow-up work.
-- Estado vigente: `ENTRY-ONB-007 - CLOSED / MERGED / PRODUCTION WEB DEPLOYED`.
+- Estado vigente: `ENTRY-ONB-008 - IMPLEMENTATION IN REVIEW / REMOTE SQL GATE PENDING`.
+- ONB-008 adds no remote database changes at implementation time. Its new
+  hardening migration must pass a PostgreSQL engine gate before any permanent
+  application. Runtime testing that changes campaign or unit state remains
+  behind an explicit authorization gate.
