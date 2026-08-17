@@ -2,7 +2,7 @@
 
 **Mission:** `ENTRY-ONB-007`
 
-**Status:** runtime validated; ready for final PR review and merge gate.
+**Status:** CLOSED — PR #39 merged to `master`; production web deployment verified.
 
 ## Scope
 
@@ -134,8 +134,8 @@ the intended grants. No test campaigns from the SQL engine tests remained.
 Supabase security/performance advisors were reviewed; existing project-level
 advisor debt remains, but no new ONB-007-specific blocker was identified.
 
-Production/seshat was not touched. ENTRY mobile was not touched. Vercel env,
-Upstash, rate limits, and secrets were not changed.
+At the SQL-engine validation stage, Production/seshat, ENTRY mobile, Vercel
+environment configuration, Upstash, rate limits, and secrets were not changed.
 
 ## Runtime Walkthrough
 
@@ -181,14 +181,42 @@ Before submission testing, Casa 1 through Casa 5 were confirmed
 operator then completed an end-to-end public submission through the newly
 generated registration capability. Casa 1 transitioned to `submitted` with
 `submission_count = 1` and `resident_count = 2`; Casa 2 through Casa 5 remained
-`unregistered` with zero submissions and zero residents. This confirms the
-ONB-007 campaign launch and link-generation path interoperates with the
-existing public registration submission flow.
+`unregistered` with zero submissions and zero residents. The Console card then
+refreshed from `0 / 5` to `1 / 5` submitted units. This confirms the ONB-007
+campaign launch and link-generation path interoperates with the existing public
+registration submission flow and its internal progress query.
 
-Production/seshat was not touched. ENTRY mobile was not touched. No production
-migration was applied. No Upstash credential value was changed or rotated.
-`ENTRY_CR_RATE_LIMIT_SECRET` was not changed or rotated. No rate-limit policy
-or code was changed.
+Production/seshat was not touched during the Preview walkthrough. ENTRY mobile
+was not touched. No production migration was applied. No Upstash credential
+value was changed or rotated. `ENTRY_CR_RATE_LIMIT_SECRET` was not changed or
+rotated. No rate-limit policy or code was changed.
+
+## Post-Merge Closeout
+
+PR #39 was squash-merged to `master` as:
+
+`f3c95a784f5356427fba1797ea851a095897b88d`
+
+Vercel deployed that exact commit to the Minerva Console Production target.
+Post-deploy verification confirmed `READY`, `console.minervatechs.com` serving
+the merged build, and no new Vercel runtime errors in the smoke window.
+
+Production Minerva Console wiring was verified against Supabase project
+`gate-project-dev` (`ytzvislhvrcdtkbtpbmu`). That project already contains the
+complete Community Registration migration chain through
+`20260817014957_create_entry_community_registration_launch_ui_hardening_v1`.
+No additional ONB-007 database migration was required after merge.
+
+Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) is separate from the ENTRY
+Community Registration backend and does not contain the `communities` or
+`community_registration_*` tables. It was not modified.
+
+The dedicated test community retains the runtime walkthrough state: Casa 1 is
+`submitted` with one submission and two resident records; Casa 2 through Casa 5
+remain `unregistered`.
+
+Existing Supabase advisor debt, Brain guardrail debt, and unrelated full-lint
+debt remain separate follow-up work and were not changed by this closeout.
 
 ## Follow-Up Findings
 
