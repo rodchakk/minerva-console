@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-007 - CAMPAIGN LAUNCH UI DEV SQL VALIDATED`.
+- **Estado actual:** `ENTRY-ONB-007 - RUNTIME VALIDATED / READY FOR FINAL PR REVIEW`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -52,10 +52,10 @@
 - `ENTRY-ONB-004`: completed; baseline `ac25878`.
 - `ENTRY-ONB-005`: hosted runtime pass; UI work unblocked.
 - `ENTRY-ONB-006`: completed; production runtime blocker cleared.
-- `ENTRY-ONB-007`: implementation hardened for review; internal campaign
+- `ENTRY-ONB-007`: runtime validated and ready for final PR review; internal campaign
   launch UI added to the community detail page with atomic launch and
-  replacement-link recovery; code review and `gate-project-dev` PostgreSQL 17
-  engine validation passed.
+  replacement-link recovery; code review, `gate-project-dev` PostgreSQL 17
+  engine validation, and PR #39 Preview runtime walkthrough passed.
 
 ## Gates
 
@@ -85,7 +85,7 @@
   Redis rate-limit counters were created.
 - Estado vigente: `ENTRY-ONB-006 - PRODUCTION RUNTIME VERIFIED`; runtime
   blocker cleared.
-- Estado vigente: `ENTRY-ONB-007 - CAMPAIGN LAUNCH UI DEV SQL VALIDATED`.
+- Estado vigente: `ENTRY-ONB-007 - RUNTIME VALIDATED / READY FOR FINAL PR REVIEW`.
 - ONB-007 SQL engine validation passed on `gate-project-dev`
   (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17. Validation was first performed
   transactionally and rolled back cleanly, then the exact approved migration was
@@ -104,3 +104,27 @@
   new ONB-007-specific blocker was identified.
 - Production/seshat was not touched. ENTRY mobile, Vercel env, Upstash, rate
   limits, and secrets were not changed.
+- ONB-007 runtime walkthrough passed on PR #39 Preview for commit `c68043a`
+  using `gate-project-dev` and test community `Residencial Prueba CR`.
+  Internal launch rendered correctly, launch created one open campaign with
+  five participating units and one active `campaign_access`, reload did not
+  redisplay plaintext, replacement-link recovery revoked the old access and
+  produced one new active access, and public lookup for Casa 1 rendered the
+  resident form with the configured limit.
+- ONB-007 submission interoperability was verified after the initial zero-data
+  state. Casa 1 through Casa 5 were first confirmed `unregistered` with zero
+  submissions and zero residents. The operator then completed one end-to-end
+  public submission through the newly generated registration capability. Casa 1
+  transitioned to `submitted` with `submission_count = 1` and
+  `resident_count = 2`; Casa 2 through Casa 5 remained `unregistered` with
+  zero submissions and zero residents.
+- Runtime finding: the first Preview public-access attempt returned `503`
+  because Preview runtime variables were still branch-scoped to the obsolete
+  ONB-006 branch. Existing Preview variable branch scope was broadened to all
+  Preview branches; values/secrets and Production variables were not changed.
+  The same PR commit was redeployed, after which `/access` returned `303` and
+  the public campaign page returned `200`.
+- Runtime safety closeout: Production/seshat was not touched; ENTRY mobile was
+  not touched; no production migration was applied; no Upstash credential value,
+  `ENTRY_CR_RATE_LIMIT_SECRET`, rate-limit policy, or rate-limit code was
+  changed.

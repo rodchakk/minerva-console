@@ -2,6 +2,45 @@
 
 Append-only. Most recent first.
 
+## 2026-08-16 - ENTRY-ONB-007 - Runtime walkthrough passed
+
+- Runtime walkthrough passed on the PR #39 Vercel Preview deployment for commit
+  `c68043a`, connected to Supabase project `gate-project-dev`
+  (`ytzvislhvrcdtkbtpbmu`) and test community `Residencial Prueba CR`.
+- Internal launch UI rendered on Community Detail with no active campaign,
+  `0 / 5 units submitted`, `5 participating units`, modal default title
+  `Registro de residentes - Residencial Prueba CR`, resident limit `3`, and
+  Casa 1 through Casa 5 selected.
+- Real launch created an open campaign with five participating units, default
+  resident limit `3`, and exactly one active `campaign_access`. The plaintext
+  registration URL appeared only in the immediate success state and was not
+  redisplayed after reload.
+- Registration-link replacement succeeded for the open campaign: exactly one
+  active `campaign_access` remained, exactly one previous access was revoked,
+  exactly one `campaign_access_replaced` audit event existed, the new
+  capability reached public registration, and the old revoked capability
+  resolved to `Enlace no disponible`.
+- Public unit lookup through the replacement capability succeeded for Casa 1;
+  the resident form rendered with `Puedes registrar hasta 3 residentes.`
+- Before submission testing, Casa 1 through Casa 5 were confirmed
+  `unregistered` with zero submissions and zero residents. The operator then
+  completed one end-to-end public submission through the newly generated
+  registration capability. Casa 1 transitioned to `submitted` with
+  `submission_count = 1` and `resident_count = 2`; Casa 2 through Casa 5
+  remained `unregistered` with zero submissions and zero residents. This adds
+  runtime evidence that ONB-007 campaign launch/link generation interoperates
+  with the existing public registration submission flow.
+- Preview runtime config finding: the first public-access attempt returned
+  `503` because Preview runtime variables were scoped to the obsolete
+  ONB-006 branch. Existing Preview variable branch scope was broadened to all
+  Preview branches only; values/secrets and Production variables were not
+  changed. The same PR commit was redeployed, after which `/access` returned
+  `303` and the public campaign page returned `200`.
+- Production/seshat was not touched. ENTRY mobile was not touched. No
+  production migration was applied. No Upstash credential value or
+  `ENTRY_CR_RATE_LIMIT_SECRET` value was changed or rotated. No rate-limit
+  policy or code was changed.
+
 ## 2026-08-16 - ENTRY-ONB-007 - Dev SQL engine validation recorded
 
 - Renamed the repository hardening migration to match the permanently applied

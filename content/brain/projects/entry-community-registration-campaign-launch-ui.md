@@ -2,8 +2,7 @@
 
 **Mission:** `ENTRY-ONB-007`
 
-**Status:** implementation PR prepared; hardening code review and dev SQL
-engine validation passed; do not merge until review.
+**Status:** runtime validated; ready for final PR review and merge gate.
 
 ## Scope
 
@@ -137,6 +136,59 @@ advisor debt remains, but no new ONB-007-specific blocker was identified.
 
 Production/seshat was not touched. ENTRY mobile was not touched. Vercel env,
 Upstash, rate limits, and secrets were not changed.
+
+## Runtime Walkthrough
+
+Manual runtime walkthrough passed on the PR #39 Vercel Preview deployment for
+commit `c68043a`, connected to Supabase project `gate-project-dev`
+(`ytzvislhvrcdtkbtpbmu`).
+
+The walkthrough used test community `Residencial Prueba CR`. The Community
+Detail page rendered the Resident registration card in the no-active-campaign
+state with `0 / 5 units submitted` and `5 participating units`. The launch
+modal rendered with default title `Registro de residentes - Residencial Prueba
+CR`, resident limit `3`, and Casa 1 through Casa 5 selected.
+
+Real campaign launch succeeded. Database verification showed `status = open`,
+five participating units, default resident limit `3`, and exactly one active
+`campaign_access` token. The plaintext registration URL was shown only in the
+immediate success state.
+
+After reload, the plaintext URL was not redisplayed. Campaign status and
+progress remained visible, and `Replace registration link` was available
+because the campaign was open.
+
+The first Preview public-access attempt returned `503` with runtime log
+`entry_cr_rate_limit_failure=missing_runtime_configuration`. Root cause was
+Preview runtime variables scoped to the obsolete
+`codex/entry-onb-006-public-registration-foundation` branch. The operational
+correction broadened the existing Preview variable branch scope to all Preview
+branches only; values and secrets were not changed, Production variables were
+not changed, and the same PR commit was redeployed. After redeploy, `/access`
+returned `303` and the public campaign page returned `200`.
+
+Registration-link replacement succeeded for the open campaign. Verification
+showed exactly one active `campaign_access`, exactly one previous
+`campaign_access` revoked, exactly one `campaign_access_replaced` audit event,
+and the campaign still open. The new capability reached public registration;
+the revoked capability resolved to `Enlace no disponible`.
+
+Public unit lookup through the replacement capability succeeded for Casa 1.
+The resident form rendered and displayed `Puedes registrar hasta 3 residentes.`
+
+Before submission testing, Casa 1 through Casa 5 were confirmed
+`unregistered` with `submission_count = 0` and `resident_count = 0`. The
+operator then completed an end-to-end public submission through the newly
+generated registration capability. Casa 1 transitioned to `submitted` with
+`submission_count = 1` and `resident_count = 2`; Casa 2 through Casa 5 remained
+`unregistered` with zero submissions and zero residents. This confirms the
+ONB-007 campaign launch and link-generation path interoperates with the
+existing public registration submission flow.
+
+Production/seshat was not touched. ENTRY mobile was not touched. No production
+migration was applied. No Upstash credential value was changed or rotated.
+`ENTRY_CR_RATE_LIMIT_SECRET` was not changed or rotated. No rate-limit policy
+or code was changed.
 
 ## Follow-Up Findings
 
