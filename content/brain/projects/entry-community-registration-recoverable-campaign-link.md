@@ -4,67 +4,45 @@
 
 - **Mission:** `ENTRY-ONB-009`
 - **Branch:** `codex/entry-onb-009-recoverable-campaign-link`
-- **Status:** local/static gates passed; hosted dev permanent apply and Preview runtime gates pending.
-- **Goal:** allow superadmins to copy or open the current active open-campaign registration link without rotating it.
+- **Status:** implementation, PostgreSQL 17 gate, hosted-dev apply and Preview runtime walkthrough passed; final CI/merge gate pending.
+- **Goal:** allow superadmins to copy or open the current active open-campaign registration link repeatedly without rotating it.
 
 ## Security Model
 
-Campaign access continues to validate with `token_hash`. ONB-009 adds nullable
-application-layer encrypted recovery material on
-`community_registration_access_tokens` for `campaign_access` rows only. The
-plaintext capability is generated in the authenticated server action, hashed,
-encrypted with AES-256-GCM, and sent to Supabase as `token_hash` plus
-`encrypted_token_payload` in the same RPC write.
+Campaign access continues to validate with `token_hash`. ONB-009 adds nullable application-layer encrypted recovery material on `community_registration_access_tokens` for `campaign_access` rows only. The plaintext capability is generated in the authenticated server action, hashed, encrypted with AES-256-GCM, and sent to Supabase as `token_hash` plus `encrypted_token_payload` in the same RPC write.
 
-Recovery is a superadmin-gated server action. It scopes by community and
-campaign, requires campaign `status = open`, requires exactly one active
-`campaign_access`, rejects consumed/revoked/expired states, requires encrypted
-payload material, decrypts server-side, recomputes SHA-256, and uses
-timing-safe comparison against the stored hash before returning the official
-`/entry/register/<slug>/access?token=...` URL.
+Recovery is superadmin-gated. It scopes by community and campaign, requires campaign `status = open`, requires exactly one active `campaign_access`, rejects consumed/revoked/expired states, decrypts only server-side, recomputes SHA-256, and timing-safe compares it with the stored hash before returning the official registration URL.
 
-The plaintext campaign capability is not stored in Supabase, cookies,
-localStorage, sessionStorage, Brain, logs, or analytics.
+Plaintext campaign capabilities are not stored in Supabase, cookies, localStorage, sessionStorage, Brain, logs, or analytics.
 
 ## Campaign Links vs Correction Links
 
-The general campaign registration link is intentionally reusable while a
-campaign is open. Operators may need to share the same valid link repeatedly
-through WhatsApp, email, patronato groups, or field support channels, so
-recovery avoids unnecessary revocation.
+General campaign registration links are intentionally reusable while the campaign is open because operators may need to share the same valid link repeatedly through WhatsApp, email, patronato groups, or field support.
 
-Resident correction links remain intentionally non-recoverable. They are
-household-scoped repair capabilities with one-time plaintext display and
-explicit Replace correction link behavior from ONB-008. ONB-009 does not change
-resident correction-link storage, encryption policy, creation, rotation,
-consumption, or UI.
+Resident correction links remain intentionally non-recoverable household-scoped capabilities. ONB-009 does not change their storage, creation, rotation, consumption, or UI.
 
 ## Legacy Behavior
 
-Existing `campaign_access` rows with only `token_hash` are mathematically
-unrecoverable. For an open legacy campaign, the Console shows:
-
-`Current registration link cannot be recovered. Replace the registration link once to enable future re-sharing.`
-
-Replacing the link revokes the previous active campaign access and creates a
-new ONB-009-format active access row with encrypted recovery material.
+Existing `campaign_access` rows with only `token_hash` are unrecoverable. An open legacy campaign shows an honest replace-to-upgrade state. Replacing once revokes the legacy active access and creates a new ONB-009-format active access row with encrypted recovery material.
 
 ## SQL Design
 
-Migration:
+Canonical hosted-dev migration:
 
-`supabase/migrations/20260818010000_entry_onb_009_recoverable_campaign_links.sql`
+`supabase/migrations/20260818034216_entry_onb_009_recoverable_campaign_links.sql`
+
+Supabase recorded:
+
+`20260818034216_entry_onb_009_recoverable_campaign_links`
 
 Design:
 
-- Adds nullable `encrypted_token_payload text`.
-- Constrains any non-null payload to `campaign_access` rows scoped at campaign level.
-- Keeps legacy null rows valid.
-- Adds `launch_community_registration_campaign_v2(...)`.
-- Adds `rotate_community_registration_campaign_access_v2(...)`.
-- Retains v1 RPCs for compatibility.
-- Revokes public, anon, and authenticated execution; grants only `service_role`.
-- Keeps replacement transactional and preserves the one-active-campaign-access invariant.
+- nullable `encrypted_token_payload text` scoped to campaign-level `campaign_access` rows;
+- legacy NULL rows remain valid;
+- `launch_community_registration_campaign_v2(...)` writes hash + encrypted payload atomically;
+- `rotate_community_registration_campaign_access_v2(...)` revokes prior active access and inserts the replacement atomically;
+- v1 RPCs remain for compatibility;
+- public, anon and authenticated execution revoked; `service_role` only.
 
 ## Runtime Contract
 
@@ -72,67 +50,65 @@ Required server-only variable:
 
 `ENTRY_CR_CAMPAIGN_LINK_ENCRYPTION_KEY`
 
-Generate with:
-
-`openssl rand -base64 32`
-
-The decoded key must be exactly 32 bytes. Preview and Production need the same
-stable value, otherwise a link encrypted in one runtime may not be recoverable
-in another. No Production secrets were changed by this mission.
+The decoded key must be exactly 32 bytes. Preview and Production are configured with the same stable value. The secret itself is not recorded in Brain or the repository and must not be rotated casually because existing recoverable campaign links depend on it.
 
 ## Validation Evidence
 
-Local focused validator:
+Focused validator:
 
 `node scripts/entry-onb-009-validate-recoverable-campaign-link.mjs`
 
-Current result: passed.
+Local/static gates passed:
 
-Covered:
-
-- encrypt/decrypt round trip;
-- different ciphertext for repeated plaintext encryption;
+- crypto round trip;
+- random IV / distinct ciphertext;
 - tamper failure;
-- invalid/missing key failure;
+- missing/invalid key fail-closed;
 - no plaintext persistence/logging patterns;
-- atomic SQL hash plus encrypted-payload insertion for launch and replacement;
-- exactly-one active campaign access check;
-- legacy null payload support;
+- atomic launch/replacement SQL assertions;
 - service-role-only grants;
-- Copy/Open recover without rotation;
-- review/closed campaign hiding of re-share controls;
-- correction-link behavior untouched.
+- Copy/Open do not call rotation;
+- legacy replace-to-upgrade behavior;
+- review/closed campaign hides sharing controls;
+- resident correction-link behavior untouched;
+- targeted ESLint, TypeScript/build and `git diff --check` passed.
 
-Pending external gates:
+Known unrelated CI debt remains limited to the existing full-lint React hook failures and Brain relation `DEC-0007 -> ENTRY-ONB-000`.
 
-- PostgreSQL 17 functional validation on `gate-project-dev`;
-- permanent dev apply only if explicitly authorized;
-- Preview and Production env variable configuration;
-- Preview runtime walkthrough after deployment.
+## PostgreSQL 17 Hosted-Dev Gate
 
-Additional validation run during implementation:
+Target: `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`). `seshat` was not touched.
 
-- `git diff --check`: passed.
-- Targeted ESLint for ONB-009 admin files: passed.
-- Production build: passed with
-  `node --use-system-ca node_modules\next\dist\bin\next build --webpack`; the
-  build TypeScript phase passed.
-- Full lint: failed only on known unrelated React hook rule debt in
-  `app/activate/page.tsx`, `app/reset-password/page.tsx`,
-  `features/entry/communities/CommunityUnitQuickActions.tsx`, and
-  `features/entry/users/CommunityUsersClient.tsx`.
-- Brain relation/guardrails: failed only on the pre-existing broken relation
-  `DEC-0007 -> ENTRY-ONB-000` after loop state was refreshed.
-- Hosted dev read-only inspection confirmed ONB-009 is not applied on
-  `gate-project-dev`: no `encrypted_token_payload` column and no v2 campaign
-  link RPCs.
-- Hosted dev rollback gate applied the ONB-009 migration inside `BEGIN` /
-  `ROLLBACK` and confirmed the v2 functions were visible in-transaction. A
-  follow-up read-only proof showed both the encrypted column and v2 functions
-  absent after rollback.
+The exact migration was first applied inside `BEGIN` / `ROLLBACK`. Tests covered v2 launch, atomic encrypted payload persistence, v2 rotation, exactly one active campaign token after rotation, authenticated caller rejection and grants. Rollback proof confirmed temporary DDL/data disappeared.
 
-Not completed:
+The migration was then permanently applied to `gate-project-dev` only. A second transactional functional test against the installed migration passed and rolled back its test data while leaving the migration installed.
 
-- Permanent Supabase dev apply was not performed because explicit authorization
-  for persistent remote mutation was not present.
-- Preview/Production environment variables were not changed.
+## Preview Runtime Walkthrough
+
+Preview deployment for PR #43 was redeployed after configuring the encryption key and reached READY.
+
+A dedicated open campaign was launched on the existing test community `Cimuty monopy` with one participating test unit. Runtime evidence:
+
+1. Launch created exactly one active `campaign_access` with a 64-character hash and an encrypted `v1` payload.
+2. After closing the immediate-success modal and fully reloading Console, `Copy registration link`, `Open registration`, and `Replace registration link` remained available.
+3. `Copy registration link` returned `Copied`; database state remained exactly one active token, zero revoked tokens and zero replacement events.
+4. `Open registration` opened the public registration flow successfully and still did not rotate or consume campaign access.
+5. `Replace registration link` created a distinct token hash, revoked the previous token, left exactly one active token and emitted exactly one `campaign_access_replaced` event.
+6. Direct resolver verification proved the old token returns unavailable while the new token returns available.
+
+The browser can make two tabs appear to share the same clean campaign URL because the access route strips the token from the URL and stores a campaign-scoped signed cookie. Tabs in the same browser share that cookie. This does not mean both capability tokens remain active; database and resolver verification confirmed the old capability is revoked.
+
+No plaintext capability or encryption key is recorded here.
+
+## Non-Scope / Safety
+
+- ENTRY mobile untouched.
+- Resident correction-link policy untouched.
+- Patronato confirmation UI untouched.
+- Conversion and `resident_activation_queue` untouched.
+- Upstash/rate-limit policy untouched.
+- `seshat` untouched.
+
+## Final Gate
+
+ONB-009 runtime behavior is passed. Remaining work is repository closeout, final head CI/Vercel verification, then squash merge when authorized.
