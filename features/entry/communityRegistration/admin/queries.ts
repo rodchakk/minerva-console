@@ -29,6 +29,7 @@ export type CommunityRegistrationAdminUnit = {
 };
 
 export type CommunityRegistrationAdminCampaign = {
+  activeCampaignAccessRecoverable: boolean;
   defaultResidentLimit: number;
   id: string;
   publicSlug: string;
@@ -59,6 +60,7 @@ function normalizeCampaign(value: unknown): CommunityRegistrationAdminCampaign |
   }
 
   return {
+    activeCampaignAccessRecoverable: false,
     defaultResidentLimit: coerceNumber(record.default_resident_limit) || 3,
     id,
     publicSlug,
@@ -148,13 +150,35 @@ export async function getCommunityRegistrationAdminState(
     .from("community_registration_units")
     .select("status")
     .eq("campaign_id", campaign.id);
+  const { data: activeAccessData } = await supabase
+    .from("community_registration_access_tokens")
+    .select("id")
+    .eq("campaign_id", campaign.id)
+    .eq("token_type", "campaign_access")
+    .eq("status", "active");
+  const { data: recoverableAccessData } = await supabase
+    .from("community_registration_access_tokens")
+    .select("id")
+    .eq("campaign_id", campaign.id)
+    .eq("token_type", "campaign_access")
+    .eq("status", "active")
+    .not("encrypted_token_payload", "is", null);
   const campaignUnits = Array.isArray(campaignUnitsData) ? campaignUnitsData : [];
+  const activeAccessRows = Array.isArray(activeAccessData) ? activeAccessData : [];
+  const recoverableAccessRows = Array.isArray(recoverableAccessData)
+    ? recoverableAccessData
+    : [];
+  const activeCampaignAccessRecoverable =
+    activeAccessRows.length === 1 && recoverableAccessRows.length === 1;
   const submittedStatuses = new Set<string>(
     SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES,
   );
 
   return {
-    campaign,
+    campaign: {
+      ...campaign,
+      activeCampaignAccessRecoverable,
+    },
     hasOperationalCampaign: operationalCampaign !== null,
     submittedStatuses: SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES,
     submittedUnitCount: campaignUnits.filter((unit) =>

@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-008 - DEV SQL ENGINE GATE PASSED / PREVIEW RUNTIME WALKTHROUGH PENDING`.
+- **Estado actual:** `ENTRY-ONB-009 - PREVIEW RUNTIME PASSED / FINAL MERGE GATE`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -43,6 +43,9 @@
 29. Internal review UI: `content/brain/projects/entry-community-registration-internal-review-ui.md`
 30. Migracion review UI hardening: `supabase/migrations/20260817040516_create_entry_community_registration_review_ui_hardening_v1.sql`
 31. Validador review UI: `scripts/entry-onb-008-validate-review-ui.mjs`
+32. Recoverable campaign link: `content/brain/projects/entry-community-registration-recoverable-campaign-link.md`
+33. Migracion recoverable campaign link: `supabase/migrations/20260818034216_entry_onb_009_recoverable_campaign_links.sql`
+34. Validador recoverable campaign link: `scripts/entry-onb-009-validate-recoverable-campaign-link.mjs`
 
 ## Estado de misiones
 
@@ -56,18 +59,9 @@
 - `ENTRY-ONB-004`: completed; baseline `ac25878`.
 - `ENTRY-ONB-005`: hosted runtime pass; UI work unblocked.
 - `ENTRY-ONB-006`: completed; production runtime blocker cleared.
-- `ENTRY-ONB-007`: CLOSED; PR #39 squash-merged to `master` as
-  `f3c95a784f5356427fba1797ea851a095897b88d`; production Minerva Console
-  deployment reached `READY`. Code review, `gate-project-dev` PostgreSQL 17
-  engine validation, PR Preview runtime walkthrough, link rotation, real Casa 1
-  submission, and `1 / 5` progress refresh all passed.
-- `ENTRY-ONB-008`: implementation in review on branch
-  `codex/entry-onb-008-internal-review-ui`, PR #41. Internal campaign review,
-  household inspection, reviewed/correction actions, recoverable resident
-  correction links, and authorized correction-observation display are
-  implemented. PostgreSQL engine validation passed on `gate-project-dev`; the
-  exact migration is applied there as version `20260817040516`. Preview runtime
-  walkthrough is the next gate.
+- `ENTRY-ONB-007`: CLOSED; PR #39 squash-merged to `master` as `f3c95a784f5356427fba1797ea851a095897b88d`; production Minerva Console deployment reached `READY`. Code review, `gate-project-dev` PostgreSQL 17 engine validation, PR Preview runtime walkthrough, link rotation, real Casa 1 submission, and `1 / 5` progress refresh all passed.
+- `ENTRY-ONB-008`: CLOSED; PR #41 squash-merged to `master` as `cf23b4b4885c1c4ab7f297d581df8de6fde500d2`. Internal review, correction observation, correction-link replacement, old-link rejection, Version 2 resubmission, pending-correction hotfix and final Version 2 review all passed; Production deployment reached READY.
+- `ENTRY-ONB-009`: implementation complete on branch `codex/entry-onb-009-recoverable-campaign-link`, PR #43. PostgreSQL 17 validation passed, canonical migration `20260818034216` is applied to `gate-project-dev`, Preview/Production share the stable server-only encryption key, and Preview runtime launch/reload/Copy/Open/Replace/old-link invalidation all passed. Final head CI/Vercel and merge are the remaining gates.
 
 ## Gates
 
@@ -87,19 +81,15 @@
 - Production runtime logs showed zero `entry_cr_rate_limit_failure=` occurrences after credential correction.
 - Production verification created no Supabase writes, no resident records, no household records, and left `resident_activation_queue` untouched. Only Redis rate-limit counters were created.
 - ONB-007 SQL engine validation passed on `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) / PostgreSQL 17. Validation was first performed transactionally and rolled back cleanly, then the exact approved migration was permanently applied to `gate-project-dev` only as `20260817014957`.
-- ONB-007 engine tests covered successful atomic launch; complete campaign, units, and single active `campaign_access`; cross-community unit failure rollback; successful campaign-access replacement; old-link invalidation; replacement-token public resolve; failed replacement rollback preserving previous active access; non-open campaign replacement rejection with `P0409`; authenticated caller rejection with `42501`; service-role-only execution grants; and `campaign_access_replaced` event compatibility.
-- ONB-007 runtime walkthrough passed on PR #39 Preview using `gate-project-dev` and test community `Residencial Prueba CR`.
-- ONB-007 submission interoperability was verified with Casa 1 transitioning to `submitted` with `submission_count = 1` and `resident_count = 2`; Casa 2 through Casa 5 remained `unregistered`.
-- Preview runtime variables were broadened from the obsolete ONB-006 branch scope to all Preview branches without changing values/secrets or Production variables. After redeploy, public access returned `303` and campaign page `200`.
+- ONB-007 runtime walkthrough passed on PR #39 Preview using `gate-project-dev` and test community `Residencial Prueba CR`; launch, replacement, revoked-link rejection, new-link access and real Casa 1 submission passed.
 - PR #39 was squash-merged to `master` as `f3c95a784f5356427fba1797ea851a095897b88d`; Vercel production reached `READY`.
 - Production Minerva Console wiring was verified against Supabase `gate-project-dev`; `seshat` remains a separate project and was not modified.
-- ONB-008 initial PR #41 code gate: TypeScript passed, production Build passed, Brain/layout lint passed, and Vercel Preview passed. Full lint remained informationally red only on known unrelated React-hook debt. Brain guardrails remained red on the pre-existing broken relation `DEC-0007 -> ENTRY-ONB-000`.
-- ONB-008 read-only schema inspection confirmed the live dev token indexes, event actor constraints and service-role execution contract match the proposed hardening design.
-- ONB-008 PostgreSQL engine validation passed transactionally on `gate-project-dev` / PostgreSQL 17 using the dedicated `Residencial Prueba CR` Casa 1 submission. The test exercised `open -> review`, `submitted -> reviewed -> needs_correction -> edit_enabled`, correction-observation resolution, edit-link rotation, old-link rejection, failed replacement rollback, `42501` unauthorized rejection and replacement audit compatibility.
-- The pre-apply transaction ended in `ROLLBACK`. Proof confirmed campaign restored `open`, Casa 1 restored `submitted`, submission restored `submitted`, no test review remained, no test edit token remained, and temporary DDL was absent.
-- The exact ONB-008 hardening migration was then permanently applied to `gate-project-dev` only. Supabase recorded version `20260817040516_create_entry_community_registration_review_ui_hardening_v1`.
-- Post-DDL verification confirmed the rotation RPC exists; execute is granted to `service_role` and blocked for `authenticated`/`anon`; `resident_edit_access_replaced` is accepted by the event constraint; the test campaign stayed `open`; Casa 1 stayed `submitted`; and no edit token was created by migration application.
-- A second transactional functional test was run against the installed migration. Correction observation, two-resident payload, rotation, old-token invalidation, duplicate-hash rollback preservation, unauthorized caller rejection and audit event behavior all passed. Final rollback again left zero test reviews/tokens and restored campaign/unit/submission state.
-- Repository migration filename was reconciled to canonical hosted-dev version `20260817040516`; SQL content is unchanged.
-- ONB-008 did not touch production, `seshat`, ENTRY mobile, Vercel env, Upstash, rate-limit policy or secrets.
-- Estado vigente: `ENTRY-ONB-008 - DEV SQL ENGINE GATE PASSED / PREVIEW RUNTIME WALKTHROUGH PENDING`.
+- ONB-008 PostgreSQL engine validation, Preview walkthrough and correction/resubmission hotfix passed. Canonical migrations `20260817040516` and `20260817043002` are applied to `gate-project-dev`.
+- PR #41 was squash-merged to `master` as `cf23b4b4885c1c4ab7f297d581df8de6fde500d2`; Vercel Production reached READY.
+- ONB-009 focused validator, targeted lint, TypeScript/build and static security checks passed. Full lint remains informationally red only on known unrelated React-hook debt; Brain guardrails remain red only on the pre-existing `DEC-0007 -> ENTRY-ONB-000` relation.
+- ONB-009 migration passed exact `BEGIN` / `ROLLBACK` validation on PostgreSQL 17, including v2 launch, atomic hash + encrypted payload, v2 rotation, exactly one active token after replacement, unauthorized caller rejection and grants. Rollback cleanup passed.
+- The exact ONB-009 migration was then applied permanently to `gate-project-dev`; Supabase recorded `20260818034216_entry_onb_009_recoverable_campaign_links`. A second transactional functional test against the installed migration passed and rolled back test data cleanly.
+- `ENTRY_CR_CAMPAIGN_LINK_ENCRYPTION_KEY` is configured as a sensitive server-only Vercel variable for Preview and Production with the same stable value; no secret value is stored in Brain or the repo.
+- PR #43 Preview runtime launched a one-unit test campaign on `Cimuty monopy`. Reload retained recoverable controls. Copy and Open did not rotate or consume access. Replace produced a distinct active token, revoked the old token and emitted one replacement event. Direct resolver verification returned unavailable for the old capability and available for the new capability.
+- Resident correction links remain hash-only/non-recoverable and ENTRY mobile, Patronato confirmation UI, conversion, activation queue, Upstash/rate-limit policy and `seshat` remain outside ONB-009 scope.
+- Estado vigente: `ENTRY-ONB-009 - PREVIEW RUNTIME PASSED / FINAL MERGE GATE`.
