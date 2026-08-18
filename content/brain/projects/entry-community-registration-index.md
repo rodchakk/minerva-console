@@ -3,7 +3,7 @@
 ## Identidad
 
 - **Nombre del proyecto:** ENTRY Community Registration / Pre-Onboarding
-- **Estado actual:** `ENTRY-ONB-008 - DEV SQL ENGINE GATE PASSED / PREVIEW RUNTIME WALKTHROUGH PENDING`.
+- **Estado actual:** `ENTRY-ONB-009 - RECOVERABLE CAMPAIGN LINK IMPLEMENTATION IN PROGRESS`.
 - **Decision fundacional vigente:** `DEC-0007` - `content/brain/decisions/dec-0007-entry-community-registration-foundation.md`
 - **Repositorio principal:** `D:\Dev\minerva-console`
 - **Carril de activacion:** `community_registration_*` approved residents -> `resident_activation_queue` -> existing PIN / activation flow
@@ -43,6 +43,9 @@
 29. Internal review UI: `content/brain/projects/entry-community-registration-internal-review-ui.md`
 30. Migracion review UI hardening: `supabase/migrations/20260817040516_create_entry_community_registration_review_ui_hardening_v1.sql`
 31. Validador review UI: `scripts/entry-onb-008-validate-review-ui.mjs`
+32. Recoverable campaign link: `content/brain/projects/entry-community-registration-recoverable-campaign-link.md`
+33. Migracion recoverable campaign link: `supabase/migrations/20260818010000_entry_onb_009_recoverable_campaign_links.sql`
+34. Validador recoverable campaign link: `scripts/entry-onb-009-validate-recoverable-campaign-link.mjs`
 
 ## Estado de misiones
 
@@ -68,6 +71,12 @@
   implemented. PostgreSQL engine validation passed on `gate-project-dev`; the
   exact migration is applied there as version `20260817040516`. Preview runtime
   walkthrough is the next gate.
+- `ENTRY-ONB-009`: local/static gates passed on branch
+  `codex/entry-onb-009-recoverable-campaign-link`. Adds recoverable open
+  campaign registration links using application-layer AES-256-GCM encrypted
+  campaign-token payloads while keeping resident correction links hash-only and
+  non-recoverable. Permanent hosted dev apply and Preview runtime gates remain
+  pending.
 
 ## Gates
 
@@ -102,4 +111,20 @@
 - A second transactional functional test was run against the installed migration. Correction observation, two-resident payload, rotation, old-token invalidation, duplicate-hash rollback preservation, unauthorized caller rejection and audit event behavior all passed. Final rollback again left zero test reviews/tokens and restored campaign/unit/submission state.
 - Repository migration filename was reconciled to canonical hosted-dev version `20260817040516`; SQL content is unchanged.
 - ONB-008 did not touch production, `seshat`, ENTRY mobile, Vercel env, Upstash, rate-limit policy or secrets.
-- Estado vigente: `ENTRY-ONB-008 - DEV SQL ENGINE GATE PASSED / PREVIEW RUNTIME WALKTHROUGH PENDING`.
+- ONB-009 local focused validator passed:
+  `node scripts/entry-onb-009-validate-recoverable-campaign-link.mjs`.
+- ONB-009 production build passed with
+  `node --use-system-ca node_modules\next\dist\bin\next build --webpack`; the
+  build TypeScript phase passed.
+- ONB-009 hosted dev read-only inspection confirmed no pre-existing ONB-009
+  column/functions. Transactional migration application inside `BEGIN` /
+  `ROLLBACK` succeeded, and rollback proof confirmed the column/functions were
+  absent afterward.
+- ONB-009 requires server-only `ENTRY_CR_CAMPAIGN_LINK_ENCRYPTION_KEY`, generated
+  as a 32-byte key such as `openssl rand -base64 32`. Preview and Production
+  need the same stable key for recoverability. No secrets were changed in repo.
+- ONB-009 external gates pending: PostgreSQL 17 functional validation on
+  `gate-project-dev`, explicit authorization for permanent dev apply, Preview
+  env configuration and runtime walkthrough. Production and `seshat` remain
+  untouched.
+- Estado vigente: `ENTRY-ONB-009 - LOCAL IMPLEMENTATION / EXTERNAL GATES PENDING`.

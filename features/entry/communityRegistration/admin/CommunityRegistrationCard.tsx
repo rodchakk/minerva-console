@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
   launchCommunityRegistrationCampaign,
+  recoverCommunityRegistrationLink,
   replaceCommunityRegistrationLink,
   type LaunchCommunityRegistrationCampaignResult,
   type ReplaceCommunityRegistrationLinkResult,
@@ -148,9 +149,8 @@ function LaunchDialog({
           </div>
 
           <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
-            Copy or open this secure link now. The capability token is stored
-            only as a hash, so the same plaintext link cannot be redisplayed
-            after reload without rotating access.
+            This link is now recoverable for future sharing. Copying or opening
+            it later will not rotate access.
           </p>
 
           <div className="flex flex-wrap justify-end gap-3">
@@ -346,8 +346,8 @@ function ReplaceLinkDialog({
 
           <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
             Copy or open this secure replacement link now. The previous
-            registration link has been invalidated, and this plaintext
-            capability will not be redisplayed after reload.
+            registration link has been invalidated, and this replacement can be
+            recovered for future sharing.
           </p>
 
           <div className="flex flex-wrap justify-end gap-3">
@@ -412,6 +412,115 @@ function ReplaceLinkDialog({
   );
 }
 
+function ActiveRegistrationLinkControls({
+  campaign,
+  communityId,
+  onReplace,
+}: {
+  campaign: CommunityRegistrationAdminCampaign;
+  communityId: string;
+  onReplace: () => void;
+}) {
+  const [isPending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function recoverLink(onSuccess: (url: string) => Promise<void> | void) {
+    setMessage(null);
+    setCopied(false);
+
+    startTransition(async () => {
+      const result = await recoverCommunityRegistrationLink({
+        campaignId: campaign.id,
+        communityId,
+      });
+
+      if (!result.success) {
+        setMessage(result.error);
+        return;
+      }
+
+      try {
+        await onSuccess(result.data.registrationUrl);
+      } catch {
+        setMessage("Could not use the recovered registration link.");
+      }
+    });
+  }
+
+  function copyCurrentLink() {
+    recoverLink(async (url) => {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2200);
+    });
+  }
+
+  function openCurrentLink() {
+    setMessage(null);
+    setCopied(false);
+
+    const opened = window.open("about:blank", "_blank");
+    if (!opened) {
+      setMessage("Browser blocked the registration page popup.");
+      return;
+    }
+    opened.opener = null;
+
+    startTransition(async () => {
+      const result = await recoverCommunityRegistrationLink({
+        campaignId: campaign.id,
+        communityId,
+      });
+
+      if (!result.success) {
+        opened.close();
+        setMessage(result.error);
+        return;
+      }
+
+      opened.location.href = result.data.registrationUrl;
+    });
+  }
+
+  if (!campaign.activeCampaignAccessRecoverable) {
+    return (
+      <div className="flex flex-col gap-3">
+        <p className="max-w-2xl rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          Current registration link cannot be recovered. Replace the
+          registration link once to enable future re-sharing.
+        </p>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button type="button" variant="secondary" onClick={onReplace}>
+            Replace registration link
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-end gap-3">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button type="button" variant="secondary" onClick={copyCurrentLink} disabled={isPending}>
+          {copied ? "Copied" : isPending ? "Preparing..." : "Copy registration link"}
+        </Button>
+        <Button type="button" variant="secondary" onClick={openCurrentLink} disabled={isPending}>
+          Open registration
+        </Button>
+        <Button type="button" variant="secondary" onClick={onReplace}>
+          Replace registration link
+        </Button>
+      </div>
+      {message ? (
+        <p className="max-w-2xl rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          {message}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function CommunityRegistrationCard({
   campaign,
   communityId,
@@ -427,7 +536,7 @@ export function CommunityRegistrationCard({
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
   const progressTotal = campaign ? totalCampaignUnitCount : totalUnits;
   const canStart = !hasOperationalCampaign && units.length > 0;
-  const canReplaceLink = campaign?.status.trim().toLowerCase() === "open";
+  const campaignOpen = campaign?.status.trim().toLowerCase() === "open";
   const canOpenReview = Boolean(campaign && submittedUnitCount > 0);
   const submittedStatusText = useMemo(
     () => submittedStatuses.join(", "),
@@ -490,7 +599,9 @@ export function CommunityRegistrationCard({
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
           {campaign
-            ? "Reload shows campaign status and progress. The original secure link is not redisplayed because only the token hash is stored."
+            ? campaignOpen
+              ? "Open campaign link sharing is available without rotating access when the current link is recoverable."
+              : "Registration sharing is available only while the campaign is open."
             : "Launch a secure public registration link for selected existing units."}
         </p>
 
@@ -516,14 +627,12 @@ export function CommunityRegistrationCard({
                 <Button type="button">Review registrations</Button>
               </Link>
             ) : null}
-            {canReplaceLink ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setShowReplaceDialog(true)}
-              >
-                Replace registration link
-              </Button>
+            {campaignOpen ? (
+              <ActiveRegistrationLinkControls
+                campaign={campaign}
+                communityId={communityId}
+                onReplace={() => setShowReplaceDialog(true)}
+              />
             ) : null}
           </div>
         ) : null}

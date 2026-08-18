@@ -26,6 +26,23 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+## Environment
+
+Community Registration campaign-link recovery requires:
+
+```bash
+ENTRY_CR_CAMPAIGN_LINK_ENCRYPTION_KEY=...
+```
+
+Generate a valid 32-byte key with:
+
+```bash
+openssl rand -base64 32
+```
+
+Use the same stable value in Preview and Production. Do not commit the secret
+or rotate it casually; existing recoverable campaign links depend on it.
+
 ## Main Areas
 
 - Community onboarding and activation queue

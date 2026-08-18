@@ -5,6 +5,11 @@ import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import {
+  decryptCampaignRegistrationToken,
+  encryptCampaignRegistrationToken,
+  timingSafeHashEqual,
+} from "@/features/entry/communityRegistration/admin/campaignLinkEncryption";
+import {
   hashRegistrationToken,
   normalizePublicSlug,
 } from "@/features/entry/communityRegistration/public/accessState";
@@ -49,6 +54,25 @@ export type ReplaceCommunityRegistrationLinkResult =
       code:
         | "invalid_input"
         | "invalid_state"
+        | "unauthorized"
+        | "unknown";
+      error: string;
+      success: false;
+    };
+
+export type RecoverCommunityRegistrationLinkResult =
+  | {
+      success: true;
+      data: {
+        mode: "recover";
+        registrationUrl: string;
+      };
+    }
+  | {
+      code:
+        | "invalid_input"
+        | "invalid_state"
+        | "legacy_unrecoverable"
         | "unauthorized"
         | "unknown";
       error: string;
@@ -155,6 +179,14 @@ function mapReplacementError(error: {
   };
 }
 
+function mapRecoverError(): RecoverCommunityRegistrationLinkResult {
+  return {
+    code: "unknown",
+    error: "Could not recover the registration link. Please replace it if needed.",
+    success: false,
+  };
+}
+
 export async function launchCommunityRegistrationCampaign(
   _previousState: LaunchCommunityRegistrationCampaignResult | null,
   formData: FormData,
@@ -184,17 +216,28 @@ export async function launchCommunityRegistrationCampaign(
 
   const plaintextToken = makeCampaignToken();
   const campaignTokenHash = hashRegistrationToken(plaintextToken);
+  let encryptedTokenPayload: string;
+  try {
+    encryptedTokenPayload = encryptCampaignRegistrationToken(plaintextToken);
+  } catch {
+    return {
+      code: "unknown",
+      error: "Campaign link recovery encryption is not configured.",
+      success: false,
+    };
+  }
   const publicSlug = makeCampaignSlug(communityName || publicTitle);
   const supabase = createAdminClient();
 
   const { data: campaignData, error: campaignError } = await supabase.rpc(
-    "launch_community_registration_campaign_v1",
+    "launch_community_registration_campaign_v2",
     {
       p_actor_user_id: auth.user.id,
       p_campaign_token_hash: campaignTokenHash,
       p_closes_at: null,
       p_community_id: communityId,
       p_default_resident_limit: defaultResidentLimit,
+      p_encrypted_token_payload: encryptedTokenPayload,
       p_internal_name: `Resident registration - ${communityName || communityId}`,
       p_opens_at: null,
       p_public_instructions: publicInstructions || null,
@@ -261,14 +304,25 @@ export async function replaceCommunityRegistrationLink(
 
   const plaintextToken = makeCampaignToken();
   const campaignTokenHash = hashRegistrationToken(plaintextToken);
+  let encryptedTokenPayload: string;
+  try {
+    encryptedTokenPayload = encryptCampaignRegistrationToken(plaintextToken);
+  } catch {
+    return {
+      code: "unknown",
+      error: "Campaign link recovery encryption is not configured.",
+      success: false,
+    };
+  }
   const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc(
-    "rotate_community_registration_campaign_access_v1",
+    "rotate_community_registration_campaign_access_v2",
     {
       p_actor_user_id: auth.user.id,
       p_campaign_id: campaignId,
       p_campaign_token_hash: campaignTokenHash,
+      p_encrypted_token_payload: encryptedTokenPayload,
     },
   );
 
@@ -305,4 +359,119 @@ export async function replaceCommunityRegistrationLink(
     },
     success: true,
   };
+}
+
+export async function recoverCommunityRegistrationLink(input: {
+  campaignId: string;
+  communityId: string;
+}): Promise<RecoverCommunityRegistrationLinkResult> {
+  await requireSuperadmin();
+
+  const campaignId = input.campaignId.trim();
+  const communityId = input.communityId.trim();
+
+  if (!campaignId || !communityId) {
+    return {
+      code: "invalid_input",
+      error: "Campaign information is missing.",
+      success: false,
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { data: campaignData, error: campaignError } = await supabase
+    .from("community_registration_campaigns")
+    .select("id,community_id,public_slug,status")
+    .eq("id", campaignId)
+    .eq("community_id", communityId)
+    .maybeSingle();
+
+  if (campaignError) {
+    return mapRecoverError();
+  }
+
+  const campaign = (campaignData ?? {}) as Record<string, unknown>;
+  const publicSlug = coerceString(campaign.public_slug);
+
+  if (
+    coerceString(campaign.id) !== campaignId ||
+    coerceString(campaign.community_id) !== communityId ||
+    coerceString(campaign.status).trim().toLowerCase() !== "open" ||
+    !publicSlug
+  ) {
+    return {
+      code: "invalid_state",
+      error: "This campaign does not have an active registration link to share.",
+      success: false,
+    };
+  }
+
+  const { data: tokenData, error: tokenError } = await supabase
+    .from("community_registration_access_tokens")
+    .select(
+      "id,token_hash,token_type,status,expires_at,consumed_at,revoked_at,encrypted_token_payload",
+    )
+    .eq("campaign_id", campaignId)
+    .eq("token_type", "campaign_access")
+    .eq("status", "active");
+
+  if (tokenError || !Array.isArray(tokenData) || tokenData.length !== 1) {
+    return {
+      code: "invalid_state",
+      error: "This campaign does not have exactly one active registration link.",
+      success: false,
+    };
+  }
+
+  const token = tokenData[0] as Record<string, unknown>;
+  const encryptedPayload = coerceString(token.encrypted_token_payload);
+  const storedHash = coerceString(token.token_hash);
+  const expiresAt = coerceString(token.expires_at);
+
+  if (
+    coerceString(token.token_type) !== "campaign_access" ||
+    coerceString(token.status) !== "active" ||
+    coerceString(token.revoked_at) ||
+    coerceString(token.consumed_at) ||
+    (expiresAt && Date.parse(expiresAt) <= Date.now())
+  ) {
+    return {
+      code: "invalid_state",
+      error: "This campaign registration link is not active.",
+      success: false,
+    };
+  }
+
+  if (!encryptedPayload) {
+    return {
+      code: "legacy_unrecoverable",
+      error:
+        "Current registration link cannot be recovered. Replace the registration link once to enable future re-sharing.",
+      success: false,
+    };
+  }
+
+  try {
+    const plaintextToken = decryptCampaignRegistrationToken(encryptedPayload);
+    const recoveredHash = hashRegistrationToken(plaintextToken);
+
+    if (!timingSafeHashEqual(recoveredHash, storedHash)) {
+      return mapRecoverError();
+    }
+
+    const baseUrl = await getRegistrationBaseUrl();
+    const path = `/entry/register/${encodeURIComponent(
+      publicSlug,
+    )}/access?token=${encodeURIComponent(plaintextToken)}`;
+
+    return {
+      data: {
+        mode: "recover",
+        registrationUrl: `${baseUrl}${path}`,
+      },
+      success: true,
+    };
+  } catch {
+    return mapRecoverError();
+  }
 }
