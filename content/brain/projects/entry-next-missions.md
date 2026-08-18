@@ -1,6 +1,6 @@
 # ENTRY — Next Missions
 
-Prioritized roadmap for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These priorities were approved by the operator on 2026-07-28. Execution belongs in the ENTRY repo/runtime, not in Brain.
+Prioritized roadmap for ENTRY. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md). These engineering priorities were approved by the operator on 2026-07-28. Execution belongs in the ENTRY repo/runtime, not in Brain.
 
 ## Operator-approved priority order
 
@@ -19,35 +19,34 @@ This sequence is intentionally pragmatic. ENTRY does not yet have clients, so th
 
 ## Priority 1 — Diagnose the real state of ENTRY
 
-**Why:** the current code, branches, harness documentation, Supabase state, builds, and known work may have diverged.
+**Why:** current code, branches, harness documentation, Supabase state, builds, and known work may have diverged.
 
-**Scope:**
+Scope:
+
 - Inspect repository and branch state.
 - Compare code against the ENTRY harness and Brain capture.
 - Run TypeScript, lint, Expo Doctor, and available checks.
 - Identify broken flows, incomplete work, dangerous configuration, stale branches, and technical debt.
-- Produce an evidence-backed diagnostic and a prioritized implementation board.
+- Produce an evidence-backed diagnostic and prioritized implementation board.
 
 ## Priority 2 — Fix existing bugs
 
-Start with user trust and blocking defects.
+Start with user-trust and blocking defects.
 
 ### First known bug — “Forgot my password”
 
-**Why:** operator-reported broken; account recovery is a core trust path.
+Operator-reported broken. Reproduce on web and native; verify deep-link registration, Supabase Auth redirect allowlist, recovery email/template delivery, token/code handling, and the expected recovery path for synthetic `@entry.local` or username-based accounts. Evidence first; no schema change assumed.
 
-**Scope:** reproduce on web and native; verify deep-link registration, Supabase Auth redirect allowlist, recovery email/template delivery, token/code handling, and the expected recovery path for synthetic `@entry.local` or username-based accounts. Evidence first; no schema change assumed.
-
-### Other known cleanup
+Other cleanup:
 
 - Restore a green TypeScript baseline by resolving the existing `components/ExternalLink.tsx` `TS2578` issue.
-- Add newly confirmed defects from the diagnostic before advancing to lower-priority work.
+- Add newly confirmed defects from the diagnostic before advancing.
 
 See [entry-known-issues.md](entry-known-issues.md).
 
 ## Priority 3 — QA existing flows
 
-Validate the product that already exists before adding more surface area.
+Validate what already exists before adding surface area.
 
 ### Voice MVP native QA
 
@@ -56,102 +55,166 @@ Run ENTRY-I001-QA on real Android and iOS native/dev builds, not Expo Go. Valida
 ### Core ENTRY QA
 
 Cover at minimum:
-- Registration, login, logout, activation, and password recovery.
-- Resident pass creation and expiration behavior.
-- QR and PIN validation at the guard flow.
-- Resident, guard, and administrator permissions.
-- Community isolation and expected RLS behavior.
-- Notifications and other release-critical flows found during diagnosis.
+
+- registration, login, logout, activation, and password recovery;
+- resident pass creation and expiration;
+- QR and PIN validation at the guard flow;
+- resident, guard, and administrator permissions;
+- community isolation and expected RLS behavior;
+- notifications and other release-critical flows found during diagnosis.
 
 ## Priority 4 — Automated tests
 
-Create a practical first test suite around the highest-risk behavior rather than chasing total coverage.
+Create a practical first suite around highest-risk behavior:
 
-Initial targets:
-- User creation and authentication.
-- Password recovery.
-- Pass creation and validation.
-- QR/PIN credential resolution.
-- Role and community authorization.
-- Supabase RPC and RLS behavior.
-- Regression tests for every repaired critical bug.
+- user creation/authentication;
+- password recovery;
+- pass creation/validation;
+- QR/PIN credential resolution;
+- role/community authorization;
+- Supabase RPC/RLS behavior;
+- regression tests for repaired critical bugs.
 
-Tests should live in the repository and run through CI on pull requests. Device and visual automation may reduce manual work, but a small real-device QA layer will still be required.
+Tests should run in CI on pull requests. Real-device QA remains necessary for a small release-critical layer.
 
 ## Priority 5 — Organize the release process
 
-This is a lightweight operational checklist, not an enterprise release platform.
+Define a lightweight operational checklist:
 
-Define:
-- What checks and QA a version must pass.
-- How app and backend changes are grouped and identified.
-- Who approves a release.
-- How mobile builds and backend changes are published.
-- How release notes are recorded.
-- What to do when a release fails, including a rollback path where technically possible.
+- required checks/QA;
+- grouping/identification of app and backend changes;
+- approval responsibility;
+- publication of mobile/backend changes;
+- release notes;
+- failure and rollback path where technically possible.
 
 ## Priority 6 — Pending or necessary functions
 
 Only after the existing system is diagnosed, repaired, tested, and releasable.
 
 Known candidates:
+
 - Facility / Internal Destination Access design and implementation.
 - Improvements to frequent-access identities.
 - Functions proven necessary by QA, operations, or commercial discovery.
 
-Facility Destinations remains a design-first change because it may affect schema, `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, and community scoping.
+Facility Destinations remains design-first because it may affect schema, `resolve_access_credential_v2`, guard UI, `entry_logs`, RLS, and community scoping.
 
-The El Limonar field observation of a posted physical list of authorized people,
-apparently connected to construction work, is relevant evidence for the existing
-frequent-access concept. Its exact operational meaning is still unconfirmed and
-must not by itself trigger new product scope.
+The El Limonar posted authorization-list observation remains evidence relevant to frequent access, but its exact meaning is unconfirmed and must not by itself trigger new scope.
+
+The Andalucía founder perception that Waldina may mix digital/QR visitor management with automatic-barrier automation is also **not sufficient evidence for new product scope**. Confirm actual buyer requirements with Eugenio Hernández first.
 
 ## Priority 7 — Security and backups
 
-This is the penultimate planned workstream.
+Penultimate planned workstream.
 
 Scope when reached:
-- Formal review of RLS, policies, roles, grants, and `SECURITY DEFINER` functions.
-- Review authentication and sensitive logging.
-- Confirm recovery options and backup ownership.
-- Establish automated backups and perform at least one restoration test.
-- Reconcile live RPC/schema definitions with versioned migrations as needed for recoverability.
 
-Routine security architecture and formal backup work do not interrupt the earlier product priorities unless the critical exception applies.
+- formal review of RLS, policies, roles, grants, and `SECURITY DEFINER` functions;
+- authentication/sensitive logging review;
+- recovery options and backup ownership;
+- automated backups plus at least one restore test;
+- reconcile live RPC/schema definitions with versioned migrations where needed.
+
+Routine security architecture does not interrupt earlier priorities unless the critical exception applies.
 
 ## Priority 8 — Separate environments
 
-**Absolute last priority. Do not begin this work while higher priorities remain.**
+**Absolute last priority. Do not begin while higher priorities remain.**
 
-Future scope may include:
-- Separate development and production databases/projects.
-- Environment-specific configuration for mobile and web.
-- Versioned migrations for schema, functions, triggers, RLS, and policies.
-- Production backup copies outside the primary provider.
-- Evaluation of whether production should remain on Supabase or move elsewhere.
+Future scope may include separate development/production databases, environment-specific configuration, versioned migrations, production backup copies, and provider evaluation.
 
-No provider decision should be made before measuring ENTRY’s dependency on Supabase Auth, Storage, Realtime, Edge Functions, and database-specific behavior. Kubernetes is not justified for ENTRY’s current scale.
+No provider decision should be made before measuring ENTRY's dependency on Supabase Auth, Storage, Realtime, Edge Functions, and database-specific behavior. Kubernetes is not justified for ENTRY's current scale.
 
 ## Commercial track
 
-FIRST DOOR / Patronato Package v1 continues as a parallel commercial validation track and does not reorder the engineering priorities.
+FIRST DOOR / Patronato Package v1 continues in parallel and does not reorder the engineering priorities.
 
-Current field state:
+### Current field state — end of 2026-08-17
 
-- **Colonia El Carmen:** first Patronato Package delivered to the head of security on 2026-08-04. He said he would forward it to the patronato. Patronato receipt, review, direct contact, and meeting remain unconfirmed.
-- **Residencial El Limonar:** now a qualified lead / FIRST DOOR #2. Security confirmed that residents announce visits by calls and WhatsApp, visitor records are kept on paper, and the barrier is manual. Security stated that the community wants to implement a system, subject to patronato discussion, and identified **Antonio Flores** as patronato president.
-- A personalized El Limonar package was delivered at the gate on 2026-08-07. The guard on duty called the prior security contact, who confirmed the package could be left. Delivery to Antonio Flores or another patronato member remains unconfirmed.
-- Additional El Limonar observations: visible paper visitor sheet and a posted list of authorized people, apparently related to construction work. The list may indicate a recurrent-access need, but its exact purpose is unconfirmed.
-- No El Limonar patronato meeting date or cadence is currently known.
+**Residencial El Limonar**
 
-Next commercial actions:
+- Qualified lead / FIRST DOOR #2.
+- Manual calls + WhatsApp + paper + manual barrier confirmed through field discovery.
+- Patronato Package receipt confirmed through security.
+- On 2026-08-16 security reported that ENTRY had been mentioned to **Antonio Flores Chacón**.
+- Security reported another urgent internal community issue competing for attention; exact legal/administrative status not independently verified.
+- Direct contact obtained: **3293-1317**.
+- On 2026-08-17 Rudy sent the first direct WhatsApp outreach from the Minerva Technologies number.
+- Response, meeting, demo, quote, and decision remain pending.
 
-- Follow up with Colonia El Carmen according to its existing follow-up window to confirm patronato handoff and seek a direct presentation path.
-- Follow up with Residencial El Limonar approximately **2026-08-12 through 2026-08-14** to confirm whether the package reached Antonio Flores or another patronato member, ask whether a patronato meeting date is known, and obtain a direct follow-up channel or presentation date.
-- Do not treat the El Limonar package as received by the patronato until that internal handoff is confirmed.
-- Continue building a structured San Pedro Sula residential-community map and move each community through explicit commercial stages rather than treating every visit as an immediate sales attempt.
+**Colonia El Carmen**
 
-See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md), and [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md).
+- Patronato Package receipt confirmed through security.
+- On 2026-08-16 security/encargados estimated approximately **700 homes / 400 paying households**.
+- Security asked about price.
+- Rudy gave a rough verbal reference of approximately **L 7,000**.
+- That number is explicitly classified as **non-binding field guidance, not a formal quote or approved price**.
+- Security said it would speak again with patronato and asked Rudy to return **2026-08-19 or 2026-08-20**.
+
+**Residencial Andalucía**
+
+- Manual resident calls + paper visitor records + manual barrier; no visitor-management system according to security.
+- Security estimated approximately 80 homes; count not yet administration-confirmed.
+- Multiple prior vendors reported.
+- Personalized Patronato Package left with security on 2026-08-16; internal recipient remains unconfirmed.
+- On 2026-08-17 Rudy spoke directly with Waldina. She did not appear to be the final decision-maker; exact role remains unconfirmed.
+- Waldina identified **Eugenio Hernández** as patronato president and provided **3307-9910**. Direct confirmation with Eugenio is pending.
+- Founder hypothesis: Waldina may conflate digital/QR access management with physical automatic-barrier automation; do not treat this as confirmed buyer requirement.
+
+### Next commercial actions
+
+#### 1. El Limonar — wait for direct response
+
+- Do not return immediately to the gate after opening the direct channel.
+- Wait for Antonio Flores Chacón's response to the 2026-08-17 WhatsApp message.
+- If no response after a reasonable interval, send one concise, respectful follow-up.
+- If Antonio engages, objective is a 20- to 30-minute discovery/demo conversation.
+- Do not treat security's possible price perception as a patronato objection.
+
+#### 2. El Carmen — 2026-08-19 or 2026-08-20
+
+Primary objective:
+
+> Obtain patronato reaction, direct contact, or a meeting path.
+
+If price comes up:
+
+- clarify that the prior ~L 7,000 figure was a quick verbal reference only;
+- do not negotiate further through security;
+- confirm total homes, paying/active households, entrances, and desired scope with the decision-maker before formal pricing.
+
+Commercial issue to solve:
+
+> Current standard plans stop at 300 homes. If the ~400 paying / ~700 total estimates are confirmed, El Carmen requires deliberate scope/pricing analysis before an economic proposal.
+
+#### 3. Andalucía — contact Eugenio Hernández
+
+Primary objective:
+
+> Confirm the decision-maker and move from gate/intermediary discovery to direct patronato discovery.
+
+First direct conversation should:
+
+- confirm that Eugenio is current patronato president;
+- ask whether he received or knows about the package;
+- understand what problem the community is trying to solve;
+- ask what previous vendors offered and why no implementation occurred;
+- distinguish visitor/access-management software from physical barrier automation if needed;
+- request a short discovery/demo meeting if fit exists.
+
+Do not send pricing before scope is understood.
+
+### Commercial process learning
+
+- Direct buyer contact is now the most valuable progression metric after package handoff.
+- Guards/security remain useful bridges and operational users, but should not carry the sales process indefinitely.
+- Field price references must be labeled as approximate and non-binding.
+- Define whether a community is being priced by total homes, paying households, active homes/users, or another operational scope before quoting.
+- Prior vendor activity should trigger discovery about why previous proposals failed, not an assumption that the category is rejected.
+- A package disappearing from the gate is not evidence that patronato received it.
+
+See [entry-sales-and-leads.md](entry-sales-and-leads.md), [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md), [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md), [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md), [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md), and [entry-field-report-2026-08-16-17.md](entry-field-report-2026-08-16-17.md).
 
 ## Source-of-truth note
 
