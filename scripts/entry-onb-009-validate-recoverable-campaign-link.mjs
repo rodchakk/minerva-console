@@ -8,7 +8,7 @@ import {
 import fs from "node:fs";
 
 const migrationPath =
-  "supabase/migrations/20260818010000_entry_onb_009_recoverable_campaign_links.sql";
+  "supabase/migrations/20260818034216_entry_onb_009_recoverable_campaign_links.sql";
 const actionsPath = "features/entry/communityRegistration/admin/actions.ts";
 const queriesPath = "features/entry/communityRegistration/admin/queries.ts";
 const cardPath =
