@@ -12,9 +12,13 @@ Official index and summary of the ENTRY product inside Minerva Core Brain. ENTRY
 - **Inferred** — reasonable but unconfirmed.
 - **Unknown / Needs verification** — open gaps; not asserted as fact.
 
-## What ENTRY is (one paragraph)
+## What ENTRY is
 
 ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential / community access control, backed by Supabase (Postgres 17 + Auth + Edge Functions + Realtime + Storage). Residents create access passes (visits, deliveries, events, recurring staff, self-access) that guards validate at the gate by scanning a QR or typing a PIN; admins manage users, invites, reservations, messages, identity review and recovery. UI is Spanish (Honduras). **Verified from code.**
+
+Commercial positioning:
+
+> ENTRY helps communities move from manual visitor/access processes to connected digital management. The resident authorizes, security validates, the entrance is recorded, and patronato/administration can consult the information when needed.
 
 ## Knowledge pack
 
@@ -23,14 +27,15 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - [entry-current-work.md](entry-current-work.md) — active branch, WIP, mission board.
 - [entry-known-issues.md](entry-known-issues.md) — bugs incl. "Forgot password", tech debt.
 - [entry-voice-mvp.md](entry-voice-mvp.md) — ENTRY Voice status and contract.
-- [entry-sales-and-leads.md](entry-sales-and-leads.md) — commercial strategy, colonias, competitors.
-- [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md) — official FIRST DOOR / Patronato Package v1 strategy, El Carmen field package, hypotheses, pricing notes, and delivery script.
-- [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md) — first field delivery outcome at Colonia El Carmen and the initial discovery of Residencial El Limonar.
-- [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md) — dedicated El Limonar discovery, qualified-lead evidence, personalized package, delivery outcome, manual visitor-control observations, and follow-up plan.
-- [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md) — El Carmen and El Limonar patronato-receipt follow-ups plus the new Residencial Andalucía discovery and next actions.
-- [entry-next-missions.md](entry-next-missions.md) — operator-approved priority roadmap and recommended missions.
+- [entry-sales-and-leads.md](entry-sales-and-leads.md) — commercial strategy, current lead map, field learning, and pricing notes.
+- [entry-first-door-patronato-package-v1.md](entry-first-door-patronato-package-v1.md) — official FIRST DOOR / Patronato Package v1 strategy.
+- [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md) — El Carmen first delivery and initial El Limonar discovery.
+- [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md) — El Limonar qualified-lead evidence, package, and delivery.
+- [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md) — El Carmen / El Limonar patronato-receipt follow-ups and Andalucía discovery.
+- [entry-field-report-2026-08-16-17.md](entry-field-report-2026-08-16-17.md) — latest commercial follow-ups: direct patronato contacts, El Carmen scale/price discussion, Andalucía package/Waldina/Eugenio, and first Antonio outreach.
+- [entry-next-missions.md](entry-next-missions.md) — operator-approved technical priority roadmap and current commercial actions.
 
-## Isolation principles (unchanged)
+## Isolation principles
 
 - Brain must not touch `features/entry/**` in the Console repo or the ENTRY app runtime.
 - ENTRY keeps its own Supabase project; Brain does not connect to the ENTRY database.
@@ -41,9 +46,13 @@ ENTRY is a Minerva Technologies mobile app (Expo / React Native) for residential
 - **Status:** Approved, active development.
 - **Current ENTRY branch at last code capture:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code at capture time.**
 - **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo harness at capture time.**
-- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` is the approved first formal outreach standard. On 2026-08-12 security confirmed that the El Carmen package had reached the patronato. Review/reaction, direct contact, and meeting remain unconfirmed; next follow-up is 2026-08-14. **Operator-provided.**
-- **Residencial El Limonar:** qualified lead / FIRST DOOR #2. On 2026-08-12 security confirmed that the package had reached the patronato. The security contact said he expected to meet Antonio Flores that day and would raise ENTRY directly; the outcome remains unknown. Next follow-up is 2026-08-14. **Operator-provided.**
-- **Residencial Andalucía:** investigated / qualified discovery lead added on 2026-08-12. Security reported no visitor-management system, resident calls, paper visitor records, manual barrier, and approximately 80 homes. Another vendor had previously approached the community without a finalized outcome. Waldina was identified by first name as the person involved with this topic and is expected at the entrance on 2026-08-15 after 5:00 p.m. **Operator-provided.**
+- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` remains the approved formal outreach standard. **Operator-provided.**
+
+### Current commercial status — through 2026-08-17
+
+- **Residencial El Limonar:** qualified lead / FIRST DOOR #2. Package receipt by patronato confirmed through security. On 2026-08-16 security reported that ENTRY had been mentioned to **Antonio Flores Chacón** and provided his direct contact, **3293-1317**. On 2026-08-17 Rudy sent the first direct WhatsApp message from the Minerva Technologies number; response pending. Security also reported another urgent internal community matter competing for attention. **Operator-provided.**
+- **Colonia El Carmen:** package receipt by patronato confirmed through security. On 2026-08-16 security estimated approximately **700 homes / 400 paying households**, asked about price, and received a rough **non-binding** verbal reference of approximately **L 7,000**. Security said it would speak again with patronato and asked Rudy to return **2026-08-19 or 2026-08-20**. Formal scope and pricing remain unconfirmed. **Operator-provided.**
+- **Residencial Andalucía:** manual calls + paper + manual barrier; security previously estimated ~80 homes and reported multiple prior vendors. A personalized package was left with security on 2026-08-16; internal handoff remains unconfirmed. On 2026-08-17 Rudy spoke with Waldina, who did not appear to be the final decision-maker and identified **Eugenio Hernández** as patronato president, providing **3307-9910**. Direct confirmation of Eugenio's role and direct outreach remain pending. **Operator-provided.**
 
 ## Current strategic priority order
 
@@ -60,20 +69,28 @@ Approved by the operator on 2026-07-28:
 
 A confirmed severe vulnerability, active exposure, destructive permission problem, or immediate risk of data loss may be corrected early. This does not move the full security/backups workstream from its penultimate position.
 
-## Risks (summary; detail in sub-docs)
+## Risks / open gaps
 
 - Voice MVP remains unverified on real devices at the last capture.
 - Several RPC bodies may live only in the live development database rather than versioned migrations.
 - “Forgot password” is operator-reported broken; root cause remains to be verified.
-- The documented state may have diverged from the code, branches, builds, and live backend; diagnosis is therefore the first priority.
-- El Carmen patronato receipt is now confirmed by security, but patronato reaction, direct contact, meeting cadence, community size, and presentation interest remain unknown.
-- El Limonar patronato receipt is now confirmed by security and ENTRY was expected to be raised directly with Antonio Flores on 2026-08-12, but the result of that conversation, meeting timing, exact community size, and direct contact remain unknown.
-- Andalucía has a concrete discovery path but Waldina's exact role, the prior vendor failure reason, final decision-maker, confirmed home count, and actual interest in an ENTRY meeting/demo remain unknown.
+- The documented technical state may have diverged from code, branches, builds, and live backend; diagnosis remains the first engineering priority.
+- El Carmen's ~700-home / ~400-paying figures are security estimates, not administration-confirmed counts. The ~L 7,000 statement was an informal field reference, not a formal quote.
+- El Limonar now has a direct apparent patronato contact, but response, meeting, demo, exact community size, and actual patronato price position remain unknown.
+- Andalucía now has a direct apparent patronato-president contact, but Eugenio's role, package receipt, exact community requirement, and prior-vendor failure reasons require direct confirmation.
 
 ## Next action
 
-Run an evidence-backed ENTRY diagnostic before selecting the next implementation mission. Use the result to confirm bugs and current branch/backend state, then follow the roadmap in [entry-next-missions.md](entry-next-missions.md).
+### Engineering
 
-FIRST DOOR continues as a parallel commercial validation track. On **2026-08-14**, follow up with El Carmen and El Limonar to obtain patronato reaction, direct contact, or a meeting/demo path. On **2026-08-15 after 5:00 p.m.**, return to Residencial Andalucía to speak with Waldina, clarify her role and the prior vendor outcome, identify the decision-maker, and determine whether ENTRY should advance to a demo, meeting, or formal package.
+Run an evidence-backed ENTRY diagnostic before selecting the next implementation mission. Use the result to confirm bugs and current branch/backend state, then follow [entry-next-missions.md](entry-next-missions.md).
+
+### Commercial
+
+FIRST DOOR continues in parallel without reordering engineering priorities:
+
+- wait for Antonio Flores Chacón's response to the 2026-08-17 direct WhatsApp outreach before adding pressure;
+- return to El Carmen on **2026-08-19 or 2026-08-20** to seek patronato reaction/direct contact and clarify that the prior L 7,000 figure was only a rough field reference if pricing comes up;
+- contact Eugenio Hernández directly for Andalucía, confirm his role/package receipt, understand what prior vendors offered and what the community actually wants, and seek a short discovery/demo meeting.
 
 Environment separation, provider migration, staging architecture, and production database selection must not begin while higher-priority work remains.
