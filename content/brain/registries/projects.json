@@ -16,11 +16,11 @@
     "type": "project",
     "status": "approved",
     "title": "Seshat",
-    "summary": "Financial operating system for freelancers, developers, and small studios. Has its own Supabase project. Brain does not store Seshat operational data.",
+    "summary": "Minerva financial operating system and management-accounting product. Approved direction: evolve incrementally around real company/product/client economics, add business-unit and multi-currency controls before real Minerva financial use, and eventually migrate away from the current Supabase backend through a separate reviewed mission.",
     "created": "2026-06-16",
-    "updated": "2026-06-16",
-    "tags": ["product", "fintech", "supabase"],
-    "related": ["PRJ-0004"],
+    "updated": "2026-08-20",
+    "tags": ["product", "fintech", "management-accounting", "financial-intelligence", "supabase", "migration-planned"],
+    "related": ["PRJ-0001", "PRJ-0004"],
     "path": "content/brain/projects/seshat.md"
   },
   {
