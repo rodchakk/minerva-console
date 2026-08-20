@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { HouseholdSubmissionResident } from "./submissionPayload";
+import { normalizeCommunityUnitLabelPrefix } from "./unitLabelPrefix";
 
 export type PublicRegistrationCampaign =
   | {
@@ -14,6 +15,7 @@ export type PublicRegistrationCampaign =
       defaultResidentLimit: number;
       publicInstructions: string | null;
       publicTitle: string;
+      unitLabelPrefix: string;
     };
 
 export type PublicRegistrationUnitLookup =
@@ -115,6 +117,17 @@ type EditRpcResult = {
   unit_label?: string | null;
 };
 
+type CampaignCommunityUnitLabelRecord = {
+  communities?:
+    | {
+        unit_label?: string | null;
+      }
+    | Array<{
+        unit_label?: string | null;
+      }>
+    | null;
+};
+
 const EDIT_RELATIONSHIPS = new Set([
   "owner",
   "tenant",
@@ -155,6 +168,14 @@ export async function resolveCommunityRegistrationCampaign(input: {
     return { available: false };
   }
 
+  const unitLabelPrefix = await resolveCommunityRegistrationUnitPrefix({
+    publicSlug: input.publicSlug,
+  });
+
+  if (!unitLabelPrefix) {
+    return { available: false };
+  }
+
   return {
     available: true,
     closesAt: result.closes_at ?? null,
@@ -162,7 +183,46 @@ export async function resolveCommunityRegistrationCampaign(input: {
     defaultResidentLimit: Number(result.default_resident_limit ?? 0),
     publicInstructions: result.public_instructions ?? null,
     publicTitle: result.public_title?.trim() || "Registro de residentes",
+    unitLabelPrefix,
   };
+}
+
+export async function resolveCommunityRegistrationUnitPrefix(input: {
+  publicSlug: string;
+}) {
+  const configuredUnitLabel = await resolveCommunityRegistrationConfiguredUnitLabel(input);
+  if (!configuredUnitLabel) return null;
+
+  return normalizeCommunityUnitLabelPrefix(configuredUnitLabel);
+}
+
+async function resolveCommunityRegistrationConfiguredUnitLabel(input: {
+  publicSlug: string;
+}) {
+  const publicSlug = input.publicSlug.trim().toLocaleLowerCase("es-GT");
+
+  if (!publicSlug) return null;
+
+  try {
+    const supabase = createAdminClient();
+    const campaignResponse = await supabase
+      .from("community_registration_campaigns")
+      .select("communities(unit_label)")
+      .eq("public_slug", publicSlug)
+      .maybeSingle();
+
+    if (campaignResponse.error || !campaignResponse.data) return null;
+
+    const campaign = campaignResponse.data as CampaignCommunityUnitLabelRecord;
+    const community = Array.isArray(campaign.communities)
+      ? campaign.communities[0]
+      : campaign.communities;
+    const unitLabel = community?.unit_label?.trim();
+
+    return unitLabel || null;
+  } catch {
+    return null;
+  }
 }
 
 export async function lookupCommunityRegistrationUnit(input: {

@@ -184,7 +184,7 @@ assert(
 assert(
   "resident correction page visibly explains requested correction",
   /correction\.correctionObservation/.test(correctionPage) &&
-    /Observacion de la administracion/.test(correctionPage),
+    /Observación de la administración/.test(correctionPage),
 );
 
 assert(
