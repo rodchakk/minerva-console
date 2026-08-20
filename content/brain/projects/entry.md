@@ -32,7 +32,9 @@ Commercial positioning:
 - [entry-first-door-field-report-2026-08-04.md](entry-first-door-field-report-2026-08-04.md) — El Carmen first delivery and initial El Limonar discovery.
 - [entry-first-door-field-report-el-limonar-2026-08-07.md](entry-first-door-field-report-el-limonar-2026-08-07.md) — El Limonar qualified-lead evidence, package, and delivery.
 - [entry-field-report-2026-08-12.md](entry-field-report-2026-08-12.md) — El Carmen / El Limonar patronato-receipt follow-ups and Andalucía discovery.
-- [entry-field-report-2026-08-16-17.md](entry-field-report-2026-08-16-17.md) — latest commercial follow-ups: direct patronato contacts, El Carmen scale/price discussion, Andalucía package/Waldina/Eugenio, and first Antonio outreach.
+- [entry-field-report-2026-08-16-17.md](entry-field-report-2026-08-16-17.md) — direct patronato contacts, El Carmen scale/price discussion, Andalucía package/Waldina/Eugenio, and first Antonio outreach.
+- [entry-field-update-2026-08-18.md](entry-field-update-2026-08-18.md) — first direct WhatsApp outreach to Eugenio Hernández.
+- [entry-field-update-2026-08-20.md](entry-field-update-2026-08-20.md) — Eugenio call, ~98-home scope, first prior-price reference, multi-resident/onboarding discussion, implementation/support commitments, and executive-proposal handoff for patronato review.
 - [entry-next-missions.md](entry-next-missions.md) — operator-approved technical priority roadmap and current commercial actions.
 
 ## Isolation principles
@@ -46,13 +48,15 @@ Commercial positioning:
 - **Status:** Approved, active development.
 - **Current ENTRY branch at last code capture:** `feature/entry-voice-mvp` (Voice MVP implemented client-only, pending native device QA). **Verified from code at capture time.**
 - **Infrastructure:** dedicated Supabase dev project `gate-project-dev` (ref `ytzvislhvrcdtkbtpbmu`, Postgres 17). A second project `seshat` exists but is INACTIVE. **Verified from repo harness at capture time.**
-- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` remains the approved formal outreach standard. **Operator-provided.**
+- **Commercial strategy:** `ENTRY — FIRST DOOR / Patronato Package v1` remains the approved formal outreach standard for first contact. Andalucía has now progressed beyond FIRST DOOR into a direct buyer / internal-patronato evaluation stage. **Operator-provided.**
 
-### Current commercial status — through 2026-08-17
+### Current commercial status — through 2026-08-20
 
-- **Residencial El Limonar:** qualified lead / FIRST DOOR #2. Package receipt by patronato confirmed through security. On 2026-08-16 security reported that ENTRY had been mentioned to **Antonio Flores Chacón** and provided his direct contact, **3293-1317**. On 2026-08-17 Rudy sent the first direct WhatsApp message from the Minerva Technologies number; response pending. Security also reported another urgent internal community matter competing for attention. **Operator-provided.**
-- **Colonia El Carmen:** package receipt by patronato confirmed through security. On 2026-08-16 security estimated approximately **700 homes / 400 paying households**, asked about price, and received a rough **non-binding** verbal reference of approximately **L 7,000**. Security said it would speak again with patronato and asked Rudy to return **2026-08-19 or 2026-08-20**. Formal scope and pricing remain unconfirmed. **Operator-provided.**
-- **Residencial Andalucía:** manual calls + paper + manual barrier; security previously estimated ~80 homes and reported multiple prior vendors. A personalized package was left with security on 2026-08-16; internal handoff remains unconfirmed. On 2026-08-17 Rudy spoke with Waldina, who did not appear to be the final decision-maker and identified **Eugenio Hernández** as patronato president, providing **3307-9910**. Direct confirmation of Eugenio's role and direct outreach remain pending. **Operator-provided.**
+- **Residencial Andalucía:** currently the most advanced ENTRY opportunity. Manual calls + paper + manual barrier were confirmed during discovery. Waldina identified **Eugenio Hernández** as patronato president and provided **3307-9910**. Rudy opened direct WhatsApp on 2026-08-18. Eugenio then attempted two calls on 2026-08-19 at approximately 7:21 p.m.; Rudy missed them and returned the call on 2026-08-20, later speaking directly with Eugenio. Eugenio stated approximately **98 homes** and disclosed a prior proposal of approximately **L 35,000/year**. Scope/provider of that prior offer remain unknown. Rudy had referenced ENTRY's current L 5,000/month 51–200-home tier and verbally committed that Minerva could **match the prior annual offer** for Andalucía. Eugenio asked specifically about rental homes / multiple occupants; ENTRY supports multiple independent resident accounts associated with one home. Eugenio also said their resident list is incomplete and lacks house numbers. Rudy offered ENTRY's shareable resident-registration tool to reduce patronato data-entry work. Working implementation estimate is approximately **one week**, subject to information/coordination, with training and onsite activation support included during implementation. Eugenio requested written information to take to the patronato. On 2026-08-20 Rudy sent a 3-page executive proposal plus `https://www.minervatechs.com/entry` by WhatsApp. The proposal states that Minerva will match the prior annual investment without printing the amount. **Current next step: patronato review / reaction, ideally followed by a demo. No approval, formal economic acceptance, pilot, or customer commitment yet. Operator-provided.**
+- **Residencial El Limonar:** qualified lead / FIRST DOOR #2. Package receipt by patronato confirmed through security. On 2026-08-16 security reported that ENTRY had been mentioned to **Antonio Flores Chacón** and provided his direct contact, **3293-1317**. On 2026-08-17 Rudy sent the first direct WhatsApp message from the Minerva Technologies number. No newer response is recorded in this Brain update. Security also reported another urgent internal community matter competing for attention. **Operator-provided.**
+- **Colonia El Carmen:** package receipt by patronato confirmed through security. On 2026-08-16 security estimated approximately **700 homes / 400 paying households**, asked about price, and received a rough **non-binding** verbal reference of approximately **L 7,000**. Security said it would speak again with patronato and asked Rudy to return **2026-08-19 or 2026-08-20**. No newer visit result is recorded in this Brain update. Formal scope and pricing remain unconfirmed. **Operator-provided.**
+- **Next new discovery zone:** Avenida Junior / Bermejo toward Segundo Anillo, with initial mapping candidates including Residencial Alondra, Residencial El Bosque, Residencial Bermejo, Residencial Los Ceibos L&M, and Residencial Milla. Jardines del Valle is excluded from this round because prior outreach already occurred there and an existing system is in place. **Operator-provided.**
+- **Deferred future hypothesis:** community dues/payments may later be explored in layers (ledger/receivables → bank/reference reconciliation → optional card/recurring payments), but it is **not authorized for implementation now** and does not change the engineering priority order. **Operator-provided.**
 
 ## Current strategic priority order
 
@@ -76,8 +80,11 @@ A confirmed severe vulnerability, active exposure, destructive permission proble
 - “Forgot password” is operator-reported broken; root cause remains to be verified.
 - The documented technical state may have diverged from code, branches, builds, and live backend; diagnosis remains the first engineering priority.
 - El Carmen's ~700-home / ~400-paying figures are security estimates, not administration-confirmed counts. The ~L 7,000 statement was an informal field reference, not a formal quote.
-- El Limonar now has a direct apparent patronato contact, but response, meeting, demo, exact community size, and actual patronato price position remain unknown.
-- Andalucía now has a direct apparent patronato-president contact, but Eugenio's role, package receipt, exact community requirement, and prior-vendor failure reasons require direct confirmation.
+- El Limonar has a direct apparent patronato contact, but response, meeting, demo, exact community size, and actual patronato price position remain unknown.
+- Andalucía's **~98-home** count is customer-provided verbally, not independently audited.
+- Andalucía's **~L 35,000/year** prior-offer figure is valuable competitive intelligence but scope, provider, taxes, hardware, implementation, support, and contract conditions remain unknown. Do not treat it as the general market price.
+- The verbal commitment to match Andalucía's prior annual offer should be checked against **ENTRY Unit Economics v1** before formal economic documentation. Matching the amount is an Andalucía-specific commercial commitment, not a general price-table change.
+- Eugenio's active role in the evaluation is now clear, but his formal title remains based on Waldina's identification unless directly confirmed later.
 
 ## Next action
 
@@ -87,10 +94,9 @@ Run an evidence-backed ENTRY diagnostic before selecting the next implementation
 
 ### Commercial
 
-FIRST DOOR continues in parallel without reordering engineering priorities:
-
-- wait for Antonio Flores Chacón's response to the 2026-08-17 direct WhatsApp outreach before adding pressure;
-- return to El Carmen on **2026-08-19 or 2026-08-20** to seek patronato reaction/direct contact and clarify that the prior L 7,000 figure was only a rough field reference if pricing comes up;
-- contact Eugenio Hernández directly for Andalucía, confirm his role/package receipt, understand what prior vendors offered and what the community actually wants, and seek a short discovery/demo meeting.
+- **Andalucía:** do not add immediate pressure after the 2026-08-20 executive-proposal handoff. Wait for Eugenio/patronato reaction; if they engage, move toward a short patronato demo. Before a formal economic proposal, calculate ENTRY Unit Economics v1 for approximately 98 homes and the promised onboarding/support scope.
+- **El Carmen:** complete/record the planned Aug 19–20 follow-up when it occurs; objective remains direct patronato reaction/contact and scope clarification.
+- **El Limonar:** maintain the direct Antonio channel; if still unanswered after the agreed interval, use one concise follow-up rather than returning immediately to gate pressure.
+- **New discovery:** Avenida Junior / Bermejo remains the next new-zone mission; field objective is discovery/qualification, not immediate package delivery.
 
 Environment separation, provider migration, staging architecture, and production database selection must not begin while higher-priority work remains.
