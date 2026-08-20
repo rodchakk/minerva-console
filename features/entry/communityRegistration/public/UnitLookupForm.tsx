@@ -161,7 +161,7 @@ export function UnitLookupForm({
                 Identifica tu vivienda
               </h2>
               <p className="mt-2 text-base leading-7 text-slate-600">
-                Ingresa solo el número o código de tu vivienda para continuar.
+                Ingresa el código de tu vivienda.
               </p>
             </div>
           </div>
@@ -219,7 +219,7 @@ export function UnitLookupForm({
               />
             </svg>
             <p>
-              No escribas &quot;{unitLabelPrefix}&quot;. Ejemplos:{" "}
+              Ejemplos:{" "}
               <span className="font-bold text-[#5b21b6]">1, 2, 3, 5B, 6A</span>
             </p>
           </div>

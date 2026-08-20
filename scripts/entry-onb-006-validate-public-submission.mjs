@@ -272,8 +272,8 @@ assert("duplicate click prevented", /isSubmitting/.test(householdForm) && /disab
 assert("no automatic POST retry", (householdForm.match(/fetch\(/g) ?? []).length === 1);
 assert(
   "network-uncertain outcome documented",
-  /No pudimos confirmar si el registro se guardo/.test(householdForm) &&
-    /No se reintentara automaticamente/.test(householdForm),
+  /No pudimos confirmar si el registro se guardó/.test(householdForm) &&
+    /No se reintentará automáticamente/.test(householdForm),
 );
 assert(
   "unit lookup route still delegates to same RPC gateway",

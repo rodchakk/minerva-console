@@ -314,30 +314,45 @@ function ResidentSummaryCard({
   removable: boolean;
 }) {
   return (
-    <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_14px_46px_rgba(15,23,42,0.06)]">
-      <div className="flex items-start gap-4">
-        <ResidentIcon />
+    <article className="rounded-xl border border-slate-100 bg-white px-3 py-2.5 shadow-sm">
+      <div className="flex items-center gap-3">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#efe7ff] text-sm font-bold text-[#4c1d95]">
+          {index + 1}
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-bold uppercase text-[#4c1d95]">
-            Residente {index + 1}
-          </p>
-          <p className="mt-1 truncate text-lg font-bold text-slate-950">
+          <p className="truncate text-sm font-bold text-slate-950">
             {normalizeName(resident.fullName)}
           </p>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="truncate text-xs font-medium text-slate-500">
             {RELATIONSHIP_LABELS[resident.relationship || "unknown"]}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <button
+          aria-label={`Editar residente ${index + 1}`}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#4c1d95] transition hover:bg-[#efe7ff]"
+          onClick={onEdit}
+          type="button"
+        >
+          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <path
+              d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.8"
+            />
+          </svg>
+        </button>
+        {removable ? (
           <button
-            aria-label={`Editar residente ${index + 1}`}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-[#4c1d95] transition hover:bg-[#efe7ff]"
-            onClick={onEdit}
+            aria-label={`Eliminar residente ${index + 1}`}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-rose-600 transition hover:bg-rose-50"
+            onClick={onRemove}
             type="button"
           >
-            <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
               <path
-                d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"
+                d="M5 7h14m-9 4v6m4-6v6M9 7l1-2h4l1 2m2 0-.7 12a2 2 0 0 1-2 2H9.7a2 2 0 0 1-2-2L7 7"
                 stroke="currentColor"
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -345,40 +360,8 @@ function ResidentSummaryCard({
               />
             </svg>
           </button>
-          {removable ? (
-            <button
-              aria-label={`Eliminar residente ${index + 1}`}
-              className="flex h-10 w-10 items-center justify-center rounded-full text-rose-600 transition hover:bg-rose-50"
-              onClick={onRemove}
-              type="button"
-            >
-              <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
-                <path
-                  d="M5 7h14m-9 4v6m4-6v6M9 7l1-2h4l1 2m2 0-.7 12a2 2 0 0 1-2 2H9.7a2 2 0 0 1-2-2L7 7"
-                  stroke="currentColor"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="1.8"
-                />
-              </svg>
-            </button>
-          ) : null}
-        </div>
+        ) : null}
       </div>
-      <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-slate-500">Telefono</dt>
-          <dd className="mt-1 font-semibold text-slate-900">
-            {normalizePhone(resident.phone) || "No indicado"}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">Correo</dt>
-          <dd className="mt-1 truncate font-semibold text-slate-900">
-            {normalizeEmail(resident.email) || "No indicado"}
-          </dd>
-        </div>
-      </dl>
     </article>
   );
 }
@@ -1012,54 +995,6 @@ export function HouseholdDraftForm({
                 ) : null}
               </label>
 
-              <label className="block" htmlFor={`resident-${activeResident.id}-relationship`}>
-                <span className="text-sm font-bold text-slate-950">
-                  Relación con la vivienda
-                </span>
-                <select
-                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
-                  id={`resident-${activeResident.id}-relationship`}
-                  name={`resident-${activeResident.id}-relationship`}
-                  onChange={(event) =>
-                    updateResident(activeResident.id, {
-                      relationship: event.target.value as Relationship,
-                    })
-                  }
-                  value={activeResident.relationship}
-                >
-                  <option value="">Selecciona una opción</option>
-                  {RELATIONSHIP_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {activeResident.relationship === "owner" ? (
-                <label className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-700">
-                  <input
-                    checked={activeResident.isOwnerReference}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 accent-[#5b21b6]"
-                    name={`resident-${activeResident.id}-owner-reference`}
-                    onChange={(event) =>
-                      setOwnerReference(activeResident.id, event.target.checked)
-                    }
-                    type="checkbox"
-                  />
-                  <span>Marcar como propietario de referencia de esta vivienda.</span>
-                </label>
-              ) : null}
-
-              {errors[activeResident.id]?.ownerReference ? (
-                <p
-                  className="text-sm leading-5 text-amber-700"
-                  id={getErrorId(activeResident.id, "ownerReference")}
-                >
-                  {errors[activeResident.id]?.ownerReference}
-                </p>
-              ) : null}
-
               <label className="block" htmlFor={`resident-${activeResident.id}-phone`}>
                 <span className="text-sm font-bold text-slate-950">Teléfono</span>
                 <input
@@ -1129,6 +1064,54 @@ export function HouseholdDraftForm({
                   </p>
                 ) : null}
               </label>
+
+              <label className="block" htmlFor={`resident-${activeResident.id}-relationship`}>
+                <span className="text-sm font-bold text-slate-950">
+                  Relación con la vivienda
+                </span>
+                <select
+                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
+                  id={`resident-${activeResident.id}-relationship`}
+                  name={`resident-${activeResident.id}-relationship`}
+                  onChange={(event) =>
+                    updateResident(activeResident.id, {
+                      relationship: event.target.value as Relationship,
+                    })
+                  }
+                  value={activeResident.relationship}
+                >
+                  <option value="">Selecciona una opción</option>
+                  {RELATIONSHIP_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {activeResident.relationship === "owner" ? (
+                <label className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-700">
+                  <input
+                    checked={activeResident.isOwnerReference}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 accent-[#5b21b6]"
+                    name={`resident-${activeResident.id}-owner-reference`}
+                    onChange={(event) =>
+                      setOwnerReference(activeResident.id, event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>Marcar como propietario de referencia de esta vivienda.</span>
+                </label>
+              ) : null}
+
+              {errors[activeResident.id]?.ownerReference ? (
+                <p
+                  className="text-sm leading-5 text-amber-700"
+                  id={getErrorId(activeResident.id, "ownerReference")}
+                >
+                  {errors[activeResident.id]?.ownerReference}
+                </p>
+              ) : null}
 
               {errors[activeResident.id]?.duplicate ? (
                 <p

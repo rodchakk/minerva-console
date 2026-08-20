@@ -52,6 +52,11 @@ const gateway = read("features/entry/communityRegistration/public/gateway.ts");
 const successBlock =
   householdForm.match(/\{step === "success" \? \([\s\S]*?\) : step === "review"/)?.[0] ??
   "";
+const residentSummaryCardBlock =
+  householdForm.match(/function ResidentSummaryCard\([\s\S]*?export function HouseholdDraftForm/)?.[0] ??
+  "";
+const activeResidentFormBlock =
+  householdForm.match(/<form[\s\S]*?Guardar residente[\s\S]*?<\/form>/)?.[0] ?? "";
 
 assert(
   "scope avoids protected console and migrations",
@@ -87,7 +92,9 @@ assert(
   "vivienda lookup asks for suffix and keeps canonical returned unit label",
   /unitSuffix/.test(unitForm) &&
     /placeholder="Ej\. 1 o 5B"/.test(unitForm) &&
-    /No escribas &quot;\{unitLabelPrefix\}&quot;/.test(unitForm) &&
+    /Ingresa el código de tu vivienda\./.test(unitForm) &&
+    /Ejemplos:\{" "\}/.test(unitForm) &&
+    !/No escribas/.test(unitForm) &&
     /unitLabel=\{state\.result\.unitLabel\}/.test(unitForm) &&
     !/const UNIT_PREFIX = "Casa"/.test(unitRoute) &&
     /resolveCommunityRegistrationUnitPrefix/.test(unitRoute) &&
@@ -113,6 +120,12 @@ assert(
   /activeResidentId/.test(householdForm) &&
     /savedResidentIds/.test(householdForm) &&
     /ResidentSummaryCard/.test(householdForm) &&
+    /Nombre completo[\s\S]*Teléfono[\s\S]*Correo electrónico[\s\S]*Relación con la vivienda/.test(
+      activeResidentFormBlock,
+    ) &&
+    !/normalizePhone|normalizeEmail|Telefono|Teléfono|Correo electrónico/.test(
+      residentSummaryCardBlock,
+    ) &&
     /Aún no has agregado residentes/.test(householdForm) &&
     /Guardar residente/.test(householdForm) &&
     /Agregar otro residente/.test(householdForm) &&
