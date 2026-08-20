@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { buildHouseholdSubmissionResidents } from "./submissionPayload";
+import { RegistrationStepper } from "./PublicRegistrationShell";
 
 type Relationship = "" | "owner" | "tenant" | "family" | "other";
 
@@ -131,14 +132,14 @@ function validateResidents(residents: ResidentDraft[]) {
         !/^\+?[0-9]+$/.test(normalizedPhone) ||
         phoneDigits.length < 7)
     ) {
-      residentErrors.phone = "Revisa el numero de telefono.";
+      residentErrors.phone = "Revisa el número de teléfono.";
     }
 
     if (resident.isOwnerReference) {
       ownerReferenceCount += 1;
       if (resident.relationship !== "owner") {
         residentErrors.ownerReference =
-          "La referencia de propietario debe tener relacion Propietario.";
+          "La referencia de propietario debe tener relación Propietario.";
       }
     }
 
@@ -191,17 +192,195 @@ function hasResidentContent(resident: ResidentDraft) {
     resident.isOwnerReference
   );
 }
-
 function getErrorId(residentId: number, field: keyof ResidentErrors) {
   return `resident-${residentId}-${field}-error`;
 }
 
-function joinErrorIds(residentId: number, errors?: ResidentErrors) {
+function getFieldErrorIds(residentId: number, errors?: ResidentErrors) {
   if (!errors) return undefined;
 
   return (Object.keys(errors) as Array<keyof ResidentErrors>)
     .map((field) => getErrorId(residentId, field))
     .join(" ");
+}
+
+function ResidentIcon({ plus = false }: { plus?: boolean }) {
+  return (
+    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#efe7ff] text-[#5b21b6]">
+      <svg aria-hidden="true" className="h-7 w-7" fill="none" viewBox="0 0 24 24">
+        <path
+          d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-7 8a7 7 0 0 1 14 0"
+          stroke="currentColor"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="1.8"
+        />
+        {plus ? (
+          <path
+            d="M18 9v6m-3-3h6"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.8"
+          />
+        ) : null}
+      </svg>
+    </span>
+  );
+}
+
+function SelectedUnitCard({
+  onChangeUnit,
+  onRequestChange,
+  residentLimit,
+  unitLabel,
+}: {
+  onChangeUnit?: () => void;
+  onRequestChange: () => void;
+  residentLimit: number;
+  unitLabel: string;
+}) {
+  return (
+    <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+      <div className="flex items-center gap-4">
+        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#5b21b6]">
+          <svg aria-hidden="true" className="h-9 w-9" fill="none" viewBox="0 0 24 24">
+            <path
+              d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.9"
+            />
+            <path
+              d="m15.5 9.5 1.5 1.5 3-3"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.9"
+            />
+          </svg>
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-lg font-bold text-slate-950">Vivienda seleccionada</p>
+          <p className="mt-1 text-2xl font-bold text-[#4c1d95]">{unitLabel}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Puedes registrar hasta {residentLimit} residentes.
+          </p>
+        </div>
+        {onChangeUnit ? (
+          <button
+            className="hidden shrink-0 items-center gap-2 text-sm font-bold text-[#4c1d95] transition hover:text-[#5b21b6] sm:inline-flex"
+            onClick={onRequestChange}
+            type="button"
+          >
+            Cambiar vivienda
+            <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
+              <path
+                d="m9 18 6-6-6-6"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+              />
+            </svg>
+          </button>
+        ) : null}
+      </div>
+      {onChangeUnit ? (
+        <button
+          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#5b21b6] px-4 py-3 text-sm font-bold text-[#4c1d95] sm:hidden"
+          onClick={onRequestChange}
+          type="button"
+        >
+          Cambiar vivienda
+        </button>
+      ) : null}
+    </section>
+  );
+}
+
+function ResidentSummaryCard({
+  index,
+  onEdit,
+  onRemove,
+  resident,
+  removable,
+}: {
+  index: number;
+  onEdit: () => void;
+  onRemove: () => void;
+  resident: ResidentDraft;
+  removable: boolean;
+}) {
+  return (
+    <article className="rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_14px_46px_rgba(15,23,42,0.06)]">
+      <div className="flex items-start gap-4">
+        <ResidentIcon />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold uppercase text-[#4c1d95]">
+            Residente {index + 1}
+          </p>
+          <p className="mt-1 truncate text-lg font-bold text-slate-950">
+            {normalizeName(resident.fullName)}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {RELATIONSHIP_LABELS[resident.relationship || "unknown"]}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            aria-label={`Editar residente ${index + 1}`}
+            className="flex h-10 w-10 items-center justify-center rounded-full text-[#4c1d95] transition hover:bg-[#efe7ff]"
+            onClick={onEdit}
+            type="button"
+          >
+            <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+              <path
+                d="m4 20 4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20Z"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+          </button>
+          {removable ? (
+            <button
+              aria-label={`Eliminar residente ${index + 1}`}
+              className="flex h-10 w-10 items-center justify-center rounded-full text-rose-600 transition hover:bg-rose-50"
+              onClick={onRemove}
+              type="button"
+            >
+              <svg aria-hidden="true" className="h-5 w-5" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M5 7h14m-9 4v6m4-6v6M9 7l1-2h4l1 2m2 0-.7 12a2 2 0 0 1-2 2H9.7a2 2 0 0 1-2-2L7 7"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-2">
+        <div>
+          <dt className="text-slate-500">Telefono</dt>
+          <dd className="mt-1 font-semibold text-slate-900">
+            {normalizePhone(resident.phone) || "No indicado"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-slate-500">Correo</dt>
+          <dd className="mt-1 truncate font-semibold text-slate-900">
+            {normalizeEmail(resident.email) || "No indicado"}
+          </dd>
+        </div>
+      </dl>
+    </article>
+  );
 }
 
 export function HouseholdDraftForm({
@@ -226,13 +405,15 @@ export function HouseholdDraftForm({
       ? initialResidents.map((resident, index) =>
           createResidentDraftFromInitial(resident, index + 1),
         )
-      : [createResidentDraft(1)];
+      : [];
+  const initialSavedIds = initialDrafts.map((resident) => resident.id);
   const [nextResidentId, setNextResidentId] = useState(initialDrafts.length + 1);
   const [residents, setResidents] = useState<ResidentDraft[]>(initialDrafts);
+  const [savedResidentIds, setSavedResidentIds] = useState<number[]>(initialSavedIds);
+  const [activeResidentId, setActiveResidentId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<number, ResidentErrors>>({});
-  const [reviewResidents, setReviewResidents] = useState<ValidResidentDraft[]>(
-    [],
-  );
+  const [reviewResidents, setReviewResidents] = useState<ValidResidentDraft[]>([]);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<
     | "access_unavailable"
     | "rate_limited"
@@ -245,6 +426,13 @@ export function HouseholdDraftForm({
   const [step, setStep] = useState<"edit" | "review" | "success">("edit");
   const [confirmingUnitChange, setConfirmingUnitChange] = useState(false);
 
+  const savedResidents = residents.filter((resident) =>
+    savedResidentIds.includes(resident.id),
+  );
+  const activeResident =
+    activeResidentId === null
+      ? null
+      : residents.find((resident) => resident.id === activeResidentId) ?? null;
   const isAtLimit = residents.length >= residentLimit;
   const canRemoveResident = residents.length > MIN_RESIDENTS;
   const hasDraftContent = useMemo(
@@ -252,6 +440,12 @@ export function HouseholdDraftForm({
     [residents],
   );
   const isCorrectionSubmit = finalAction === "correction-submit";
+
+  function markResidentSaved(residentId: number) {
+    setSavedResidentIds((current) =>
+      current.includes(residentId) ? current : [...current, residentId],
+    );
+  }
 
   function updateResident(
     residentId: number,
@@ -280,6 +474,7 @@ export function HouseholdDraftForm({
       }),
     );
     setStep("edit");
+    setDraftNotice(null);
     setSubmitError(null);
   }
 
@@ -294,15 +489,26 @@ export function HouseholdDraftForm({
       })),
     );
     setStep("edit");
+    setDraftNotice(null);
     setSubmitError(null);
   }
 
   function addResident() {
-    if (isAtLimit) return;
+    if (isAtLimit || activeResidentId !== null) return;
 
-    setResidents((current) => [...current, createResidentDraft(nextResidentId)]);
+    const resident = createResidentDraft(nextResidentId);
+    setResidents((current) => [...current, resident]);
     setNextResidentId((current) => current + 1);
+    setActiveResidentId(resident.id);
     setStep("edit");
+    setDraftNotice(null);
+    setSubmitError(null);
+  }
+
+  function editResident(residentId: number) {
+    setActiveResidentId(residentId);
+    setStep("edit");
+    setDraftNotice(null);
     setSubmitError(null);
   }
 
@@ -312,12 +518,17 @@ export function HouseholdDraftForm({
     setResidents((current) =>
       current.filter((resident) => resident.id !== residentId),
     );
+    setSavedResidentIds((current) => current.filter((id) => id !== residentId));
     setErrors((current) => {
       const nextErrors = { ...current };
       delete nextErrors[residentId];
       return nextErrors;
     });
+    if (activeResidentId === residentId) {
+      setActiveResidentId(null);
+    }
     setStep("edit");
+    setDraftNotice(null);
     setSubmitError(null);
   }
 
@@ -332,19 +543,49 @@ export function HouseholdDraftForm({
     onChangeUnit();
   }
 
-  function handleReview(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function saveActiveResident(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (activeResidentId === null) return;
+
+    const result = validateResidents(residents);
+    setErrors(result.errors);
+
+    if (result.errors[activeResidentId]) {
+      setDraftNotice("Revisa los campos marcados antes de guardar.");
+      return;
+    }
+
+    markResidentSaved(activeResidentId);
+    setActiveResidentId(null);
+    setDraftNotice(null);
+    setSubmitError(null);
+  }
+
+  function handleReview() {
+    if (activeResidentId !== null) {
+      setDraftNotice("Guarda el residente abierto antes de continuar.");
+      return;
+    }
+
+    if (residents.length < MIN_RESIDENTS) {
+      setDraftNotice("Agrega al menos un residente para continuar.");
+      return;
+    }
 
     const result = validateResidents(residents);
     setErrors(result.errors);
 
     if (Object.keys(result.errors).length > 0) {
+      const firstErrorId = Number(Object.keys(result.errors)[0]);
+      setActiveResidentId(Number.isFinite(firstErrorId) ? firstErrorId : null);
       setStep("edit");
+      setDraftNotice("Revisa la información antes de continuar.");
       return;
     }
 
     setReviewResidents(result.validResidents);
     setSubmitError(null);
+    setDraftNotice(null);
     setStep("review");
   }
 
@@ -399,10 +640,12 @@ export function HouseholdDraftForm({
         | null;
 
       if (response.ok && result?.submitted === true) {
-        setResidents([createResidentDraft(1)]);
-        setNextResidentId(2);
+        setResidents([]);
+        setSavedResidentIds([]);
+        setNextResidentId(1);
         setReviewResidents([]);
         setErrors({});
+        setActiveResidentId(null);
         setStep("success");
         return;
       }
@@ -425,46 +668,38 @@ export function HouseholdDraftForm({
     }
   }
 
+  const currentStep = step === "review" || step === "success" ? 3 : 2;
+
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100/80">
-          Vivienda
-        </p>
-        <p className="mt-2 text-lg font-semibold text-white">{unitLabel}</p>
-        <p className="mt-2 text-sm leading-6 text-emerald-50/80">
-          Puedes registrar hasta {residentLimit} residentes.
-        </p>
-        {onChangeUnit ? (
-          <button
-            className="mt-3 text-sm font-semibold text-emerald-50 underline decoration-emerald-200/50 underline-offset-4 transition hover:text-white"
-            onClick={requestUnitChange}
-            type="button"
-          >
-            Cambiar vivienda
-          </button>
-        ) : null}
-      </div>
+      <RegistrationStepper currentStep={currentStep} isComplete={step === "success"} />
+
+      <SelectedUnitCard
+        onChangeUnit={onChangeUnit}
+        onRequestChange={requestUnitChange}
+        residentLimit={residentLimit}
+        unitLabel={unitLabel}
+      />
 
       {confirmingUnitChange && onChangeUnit ? (
-        <div className="rounded-xl border border-amber-400/25 bg-amber-500/10 px-4 py-4">
-          <p className="text-sm font-semibold text-amber-100">
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+          <p className="text-sm font-semibold text-amber-950">
             Cambiar vivienda borrara este borrador.
           </p>
-          <p className="mt-2 text-sm leading-6 text-amber-50/80">
-            Para evitar asociar residentes a otra vivienda, la informacion local
-            se limpiara antes de buscar una nueva casa.
+          <p className="mt-2 text-sm leading-6 text-amber-900">
+            Para evitar asociar residentes a otra vivienda, la información local
+            se limpiara antes de buscar una nueva vivienda.
           </p>
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <button
-              className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.07]"
+              className="inline-flex h-12 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50"
               onClick={() => setConfirmingUnitChange(false)}
               type="button"
             >
               Conservar vivienda
             </button>
             <button
-              className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-amber-200/30 bg-amber-500/20 px-4 text-sm font-semibold text-amber-50 transition hover:bg-amber-500/28"
+              className="inline-flex h-12 items-center justify-center rounded-2xl bg-amber-500 px-4 text-sm font-bold text-white transition hover:bg-amber-600"
               onClick={onChangeUnit}
               type="button"
             >
@@ -476,50 +711,79 @@ export function HouseholdDraftForm({
 
       {step === "success" ? (
         <section className="space-y-5" aria-labelledby="household-success-title">
-          <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-4">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-8 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_16px_32px_rgba(5,150,105,0.24)]">
+              <svg aria-hidden="true" className="h-10 w-10" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="m6 12 4 4 8-9"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2.5"
+                />
+              </svg>
+            </div>
             <h2
-              className="text-xl font-semibold text-white"
+              className="mt-5 text-3xl font-bold text-emerald-700"
               id="household-success-title"
             >
               {isCorrectionSubmit ? "Cambios enviados" : "Registro enviado"}
             </h2>
-            <p className="mt-2 text-sm leading-6 text-emerald-50/80">
+            <p className="mx-auto mt-3 max-w-md text-base leading-7 text-slate-600">
               {isCorrectionSubmit
-                ? "Tu informacion actualizada fue enviada correctamente."
-                : "Tu informacion fue enviada correctamente a la administracion de tu residencial."}
+                ? "Tu información actualizada fue enviada correctamente a la administración de tu residencial."
+                : "Tu información fue enviada correctamente a la administración de tu residencial."}
+            </p>
+            <p className="mx-auto mt-4 max-w-md text-base font-semibold text-emerald-700">
+              Ya puedes cerrar esta página.
             </p>
           </div>
         </section>
       ) : step === "review" ? (
         <section className="space-y-5" aria-labelledby="household-review-title">
           <div>
-            <h2
-              className="text-xl font-semibold text-white"
-              id="household-review-title"
-            >
-              Revisar informacion
+            <h2 className="text-3xl font-bold text-slate-950" id="household-review-title">
+              Revisar información
             </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Revisa el borrador local antes del siguiente paso.
+            <p className="mt-2 text-base leading-7 text-slate-600">
+              Revisa la información antes de enviarla a la administración de tu residencial.
             </p>
           </div>
 
           <div className="space-y-3">
             {reviewResidents.map((resident) => (
               <article
-                className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4"
+                className="rounded-2xl border border-slate-100 bg-white px-4 py-5 shadow-[0_14px_46px_rgba(15,23,42,0.06)]"
                 key={resident.id}
               >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                  Residente {resident.position}
-                </p>
-                <p className="mt-2 text-base font-semibold text-white">
-                  {resident.normalizedFullName}
-                </p>
-                <dl className="mt-3 grid gap-2 text-sm leading-6 text-slate-200">
+                <div className="flex items-start gap-4">
+                  <ResidentIcon />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-bold uppercase text-[#4c1d95]">
+                        Residente {resident.position}
+                      </p>
+                      <button
+                        className="inline-flex items-center gap-2 text-sm font-bold text-[#4c1d95]"
+                        onClick={() => {
+                          setSubmitError(null);
+                          setStep("edit");
+                          setActiveResidentId(resident.id);
+                        }}
+                        type="button"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                    <p className="mt-2 text-lg font-bold text-slate-950">
+                      {resident.normalizedFullName}
+                    </p>
+                  </div>
+                </div>
+                <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-3">
                   <div>
-                    <dt className="font-semibold text-slate-100">Relacion</dt>
-                    <dd>
+                    <dt className="text-slate-500">Relación</dt>
+                    <dd className="mt-1 font-semibold text-slate-900">
                       {RELATIONSHIP_LABELS[resident.relationship || "unknown"]}
                       {resident.isOwnerReference
                         ? " - propietario de referencia"
@@ -527,48 +791,52 @@ export function HouseholdDraftForm({
                     </dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-slate-100">Telefono</dt>
-                    <dd>{resident.normalizedPhone || "No indicado"}</dd>
+                    <dt className="text-slate-500">Teléfono</dt>
+                    <dd className="mt-1 font-semibold text-slate-900">
+                      {resident.normalizedPhone || "No indicado"}
+                    </dd>
                   </div>
                   <div>
-                    <dt className="font-semibold text-slate-100">Correo</dt>
-                    <dd>{resident.normalizedEmail || "No indicado"}</dd>
+                    <dt className="text-slate-500">Correo</dt>
+                    <dd className="mt-1 truncate font-semibold text-slate-900">
+                      {resident.normalizedEmail || "No indicado"}
+                    </dd>
                   </div>
                 </dl>
               </article>
             ))}
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4">
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
+          <div className="rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-sm">
+            <p className="text-sm leading-6 text-slate-600">
               {finalAction === "local-review"
-                ? "Los cambios podran enviarse en el siguiente paso. Esta revision local todavia no actualiza el registro."
+                ? "Los cambios podrán enviarse en el siguiente paso. Esta revisión local todavía no actualiza el registro."
                 : isCorrectionSubmit
-                  ? "Al enviar estos cambios, la informacion actualizada se compartira con la administracion de tu residencial para su revision."
-                : "Al enviar este registro, la informacion de residentes se compartira con la administracion de tu residencial para su revision."}
+                  ? "Al enviar estos cambios, la información actualizada se compartirá con la administración de tu residencial para su revisión."
+                  : "Al enviar este registro, la información de residentes se compartirá con la administración de tu residencial para su revisión."}
             </p>
           </div>
 
           <div aria-live="polite">
             {submitError ? (
-              <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-                <p className="text-sm font-semibold text-amber-100">
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+                <p className="text-sm font-semibold text-amber-950">
                   {isCorrectionSubmit
                     ? "No pudimos enviar los cambios"
                     : "No pudimos enviar el registro"}
                 </p>
-                <p className="mt-2 text-sm leading-6 text-amber-50/80">
+                <p className="mt-2 text-sm leading-6 text-amber-900">
                   {submitError === "access_unavailable"
-                    ? "Este enlace de correccion ya no esta disponible."
+                    ? "Este enlace de corrección ya no está disponible."
                     : submitError === "rate_limited"
-                    ? "Has realizado demasiados intentos. Espera un momento e intentalo nuevamente."
-                    : submitError === "service_unavailable"
-                    ? "No pudimos procesar la solicitud en este momento. Intentalo nuevamente."
-                    : submitError === "unavailable"
-                    ? "No pudimos completar el registro. Verifica el enlace o comunicate con la administracion."
-                    : isCorrectionSubmit
-                      ? "No pudimos confirmar si los cambios se guardaron. No se reintentara automaticamente; actualiza o abre de nuevo el enlace oficial para verificar si sigue disponible antes de intentarlo otra vez."
-                    : "No pudimos confirmar si el registro se guardo. No se reintentara automaticamente; verifica con la administracion antes de enviarlo otra vez."}
+                      ? "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente."
+                      : submitError === "service_unavailable"
+                        ? "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente."
+                        : submitError === "unavailable"
+                          ? "No pudimos completar el registro. Verifica el enlace o comunícate con la administración."
+                          : isCorrectionSubmit
+                            ? "No pudimos confirmar si los cambios se guardaron. No se reintentará automáticamente; actualiza o abre de nuevo el enlace oficial para verificar si sigue disponible antes de intentarlo otra vez."
+                            : "No pudimos confirmar si el registro se guardó. No se reintentará automáticamente; verifica con la administración antes de enviarlo otra vez."}
                 </p>
               </div>
             ) : null}
@@ -576,7 +844,7 @@ export function HouseholdDraftForm({
 
           <div className="grid gap-3 sm:grid-cols-2">
             <button
-              className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-14 w-full items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-base font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               disabled={isSubmitting}
               onClick={() => {
                 setSubmitError(null);
@@ -584,10 +852,10 @@ export function HouseholdDraftForm({
               }}
               type="button"
             >
-              Editar informacion
+              Editar información
             </button>
             <button
-              className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-violet-300/25 bg-violet-500/20 px-4 text-sm font-semibold text-white transition hover:border-violet-200/40 hover:bg-violet-500/28 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[#4c1d95] px-4 text-base font-bold text-white shadow-[0_16px_34px_rgba(76,29,149,0.24)] transition hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-60"
               disabled={finalAction === "local-review" || isSubmitting}
               onClick={
                 finalAction === "local-review" ? undefined : handleFinalSubmit
@@ -595,7 +863,7 @@ export function HouseholdDraftForm({
               type="button"
             >
               {finalAction === "local-review"
-                ? "Envio disponible en el siguiente paso"
+                ? "Envío disponible en el siguiente paso"
                 : isSubmitting
                   ? isCorrectionSubmit
                     ? "Enviando cambios..."
@@ -607,240 +875,322 @@ export function HouseholdDraftForm({
           </div>
         </section>
       ) : (
-        <form className="space-y-5" noValidate onSubmit={handleReview}>
+        <section className="space-y-5" aria-labelledby="household-edit-title">
           <div>
-            <h2 className="text-xl font-semibold text-white">
-              Residentes de la vivienda
-            </h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              {introText ??
-                "Agrega la informacion de las personas que viven en esta casa. El borrador se mantiene solo en esta pantalla."}
-            </p>
+            <div className="flex items-start gap-3">
+              <span className="mt-1 text-[#5b21b6]">
+                <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-6 9a6 6 0 0 1 12 0m6-9v6m-3-3h6"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.8"
+                  />
+                </svg>
+              </span>
+              <div>
+                <h2 className="text-2xl font-bold text-slate-950" id="household-edit-title">
+                  Residentes de la vivienda
+                </h2>
+                <p className="mt-1 text-base leading-7 text-slate-600">
+                  {introText ??
+                    "Agrega la información de las personas que viven en esta vivienda."}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            {residents.map((resident, index) => {
-              const residentErrors = errors[resident.id];
-              const describedBy = joinErrorIds(resident.id, residentErrors);
-              const isOwner = resident.relationship === "owner";
+          {savedResidents.length > 0 ? (
+            <div className="space-y-3">
+              {savedResidents.map((resident) => {
+                const index = residents.findIndex((item) => item.id === resident.id);
+                return activeResidentId === resident.id ? null : (
+                  <ResidentSummaryCard
+                    index={index}
+                    key={resident.id}
+                    onEdit={() => editResident(resident.id)}
+                    onRemove={() => removeResident(resident.id)}
+                    removable={canRemoveResident}
+                    resident={resident}
+                  />
+                );
+              })}
+            </div>
+          ) : null}
 
-              return (
-                <fieldset
-                  aria-describedby={describedBy}
-                  className="space-y-4 rounded-xl border border-white/10 bg-white/[0.04] px-4 py-4"
-                  key={resident.id}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <legend className="text-base font-semibold text-white">
-                      Residente {index + 1}
-                    </legend>
-                    <button
-                      className="text-sm font-semibold text-slate-300 underline decoration-slate-400/50 underline-offset-4 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-45"
-                      disabled={!canRemoveResident}
-                      onClick={() => removeResident(resident.id)}
-                      type="button"
-                    >
-                      Quitar
-                    </button>
-                  </div>
-
-                  <label className="block" htmlFor={`resident-${resident.id}-name`}>
-                    <span className="text-sm font-semibold text-slate-100">
-                      Nombre completo
-                    </span>
-                    <input
-                      aria-invalid={residentErrors?.fullName ? "true" : "false"}
-                      aria-describedby={
-                        residentErrors?.fullName
-                          ? getErrorId(resident.id, "fullName")
-                          : undefined
-                      }
-                      autoComplete="name"
-                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-300/50 focus:bg-white/[0.06]"
-                      id={`resident-${resident.id}-name`}
-                      maxLength={NAME_MAX_LENGTH}
-                      name={`resident-${resident.id}-name`}
-                      onChange={(event) =>
-                        updateResident(resident.id, {
-                          fullName: event.target.value,
-                        })
-                      }
-                      placeholder="Ej. Ana Martinez"
-                      required
-                      type="text"
-                      value={resident.fullName}
-                    />
-                    {residentErrors?.fullName ? (
-                      <p
-                        className="mt-2 text-sm leading-5 text-amber-100"
-                        id={getErrorId(resident.id, "fullName")}
-                      >
-                        {residentErrors.fullName}
-                      </p>
-                    ) : null}
-                  </label>
-
-                  <label
-                    className="block"
-                    htmlFor={`resident-${resident.id}-relationship`}
-                  >
-                    <span className="text-sm font-semibold text-slate-100">
-                      Relacion con la vivienda
-                    </span>
-                    <select
-                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-[#111827] px-4 text-base text-white outline-none transition focus:border-violet-300/50 focus:bg-[#151f2f]"
-                      id={`resident-${resident.id}-relationship`}
-                      name={`resident-${resident.id}-relationship`}
-                      onChange={(event) =>
-                        updateResident(resident.id, {
-                          relationship: event.target.value as Relationship,
-                        })
-                      }
-                      value={resident.relationship}
-                    >
-                      <option value="">Selecciona una opcion</option>
-                      {RELATIONSHIP_OPTIONS.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  {isOwner ? (
-                    <label className="flex gap-3 rounded-xl border border-white/10 bg-black/10 px-3 py-3 text-sm leading-6 text-slate-100">
-                      <input
-                        checked={resident.isOwnerReference}
-                        className="mt-1 h-4 w-4 rounded border-white/20 bg-white/[0.04] accent-violet-300"
-                        name={`resident-${resident.id}-owner-reference`}
-                        onChange={(event) =>
-                          setOwnerReference(resident.id, event.target.checked)
-                        }
-                        type="checkbox"
-                      />
-                      <span>
-                        Marcar como propietario de referencia de esta vivienda.
-                      </span>
-                    </label>
-                  ) : null}
-
-                  {residentErrors?.ownerReference ? (
-                    <p
-                      className="text-sm leading-5 text-amber-100"
-                      id={getErrorId(resident.id, "ownerReference")}
-                    >
-                      {residentErrors.ownerReference}
-                    </p>
-                  ) : null}
-
-                  <label className="block" htmlFor={`resident-${resident.id}-phone`}>
-                    <span className="text-sm font-semibold text-slate-100">
-                      Telefono
-                    </span>
-                    <input
-                      aria-invalid={residentErrors?.phone ? "true" : "false"}
-                      aria-describedby={
-                        residentErrors?.phone
-                          ? getErrorId(resident.id, "phone")
-                          : undefined
-                      }
-                      autoComplete="tel"
-                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-300/50 focus:bg-white/[0.06]"
-                      id={`resident-${resident.id}-phone`}
-                      inputMode="tel"
-                      maxLength={PHONE_MAX_LENGTH}
-                      name={`resident-${resident.id}-phone`}
-                      onChange={(event) =>
-                        updateResident(resident.id, {
-                          phone: event.target.value,
-                        })
-                      }
-                      placeholder="Ej. 5555-5555"
-                      type="tel"
-                      value={resident.phone}
-                    />
-                    {residentErrors?.phone ? (
-                      <p
-                        className="mt-2 text-sm leading-5 text-amber-100"
-                        id={getErrorId(resident.id, "phone")}
-                      >
-                        {residentErrors.phone}
-                      </p>
-                    ) : null}
-                  </label>
-
-                  <label className="block" htmlFor={`resident-${resident.id}-email`}>
-                    <span className="text-sm font-semibold text-slate-100">
-                      Correo electronico
-                    </span>
-                    <input
-                      aria-invalid={residentErrors?.email ? "true" : "false"}
-                      aria-describedby={
-                        residentErrors?.email
-                          ? getErrorId(resident.id, "email")
-                          : undefined
-                      }
-                      autoComplete="email"
-                      className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-300/50 focus:bg-white/[0.06]"
-                      id={`resident-${resident.id}-email`}
-                      inputMode="email"
-                      maxLength={EMAIL_MAX_LENGTH}
-                      name={`resident-${resident.id}-email`}
-                      onChange={(event) =>
-                        updateResident(resident.id, {
-                          email: event.target.value,
-                        })
-                      }
-                      placeholder="Ej. ana@correo.com"
-                      type="email"
-                      value={resident.email}
-                    />
-                    {residentErrors?.email ? (
-                      <p
-                        className="mt-2 text-sm leading-5 text-amber-100"
-                        id={getErrorId(resident.id, "email")}
-                      >
-                        {residentErrors.email}
-                      </p>
-                    ) : null}
-                  </label>
-
-                  {residentErrors?.duplicate ? (
-                    <p
-                      className="text-sm leading-5 text-amber-100"
-                      id={getErrorId(resident.id, "duplicate")}
-                    >
-                      {residentErrors.duplicate}
-                    </p>
-                  ) : null}
-                </fieldset>
-              );
-            })}
-          </div>
-
-          <div aria-live="polite">
-            {isAtLimit ? (
-              <p className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm leading-6 text-[var(--text-muted)]">
-                Has alcanzado el maximo de {residentLimit} residentes.
+          {!activeResident && savedResidents.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center shadow-sm">
+              <div className="flex justify-center">
+                <ResidentIcon plus />
+              </div>
+              <h3 className="mt-4 text-xl font-bold text-slate-950">
+                Aún no has agregado residentes
+              </h3>
+              <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
+                Empieza con la primera persona que vive en esta vivienda.
               </p>
-            ) : (
               <button
-                className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-white transition hover:bg-white/[0.07]"
+                className="mt-5 inline-flex h-12 items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-sm font-bold text-white transition hover:bg-[#5b21b6]"
                 onClick={addResident}
                 type="button"
               >
                 Agregar residente
               </button>
-            )}
+            </div>
+          ) : null}
+
+          {activeResident ? (
+            <form
+              aria-describedby={getFieldErrorIds(
+                activeResident.id,
+                errors[activeResident.id],
+              )}
+              className="space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)]"
+              noValidate
+              onSubmit={saveActiveResident}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <ResidentIcon plus={!savedResidentIds.includes(activeResident.id)} />
+                  <div>
+                    <p className="text-sm font-bold uppercase text-[#4c1d95]">
+                      Residente{" "}
+                      {residents.findIndex((resident) => resident.id === activeResident.id) + 1}
+                    </p>
+                    <h3 className="text-xl font-bold text-slate-950">
+                      {savedResidentIds.includes(activeResident.id)
+                        ? "Editar residente"
+                        : "Nuevo residente"}
+                    </h3>
+                  </div>
+                </div>
+                {canRemoveResident ? (
+                  <button
+                    className="text-sm font-bold text-rose-600"
+                    onClick={() => removeResident(activeResident.id)}
+                    type="button"
+                  >
+                    Eliminar
+                  </button>
+                ) : null}
+              </div>
+
+              <label className="block" htmlFor={`resident-${activeResident.id}-name`}>
+                <span className="text-sm font-bold text-slate-950">
+                  Nombre completo
+                </span>
+                <input
+                  aria-invalid={errors[activeResident.id]?.fullName ? "true" : "false"}
+                  aria-describedby={
+                    errors[activeResident.id]?.fullName
+                      ? getErrorId(activeResident.id, "fullName")
+                      : undefined
+                  }
+                  autoComplete="name"
+                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
+                  id={`resident-${activeResident.id}-name`}
+                  maxLength={NAME_MAX_LENGTH}
+                  name={`resident-${activeResident.id}-name`}
+                  onChange={(event) =>
+                    updateResident(activeResident.id, {
+                      fullName: event.target.value,
+                    })
+                  }
+                  placeholder="Ej. Ana Martínez"
+                  required
+                  type="text"
+                  value={activeResident.fullName}
+                />
+                {errors[activeResident.id]?.fullName ? (
+                  <p
+                    className="mt-2 text-sm leading-5 text-amber-700"
+                    id={getErrorId(activeResident.id, "fullName")}
+                  >
+                    {errors[activeResident.id]?.fullName}
+                  </p>
+                ) : null}
+              </label>
+
+              <label className="block" htmlFor={`resident-${activeResident.id}-relationship`}>
+                <span className="text-sm font-bold text-slate-950">
+                  Relación con la vivienda
+                </span>
+                <select
+                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
+                  id={`resident-${activeResident.id}-relationship`}
+                  name={`resident-${activeResident.id}-relationship`}
+                  onChange={(event) =>
+                    updateResident(activeResident.id, {
+                      relationship: event.target.value as Relationship,
+                    })
+                  }
+                  value={activeResident.relationship}
+                >
+                  <option value="">Selecciona una opción</option>
+                  {RELATIONSHIP_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              {activeResident.relationship === "owner" ? (
+                <label className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-700">
+                  <input
+                    checked={activeResident.isOwnerReference}
+                    className="mt-1 h-4 w-4 rounded border-slate-300 accent-[#5b21b6]"
+                    name={`resident-${activeResident.id}-owner-reference`}
+                    onChange={(event) =>
+                      setOwnerReference(activeResident.id, event.target.checked)
+                    }
+                    type="checkbox"
+                  />
+                  <span>Marcar como propietario de referencia de esta vivienda.</span>
+                </label>
+              ) : null}
+
+              {errors[activeResident.id]?.ownerReference ? (
+                <p
+                  className="text-sm leading-5 text-amber-700"
+                  id={getErrorId(activeResident.id, "ownerReference")}
+                >
+                  {errors[activeResident.id]?.ownerReference}
+                </p>
+              ) : null}
+
+              <label className="block" htmlFor={`resident-${activeResident.id}-phone`}>
+                <span className="text-sm font-bold text-slate-950">Teléfono</span>
+                <input
+                  aria-invalid={errors[activeResident.id]?.phone ? "true" : "false"}
+                  aria-describedby={
+                    errors[activeResident.id]?.phone
+                      ? getErrorId(activeResident.id, "phone")
+                      : undefined
+                  }
+                  autoComplete="tel"
+                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
+                  id={`resident-${activeResident.id}-phone`}
+                  inputMode="tel"
+                  maxLength={PHONE_MAX_LENGTH}
+                  name={`resident-${activeResident.id}-phone`}
+                  onChange={(event) =>
+                    updateResident(activeResident.id, {
+                      phone: event.target.value,
+                    })
+                  }
+                  placeholder="Ej. 5555-5555"
+                  type="tel"
+                  value={activeResident.phone}
+                />
+                {errors[activeResident.id]?.phone ? (
+                  <p
+                    className="mt-2 text-sm leading-5 text-amber-700"
+                    id={getErrorId(activeResident.id, "phone")}
+                  >
+                    {errors[activeResident.id]?.phone}
+                  </p>
+                ) : null}
+              </label>
+
+              <label className="block" htmlFor={`resident-${activeResident.id}-email`}>
+                <span className="text-sm font-bold text-slate-950">
+                  Correo electrónico
+                </span>
+                <input
+                  aria-invalid={errors[activeResident.id]?.email ? "true" : "false"}
+                  aria-describedby={
+                    errors[activeResident.id]?.email
+                      ? getErrorId(activeResident.id, "email")
+                      : undefined
+                  }
+                  autoComplete="email"
+                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
+                  id={`resident-${activeResident.id}-email`}
+                  inputMode="email"
+                  maxLength={EMAIL_MAX_LENGTH}
+                  name={`resident-${activeResident.id}-email`}
+                  onChange={(event) =>
+                    updateResident(activeResident.id, {
+                      email: event.target.value,
+                    })
+                  }
+                  placeholder="Ej. ana@correo.com"
+                  type="email"
+                  value={activeResident.email}
+                />
+                {errors[activeResident.id]?.email ? (
+                  <p
+                    className="mt-2 text-sm leading-5 text-amber-700"
+                    id={getErrorId(activeResident.id, "email")}
+                  >
+                    {errors[activeResident.id]?.email}
+                  </p>
+                ) : null}
+              </label>
+
+              {errors[activeResident.id]?.duplicate ? (
+                <p
+                  className="text-sm leading-5 text-amber-700"
+                  id={getErrorId(activeResident.id, "duplicate")}
+                >
+                  {errors[activeResident.id]?.duplicate}
+                </p>
+              ) : null}
+
+              <button
+                className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-base font-bold text-white shadow-[0_16px_34px_rgba(76,29,149,0.24)] transition hover:bg-[#5b21b6]"
+                type="submit"
+              >
+                Guardar residente
+              </button>
+            </form>
+          ) : null}
+
+          <div aria-live="polite">
+            {draftNotice ? (
+              <p className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+                {draftNotice}
+              </p>
+            ) : null}
+            {isAtLimit ? (
+              <p className="mt-3 rounded-2xl border border-slate-100 bg-white px-4 py-3 text-sm leading-6 text-slate-500 shadow-sm">
+                Has alcanzado el máximo de {residentLimit} residentes.
+              </p>
+            ) : null}
           </div>
 
-          <button
-            className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-violet-300/25 bg-violet-500/20 px-4 text-sm font-semibold text-white transition hover:border-violet-200/40 hover:bg-violet-500/28"
-            type="submit"
-          >
-            Revisar informacion
-          </button>
-        </form>
+          <div className="grid gap-3">
+            {savedResidents.length > 0 && !activeResident ? (
+              <button
+                className="inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-[#5b21b6] bg-white px-4 text-base font-bold text-[#4c1d95] transition hover:bg-[#f7f2ff]"
+                disabled={isAtLimit}
+                onClick={addResident}
+                type="button"
+              >
+                <svg aria-hidden="true" className="h-6 w-6" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d="M12 5v14m-7-7h14"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                </svg>
+                Agregar otro residente
+              </button>
+            ) : null}
+            <button
+              className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-base font-bold text-white shadow-[0_16px_34px_rgba(76,29,149,0.24)] transition hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={savedResidents.length < MIN_RESIDENTS || activeResidentId !== null}
+              onClick={handleReview}
+              type="button"
+            >
+              Continuar a revisión
+            </button>
+          </div>
+        </section>
       )}
     </div>
   );

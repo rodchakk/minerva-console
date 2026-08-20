@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { HouseholdDraftForm } from "./HouseholdDraftForm";
+import { RegistrationStepper } from "./PublicRegistrationShell";
 
 type LookupResult =
   | {
@@ -35,26 +36,34 @@ type LookupState =
     };
 
 const NEUTRAL_UNAVAILABLE_MESSAGE =
-  "No pudimos habilitar esta vivienda para el registro. Verifica el numero ingresado o comunicate con la administracion de tu residencial.";
+  "No pudimos habilitar esta vivienda para el registro. Verifica el número ingresado o comunícate con la administración de tu residencial.";
 const RATE_LIMITED_MESSAGE =
-  "Has realizado demasiados intentos. Espera un momento e intentalo nuevamente.";
+  "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente.";
 const SERVICE_UNAVAILABLE_MESSAGE =
   "No pudimos procesar la solicitud en este momento. Intentalo nuevamente.";
 
-export function UnitLookupForm({ slug }: { slug: string }) {
-  const [unitLabel, setUnitLabel] = useState("");
+export function UnitLookupForm({
+  intro,
+  slug,
+  unitLabelPrefix,
+}: {
+  intro?: ReactNode;
+  slug: string;
+  unitLabelPrefix: string;
+}) {
+  const [unitSuffix, setUnitSuffix] = useState("");
   const [state, setState] = useState<LookupState>({ status: "idle" });
 
   function resetLookup() {
-    setUnitLabel("");
+    setUnitSuffix("");
     setState({ status: "idle" });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const submittedUnitLabel = unitLabel.trim();
-    if (!submittedUnitLabel) {
+    const submittedUnitSuffix = unitSuffix.trim();
+    if (!submittedUnitSuffix) {
       setState({ status: "unavailable" });
       return;
     }
@@ -65,7 +74,7 @@ export function UnitLookupForm({ slug }: { slug: string }) {
       const response = await fetch(
         `/entry/register/${encodeURIComponent(slug)}/unit`,
         {
-          body: JSON.stringify({ unitLabel: submittedUnitLabel }),
+          body: JSON.stringify({ unitLabel: submittedUnitSuffix }),
           cache: "no-store",
           credentials: "same-origin",
           headers: {
@@ -128,52 +137,110 @@ export function UnitLookupForm({ slug }: { slug: string }) {
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-xl font-semibold text-white">
-          Identifica tu vivienda
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-          Ingresa el numero o nombre exacto de tu casa o vivienda para continuar.
-        </p>
-      </div>
+    <div className="space-y-6">
+      <RegistrationStepper currentStep={1} />
 
-      <form className="space-y-4" onSubmit={handleSubmit}>
-        <label className="block" htmlFor="unit-label">
-          <span className="text-sm font-semibold text-slate-100">
-            Numero de casa o vivienda
-          </span>
-          <input
-            autoComplete="off"
-            className="mt-2 h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-base text-white outline-none transition placeholder:text-slate-500 focus:border-violet-300/50 focus:bg-white/[0.06]"
+      {intro ? <div>{intro}</div> : null}
+
+      <section className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
+        <div className="border-b border-slate-100 px-5 py-6 sm:px-8">
+          <div className="flex gap-4">
+            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#5b21b6]">
+              <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24">
+                <path
+                  d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.9"
+                />
+              </svg>
+            </span>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-950">
+                Identifica tu vivienda
+              </h2>
+              <p className="mt-2 text-base leading-7 text-slate-600">
+                Ingresa solo el número o código de tu vivienda para continuar.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <form className="space-y-5 px-5 py-6 sm:px-8" onSubmit={handleSubmit}>
+          <label className="block" htmlFor="unit-label">
+            <span className="text-base font-bold text-slate-950">
+              Número de vivienda
+            </span>
+            <span className="mt-2 flex min-h-14 items-center rounded-2xl border border-[#5b21b6] bg-white px-4 shadow-[0_0_0_3px_rgba(91,33,182,0.08)] focus-within:border-[#4c1d95]">
+              <span className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center text-[#5b21b6]">
+                <svg aria-hidden="true" className="h-7 w-7" fill="none" viewBox="0 0 24 24">
+                  <path
+                    d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.9"
+                  />
+                </svg>
+              </span>
+              <span className="mr-2 text-base font-semibold text-slate-500">
+                {unitLabelPrefix}
+              </span>
+              <input
+                autoComplete="off"
+                className="h-12 min-w-0 flex-1 border-0 bg-transparent text-lg text-slate-950 outline-none placeholder:text-slate-400"
+                disabled={isChecking}
+                id="unit-label"
+                maxLength={40}
+                name="unitLabel"
+                onChange={(event) => setUnitSuffix(event.target.value)}
+                placeholder="Ej. 1 o 5B"
+                required
+                type="text"
+                value={unitSuffix}
+              />
+            </span>
+          </label>
+
+          <div className="flex gap-3 text-sm leading-6 text-slate-500">
+            <svg
+              aria-hidden="true"
+              className="mt-1 h-5 w-5 shrink-0"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <path
+                d="M12 17v-6m0-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                stroke="currentColor"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="1.8"
+              />
+            </svg>
+            <p>
+              No escribas &quot;{unitLabelPrefix}&quot;. Ejemplos:{" "}
+              <span className="font-bold text-[#5b21b6]">1, 2, 3, 5B, 6A</span>
+            </p>
+          </div>
+
+          <button
+            className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-base font-bold text-white shadow-[0_16px_34px_rgba(76,29,149,0.24)] transition hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isChecking}
-            id="unit-label"
-            maxLength={120}
-            name="unitLabel"
-            onChange={(event) => setUnitLabel(event.target.value)}
-            placeholder="Ej. Casa 24"
-            required
-            type="text"
-            value={unitLabel}
-          />
-        </label>
-
-        <button
-          className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-violet-300/25 bg-violet-500/20 px-4 text-sm font-semibold text-white transition hover:border-violet-200/40 hover:bg-violet-500/28 disabled:cursor-not-allowed disabled:opacity-60"
-          disabled={isChecking}
-          type="submit"
-        >
-          {isChecking ? "Verificando..." : "Buscar vivienda"}
-        </button>
-      </form>
+            type="submit"
+          >
+            {isChecking ? "Verificando..." : "Continuar"}
+          </button>
+        </form>
+      </section>
 
       <div aria-live="polite">
         {state.status === "unavailable" ? (
-          <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-            <p className="text-sm font-semibold text-amber-100">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+            <p className="text-sm font-semibold text-amber-950">
               Vivienda no habilitada
             </p>
-            <p className="mt-2 text-sm leading-6 text-amber-50/80">
+            <p className="mt-2 text-sm leading-6 text-amber-900">
               {NEUTRAL_UNAVAILABLE_MESSAGE}
             </p>
           </div>
@@ -181,11 +248,11 @@ export function UnitLookupForm({ slug }: { slug: string }) {
 
         {state.status === "rate_limited" ||
         state.status === "service_unavailable" ? (
-          <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-            <p className="text-sm font-semibold text-amber-100">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+            <p className="text-sm font-semibold text-amber-950">
               No pudimos verificar la vivienda
             </p>
-            <p className="mt-2 text-sm leading-6 text-amber-50/80">
+            <p className="mt-2 text-sm leading-6 text-amber-900">
               {state.status === "rate_limited"
                 ? RATE_LIMITED_MESSAGE
                 : SERVICE_UNAVAILABLE_MESSAGE}
@@ -194,11 +261,11 @@ export function UnitLookupForm({ slug }: { slug: string }) {
         ) : null}
 
         {state.status === "error" ? (
-          <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-            <p className="text-sm font-semibold text-amber-100">
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+            <p className="text-sm font-semibold text-amber-950">
               No pudimos verificar la vivienda
             </p>
-            <p className="mt-2 text-sm leading-6 text-amber-50/80">
+            <p className="mt-2 text-sm leading-6 text-amber-900">
               {NEUTRAL_UNAVAILABLE_MESSAGE}
             </p>
           </div>
