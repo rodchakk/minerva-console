@@ -23,12 +23,17 @@ const progressiveSql = read(
 const runtimeHotfixSql = read(
   "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
 );
+const runtimeHotfix002Sql = read(
+  "supabase/migrations/20260821074200_entry_onb_012_fix_user_role_enum_classifier.sql",
+);
 const actions = read("features/entry/communityRegistration/review/actions.ts");
 
 const classifierPattern =
   /create or replace function public\._cr_classify_unit_conversion_v1[\s\S]*?\$function\$;/;
 const progressiveClassifier = progressiveSql.match(classifierPattern)?.[0] ?? "";
 const hotfixClassifier = runtimeHotfixSql.match(classifierPattern)?.[0] ?? "";
+const hotfix002Classifier =
+  runtimeHotfix002Sql.match(classifierPattern)?.[0] ?? "";
 const conversionFunction =
   progressiveSql.match(
     /create or replace function public\.convert_community_registration_unit_to_activation_v1[\s\S]*?\$function\$;/,
@@ -40,8 +45,10 @@ assert(
   "runtime hotfix includes exactly the classifier replacement",
   hotfixClassifier.length > 0 &&
     runtimeHotfixSql.trim().endsWith(hotfixClassifier.trim()) &&
+    hotfix002Classifier.length > 0 &&
+    runtimeHotfix002Sql.trim().endsWith(hotfix002Classifier.trim()) &&
     !/record_community_registration_unit_external_approval_v1|convert_community_registration_unit_to_activation_v1/.test(
-      runtimeHotfixSql,
+      runtimeHotfixSql + runtimeHotfix002Sql,
     ),
 );
 
@@ -49,6 +56,7 @@ assert(
   "classifier prohibits UUID aggregate candidate selection",
   !uuidAggregatePattern.test(progressiveClassifier) &&
     !uuidAggregatePattern.test(hotfixClassifier) &&
+    !uuidAggregatePattern.test(hotfix002Classifier) &&
     !/\b(min|max)\s*\(\s*q\.id\s*\)/i.test(progressiveSql),
 );
 
@@ -64,7 +72,23 @@ assert(
       progressiveClassifier,
     ) &&
     hotfixClassifier.includes("with matching_queue as") &&
-    hotfixClassifier.includes("queue_candidate as"),
+    hotfixClassifier.includes("queue_candidate as") &&
+    hotfix002Classifier.includes("with matching_queue as") &&
+    hotfix002Classifier.includes("queue_candidate as"),
+);
+
+assert(
+  "classifier preserves user_role enum-safe resident comparison",
+  !/cm\.role\s*=\s*'resident'/.test(progressiveClassifier) &&
+    !/cm\.role\s*=\s*'resident'/.test(hotfixClassifier) &&
+    !/cm\.role\s*=\s*'resident'/.test(hotfix002Classifier) &&
+    /cm\.role\s*=\s*'RESIDENT'::public\.user_role/.test(
+      progressiveClassifier,
+    ) &&
+    /cm\.role\s*=\s*'RESIDENT'::public\.user_role/.test(hotfixClassifier) &&
+    /cm\.role\s*=\s*'RESIDENT'::public\.user_role/.test(
+      hotfix002Classifier,
+    ),
 );
 
 assert(

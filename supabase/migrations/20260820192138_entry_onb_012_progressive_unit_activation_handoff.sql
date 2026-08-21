@@ -1080,7 +1080,7 @@ begin
           where coalesce(p.community_id, cm.community_id) = v_campaign.community_id
             and coalesce(p.is_active, true)
             and coalesce(cm.is_active, false)
-            and cm.role = 'resident'
+            and cm.role = 'RESIDENT'::public.user_role
             and coalesce(hr.is_active, false)
             and hr.house_id = v_unit.house_id
         )::integer,

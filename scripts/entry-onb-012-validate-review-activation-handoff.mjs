@@ -46,6 +46,9 @@ const progressiveSql = read(
 const runtimeHotfixSql = read(
   "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
 );
+const runtimeHotfix002Sql = read(
+  "supabase/migrations/20260821074200_entry_onb_012_fix_user_role_enum_classifier.sql",
+);
 
 assert(
   "ONB-012 scope is limited to review handoff UI/action and validator",
@@ -59,7 +62,9 @@ assert(
       name ===
         "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql" ||
       name ===
-        "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
+        "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql" ||
+      name ===
+        "supabase/migrations/20260821074200_entry_onb_012_fix_user_role_enum_classifier.sql",
   ),
 );
 
@@ -72,7 +77,9 @@ assert(
         name ===
           "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql" ||
         name ===
-          "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
+          "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql" ||
+        name ===
+          "supabase/migrations/20260821074200_entry_onb_012_fix_user_role_enum_classifier.sql",
     ),
 );
 
@@ -238,10 +245,17 @@ assert(
 );
 
 assert(
-  "runtime hotfix is the same focused classifier replacement",
+  "progressive classifier keeps user_role enum-safe resident comparison",
+  !/cm\.role\s*=\s*'resident'/.test(classifierFunction) &&
+    /cm\.role\s*=\s*'RESIDENT'::public\.user_role/.test(classifierFunction),
+);
+
+assert(
+  "runtime hotfixes are the same focused classifier replacement",
   runtimeHotfixSql.trim().endsWith(classifierFunction.trim()) &&
+    runtimeHotfix002Sql.trim().endsWith(classifierFunction.trim()) &&
     !/record_community_registration_unit_external_approval_v1|convert_community_registration_unit_to_activation_v1/.test(
-      runtimeHotfixSql,
+      runtimeHotfixSql + runtimeHotfix002Sql,
     ),
 );
 

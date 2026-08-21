@@ -1,5 +1,5 @@
-﻿-- ENTRY-ONB-012-RUNTIME-HOTFIX-001:
--- Repair UUID-safe queue candidate selection in the progressive conversion classifier.
+﻿-- ENTRY-ONB-012 runtime hotfix 002: preserve user_role enum-safe classifier comparison.
+-- Repairs environments where the progressive classifier was applied with cm.role = 'resident'.
 
 create or replace function public._cr_classify_unit_conversion_v1(
   p_campaign_unit_id uuid
@@ -473,4 +473,3 @@ begin
   );
 end;
 $function$;
-
