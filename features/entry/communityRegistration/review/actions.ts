@@ -21,6 +21,7 @@ export type CommunityRegistrationReviewActionResult =
         blockingCount?: number;
         convertedCount?: number;
         correctionUrl?: string;
+        diagnosticCode?: string;
         expiresAt?: string;
         kind:
           | "start_review"
@@ -439,13 +440,19 @@ export async function confirmAndPrepareCommunityRegistrationActivation(
   );
 
   if (conversion.error) {
+    const diagnosticCode = "ENTRY_ONB_012_CONVERSION_RPC_FAILED";
+    console.error(diagnosticCode, {
+      dbCode: conversion.error.code ?? "unknown",
+      rpc: "convert_community_registration_unit_to_activation_v1",
+    });
     revalidateReviewPaths(communityId);
     return {
       data: {
         activationQueueUrl,
+        diagnosticCode,
         kind: "confirm_prepare_activation",
         message:
-          "External Patronato approval is recorded for this unit, but Activation Queue preparation did not complete. Refresh and retry after reviewing the conversion status.",
+          "External Patronato approval is recorded for this unit, but Activation Queue preparation did not complete. Refresh and retry after reviewing the conversion status. Reference code: ENTRY_ONB_012_CONVERSION_RPC_FAILED.",
         status: "confirmed",
         unitLabel,
       },

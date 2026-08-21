@@ -952,36 +952,51 @@ begin
     end if;
 
     if not v_blocking and v_related_queue_id is null then
-      select count(*)::integer,
-             min(q.id),
-             min(q.status)
+      with matching_queue as (
+        select q.id, q.status
+          from public.resident_activation_queue q
+         where q.community_id = v_campaign.community_id
+           and q.status in ('pending', 'invited', 'pin_generated', 'activated')
+           and (
+             q.house_id = v_unit.house_id
+             or (
+               q.house_id is null
+               and public.normalize_unit_label(q.unit_label) = public.normalize_unit_label(v_unit.unit_label_snapshot)
+             )
+           )
+           and public._cr_conversion_normalize_name_v1(q.resident_name) = v_name
+           and (
+             (v_email is not null and public._cr_conversion_normalize_email_v1(q.email) = v_email)
+             or (
+               v_email is null
+               and v_phone is not null
+               and q.email is null
+               and public._cr_conversion_normalize_phone_v1(q.phone) = v_phone
+             )
+             or (
+               v_email is null
+               and v_phone is null
+               and q.email is null
+               and q.phone is null
+             )
+           )
+      ),
+      queue_count as (
+        select count(*)::integer as value
+          from matching_queue
+      ),
+      queue_candidate as (
+        select id, status
+          from matching_queue
+         order by id
+         limit 1
+      )
+      select queue_count.value,
+             queue_candidate.id,
+             queue_candidate.status
         into v_queue_count, v_related_queue_id, v_related_queue_status
-        from public.resident_activation_queue q
-       where q.community_id = v_campaign.community_id
-         and q.status in ('pending', 'invited', 'pin_generated', 'activated')
-         and (
-           q.house_id = v_unit.house_id
-           or (
-             q.house_id is null
-             and public.normalize_unit_label(q.unit_label) = public.normalize_unit_label(v_unit.unit_label_snapshot)
-           )
-         )
-         and public._cr_conversion_normalize_name_v1(q.resident_name) = v_name
-         and (
-           (v_email is not null and public._cr_conversion_normalize_email_v1(q.email) = v_email)
-           or (
-             v_email is null
-             and v_phone is not null
-             and q.email is null
-             and public._cr_conversion_normalize_phone_v1(q.phone) = v_phone
-           )
-           or (
-             v_email is null
-             and v_phone is null
-             and q.email is null
-             and q.phone is null
-           )
-         );
+        from queue_count
+        left join queue_candidate on true;
 
       if v_queue_count > 1 then
         v_category := 'queue_conflict';

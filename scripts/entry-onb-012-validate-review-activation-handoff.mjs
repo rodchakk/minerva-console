@@ -43,6 +43,9 @@ const conversionSql = read(
 const progressiveSql = read(
   "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql",
 );
+const runtimeHotfixSql = read(
+  "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
+);
 
 assert(
   "ONB-012 scope is limited to review handoff UI/action and validator",
@@ -52,19 +55,24 @@ assert(
       name === "features/entry/communityRegistration/review/ReviewWorkspace.tsx" ||
       name === "scripts/entry-onb-008-validate-review-ui.mjs" ||
       name === "scripts/entry-onb-012-validate-review-activation-handoff.mjs" ||
+      name === "scripts/entry-onb-012-validate-runtime-hotfix.mjs" ||
       name ===
-        "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql",
+        "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql" ||
+      name ===
+        "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
   ),
 );
 
 assert(
-  "ONB-012 adds only the reviewed forward migration",
+  "ONB-012 adds only the reviewed forward migrations",
   diffNames
     .filter((name) => name.startsWith("supabase/migrations/"))
     .every(
       (name) =>
         name ===
-        "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql",
+          "supabase/migrations/20260820192138_entry_onb_012_progressive_unit_activation_handoff.sql" ||
+        name ===
+          "supabase/migrations/20260821070500_entry_onb_012_fix_uuid_conversion_classifier.sql",
     ),
 );
 
@@ -145,7 +153,9 @@ assert(
 assert(
   "partial conversion outcome is represented honestly",
   /External Patronato approval is recorded for this unit/.test(actions) &&
-    /Activation Queue preparation did not complete/.test(actions),
+    /Activation Queue preparation did not complete/.test(actions) &&
+    /ENTRY_ONB_012_CONVERSION_RPC_FAILED/.test(actions) &&
+    /console\.error\(diagnosticCode/.test(actions),
 );
 
 assert(
@@ -208,6 +218,31 @@ assert(
     ) &&
     !/mark_community_registration_campaign_processed_v1\(/.test(actions) &&
     !/confirm_community_registration_campaign_v1\(/.test(actions),
+);
+
+const classifierFunction =
+  progressiveSql.match(
+    /create or replace function public\._cr_classify_unit_conversion_v1[\s\S]*?\$function\$;/,
+  )?.[0] ?? "";
+
+assert(
+  "progressive classifier keeps UUID-safe queue candidate selection",
+  /v_campaign\.status not in \('open', 'review', 'confirmed'\)/.test(
+    classifierFunction,
+  ) &&
+    /with matching_queue as/.test(classifierFunction) &&
+    /queue_count as/.test(classifierFunction) &&
+    /queue_candidate as/.test(classifierFunction) &&
+    /order by id[\s\S]*limit 1/.test(classifierFunction) &&
+    !/\b(min|max)\s*\(\s*q\.id\s*\)/i.test(classifierFunction),
+);
+
+assert(
+  "runtime hotfix is the same focused classifier replacement",
+  runtimeHotfixSql.trim().endsWith(classifierFunction.trim()) &&
+    !/record_community_registration_unit_external_approval_v1|convert_community_registration_unit_to_activation_v1/.test(
+      runtimeHotfixSql,
+    ),
 );
 
 assert(
