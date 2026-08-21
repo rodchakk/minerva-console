@@ -87,7 +87,10 @@ assert(
   "UI deliberately separates campaign start-review from unit decisions",
   /Start review/.test(workspace) &&
     /campaignStatus === "open"/.test(workspace) &&
-    /reviewActive && selectedStatus === "submitted"/.test(workspace) &&
+    /reviewCapable = \["open", "review"\]\.includes\(campaignStatus\)/.test(
+      workspace,
+    ) &&
+    /reviewCapable && selectedStatus === "submitted"/.test(workspace) &&
     /Mark reviewed/.test(workspace),
 );
 
