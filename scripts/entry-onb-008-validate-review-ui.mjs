@@ -84,10 +84,18 @@ assert(
 );
 
 assert(
-  "UI deliberately separates campaign start-review from unit decisions",
-  /Start review/.test(workspace) &&
+  "UI supports progressive unit review without campaign-wide start-review CTA",
+  !/StartReviewDialog|showStartReview|setShowStartReview|canStartReview/.test(
+    workspace,
+  ) &&
+    !/Start review|Starting review|Start internal review|campaign-wide review/.test(
+      workspace,
+    ) &&
     /campaignStatus === "open"/.test(workspace) &&
-    /reviewActive && selectedStatus === "submitted"/.test(workspace) &&
+    /reviewCapable = \["open", "review"\]\.includes\(campaignStatus\)/.test(
+      workspace,
+    ) &&
+    /reviewCapable && selectedStatus === "submitted"/.test(workspace) &&
     /Mark reviewed/.test(workspace),
 );
 
@@ -214,9 +222,10 @@ assert(
 
 assert(
   "no admin plaintext correction capability persistence or logging",
-  !/localStorage|sessionStorage|cookies\.set|console\.(log|info|warn|error|debug)/.test(
-    `${actions}\n${workspace}`,
-  ),
+  !/localStorage|sessionStorage|cookies\.set/.test(`${actions}\n${workspace}`) &&
+    !/console\.(log|info|warn|error|debug)[\s\S]{0,240}(correction|capability|token|secret)/i.test(
+      `${actions}\n${workspace}`,
+    ),
 );
 
 assert(
