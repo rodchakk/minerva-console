@@ -9,7 +9,6 @@ import {
   createOrReplaceCommunityRegistrationCorrectionLink,
   markCommunityRegistrationUnitReviewed,
   requestCommunityRegistrationCorrection,
-  startCommunityRegistrationReview,
   type CommunityRegistrationReviewActionResult,
 } from "@/features/entry/communityRegistration/review/actions";
 import type {
@@ -96,78 +95,6 @@ function CopyButton({ url }: { url: string }) {
     <Button type="button" onClick={copy}>
       {copied ? "Copied" : "Copy correction link"}
     </Button>
-  );
-}
-
-function StartReviewDialog({
-  campaign,
-  communityId,
-  onClose,
-}: {
-  campaign: CommunityRegistrationReviewCampaign;
-  communityId: string;
-  onClose: () => void;
-}) {
-  const [state, formAction, pending] = useActionState(
-    startCommunityRegistrationReview,
-    initialActionState,
-  );
-
-  if (state?.success) {
-    return (
-      <Overlay>
-        <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
-          <Badge tone="success">Review active</Badge>
-          <h3 className="mt-4 text-xl font-semibold text-white">Review started</h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-            Public registration is no longer accepting new household submissions.
-            You can now review submitted units.
-          </p>
-          <div className="mt-6 flex justify-end">
-            <Button type="button" onClick={onClose}>
-              Continue review
-            </Button>
-          </div>
-        </div>
-      </Overlay>
-    );
-  }
-
-  return (
-    <Overlay>
-      <form
-        action={formAction}
-        className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-          Resident registration
-        </p>
-        <h3 className="mt-2 text-xl font-semibold text-white">Start internal review?</h3>
-        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-          This moves <strong className="text-white">{campaign.publicTitle}</strong> from
-          open registration into review. New public household submissions stop,
-          while authorized correction links can still be used.
-        </p>
-
-        <input type="hidden" name="campaign_id" value={campaign.id} />
-        <input type="hidden" name="community_id" value={communityId} />
-
-        {state && !state.success ? (
-          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-            {state.error}
-          </p>
-        ) : null}
-
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Starting review..." : "Start review"}
-          </Button>
-        </div>
-      </form>
-    </Overlay>
   );
 }
 
@@ -552,7 +479,6 @@ export function ReviewWorkspace({
   summary,
   units,
 }: ReviewWorkspaceProps) {
-  const [showStartReview, setShowStartReview] = useState(false);
   const [showCorrectionRequest, setShowCorrectionRequest] = useState(false);
   const [correctionLinkMode, setCorrectionLinkMode] = useState<
     "create" | "replace" | null
@@ -565,7 +491,6 @@ export function ReviewWorkspace({
 
   const campaignStatus = campaign.status.trim().toLowerCase();
   const reviewCapable = ["open", "review"].includes(campaignStatus);
-  const canStartReview = campaignStatus === "open" && summary.submitted > 0;
   const selectedStatus = selectedUnit?.status.trim().toLowerCase() ?? "";
   const canMarkReviewed = reviewCapable && selectedStatus === "submitted";
   const canRequestCorrection =
@@ -618,25 +543,10 @@ export function ReviewWorkspace({
         </div>
 
         {campaignStatus === "open" ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-            <p className="max-w-2xl text-sm leading-6 text-amber-50/90">
-              Registration is still open. You can review submitted units and
-              prepare approved households while other unregistered units remain
-              eligible to submit.
-            </p>
-            <Button
-              type="button"
-              onClick={() => setShowStartReview(true)}
-              disabled={!canStartReview || Boolean(loadError)}
-              title={
-                summary.submitted === 0
-                  ? "At least one submitted unit is required before review starts."
-                  : "Stop new registrations and enter campaign-wide review."
-              }
-            >
-              Start review
-            </Button>
-          </div>
+          <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-amber-50/90">
+            Registration is open. Submitted households can be reviewed and
+            prepared for activation while other units continue registering.
+          </p>
         ) : null}
 
         {campaignStatus === "paused" ? (
@@ -781,7 +691,7 @@ export function ReviewWorkspace({
 
               {!reviewCapable && !isPreparedForActivation && !canConfirmAndPrepare ? (
                 <p className="mt-5 text-sm leading-6 text-[var(--text-muted)]">
-                  Review actions are read-only until the campaign enters review.
+                  Review actions are read-only until the campaign can accept review.
                 </p>
               ) : null}
 
@@ -845,14 +755,6 @@ export function ReviewWorkspace({
           )}
         </section>
       </div>
-
-      {showStartReview ? (
-        <StartReviewDialog
-          campaign={campaign}
-          communityId={communityId}
-          onClose={() => setShowStartReview(false)}
-        />
-      ) : null}
 
       {showCorrectionRequest && selectedUnit && selectedUnitId ? (
         <CorrectionRequestDialog

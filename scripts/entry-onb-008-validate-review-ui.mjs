@@ -84,8 +84,13 @@ assert(
 );
 
 assert(
-  "UI deliberately separates campaign start-review from unit decisions",
-  /Start review/.test(workspace) &&
+  "UI supports progressive unit review without campaign-wide start-review CTA",
+  !/StartReviewDialog|showStartReview|setShowStartReview|canStartReview/.test(
+    workspace,
+  ) &&
+    !/Start review|Starting review|Start internal review|campaign-wide review/.test(
+      workspace,
+    ) &&
     /campaignStatus === "open"/.test(workspace) &&
     /reviewCapable = \["open", "review"\]\.includes\(campaignStatus\)/.test(
       workspace,

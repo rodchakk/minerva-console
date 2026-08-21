@@ -34,6 +34,9 @@ const workspace = read(
 const backendSql = read(
   "supabase/migrations/20260806233000_create_entry_community_registration_backend_v1.sql",
 );
+const reviewSql = read(
+  "supabase/migrations/20260806234000_create_entry_community_registration_review_v1.sql",
+);
 const conversionSql = read(
   "supabase/migrations/20260806235000_create_entry_community_registration_conversion_v1.sql",
 );
@@ -87,6 +90,31 @@ assert(
     !/authorize_incomplete_campaign_confirmation_v1/.test(actions) &&
     !/confirm_community_registration_campaign_v1/.test(actions) &&
     !/mark_community_registration_campaign_processed_v1/.test(actions),
+);
+
+assert(
+  "progressive review never requires campaign-wide start review",
+  /const reviewCapable = \["open", "review"\]\.includes\(campaignStatus\)/.test(
+    workspace,
+  ) &&
+    /const canMarkReviewed = reviewCapable && selectedStatus === "submitted"/.test(
+      workspace,
+    ) &&
+    !/startCommunityRegistrationReview/.test(workspace) &&
+    !/start_community_registration_review_v1/.test(workspace),
+);
+
+assert(
+  "normal Review Workspace exposes no accidental campaign-wide review start CTA",
+  !/StartReviewDialog|showStartReview|setShowStartReview|canStartReview/.test(
+    workspace,
+  ) &&
+    !/Start review|Starting review|Start internal review|campaign-wide review/.test(
+      workspace,
+    ) &&
+    /Registration is open\.[\s\S]*Submitted households can be reviewed[\s\S]*other units continue registering/.test(
+      workspace,
+    ),
 );
 
 assert(
@@ -152,6 +180,24 @@ assert(
     !/create_community_registration_patronato_access_v1/.test(progressiveSql),
 );
 
+const externalApprovalFunction =
+  progressiveSql.match(
+    /create or replace function public\.record_community_registration_unit_external_approval_v1[\s\S]*?\$function\$;/,
+  )?.[0] ?? "";
+const conversionFunction =
+  progressiveSql.match(
+    /create or replace function public\.convert_community_registration_unit_to_activation_v1[\s\S]*?\$function\$;/,
+  )?.[0] ?? "";
+
+assert(
+  "101 progressive processing does not change campaign status",
+  /campaign_status_preserved/.test(externalApprovalFunction) &&
+    !/update\s+public\.community_registration_campaigns/i.test(
+      externalApprovalFunction,
+    ) &&
+    !/update\s+public\.community_registration_campaigns/i.test(conversionFunction),
+);
+
 assert(
   "progressive conversion no longer requires final campaign confirmation",
   /create or replace function public\._cr_classify_unit_conversion_v1[\s\S]*v_campaign\.status not in \('open', 'review', 'confirmed'\)/.test(
@@ -192,6 +238,20 @@ assert(
     ) &&
     /version_number > v_submission\.version_number/.test(progressiveSql) &&
     /token_type = 'resident_edit'[\s\S]*status = 'active'/.test(progressiveSql),
+);
+
+assert(
+  "legacy campaign closeout remains confirmed-unit based follow-up after all units processed",
+  /create or replace function public\.confirm_community_registration_campaign_v1/.test(
+    reviewSql,
+  ) &&
+    /count\(\*\) filter \(where status = 'confirmed'\)::integer/.test(
+      reviewSql,
+    ) &&
+    /if v_confirmed_units = 0 then[\s\S]*ENTRY_CR_REVIEW_NOT_READY/.test(
+      reviewSql,
+    ) &&
+    !/confirm_community_registration_campaign_v1/.test(progressiveSql),
 );
 
 assert(
