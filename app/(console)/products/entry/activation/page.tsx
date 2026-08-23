@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
+import { ActivationQueueReviewAcknowledge } from "@/features/entry/activation/ActivationQueueReviewAcknowledge";
 import { ActivationQueueTable } from "@/features/entry/activation/ActivationQueueTable";
 import { getActivationQueuePageData } from "@/features/entry/activation/actions";
 import { LaunchCampaignButton } from "@/features/entry/onboardingCampaigns/LaunchCampaignButton";
@@ -167,6 +168,14 @@ export default async function ActivationQueuePage(
                 </div>
               </div>
             </section>
+          ) : null}
+
+          {data.progress?.activationQueueReviewRequired ? (
+            <ActivationQueueReviewAcknowledge
+              communityId={selectedCommunityId}
+              pendingCount={data.progress.activationPendingCount}
+              reviewedAt={data.progress.activationQueueReviewedAt}
+            />
           ) : null}
 
           {data.rows.length > 0 ? (

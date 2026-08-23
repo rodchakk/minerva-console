@@ -375,13 +375,25 @@ export function StaffOperatorsPanel({
                 </label>
 
                 <label className="block text-sm font-semibold text-white">
-                  Email
+                  Email optional
                   <input
                     name="email"
                     type="email"
                     className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
                     placeholder="guardia@community.com"
                   />
+                </label>
+
+                <label className="block text-sm font-semibold text-white">
+                  Username
+                  <input
+                    name="username"
+                    className="mt-2 w-full rounded-2xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition focus:border-[var(--primary)]"
+                    placeholder="guardia_principal"
+                  />
+                  <span className="mt-2 block text-xs leading-5 text-[var(--text-muted)]">
+                    Required when no email is provided. This is what the guard uses to sign in.
+                  </span>
                 </label>
 
                 <label className="block text-sm font-semibold text-white">

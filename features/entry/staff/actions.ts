@@ -33,11 +33,37 @@ function getString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function isSyntheticEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+
+  return (
+    !normalized ||
+    normalized.endsWith("@entry.local") ||
+    normalized.endsWith("@entry.internal")
+  );
+}
+
+function normalizeGuardUsername(value: string) {
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 32);
+}
+
+function buildGuardSyntheticEmail(username: string) {
+  return `guard-${username}@entry.internal`;
+}
+
 function getPreferredContact(record: Record<string, unknown>) {
   const email = coerceString(record.email).trim();
   const username = coerceString(record.username).trim();
 
-  if (email && !email.toLowerCase().endsWith("@entry.local")) {
+  if (email && !isSyntheticEmail(email)) {
     return email;
   }
 
@@ -83,8 +109,43 @@ export async function getCommunityStaffPageData(
     };
   }
 
-  const users = data
-    .map((item) => mapStaffUser(item as Record<string, unknown>))
+  const userRecords = data.map((item) => item as Record<string, unknown>);
+  const userIds = Array.from(
+    new Set(
+      userRecords
+        .map((item) => coerceString(item.user_id) || coerceString(item.id))
+        .filter(Boolean),
+    ),
+  );
+  const { data: profilesData } =
+    userIds.length > 0
+      ? await supabase
+          .from("profiles")
+          .select("user_id,username,synthetic_email")
+          .eq("community_id", communityId)
+          .in("user_id", userIds)
+      : { data: [] as Array<Record<string, unknown>> };
+  const profilesByUserId = new Map(
+    (Array.isArray(profilesData) ? profilesData : []).map((profile) => [
+      coerceString(profile.user_id),
+      profile,
+    ]),
+  );
+
+  const users = userRecords
+    .map((item) => {
+      const userId = coerceString(item.user_id) || coerceString(item.id);
+      const profile = profilesByUserId.get(userId);
+
+      return mapStaffUser({
+        ...item,
+        email: isSyntheticEmail(coerceString(item.email))
+          ? coerceString(profile?.synthetic_email) || coerceString(item.email)
+          : coerceString(item.email),
+        user_id: userId,
+        username: coerceString(profile?.username) || coerceString(item.username),
+      });
+    })
     .filter((item) => item.id && item.isActive);
 
   return {
@@ -191,15 +252,27 @@ export async function createGuardAction(
   const communityId = getString(formData, "communityId");
   const fullName = getString(formData, "fullName");
   const email = getString(formData, "email").toLowerCase();
+  const username = normalizeGuardUsername(getString(formData, "username"));
   const phone = getString(formData, "phone");
   const description = getString(formData, "description");
   const password = getString(formData, "password");
   const accountType = getString(formData, "accountType") || "individual";
+  const isUsernameOnlyGuard = !email;
+  const authEmail = isUsernameOnlyGuard ? buildGuardSyntheticEmail(username) : email;
 
-  if (!communityId || !fullName || !email || !password) {
+  if (!communityId || !fullName || !password || (!email && !username)) {
     return {
       ok: false,
-      message: "Guard name, email and temporary password are required.",
+      message:
+        "Guard name, temporary password, and either email or username are required.",
+    };
+  }
+
+  if (isUsernameOnlyGuard && username.length < 3) {
+    return {
+      ok: false,
+      message:
+        "Username must be at least 3 characters after normalization. Use letters, numbers, or underscores.",
     };
   }
 
@@ -224,14 +297,37 @@ export async function createGuardAction(
     };
   }
 
+  if (isUsernameOnlyGuard) {
+    const { data: existingUsername, error: usernameLookupError } = await adminSupabase
+      .from("profiles")
+      .select("user_id")
+      .ilike("username", username)
+      .limit(1);
+
+    if (usernameLookupError) {
+      return {
+        ok: false,
+        message: `Could not validate username uniqueness: ${usernameLookupError.message}`,
+      };
+    }
+
+    if (Array.isArray(existingUsername) && existingUsername.length > 0) {
+      return {
+        ok: false,
+        message: `Username "${username}" is already in use. Choose another guard username.`,
+      };
+    }
+  }
+
   const { data: createdUser, error: createError } =
     await adminSupabase.auth.admin.createUser({
-      email,
+      email: authEmail,
       password,
       email_confirm: true,
       user_metadata: {
         full_name: fullName,
         entry_role: "GUARD",
+        entry_username: isUsernameOnlyGuard ? username : null,
         guard_account_type: accountType,
         guard_description: description || null,
       },
@@ -255,6 +351,18 @@ export async function createGuardAction(
   });
 
   if (setupError) {
+    await Promise.allSettled([
+      adminSupabase
+        .from("community_members")
+        .delete()
+        .eq("user_id", createdUser.user.id)
+        .eq("community_id", communityId),
+      adminSupabase
+        .from("profiles")
+        .delete()
+        .eq("user_id", createdUser.user.id)
+        .eq("community_id", communityId),
+    ]);
     const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(
       createdUser.user.id,
       true,
@@ -268,13 +376,55 @@ export async function createGuardAction(
     };
   }
 
+  if (isUsernameOnlyGuard) {
+    const syntheticEmail = buildGuardSyntheticEmail(username);
+    const { error: profileUpdateError } = await adminSupabase
+      .from("profiles")
+      .update({
+        auth_type: "username",
+        synthetic_email: syntheticEmail,
+        username,
+        username_login_enabled: true,
+      })
+      .eq("user_id", createdUser.user.id)
+      .eq("community_id", communityId);
+
+    if (profileUpdateError) {
+      await Promise.allSettled([
+        adminSupabase
+          .from("community_members")
+          .delete()
+          .eq("user_id", createdUser.user.id)
+          .eq("community_id", communityId),
+        adminSupabase
+          .from("profiles")
+          .delete()
+          .eq("user_id", createdUser.user.id)
+          .eq("community_id", communityId),
+      ]);
+      const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(
+        createdUser.user.id,
+        true,
+      );
+
+      return {
+        ok: false,
+        message: cleanupError
+          ? `${profileUpdateError.message} Cleanup also failed for auth user ${createdUser.user.id}: ${cleanupError.message}`
+          : `${profileUpdateError.message} The newly created auth user was deleted.`,
+      };
+    }
+  }
+
   revalidatePath(`/products/entry/communities/${communityId}`);
   revalidatePath(`/products/entry/communities/${communityId}/staff`);
+  revalidatePath(`/products/entry/communities/${communityId}/users`);
 
   return {
     ok: true,
-    message:
-      accountType === "shared"
+    message: isUsernameOnlyGuard
+      ? `Guard account created successfully. Username credential: ${username}.`
+      : accountType === "shared"
         ? "Shared guard account created successfully."
         : "Guard account created successfully.",
   };

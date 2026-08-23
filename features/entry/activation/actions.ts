@@ -54,6 +54,9 @@ export type ActivationQueueRow = {
 };
 
 export type CommunityOnboardingProgress = {
+  activationPendingCount: number;
+  activationQueueReviewRequired: boolean;
+  activationQueueReviewedAt: string;
   completedTasks: number;
   nextStepKey: string;
   onboardingStatus: string;
@@ -95,6 +98,59 @@ function extractFirstRecord(value: unknown) {
   return value && typeof value === "object"
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function normalizeJsonObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function getActivationQueueTask(record: Record<string, unknown>) {
+  if (!Array.isArray(record.tasks)) {
+    return {};
+  }
+
+  return (
+    record.tasks
+      .map(normalizeJsonObject)
+      .find((task) =>
+        ["activation_queue", "review_activation_queue"].includes(
+          coerceString(task.key),
+        ),
+      ) ?? {}
+  );
+}
+
+function getActivationPendingCount(record: Record<string, unknown>) {
+  const metrics = normalizeJsonObject(record.metrics);
+  const task = getActivationQueueTask(record);
+  const summary = normalizeJsonObject(task.summary);
+  const candidates = [
+    record.activation_queue_pending,
+    record.activation_queue_pending_count,
+    record.pending_activation_count,
+    record.pending_activations,
+    metrics.activation_queue_pending,
+    metrics.activation_queue_pending_count,
+    metrics.pending_activation_count,
+    metrics.pending_activations,
+    summary.pending_activations,
+    summary.pending_count,
+    summary.pending,
+    summary.activation_queue_pending,
+    summary.activation_queue_pending_count,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null && candidate !== "") {
+      return coerceNumber(candidate);
+    }
+  }
+
+  return 0;
 }
 
 function formatOwnerReference(record: Record<string, unknown>) {
@@ -258,8 +314,18 @@ function mapOnboardingProgress(value: unknown): CommunityOnboardingProgress | nu
 
   const nextStepKey =
     coerceString(record.next_step_key) || coerceString(record.next_step) || "";
+  const activationQueueTask = getActivationQueueTask(record);
+  const activationQueueReviewedAt =
+    coerceString(record.activation_queue_reviewed_at) ||
+    coerceString(activationQueueTask.last_reviewed_at);
+  const activationQueueReviewRequired =
+    Object.keys(activationQueueTask).length > 0 &&
+    !coerceBoolean(activationQueueTask.done);
 
   return {
+    activationPendingCount: getActivationPendingCount(record),
+    activationQueueReviewRequired,
+    activationQueueReviewedAt,
     completedTasks:
       coerceNumber(record.completed_tasks) ||
       coerceNumber(record.completed_steps),

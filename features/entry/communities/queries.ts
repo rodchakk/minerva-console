@@ -17,6 +17,7 @@ export type OnboardingTaskSummary = {
 };
 
 export type CommunityOnboardingDetail = {
+  activationPendingCount: number | null;
   activationQueueReviewedAt: string;
   blockers: string[];
   completedAt: string;
@@ -49,6 +50,7 @@ export type CommunityListItem = {
 export type CommunityWithProgressItem = CommunityListItem;
 
 type CommunityProgressMeta = {
+  activationPendingCount: number | null;
   completedTasks: number;
   nextStepKey: string;
   onboardingStatus: string;
@@ -123,6 +125,54 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function extractAuthoritativeActivationPendingCount(
+  record: Record<string, unknown>,
+): number | null {
+  const metrics = normalizeJsonObject(record.metrics);
+  const candidates = [
+    record.activation_queue_pending,
+    record.activation_queue_pending_count,
+    record.pending_activation_count,
+    record.pending_activations,
+    metrics.activation_queue_pending,
+    metrics.activation_queue_pending_count,
+    metrics.pending_activation_count,
+    metrics.pending_activations,
+  ];
+
+  for (const candidate of candidates) {
+    if (candidate !== undefined && candidate !== null && candidate !== "") {
+      return coerceNumber(candidate);
+    }
+  }
+
+  if (Array.isArray(record.tasks)) {
+    const activationQueueTask = record.tasks
+      .map(normalizeJsonObject)
+      .find((task) =>
+        ["activation_queue", "review_activation_queue"].includes(
+          coerceString(task.key),
+        ),
+      );
+    const summary = normalizeJsonObject(activationQueueTask?.summary);
+    const summaryCandidates = [
+      summary.pending_activations,
+      summary.pending_count,
+      summary.pending,
+      summary.activation_queue_pending,
+      summary.activation_queue_pending_count,
+    ];
+
+    for (const candidate of summaryCandidates) {
+      if (candidate !== undefined && candidate !== null && candidate !== "") {
+        return coerceNumber(candidate);
+      }
+    }
+  }
+
+  return null;
+}
+
 function normalizeTask(value: unknown): OnboardingTaskSummary | null {
   const record = normalizeJsonObject(value);
   const key = coerceString(record.key);
@@ -156,6 +206,7 @@ function mapProgressRecord(value: unknown): CommunityProgressMeta | null {
   }
 
   return {
+    activationPendingCount: extractAuthoritativeActivationPendingCount(record),
     completedTasks:
       coerceNumber(record.completed_tasks) ||
       coerceNumber(record.completed_steps),
@@ -183,6 +234,7 @@ function mapOnboardingDetail(value: unknown): CommunityOnboardingDetail | null {
     : [];
 
   return {
+    activationPendingCount: extractAuthoritativeActivationPendingCount(record),
     activationQueueReviewedAt: coerceString(record.activation_queue_reviewed_at),
     blockers: normalizeBlockers(record.blockers),
     completedAt: coerceString(record.completed_at),
@@ -243,6 +295,7 @@ function deriveFallbackProgress(
 
   if (community.isActive) {
     return {
+      activationPendingCount: null,
       completedTasks: totalTasks,
       nextStepKey: "complete",
       onboardingStatus: "complete_active",
@@ -252,6 +305,7 @@ function deriveFallbackProgress(
 
   if (community.totalUnits <= 0) {
     return {
+      activationPendingCount: null,
       completedTasks: 1,
       nextStepKey: "units",
       onboardingStatus: "pending_setup",
@@ -261,6 +315,7 @@ function deriveFallbackProgress(
 
   if (community.totalMembers <= 0 && community.activationPendingCount <= 0) {
     return {
+      activationPendingCount: null,
       completedTasks: 2,
       nextStepKey: "residents",
       onboardingStatus: "pending_setup",
@@ -270,6 +325,7 @@ function deriveFallbackProgress(
 
   if (community.activationPendingCount > 0) {
     return {
+      activationPendingCount: community.activationPendingCount,
       completedTasks: Math.min(totalTasks, 3),
       nextStepKey: "review_activation_queue",
       onboardingStatus: "pending_setup",
@@ -279,6 +335,7 @@ function deriveFallbackProgress(
 
   if (community.allowReservations) {
     return {
+      activationPendingCount: null,
       completedTasks: Math.min(totalTasks, 3),
       nextStepKey: "facilities",
       onboardingStatus: "pending_setup",
@@ -287,6 +344,7 @@ function deriveFallbackProgress(
   }
 
   return {
+    activationPendingCount: null,
     completedTasks: totalTasks,
     nextStepKey: "complete",
     onboardingStatus: "complete_active",
@@ -302,13 +360,17 @@ function mergeCommunityProgress(
   const fallback = deriveFallbackProgress({
     ...community,
     activationPendingCount:
-      progressFromList?.activationPendingCount ?? community.activationPendingCount,
+      progress?.activationPendingCount ??
+      progressFromList?.activationPendingCount ??
+      community.activationPendingCount,
   });
 
   const merged = {
     ...community,
     activationPendingCount:
-      progressFromList?.activationPendingCount ?? community.activationPendingCount,
+      progress?.activationPendingCount ??
+      progressFromList?.activationPendingCount ??
+      community.activationPendingCount,
     completedTasks:
       progress?.completedTasks ||
       progressFromList?.completedTasks ||
@@ -319,7 +381,9 @@ function mergeCommunityProgress(
 
       if (
         rawNextStepKey === "residents" &&
-        (progressFromList?.activationPendingCount ?? community.activationPendingCount) > 0
+        (progress?.activationPendingCount ??
+          progressFromList?.activationPendingCount ??
+          community.activationPendingCount) > 0
       ) {
         return "review_activation_queue";
       }
@@ -418,34 +482,30 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
     communitiesFromProgress.map((community) => [community.id, community]),
   );
 
-  const missingProgressIds = baseCommunities
-    .filter((community) => !progressById.has(community.id))
-    .map((community) => community.id);
-
-  const missingProgressResults = await Promise.all(
-    missingProgressIds.map(async (communityId) => {
+  const progressResults = await Promise.all(
+    baseCommunities.map(async (community) => {
       const { data, error } = await supabase.rpc(
         "get_community_onboarding_progress_v1",
         {
-          p_community_id: communityId,
+          p_community_id: community.id,
         },
       );
 
       return {
-        communityId,
+        communityId: community.id,
         progress: error ? null : mapProgressRecord(data),
       };
     }),
   );
 
-  const missingProgressById = new Map(
-    missingProgressResults.map((item) => [item.communityId, item.progress]),
+  const progressDetailById = new Map(
+    progressResults.map((item) => [item.communityId, item.progress]),
   );
 
   return baseCommunities.map((community) =>
     mergeCommunityProgress(
       community,
-      missingProgressById.get(community.id) ?? null,
+      progressDetailById.get(community.id) ?? null,
       progressById.get(community.id),
     ),
   );
@@ -485,6 +545,8 @@ export async function getCommunityWithProgress(communityId: string) {
 
   return {
     ...community,
+    activationPendingCount:
+      detail.activationPendingCount ?? community.activationPendingCount,
     completedTasks: detail.completedTasks || community.completedTasks,
     nextStepKey: detail.nextStepKey || community.nextStepKey,
     onboardingStatus: detail.onboardingStatus || community.onboardingStatus,
