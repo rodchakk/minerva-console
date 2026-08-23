@@ -52,7 +52,7 @@
     "type": "project",
     "status": "approved",
     "title": "ENTRY Community Registration Foundation Contract",
-    "summary": "Foundation contract for ENTRY Community Registration: Console-owned public registration, review, and conversion boundaries before ENTRY-ONB-001 schema work.",
+    "summary": "Foundation contract for ENTRY Community Registration. Confirms Minerva Console ownership, the resident_activation_queue activation lane, legacy-lane boundaries, and readiness for ENTRY-ONB-001 without product implementation or migrations.",
     "created": "2026-08-05",
     "updated": "2026-08-05",
     "tags": ["entry", "onboarding", "community-registration", "foundation"],

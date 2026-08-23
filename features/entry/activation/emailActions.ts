@@ -46,24 +46,24 @@ function buildActivationInviteEmail(
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
             <h2 style="color: #111827;">Activa tu cuenta de ENTRY</h2>
             <p>Hola ${residentName},</p>
-            <p>Tu cuenta para <strong>${communityName}</strong> (unidad: ${unitLabel}) esta lista para activarse.</p>
+            <p>Tu cuenta para <strong>${communityName}</strong> (unidad: ${unitLabel}) está lista para activarse.</p>
 
             <div style="margin: 30px 0; padding: 20px; background-color: #f4f4f5; border-radius: 12px; text-align: center;">
-              <p style="margin: 0; font-size: 14px; color: #52525b;">PIN de activacion</p>
+              <p style="margin: 0; font-size: 14px; color: #52525b;">PIN de activación</p>
               <p style="margin: 10px 0 0 0; font-size: 32px; font-weight: bold; font-family: monospace; letter-spacing: 4px; color: #6d28d9;">
                 ${pin}
               </p>
             </div>
 
-            <p style="margin-bottom: 24px;">Abre ENTRY desde tu telefono o continua en el navegador para crear tu contrasena.</p>
+            <p style="margin-bottom: 24px;">Abre ENTRY desde tu teléfono o continúa en el navegador para crear tu contraseña.</p>
 
             <a href="${activationLink}" style="display: inline-block; background-color: #6d28d9; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
               Activar mi cuenta
             </a>
 
             <p style="margin-top: 30px; font-size: 14px; color: #52525b;">
-              Si el boton no abre, entra a ENTRY y escribe el PIN manualmente.<br/>
-              <em>Este PIN vence en 7 dias.</em>
+              Si el botón no abre, entra a ENTRY y escribe el PIN manualmente.<br/>
+              <em>Este PIN vence en 7 días.</em>
             </p>
           </div>
         `,

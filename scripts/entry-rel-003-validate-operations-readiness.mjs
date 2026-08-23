@@ -19,6 +19,7 @@ const activationReview = read(
   "features/entry/activation/ActivationQueueReviewAcknowledge.tsx",
 );
 const emailActions = read("features/entry/activation/emailActions.ts");
+const projectsRegistry = read("content/brain/registries/projects.json");
 
 assert(
   "guard creation accepts email or username",
@@ -69,12 +70,19 @@ assert(
   "community pending count uses authoritative onboarding progress",
   /extractAuthoritativeActivationPendingCount/.test(communityQueries) &&
     /activation_queue_pending/.test(communityQueries) &&
-    /progress\?\.activationPendingCount/.test(communityQueries),
+    /detail\.activationPendingCount/.test(communityQueries),
 );
 assert(
-  "community list refreshes each community from onboarding progress",
-  /baseCommunities\.map\(async \(community\)/.test(communityQueries) &&
-    /get_community_onboarding_progress_v1/.test(communityQueries),
+  "community list preserves list RPC pending count without N+1 progress fan-out",
+  /list_superadmin_communities_with_progress_v1/.test(communityQueries) &&
+    !/baseCommunities\.map\(async \(community\)/.test(communityQueries) &&
+    !/progressResults/.test(communityQueries),
+);
+assert(
+  "community detail combines pending and failed unresolved activations",
+  /function sumPendingAndFailed/.test(communityQueries) &&
+    /activation_queue_failed/.test(communityQueries) &&
+    /return \(pending \?\? 0\) \+ \(failed \?\? 0\)/.test(communityQueries),
 );
 assert(
   "activation page exposes mark reviewed workflow",
@@ -101,9 +109,13 @@ assert(
 assert(
   "activation email is Spanish-first",
   /Activa tu cuenta de ENTRY/.test(emailActions) &&
-    /PIN de activacion/.test(emailActions) &&
+    /PIN de activación/.test(emailActions) &&
     /Activar mi cuenta/.test(emailActions) &&
-    /Este PIN vence en 7 dias/.test(emailActions),
+    /teléfono/.test(emailActions) &&
+    /continúa/.test(emailActions) &&
+    /contraseña/.test(emailActions) &&
+    /botón/.test(emailActions) &&
+    /Este PIN vence en 7 días/.test(emailActions),
 );
 assert(
   "activation email preserves URL PIN and rendering fields",
@@ -116,6 +128,11 @@ assert(
   "future email localization remains possible",
   /locale:\s*"es"\s*=\s*"es"/.test(emailActions) &&
     /switch \(locale\)/.test(emailActions),
+);
+assert(
+  "Brain relation target ENTRY-ONB-000 is registered",
+  /"id":\s*"ENTRY-ONB-000"/.test(projectsRegistry) &&
+    /entry-community-registration-foundation-contract\.md/.test(projectsRegistry),
 );
 
 if (failures.length > 0) {
