@@ -16,7 +16,7 @@ function buildEntryResetUrl() {
 }
 
 export default function ResetPasswordBridgePage() {
-  const entryResetUrl = useMemo(buildEntryResetUrl, []);
+  const entryResetUrl = useMemo(() => buildEntryResetUrl(), []);
 
   useEffect(() => {
     window.location.replace(entryResetUrl);

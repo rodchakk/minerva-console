@@ -19,6 +19,7 @@ import {
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
 import { parseHouseholdCorrectionSubmissionBody } from "@/features/entry/communityRegistration/public/submissionPayload";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +110,15 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> },
 ) {
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return correctionSubmissionResponse(
+      { error: "service_unavailable", submitted: false },
+      403,
+    );
+  }
+
   if (!hasSameOriginBoundary(request)) {
     return correctionSubmissionResponse(
       { error: "access_unavailable", submitted: false },

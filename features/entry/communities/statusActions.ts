@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type SetCommunityActiveStatusResult = {
@@ -275,6 +276,11 @@ export async function setCommunityActiveStatusAction(
   isActive: boolean,
 ): Promise<SetCommunityActiveStatusResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, error: previewReadOnlyError };
+  }
 
   if (!communityId) {
     return {

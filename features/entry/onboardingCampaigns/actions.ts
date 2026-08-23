@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
 import { coerceString } from "@/lib/supabase/utils";
 
@@ -126,6 +127,11 @@ export async function launchOnboardingCampaign(input: {
   name?: string;
 }): Promise<LaunchCampaignActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, code: "unknown", error: previewReadOnlyError };
+  }
 
   const communityId = input.communityId?.trim() ?? "";
   if (!communityId) {

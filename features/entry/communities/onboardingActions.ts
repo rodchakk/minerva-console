@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
 
 export type OnboardingActionResult =
@@ -23,6 +24,11 @@ export async function markActivationQueueReviewedAction(
   communityId: string,
 ): Promise<OnboardingActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, error: previewReadOnlyError };
+  }
 
   if (!communityId) {
     return { success: false, error: "No community selected." };
@@ -75,6 +81,11 @@ export async function completeCommunityOnboardingAction(
   },
 ): Promise<OnboardingActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, error: previewReadOnlyError };
+  }
 
   if (!input.communityId) {
     return { success: false, error: "No community selected." };

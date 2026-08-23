@@ -231,37 +231,67 @@ export function CommunityUsersClient({
   const deferredQuery = useDeferredValue(query);
 
   useEffect(() => {
-    setUsers(initialUsers);
+    let active = true;
+
+    queueMicrotask(() => {
+      if (active) {
+        setUsers(initialUsers);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, [initialUsers]);
 
   useEffect(() => {
-    setVisibleCount(DEFAULT_VISIBLE_COUNT);
+    let active = true;
+
+    queueMicrotask(() => {
+      if (active) {
+        setVisibleCount(DEFAULT_VISIBLE_COUNT);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, [deferredQuery, roleFilter, statusFilter, authFilter]);
 
   useEffect(() => {
-    if (!selectedUserId) {
+    let active = true;
+
+    queueMicrotask(() => {
+      if (!active) return;
+
+      if (!selectedUserId) {
+        setIsEditMode(false);
+        setDraft(null);
+        setModalError(null);
+        setConfirmation(null);
+        return;
+      }
+
+      const selectedUser = users.find((user) => user.userId === selectedUserId);
+
+      if (!selectedUser) {
+        setSelectedUserId(null);
+        setIsEditMode(false);
+        setDraft(null);
+        setModalError(null);
+        setConfirmation(null);
+        return;
+      }
+
+      setDraft(createDraft(selectedUser));
       setIsEditMode(false);
-      setDraft(null);
       setModalError(null);
       setConfirmation(null);
-      return;
-    }
+    });
 
-    const selectedUser = users.find((user) => user.userId === selectedUserId);
-
-    if (!selectedUser) {
-      setSelectedUserId(null);
-      setIsEditMode(false);
-      setDraft(null);
-      setModalError(null);
-      setConfirmation(null);
-      return;
-    }
-
-    setDraft(createDraft(selectedUser));
-    setIsEditMode(false);
-    setModalError(null);
-    setConfirmation(null);
+    return () => {
+      active = false;
+    };
   }, [selectedUserId, users]);
 
   const normalizedQuery = deferredQuery.trim().toLowerCase();

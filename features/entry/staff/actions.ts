@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
@@ -98,6 +99,11 @@ export async function promoteResidentAdminAction(
   formData: FormData,
 ): Promise<StaffActionState> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { ok: false, message: previewReadOnlyError };
+  }
 
   const communityId = getString(formData, "communityId");
   const userId = getString(formData, "userId");
@@ -176,6 +182,11 @@ export async function createGuardAction(
   formData: FormData,
 ): Promise<StaffActionState> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { ok: false, message: previewReadOnlyError };
+  }
 
   const communityId = getString(formData, "communityId");
   const fullName = getString(formData, "fullName");

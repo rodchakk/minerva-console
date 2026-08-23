@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
-import { createClient } from "@/lib/supabase/client";
 
 function getPinFromUrl(): string {
   if (typeof window === "undefined") return "";
@@ -81,13 +80,27 @@ function mapCompleteError(code: string | undefined): string {
       return "Tu unidad no está vinculada correctamente. Contacta al administrador.";
     case "activation_in_progress_retry":
       return "Hay otra activación en curso. Intenta de nuevo en unos segundos.";
+    case "preview_read_only":
+      return "Este entorno es PREVIEW · READ ONLY. Usa el enlace de Producción para activar tu cuenta.";
     default:
       return "No pudimos completar la activación. Intenta de nuevo.";
   }
 }
 
+async function postActivationJson<T>(url: string, body: Record<string, unknown>) {
+  const response = await fetch(url, {
+    body: JSON.stringify(body),
+    headers: {
+      "content-type": "application/json",
+    },
+    method: "POST",
+  });
+  const data = (await response.json()) as T;
+  return { data, ok: response.ok };
+}
+
 export default function ActivatePage() {
-  const pin = useMemo(getPinFromUrl, []);
+  const pin = useMemo(() => getPinFromUrl(), []);
 
   const [step, setStep] = useState<Step>("loading");
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -110,19 +123,18 @@ export default function ActivatePage() {
     validatedRef.current = true;
 
     try {
-      const supabase = createClient();
-      const { data, error } = await supabase.rpc(
-        "validate_resident_activation_pin_v1",
-        { p_pin: pin },
+      const { data, ok } = await postActivationJson<ValidationResult>(
+        "/activate/validate",
+        { pin },
       );
 
-      if (error) {
+      if (!ok) {
         setErrorMsg("No pudimos verificar el PIN. Revisa tu conexión.");
         setStep("invalid");
         return null;
       }
 
-      const result = data as ValidationResult | null;
+      const result = data;
       if (!result?.valid) {
         setErrorMsg(mapValidationError(result?.reason));
         setStep("invalid");
@@ -154,20 +166,22 @@ export default function ActivatePage() {
     if (deepLinkAttemptedRef.current) return;
     deepLinkAttemptedRef.current = true;
 
-    if (!pin || !/^\d{6}$/.test(pin)) {
-      setErrorMsg("No se encontró un PIN válido en el enlace.");
-      setStep("invalid");
-      return;
-    }
+    queueMicrotask(() => {
+      if (!pin || !/^\d{6}$/.test(pin)) {
+        setErrorMsg("No se encontró un PIN válido en el enlace.");
+        setStep("invalid");
+        return;
+      }
 
-    if (isMobileDevice()) {
-      // Show choice screen immediately; validate PIN in the background so
-      // the web flow is ready if the user chooses "Continuar en navegador".
-      setStep("mobile-redirect");
-      void validatePin();
-    } else {
-      void startWebFlow();
-    }
+      if (isMobileDevice()) {
+        // Show choice screen immediately; validate PIN in the background so
+        // the web flow is ready if the user chooses "Continuar en navegador".
+        setStep("mobile-redirect");
+        void validatePin();
+      } else {
+        void startWebFlow();
+      }
+    });
   }, [pin, startWebFlow, validatePin]);
 
   async function handleRequestNotifications() {
@@ -198,20 +212,19 @@ export default function ActivatePage() {
     setSubmitting(true);
     setErrorMsg(null);
 
-    const supabase = createClient();
-    const { data, error } = await supabase.rpc(
-      "complete_resident_activation_pin_v1",
-      { p_pin: pin, p_password: password },
+    const { data, ok } = await postActivationJson<CompleteResult>(
+      "/activate/complete",
+      { password, pin },
     );
 
     setSubmitting(false);
 
-    if (error) {
-      setErrorMsg("No pudimos completar la activación. Intenta de nuevo.");
+    if (!ok) {
+      setErrorMsg(mapCompleteError(data?.error));
       return;
     }
 
-    const result = data as CompleteResult;
+    const result = data;
     if (!result?.success) {
       setErrorMsg(mapCompleteError(result?.error));
       return;
