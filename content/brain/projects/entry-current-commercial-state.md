@@ -2,7 +2,7 @@
 
 Canonical quick-resume page for the active ENTRY commercial pipeline. Update this page when material field/commercial state changes; detailed evidence remains in the dated reports.
 
-> **Current through:** 2026-08-22
+> **Current through:** 2026-08-22 late session
 >
 > Most commercial facts are operator-provided from direct conversations or security/guard reports. Counts and role claims are not treated as administration-verified unless explicitly confirmed.
 
@@ -14,6 +14,7 @@ Canonical quick-resume page for the active ENTRY commercial pipeline. Update thi
 - Primary first-wave target: communities still using calls / WhatsApp / paper and manual gate processes.
 - Existing digital-system communities are lower-priority replacement targets until ENTRY has a reference case.
 - Success is measured by direct buyer channels, meetings, demos, economic proposals, pilots and customers — not by folders delivered.
+- Refined package posture: explain ENTRY first, show operational relevance, avoid apologetic/defensive language, and make a demo the natural next step rather than making the document primarily about Minerva wanting a meeting.
 
 ## Most advanced opportunity — Residencial Andalucía
 
@@ -59,11 +60,14 @@ Detailed report: [entry-field-update-2026-08-20.md](entry-field-update-2026-08-2
 
 ## New field discovery — 2026-08-22
 
-Detailed report: [entry-field-report-2026-08-22.md](entry-field-report-2026-08-22.md).
+Detailed reports:
+
+- [entry-field-report-2026-08-22.md](entry-field-report-2026-08-22.md)
+- [entry-package-prep-update-2026-08-22.md](entry-package-prep-update-2026-08-22.md)
 
 ### Los Robles — independent private-security sector
 
-**Current stage:** `Qualified → package preparation / agreed handoff`.
+**Current stage:** `Qualified → Package prepared → print pending → planned handoff 2026-08-23`.
 
 Guard/security reported:
 
@@ -74,15 +78,31 @@ Guard/security reported:
 - system implementation has reportedly been discussed;
 - guard promised to hand a package to the patronato person/contact.
 
-Planned action:
+Package finalized as:
 
-> Deliver personalized FIRST DOOR package on **2026-08-23** and seek the patronato name/contact/follow-up route.
+> `ENTRY_Patronato_Package_Los_Robles`
 
-Important: Los Robles is fragmented into several passages/accesses; do not treat the colony as one unified buyer.
+Customer-facing package intentionally omits the unverified ~68-home count and does not claim the patronato has already decided to buy/seek a system. It explains ENTRY first, includes web + WhatsApp QR paths, and uses a confident demo CTA.
+
+Refined structural hypothesis:
+
+> Los Robles may be partially federated: a general patronato may coexist with passage/sector-level control over some security/access budgets and decisions.
+
+Why this hypothesis exists:
+
+- operator observed large differences in barrier/guard quality between passages;
+- the promising lead came from the best-kept/private-security entrance observed;
+- guard comments suggested some local administration independence while a broader patronato may also exist.
+
+This structure is **not confirmed**. Key handoff question:
+
+> Does this sector decide its own security/access tools, or does the general Los Robles patronato decide them?
+
+Potential future spillover to other passages is upside only; do not sell or price on that assumption. Win one operating unit first.
 
 ### Residencial Bermejo
 
-**Current stage:** `Qualified → package handoff agreed`.
+**Current stage:** `Qualified → Package prepared → print pending → delivery agreed for 2026-08-24`.
 
 Guard/security reported / operator observed:
 
@@ -95,13 +115,23 @@ Guard/security reported / operator observed:
 - guard vaguely remembered an unspecified proposal being called "expensive", but did not know whether this referred to QR, barrier automation or something else;
 - guard asked Rudy to bring documentation on **Monday 2026-08-24** and said he expects to be there.
 
-Planned action:
+Package finalized as:
 
-> Deliver personalized FIRST DOOR documentation on 2026-08-24, then seek the patronato member responsible for security/access. Do not treat price as a confirmed objection.
+> `ENTRY_Patronato_Package_Residencial_Bermejo`
+
+The package is personalized around the confirmed/manual flow and deliberately excludes the unverified house count, vague price recollection, prior-vendor claims and pricing. Core positioning includes:
+
+> "De la llamada a la entrada, una operación más clara."
+
+and:
+
+> "El QR es la credencial. ENTRY es la operación."
+
+The package includes ENTRY webpage + WhatsApp QR contact paths. Planned action remains to hand it to the receptive guard and obtain the patronato member responsible for security/access. Do not treat price as a confirmed objection.
 
 ### Colonia Boran
 
-**Current stage:** `Investigated / probable fit — buyer route weak`.
+**Current stage:** `Investigated / probable fit with concrete pain signal — buyer route weak`.
 
 Guard/security reported:
 
@@ -112,11 +142,16 @@ Guard/security reported:
 - access/system implementation has apparently been considered;
 - a patronato exists;
 - **Sergio** was mentioned in connection with the patronato, but surname/title/contact are unknown;
-- guard was not receptive enough to provide a clear package-delivery commitment.
+- guard was not receptive enough to provide a clear package-delivery commitment;
+- guard also said the community receives **many vendors/salespeople**, creating a more specific visitor-volume/use-case signal.
+
+Commercial interpretation:
+
+> Frequent vendor/salesperson entries may create repeated authorization/interruption work and could become a useful discovery angle for ENTRY's quick/temporary access flows. This is a pain signal, not yet buyer validation.
 
 Planned action:
 
-> Improve the route to Sergio/patronato before spending a personalized package.
+> Revisit at a different time/shift and improve the route to Sergio/patronato before spending a personalized package. A different guard may know more, as happened in Los Robles, but do not pressure the current contact.
 
 ### Residencial Marsella
 
@@ -154,12 +189,24 @@ No immediate package action.
 
 Do not infer vendor capabilities, satisfaction or pricing. Retain `1 Pass Access` as a competitor/platform signal if it appears again elsewhere.
 
-## Immediate priority order — as of 2026-08-22
+## Print / delivery plan
+
+Planned print on **2026-08-23**:
+
+1. `ENTRY_Patronato_Package_Los_Robles`
+2. `ENTRY_Patronato_Package_Residencial_Bermejo`
+
+Planned handoffs:
+
+- **Los Robles:** 2026-08-23.
+- **Bermejo:** 2026-08-24.
+
+## Immediate priority order — as of 2026-08-22 late session
 
 1. **Andalucía:** wait for patronato reaction; be ready for demo; complete unit economics before formal economic proposal.
-2. **Los Robles independent sector:** prepare/deliver package 2026-08-23; obtain buyer follow-up route.
-3. **Bermejo:** prepare/deliver package 2026-08-24; obtain patronato security/access contact.
-4. **Boran:** improve patronato route before package.
+2. **Los Robles independent sector:** print/deliver finalized package 2026-08-23; confirm actual decision unit and obtain buyer follow-up route.
+3. **Bermejo:** print finalized package; deliver 2026-08-24; obtain patronato security/access contact.
+4. **Boran:** revisit for better patronato route; use vendor-traffic pain as a discovery angle, not a sales claim.
 5. **El Carmen / El Limonar:** continue existing follow-up paths; do not regress into indefinite guard-only selling.
 6. **Marsella / Provenza / Alondra:** retain as market intelligence; no immediate FIRST DOOR package.
 
@@ -167,10 +214,12 @@ Do not infer vendor capabilities, satisfaction or pricing. Retain `1 Pass Access
 
 - Qualify the **actual operating/decision unit**, not merely the map/neighborhood name.
 - In fragmented communities, another access point may represent a genuinely different buyer, not just another guard.
+- Physical differences between access points can be useful clues about budget/authority fragmentation, but must remain hypotheses until administration confirms them.
 - A first unhelpful guard does not automatically disqualify a physically fragmented community, but do not harass multiple posts without reason.
 - New developments can already have developer-controlled access technology before a patronato exists; this may require a future developer-sales motion rather than FIRST DOOR.
 - Existing app/system communities are learning/competitive targets before they are replacement targets.
 - Vague guard recollections about price must remain explicitly ambiguous until a buyer explains scope and quote context.
+- A package should work even when the founder is not present: clear product explanation + direct website path + direct WhatsApp path.
 
 ## Product / engineering priority unchanged
 
