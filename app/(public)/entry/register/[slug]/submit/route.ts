@@ -15,6 +15,7 @@ import {
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
 import { parseHouseholdSubmissionBody } from "@/features/entry/communityRegistration/public/submissionPayload";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 
 export const dynamic = "force-dynamic";
 
@@ -85,6 +86,15 @@ export async function POST(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> },
 ) {
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return submissionResponse(
+      { error: "service_unavailable", submitted: false },
+      403,
+    );
+  }
+
   if (!hasSameOriginBoundary(request)) {
     return submissionResponse({ error: "access_required", submitted: false }, 403);
   }

@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
 
 export type EntryMessageMode = "single" | "selected" | "all";
@@ -34,6 +35,11 @@ export async function sendEntryMessageAction(
   input: SendEntryMessageInput,
 ): Promise<SendEntryMessageResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   const mode = input.mode;
   const title = input.title.trim();

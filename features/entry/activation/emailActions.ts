@@ -1,34 +1,14 @@
 "use server";
 
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { generateActivationPins } from "@/features/entry/activation/pinActions";
+import {
+  getEntryPreviewReadOnlyError,
+  getResidentFacingBaseUrl,
+} from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
-
-async function getActivationBaseUrl(): Promise<string> {
-  const publicConsoleUrl =
-    process.env.NEXT_PUBLIC_MINERVA_CONSOLE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  if (publicConsoleUrl) {
-    return publicConsoleUrl.replace(/\/$/, "");
-  }
-
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.includes("localhost") ? "http" : "https");
-
-  if (host) {
-    return `${protocol}://${host}`;
-  }
-
-  return "";
-}
 
 export type SendEmailInviteResult = {
   success: boolean;
@@ -52,6 +32,11 @@ export async function sendActivationEmails(input: {
   queueIds: string[];
 }): Promise<SendEmailInviteResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, error: previewReadOnlyError };
+  }
 
   const { communityId, communityName, queueIds } = input;
 
@@ -91,7 +76,7 @@ export async function sendActivationEmails(input: {
   let failed_count = 0;
   let skipped_count = 0;
 
-  const baseUrl = await getActivationBaseUrl();
+  const baseUrl = await getResidentFacingBaseUrl();
 
   // 2. Iterate and send emails
   for (const item of items) {

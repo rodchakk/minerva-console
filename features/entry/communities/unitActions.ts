@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coerceString } from "@/lib/supabase/utils";
 
@@ -34,6 +35,11 @@ export async function updateCommunityUnitAction(
   input: UpdateCommunityUnitInput,
 ): Promise<CommunityUnitActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   const communityId = input.communityId.trim();
   const unitId = input.unitId.trim();
@@ -76,6 +82,11 @@ export async function setCommunityUnitActiveStatusAction(
   input: SetCommunityUnitActiveStatusInput,
 ): Promise<CommunityUnitActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   const communityId = input.communityId.trim();
   const unitId = input.unitId.trim();

@@ -1,10 +1,13 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { hashCorrectionToken } from "@/features/entry/communityRegistration/public/correctionAccessState";
+import {
+  getEntryPreviewReadOnlyError,
+  getResidentFacingBaseUrl,
+} from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coerceNumber, coerceString } from "@/lib/supabase/utils";
 
@@ -141,23 +144,6 @@ function summarizeConversionResult(value: unknown) {
   };
 }
 
-async function getRegistrationBaseUrl() {
-  const publicConsoleUrl =
-    process.env.NEXT_PUBLIC_MINERVA_CONSOLE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  if (publicConsoleUrl) return publicConsoleUrl.replace(/\/$/, "");
-
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.includes("localhost") ? "http" : "https");
-
-  return host ? `${protocol}://${host}` : "";
-}
-
 function makeCorrectionToken() {
   return randomBytes(32).toString("base64url");
 }
@@ -166,11 +152,27 @@ function correctionExpiry() {
   return new Date(Date.now() + CORRECTION_LINK_LIFETIME_HOURS * 60 * 60 * 1000).toISOString();
 }
 
+function previewReadOnlyResult(): CommunityRegistrationReviewActionResult | null {
+  const error = getEntryPreviewReadOnlyError();
+
+  return error
+    ? {
+        code: "unknown",
+        error,
+        success: false,
+      }
+    : null;
+}
+
 export async function startCommunityRegistrationReview(
   _previousState: CommunityRegistrationReviewActionResult | null,
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignId = getFormString(formData, "campaign_id");
   const communityId = getFormString(formData, "community_id");
 
@@ -206,6 +208,10 @@ export async function markCommunityRegistrationUnitReviewed(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
 
@@ -245,6 +251,10 @@ export async function requestCommunityRegistrationCorrection(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignId = getFormString(formData, "campaign_id");
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
@@ -295,6 +305,10 @@ export async function createOrReplaceCommunityRegistrationCorrectionLink(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
   const mode = getFormString(formData, "mode") === "replace" ? "replace" : "create";
@@ -344,7 +358,7 @@ export async function createOrReplaceCommunityRegistrationCorrectionLink(
   }
 
   revalidateReviewPaths(communityId);
-  const baseUrl = await getRegistrationBaseUrl();
+  const baseUrl = await getResidentFacingBaseUrl();
   const path = `/entry/register/${encodeURIComponent(
     publicSlug,
   )}/correct/access?token=${encodeURIComponent(plaintextToken)}`;
@@ -369,6 +383,10 @@ export async function confirmAndPrepareCommunityRegistrationActivation(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignId = getFormString(formData, "campaign_id");
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
