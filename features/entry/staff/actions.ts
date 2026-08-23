@@ -71,7 +71,26 @@ function getPreferredContact(record: Record<string, unknown>) {
     return username;
   }
 
-  return email || "No contact available";
+  return "No contact available";
+}
+
+async function loadCommunityStaffProfiles(communityId: string, userIds: string[]) {
+  if (userIds.length === 0) {
+    return [] as Array<Record<string, unknown>>;
+  }
+
+  try {
+    const adminSupabase = createAdminClient();
+    const { data } = await adminSupabase
+      .from("profiles")
+      .select("user_id,username,synthetic_email")
+      .eq("community_id", communityId)
+      .in("user_id", userIds);
+
+    return Array.isArray(data) ? (data as Array<Record<string, unknown>>) : [];
+  } catch {
+    return [] as Array<Record<string, unknown>>;
+  }
 }
 
 function mapStaffUser(record: Record<string, unknown>): StaffUserItem {
@@ -117,16 +136,9 @@ export async function getCommunityStaffPageData(
         .filter(Boolean),
     ),
   );
-  const { data: profilesData } =
-    userIds.length > 0
-      ? await supabase
-          .from("profiles")
-          .select("user_id,username,synthetic_email")
-          .eq("community_id", communityId)
-          .in("user_id", userIds)
-      : { data: [] as Array<Record<string, unknown>> };
+  const profilesData = await loadCommunityStaffProfiles(communityId, userIds);
   const profilesByUserId = new Map(
-    (Array.isArray(profilesData) ? profilesData : []).map((profile) => [
+    profilesData.map((profile) => [
       coerceString(profile.user_id),
       profile,
     ]),
