@@ -1,6 +1,6 @@
 "use client";
 
-import { useDeferredValue, useEffect, useState, useTransition } from "react";
+import { useDeferredValue, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -219,7 +219,10 @@ export function CommunityUsersClient({
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [authFilter, setAuthFilter] = useState<AuthFilter>("all");
-  const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);
+  const [visibleLimit, setVisibleLimit] = useState(() => ({
+    count: DEFAULT_VISIBLE_COUNT,
+    key: "",
+  }));
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [draft, setDraft] = useState<UserDraft | null>(null);
@@ -230,71 +233,9 @@ export function CommunityUsersClient({
   const [isPending, startTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
 
-  useEffect(() => {
-    let active = true;
-
-    queueMicrotask(() => {
-      if (active) {
-        setUsers(initialUsers);
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [initialUsers]);
-
-  useEffect(() => {
-    let active = true;
-
-    queueMicrotask(() => {
-      if (active) {
-        setVisibleCount(DEFAULT_VISIBLE_COUNT);
-      }
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [deferredQuery, roleFilter, statusFilter, authFilter]);
-
-  useEffect(() => {
-    let active = true;
-
-    queueMicrotask(() => {
-      if (!active) return;
-
-      if (!selectedUserId) {
-        setIsEditMode(false);
-        setDraft(null);
-        setModalError(null);
-        setConfirmation(null);
-        return;
-      }
-
-      const selectedUser = users.find((user) => user.userId === selectedUserId);
-
-      if (!selectedUser) {
-        setSelectedUserId(null);
-        setIsEditMode(false);
-        setDraft(null);
-        setModalError(null);
-        setConfirmation(null);
-        return;
-      }
-
-      setDraft(createDraft(selectedUser));
-      setIsEditMode(false);
-      setModalError(null);
-      setConfirmation(null);
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [selectedUserId, users]);
 
   const normalizedQuery = deferredQuery.trim().toLowerCase();
+  const visibleLimitKey = `${normalizedQuery}\u0000${roleFilter}\u0000${statusFilter}\u0000${authFilter}`;
   const filteredUsers = users.filter((user) => {
     const matchesQuery =
       !normalizedQuery ||
@@ -329,6 +270,8 @@ export function CommunityUsersClient({
     statusFilter !== "all" ||
     authFilter !== "all";
   const shouldLimitResults = !hasActiveFilters && filteredUsers.length > 50;
+  const visibleCount =
+    visibleLimit.key === visibleLimitKey ? visibleLimit.count : DEFAULT_VISIBLE_COUNT;
   const visibleUsers = shouldLimitResults
     ? filteredUsers.slice(0, visibleCount)
     : filteredUsers;
@@ -350,10 +293,24 @@ export function CommunityUsersClient({
     }
 
     setSelectedUserId(null);
+    setIsEditMode(false);
+    setDraft(null);
+    setModalError(null);
+    setConfirmation(null);
   }
 
   function openUser(userId: string) {
-    setSelectedUserId(userId);
+    const nextUser = users.find((user) => user.userId === userId);
+
+    if (!nextUser) {
+      return;
+    }
+
+    setSelectedUserId(nextUser.userId);
+    setDraft(createDraft(nextUser));
+    setIsEditMode(false);
+    setModalError(null);
+    setConfirmation(null);
     setPageMessage(null);
   }
 
@@ -737,9 +694,13 @@ export function CommunityUsersClient({
                   <Button
                     variant="secondary"
                     onClick={() =>
-                      setVisibleCount((current) =>
-                        Math.min(current + DEFAULT_VISIBLE_COUNT, filteredUsers.length),
-                      )
+                      setVisibleLimit({
+                        count: Math.min(
+                          visibleCount + DEFAULT_VISIBLE_COUNT,
+                          filteredUsers.length,
+                        ),
+                        key: visibleLimitKey,
+                      })
                     }
                   >
                     Show more

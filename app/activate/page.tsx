@@ -101,10 +101,13 @@ async function postActivationJson<T>(url: string, body: Record<string, unknown>)
 
 export default function ActivatePage() {
   const pin = useMemo(() => getPinFromUrl(), []);
+  const hasValidPin = /^\d{6}$/.test(pin);
 
-  const [step, setStep] = useState<Step>("loading");
+  const [step, setStep] = useState<Step>(() => (hasValidPin ? "loading" : "invalid"));
   const [validation, setValidation] = useState<ValidationResult | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(() =>
+    hasValidPin ? null : "No se encontró un PIN válido en el enlace.",
+  );
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -166,23 +169,25 @@ export default function ActivatePage() {
     if (deepLinkAttemptedRef.current) return;
     deepLinkAttemptedRef.current = true;
 
-    queueMicrotask(() => {
-      if (!pin || !/^\d{6}$/.test(pin)) {
-        setErrorMsg("No se encontró un PIN válido en el enlace.");
-        setStep("invalid");
-        return;
-      }
+    if (!hasValidPin) {
+      return;
+    }
 
-      if (isMobileDevice()) {
-        // Show choice screen immediately; validate PIN in the background so
-        // the web flow is ready if the user chooses "Continuar en navegador".
+    if (isMobileDevice()) {
+      // Show choice screen immediately; validate PIN in the background so
+      // the web flow is ready if the user chooses "Continuar en navegador".
+      const mobileRedirectTimer = window.setTimeout(() => {
         setStep("mobile-redirect");
         void validatePin();
-      } else {
-        void startWebFlow();
-      }
-    });
-  }, [pin, startWebFlow, validatePin]);
+      }, 0);
+      return () => window.clearTimeout(mobileRedirectTimer);
+    }
+
+    const webFlowTimer = window.setTimeout(() => {
+      void startWebFlow();
+    }, 0);
+    return () => window.clearTimeout(webFlowTimer);
+  }, [hasValidPin, startWebFlow, validatePin]);
 
   async function handleRequestNotifications() {
     if (typeof Notification === "undefined") {
