@@ -55,6 +55,7 @@ export async function updateSession(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/unauthorized" ||
     pathname === "/activate" ||
+    pathname.startsWith("/activate/") ||
     pathname === "/reset-password";
 
   if (!user && !isPublicRoute) {
