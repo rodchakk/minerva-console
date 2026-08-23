@@ -28,7 +28,17 @@ export function CommunityUnitQuickActions({
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    setUnitLabel(unit.label);
+    let active = true;
+
+    queueMicrotask(() => {
+      if (active) {
+        setUnitLabel(unit.label);
+      }
+    });
+
+    return () => {
+      active = false;
+    };
   }, [unit.id, unit.label]);
 
   function closeModal() {
