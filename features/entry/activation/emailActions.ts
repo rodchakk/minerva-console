@@ -78,6 +78,8 @@ export type SendEmailInviteResult = {
     sent_count: number;
     failed_count: number;
     skipped_count: number;
+    metadata_persisted: boolean;
+    warning?: string;
     items: Array<{
       queue_id: string;
       email: string;
@@ -86,6 +88,23 @@ export type SendEmailInviteResult = {
     }>;
   };
 };
+
+function getSafeQueueUpdateErrorLog(error: unknown) {
+  if (!error || typeof error !== "object") {
+    return { message: "Unknown Supabase update error" };
+  }
+
+  const record = error as Record<string, unknown>;
+
+  return {
+    code: typeof record.code === "string" ? record.code : undefined,
+    hint: typeof record.hint === "string" ? record.hint : undefined,
+    message:
+      typeof record.message === "string"
+        ? record.message
+        : "Unknown Supabase update error",
+  };
+}
 
 export async function sendActivationEmails(input: {
   communityId: string;
@@ -136,6 +155,8 @@ export async function sendActivationEmails(input: {
   let sent_count = 0;
   let failed_count = 0;
   let skipped_count = 0;
+  let metadataPersisted = true;
+  let metadataWarning: string | undefined;
 
   const baseUrl = await getResidentFacingBaseUrl();
 
@@ -210,7 +231,7 @@ export async function sendActivationEmails(input: {
       const supabase = await createClient();
       const inviteSentAt = new Date().toISOString();
       // Resends move invite_sent_at to the latest successful accepted delivery.
-      await supabase
+      const { error: queueUpdateError } = await supabase
         .from("resident_activation_queue")
         .update({
           invite_sent_at: inviteSentAt,
@@ -218,11 +239,40 @@ export async function sendActivationEmails(input: {
           updated_at: inviteSentAt,
         })
         .in("id", successfullyInvitedIds);
-      
+
+      if (queueUpdateError) {
+        metadataPersisted = false;
+        metadataWarning =
+          "Email accepted by Resend, but ENTRY could not persist invite metadata. Review the Activation Queue before resending.";
+        console.error(
+          "Failed to persist resident_activation_queue invite metadata after accepted activation email delivery",
+          {
+            attemptedQueueCount: successfullyInvitedIds.length,
+            error: getSafeQueueUpdateErrorLog(queueUpdateError),
+          },
+        );
+      }
+
       revalidatePath("/products/entry/activation");
     } catch (dbErr) {
-      console.error("Failed to update resident_activation_queue status to invited", dbErr);
-      // We don't fail the whole action if the email was already sent, but it's an edge case.
+      metadataPersisted = false;
+      metadataWarning =
+        "Email accepted by Resend, but ENTRY could not persist invite metadata. Review the Activation Queue before resending.";
+      console.error(
+        "Failed to persist resident_activation_queue invite metadata after accepted activation email delivery",
+        {
+          attemptedQueueCount: successfullyInvitedIds.length,
+          error: getSafeQueueUpdateErrorLog(dbErr),
+        },
+      );
+    }
+  }
+
+  if (metadataWarning) {
+    for (const item of emailResults) {
+      if (item.status === "sent") {
+        item.message = metadataWarning;
+      }
     }
   }
 
@@ -232,6 +282,8 @@ export async function sendActivationEmails(input: {
       sent_count,
       failed_count,
       skipped_count,
+      metadata_persisted: metadataPersisted,
+      warning: metadataWarning,
       items: emailResults,
     },
   };

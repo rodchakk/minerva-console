@@ -101,6 +101,29 @@ assert(
     /successfullyInvitedIds\.push/.test(emailActions),
 );
 assert(
+  "activation email metadata persistence checks Supabase update errors",
+  /const \{\s*error:\s*queueUpdateError\s*\} = await supabase[\s\S]*\.from\("resident_activation_queue"\)[\s\S]*\.update\(\{[\s\S]*invite_sent_at:\s*inviteSentAt[\s\S]*status:\s*"invited"[\s\S]*updated_at:\s*inviteSentAt[\s\S]*\.in\("id", successfullyInvitedIds\)/.test(
+    emailActions,
+  ) &&
+    /if \(queueUpdateError\)/.test(emailActions),
+);
+assert(
+  "accepted email metadata failure is reported as partial success",
+  /metadata_persisted:\s*boolean/.test(emailActions) &&
+    /metadataPersisted\s*=\s*false/.test(emailActions) &&
+    /Email accepted by Resend, but ENTRY could not persist invite metadata/.test(
+      emailActions,
+    ) &&
+    /item\.status === "sent"/.test(emailActions) &&
+    /item\.message = metadataWarning/.test(emailActions),
+);
+assert(
+  "metadata persistence failure logging avoids activation secrets",
+  /function getSafeQueueUpdateErrorLog/.test(emailActions) &&
+    /attemptedQueueCount:\s*successfullyInvitedIds\.length/.test(emailActions) &&
+    !/console\.error\([\s\S]*(pin|RESEND_API_KEY|activationLink)/.test(emailActions),
+);
+assert(
   "resend timestamp behavior is documented",
   /Resends move invite_sent_at to the latest successful accepted delivery/.test(
     emailActions,

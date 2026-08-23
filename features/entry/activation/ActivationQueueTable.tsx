@@ -394,7 +394,13 @@ function EmailResultModal({
             <Badge tone="success">{data.sent_count} sent</Badge>
             {data.skipped_count > 0 ? <Badge tone="default">{data.skipped_count} skipped</Badge> : null}
             {data.failed_count > 0 ? <Badge tone="danger">{data.failed_count} failed</Badge> : null}
+            {!data.metadata_persisted ? <Badge tone="warning">metadata warning</Badge> : null}
           </div>
+          {data.warning ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              {data.warning}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -404,6 +410,9 @@ function EmailResultModal({
               {sentItems.map((item) => (
                 <div key={item.queue_id} className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 py-3">
                   <p className="text-sm font-medium text-slate-200">{item.email}</p>
+                  {item.message ? (
+                    <p className="mt-1 text-xs text-amber-100">{item.message}</p>
+                  ) : null}
                 </div>
               ))}
             </div>
