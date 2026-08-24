@@ -2,7 +2,7 @@
 
 Canonical quick-resume page for the active ENTRY commercial pipeline. Detailed evidence remains in the dated field reports.
 
-> **Current through:** 2026-08-23
+> **Current through:** 2026-08-23 late session
 >
 > Most commercial facts are operator-provided from direct conversations or security/guard reports. Counts and role claims are not treated as administration-verified unless explicitly confirmed.
 
@@ -208,6 +208,88 @@ Next move:
 
 These remain market-intelligence/replacement-learning targets, not immediate FIRST DOOR package priorities.
 
+## Parallel hypothesis — Developer Channel / new residential projects
+
+**Status:** `Approved for exploration / evidence collection only`.
+
+Detailed working note:
+
+- [entry-developer-channel-hypothesis-2026-08-23.md](entry-developer-channel-hypothesis-2026-08-23.md)
+
+Recent field and marketing observations suggest that digital visitor/access technology may sometimes be selected **before a patronato exists** and may be presented to homebuyers as part of the project's amenity/security package.
+
+Current signals:
+
+- Marsella security reported an existing digital access system while the development is still sales-linked and has no patronato.
+- Provenza reportedly follows a similar pattern.
+- Operator surfaced a **Jardines del Este** marketing video that appeared to show a controlled entrance/barrier; workflow/vendor unverified.
+- Operator surfaced a **Residencial Paraíso** marketing video that explicitly presented gatehouse/controlled-access and QR access; treat this as operator-observed marketing evidence until independently qualified.
+
+Working commercial framing:
+
+> **Existing communities:** ENTRY as digitalization of a manual visitor/access operation.
+>
+> **New developments:** ENTRY as an access-management amenity and operating layer included from launch.
+
+Potential buyer/channel participants to investigate:
+
+- developer/project owner;
+- project administrator/operator;
+- organization defining amenities/security;
+- commercial/sales organization when it controls operations;
+- construction company only when it actually has decision authority over systems/amenities.
+
+Do **not** assume a generic real-estate agency is the buyer; many only sell inventory for third parties.
+
+### Why this channel may matter
+
+- New developments and developers leave a stronger public footprint than patronatos, making research and prospect mapping easier.
+- Access technology may help communicate modernity/security as part of the sales proposition.
+- One developer/operator relationship could potentially cover multiple residential projects instead of one patronato at a time.
+- The developer-to-patronato handoff may be a strategic opportunity if ENTRY can provide continuity after project turnover.
+
+### Brand/app discipline
+
+Preferred default:
+
+> **ENTRY remains the product. Communities receive their own identity/configuration inside ENTRY.**
+
+Do not default to building a separate branded app for every residential community.
+
+If a large developer later requests white-label branding, treat it as a potential **enterprise exception** whose contract value and economics must justify release/support/maintenance complexity. No white-label promise is currently approved.
+
+### Research plan
+
+Collect approximately **10–15 useful project observations** before deciding whether to formalize a developer sales motion.
+
+For each project, capture:
+
+- project/developer/operator;
+- construction/sales stage;
+- security/access amenities advertised;
+- QR/app/digital-access evidence;
+- platform/vendor if identifiable;
+- who chooses and pays for the system;
+- what happens when the project is handed to a patronato;
+- whether the same developer has multiple projects;
+- best decision-maker route;
+- evidence source/confidence.
+
+Instagram/social-media marketing should be treated as a **prospecting radar, not technical confirmation**.
+
+Critical research question:
+
+> What happens to the access platform when the developer finishes sales/operations and the resident patronato takes over?
+
+### Commercial discipline
+
+- **FIRST DOOR does not change.**
+- Do not slow current patronato opportunities to chase the developer hypothesis.
+- Do not build developer-specific features yet.
+- Do not create developer pricing yet.
+- Do not promise separate white-label apps.
+- Use incoming examples to build evidence and identify repeated developer/operator names before active outreach becomes a formal motion.
+
 ## Immediate priority order — 2026-08-23
 
 1. **Andalucía:** wait for patronato reaction; be ready for demo; complete unit economics before formal economic proposal.
@@ -216,6 +298,7 @@ These remain market-intelligence/replacement-learning targets, not immediate FIR
 4. **Boran:** revisit on another shift to improve patronato route; use vendor-traffic pain as discovery context, not as a claim.
 5. **El Carmen / El Limonar:** continue existing follow-up paths; do not regress into indefinite guard-only selling.
 6. **Marsella / Provenza / Alondra:** retain as market intelligence; no immediate package action.
+7. **Developer Channel:** keep collecting/qualifying examples in parallel; no change to FIRST DOOR execution.
 
 ## Field-learning rules reinforced
 
@@ -229,10 +312,11 @@ These remain market-intelligence/replacement-learning targets, not immediate FIR
 - New developments can already have developer-controlled access technology before a patronato exists; this may require a future developer-sales motion rather than FIRST DOOR.
 - Existing app/system communities are learning targets before they are replacement targets.
 - Vague guard recollections about price remain ambiguous until a buyer explains scope and quote context.
+- Social-media content about residential access is useful prospecting evidence, but claims should be independently qualified before they become market facts.
 
 ## Product / engineering priority unchanged
 
-Field discovery does **not** reorder the approved engineering sequence:
+Field discovery and the developer-channel hypothesis do **not** reorder the approved engineering sequence:
 
 1. Diagnose real ENTRY state.
 2. Fix bugs.
@@ -243,4 +327,4 @@ Field discovery does **not** reorder the approved engineering sequence:
 7. Security/backups.
 8. Separate environments last.
 
-No new feature should be built from these field observations alone.
+No new feature should be built from these field/marketing observations alone.
