@@ -6,9 +6,9 @@
     "title": "ENTRY",
     "summary": "Residential and community access control system. Has its own Supabase project. Brain may reference ENTRY decisions and architecture but must not read ENTRY operational data.",
     "created": "2026-06-16",
-    "updated": "2026-06-16",
+    "updated": "2026-08-26",
     "tags": ["product", "access-control", "supabase"],
-    "related": ["PRJ-0004"],
+    "related": ["PRJ-0004", "ENTRY-OPS-001"],
     "path": "content/brain/projects/entry.md"
   },
   {
@@ -58,5 +58,17 @@
     "tags": ["entry", "onboarding", "community-registration", "foundation"],
     "related": ["PRJ-0001", "DEC-0007"],
     "path": "content/brain/projects/entry-community-registration-foundation-contract.md"
+  },
+  {
+    "id": "ENTRY-OPS-001",
+    "type": "project",
+    "status": "approved",
+    "title": "ENTRY Operational Activity Feed",
+    "summary": "Completed Minerva Console dashboard feed that surfaces a curated, sanitized set of meaningful ENTRY operational events, refreshes every 30 seconds, and intentionally avoids raw audit-log noise or sensitive metadata.",
+    "created": "2026-08-26",
+    "updated": "2026-08-26",
+    "tags": ["entry", "operations", "dashboard", "activity-feed", "supabase", "console"],
+    "related": ["PRJ-0001", "DEC-0004"],
+    "path": "content/brain/projects/entry-operational-activity-feed.md"
   }
 ]
