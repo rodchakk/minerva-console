@@ -58,5 +58,17 @@
     "tags": ["entry", "onboarding", "community-registration", "foundation"],
     "related": ["PRJ-0001", "DEC-0007"],
     "path": "content/brain/projects/entry-community-registration-foundation-contract.md"
+  },
+  {
+    "id": "MINERVA-FIELD-001",
+    "type": "project",
+    "status": "planned",
+    "title": "Minerva Field Foundation",
+    "summary": "Planned mobile-first installable PWA surface inside Minerva Console for field operations across Minerva products. ENTRY is the first active module; Seshat and future products must fit the same Minerva-level field architecture without duplicating the full desktop console.",
+    "created": "2026-08-26",
+    "updated": "2026-08-26",
+    "tags": ["minerva-console", "field", "pwa", "mobile", "entry", "seshat"],
+    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004"],
+    "path": "content/brain/projects/minerva-field-foundation.md"
   }
 ]
