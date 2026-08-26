@@ -6,7 +6,6 @@ import type {
   EntryOperationalActivityItem,
   EntryOperationalActivityResult,
 } from "@/features/entry/operations/queries";
-import { cn } from "@/lib/supabase/utils";
 
 type OperationalActivityFeedProps = {
   initialResult: EntryOperationalActivityResult;
@@ -14,40 +13,16 @@ type OperationalActivityFeedProps = {
 
 const REFRESH_INTERVAL_MS = 30_000;
 
-function getEventTone(activity: EntryOperationalActivityItem) {
+function getEventTextStyle(activity: EntryOperationalActivityItem) {
   if (activity.severity === "error") {
-    return "border-red-400/20 bg-red-500/[0.08] text-red-200";
+    return "font-medium text-red-400";
   }
 
   if (activity.severity === "warning") {
-    return "border-amber-400/20 bg-amber-500/[0.08] text-amber-200";
+    return "font-medium text-amber-300";
   }
 
-  if (activity.category === "registration") {
-    return "border-cyan-400/20 bg-cyan-500/[0.08] text-cyan-200";
-  }
-
-  if (activity.category === "activation") {
-    return "border-violet-400/20 bg-violet-500/[0.08] text-violet-200";
-  }
-
-  if (activity.category === "messages") {
-    return "border-fuchsia-400/20 bg-fuchsia-500/[0.08] text-fuchsia-200";
-  }
-
-  return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
-}
-
-function getStatusDot(activity: EntryOperationalActivityItem) {
-  if (activity.severity === "error") {
-    return "bg-red-400";
-  }
-
-  if (activity.severity === "warning") {
-    return "bg-amber-400";
-  }
-
-  return "bg-emerald-400";
+  return "font-medium text-slate-200";
 }
 
 function formatRelativeTime(value: string) {
@@ -145,95 +120,88 @@ export function OperationalActivityFeed({
 
   return (
     <div>
-      <div className="flex items-center justify-end gap-2 border-b border-[var(--console-border)] px-5 py-2 text-[11px] text-[var(--console-text-muted)]">
-        <span
-          className={cn(
-            "h-1.5 w-1.5 rounded-full",
-            result.state === "unavailable" ? "bg-amber-400" : "bg-emerald-400",
-          )}
-        />
-        <span>{refreshing ? "Refreshing activity" : "Live · refreshes every 30s"}</span>
+      <div className="flex items-center justify-end gap-2 border-b border-[var(--console-border)] px-5 py-2 text-xs text-[var(--console-text-muted)]">
+        {result.state === "unavailable" ? (
+          <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+        ) : null}
+        <span>{refreshing ? "Refreshing activity" : "Auto-refreshes every 30s"}</span>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="min-w-[880px] w-full text-left text-sm">
-          <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
-            <tr>
-              <th className="px-5 py-3 font-medium">Time</th>
-              <th className="px-4 py-3 font-medium">Community</th>
-              <th className="px-4 py-3 font-medium">Event</th>
-              <th className="px-4 py-3 font-medium">Detail</th>
-              <th className="px-5 py-3 font-medium">Actor</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-[var(--console-border)]">
-            {result.state === "unavailable" ? (
+        <div className="max-h-[340px] overflow-y-auto">
+          <table className="min-w-[880px] w-full text-left text-xs">
+            <thead className="sticky top-0 z-10 border-b border-[var(--console-border)] bg-[var(--console-surface-raised)] text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
               <tr>
-                <td colSpan={5} className="px-5 py-8 text-center">
-                  <p className="font-medium text-white">Activity temporarily unavailable</p>
-                  <p className="mt-1 text-sm text-[var(--console-text-muted)]">
-                    Operational data could not be loaded safely. The feed will retry automatically.
-                  </p>
-                </td>
+                <th className="px-5 py-3 font-medium">Time</th>
+                <th className="px-4 py-3 font-medium">Community</th>
+                <th className="px-4 py-3 font-medium">Event</th>
+                <th className="px-4 py-3 font-medium">Detail</th>
+                <th className="px-5 py-3 font-medium">Actor</th>
               </tr>
-            ) : result.items.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-5 py-8 text-center">
-                  <p className="font-medium text-white">No operational activity yet</p>
-                  <p className="mt-1 text-sm text-[var(--console-text-muted)]">
-                    Important ENTRY actions will appear here as they happen.
-                  </p>
-                </td>
-              </tr>
-            ) : (
-              result.items.map((activity) => (
-                <tr
-                  key={activity.eventId}
-                  className="transition-colors hover:bg-white/[0.02]"
-                >
-                  <td className="whitespace-nowrap px-5 py-3.5 align-top text-[var(--console-text-muted)]">
-                    <time
-                      dateTime={activity.occurredAt}
-                      title={new Date(activity.occurredAt).toISOString()}
-                      suppressHydrationWarning
-                    >
-                      {formatRelativeTime(activity.occurredAt)}
-                    </time>
-                  </td>
-                  <td className="px-4 py-3.5 align-top">
-                    {activity.communityId ? (
-                      <Link
-                        href={`/products/entry/communities/${activity.communityId}`}
-                        className="font-medium text-slate-200 transition-colors hover:text-white"
-                      >
-                        {activity.communityName}
-                      </Link>
-                    ) : (
-                      <span className="font-medium text-slate-300">{activity.communityName}</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3.5 align-top">
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs font-medium",
-                        getEventTone(activity),
-                      )}
-                    >
-                      <span className={cn("h-1.5 w-1.5 rounded-full", getStatusDot(activity))} />
-                      {activity.eventLabel}
-                    </span>
-                  </td>
-                  <td className="max-w-[520px] px-4 py-3.5 align-top text-slate-300">
-                    {activity.detail}
-                  </td>
-                  <td className="whitespace-nowrap px-5 py-3.5 align-top text-slate-300">
-                    {activity.actor}
+            </thead>
+            <tbody className="divide-y divide-[var(--console-border)]">
+              {result.state === "unavailable" ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center">
+                    <p className="font-medium text-white">Activity temporarily unavailable</p>
+                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                      Operational data could not be loaded safely. The feed will retry automatically.
+                    </p>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : result.items.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-5 py-8 text-center">
+                    <p className="font-medium text-white">No operational activity yet</p>
+                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                      Important ENTRY actions will appear here as they happen.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                result.items.map((activity) => (
+                  <tr
+                    key={activity.eventId}
+                    className="transition-colors hover:bg-white/[0.02]"
+                  >
+                    <td className="whitespace-nowrap px-5 py-3 align-top text-[var(--console-text-muted)]">
+                      <time
+                        dateTime={activity.occurredAt}
+                        title={new Date(activity.occurredAt).toISOString()}
+                        suppressHydrationWarning
+                      >
+                        {formatRelativeTime(activity.occurredAt)}
+                      </time>
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      {activity.communityId ? (
+                        <Link
+                          href={`/products/entry/communities/${activity.communityId}`}
+                          className="font-medium text-slate-200 transition-colors hover:text-white"
+                        >
+                          {activity.communityName}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-slate-300">{activity.communityName}</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 align-top">
+                      <span className={getEventTextStyle(activity)}>
+                        {activity.eventLabel}
+                      </span>
+                    </td>
+                    <td className="max-w-[520px] px-4 py-3 align-top text-slate-300">
+                      {activity.detail}
+                    </td>
+                    <td className="whitespace-nowrap px-5 py-3 align-top font-medium text-slate-200">
+                      {activity.actor}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
