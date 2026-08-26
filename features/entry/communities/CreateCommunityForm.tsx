@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/Button";
+import {
+  CalendarDays,
+  Check,
+  ChevronDown,
+  Link2,
+  MessageSquare,
+  Star,
+} from "lucide-react";
 import { createCommunityAction } from "@/features/entry/communities/actions";
 import { BulkUnitsUploader } from "@/features/entry/communities/BulkUnitsUploader";
 import { FacilityFields } from "@/features/entry/communities/FacilityFields";
@@ -28,63 +35,33 @@ const FEATURE_ITEMS = [
     name: "allow_frequent_access",
     title: "Frequent access",
     description: "Enable recurring or fast-entry workflows for residents.",
-    icon: (
-      <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M8 2.25L9.7 5.7L13.5 6.25L10.75 8.92L11.4 12.7L8 10.92L4.6 12.7L5.25 8.92L2.5 6.25L6.3 5.7L8 2.25Z"
-          stroke="currentColor"
-          strokeWidth="1.25"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
+    icon: Star,
   },
   {
     name: "allow_reservations",
     title: "Reservations",
     description: "Allow amenity, space, or visit reservation flows.",
-    icon: (
-      <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M5 1.75V3.25M11 1.75V3.25M2.75 5.25H13.25M4.5 7.75H5.5M7.5 7.75H8.5M10.5 7.75H11.5M4.5 10.25H5.5M7.5 10.25H8.5"
-          stroke="currentColor"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-        />
-        <rect x="2.75" y="3.25" width="10.5" height="10" rx="2.25" stroke="currentColor" strokeWidth="1.25" />
-      </svg>
-    ),
+    icon: CalendarDays,
   },
   {
     name: "allow_messages",
     title: "Messages",
     description: "Allow in-product communication and broadcast tools.",
-    icon: (
-      <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 16 16" fill="none">
-        <path
-          d="M4.75 11.75L2.75 13V4.75C2.75 3.64543 3.64543 2.75 4.75 2.75H11.25C12.3546 2.75 13.25 3.64543 13.25 4.75V9.25C13.25 10.3546 12.3546 11.25 11.25 11.25H4.75V11.75Z"
-          stroke="currentColor"
-          strokeWidth="1.25"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M5.75 6.75H10.25M5.75 8.75H8.75"
-          stroke="currentColor"
-          strokeWidth="1.25"
-          strokeLinecap="round"
-        />
-      </svg>
-    ),
+    icon: MessageSquare,
   },
 ] as const;
 
-function SubmitButton() {
+function SubmitButton({ disabled }: { disabled?: boolean }) {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" disabled={pending}>
+    <button
+      type="submit"
+      disabled={pending || disabled}
+      className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--console-accent)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-40"
+    >
       {pending ? "Creating community..." : "Create community"}
-    </Button>
+    </button>
   );
 }
 
@@ -100,31 +77,30 @@ export function CreateCommunityForm() {
   const [facilityNames, setFacilityNames] = useState([""]);
   const [unitsInput, setUnitsInput] = useState("");
   const [unitsMode, setUnitsMode] = useState<"advanced" | "simple">("simple");
+  const [useRegistrationLink, setUseRegistrationLink] = useState(true);
   const [advancedUnitsImport, setAdvancedUnitsImport] =
     useState<AdvancedUnitsImportPayload | null>(null);
   const [clientError, setClientError] = useState("");
 
   const panelClassName =
-    cn(
-      "rounded-[30px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(16,20,29,0.94),rgba(12,17,25,0.9))] shadow-[0_18px_50px_rgba(2,6,23,0.18)] backdrop-blur",
-    );
+    "rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]";
   const fieldClassName =
-    "h-12 w-full rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 text-sm text-slate-100 outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50";
+    "h-9 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] px-3 text-sm text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]";
 
   if (state.success) {
     return (
-      <div className="rounded-[32px] border border-[var(--border-strong)] bg-[linear-gradient(180deg,rgba(112,104,255,0.16),rgba(17,24,39,0.94))] p-8 shadow-[0_24px_70px_rgba(2,6,23,0.32)] backdrop-blur">
-        <div className="inline-flex items-center rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+      <div className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-6 space-y-6">
+        <div className="inline-flex items-center rounded-[4px] border border-emerald-400/20 bg-emerald-500/[0.08] px-2 py-0.5 text-[11px] font-semibold text-emerald-200">
           Community created
         </div>
-        <h2 className="mt-4 text-3xl font-semibold text-white">
+        <h2 className="text-2xl font-semibold text-white">
           {state.communityName} created
         </h2>
-        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+        <p className="text-sm leading-6 text-[var(--console-text-muted)]">
           {state.message}
         </p>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             { label: "Community created", value: 1 },
             { label: "Inserted units", value: state.insertedUnits ?? 0 },
@@ -152,16 +128,16 @@ export function CreateCommunityForm() {
           ].map((metric) => (
             <div
               key={metric.label}
-              className="rounded-3xl border border-white/10 bg-[var(--surface-elevated)] p-4"
+              className="rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-4"
             >
-              <p className="text-sm text-[var(--text-muted)]">{metric.label}</p>
-              <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
+              <p className="text-xs text-[var(--console-text-muted)]">{metric.label}</p>
+              <p className="mt-1.5 text-xl font-semibold text-white">{metric.value}</p>
             </div>
           ))}
         </div>
 
         {state.usedAdvancedImport ? (
-          <div className="mt-6 space-y-2 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+          <div className="space-y-2 rounded-md border border-amber-400/20 bg-amber-500/[0.08] px-4 py-3 text-xs text-amber-200">
             <p>
               Resident imports are stored as pending activation records only. No
               active ENTRY users, emails, or final PINs are created from this flow.
@@ -182,19 +158,26 @@ export function CreateCommunityForm() {
           </div>
         ) : null}
 
-        <div className="mt-8 flex flex-wrap gap-3">
-          <Link href="/products/entry/communities">
-            <Button>Back to communities</Button>
+        <div className="flex flex-wrap gap-3 pt-2">
+          <Link
+            href="/products/entry/communities"
+            className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--console-accent)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)]"
+          >
+            Back to communities
           </Link>
           {state.communityId && (state.activationInserted ?? 0) > 0 ? (
             <Link
-              href={`/products/entry/activation?community_id=${state.communityId}`}
+              href={`/products/entry/communities/${state.communityId}/users`}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-4 text-xs font-semibold text-slate-200 hover:bg-white/[0.05]"
             >
-              <Button>Go to Activation Queue</Button>
+              Manage users
             </Link>
           ) : null}
-          <Link href="/products/entry/communities/new">
-            <Button variant="secondary">Create another</Button>
+          <Link
+            href="/products/entry/communities/new"
+            className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-4 text-xs font-semibold text-slate-200 hover:bg-white/[0.05]"
+          >
+            Create another
           </Link>
         </div>
       </div>
@@ -204,9 +187,17 @@ export function CreateCommunityForm() {
   return (
     <form
       action={formAction}
-      className="space-y-6"
+      className="space-y-5"
       onSubmit={(event) => {
         if (step !== 3) {
+          return;
+        }
+
+        if (!useRegistrationLink) {
+          event.preventDefault();
+          setClientError(
+            "Resident registration link must be enabled before creating the community.",
+          );
           return;
         }
 
@@ -237,6 +228,11 @@ export function CreateCommunityForm() {
       <input type="hidden" name="units_mode" value={unitsMode} />
       <input
         type="hidden"
+        name="use_registration_link"
+        value={String(useRegistrationLink)}
+      />
+      <input
+        type="hidden"
         name="advanced_units_payload"
         value={advancedUnitsImport ? JSON.stringify(advancedUnitsImport) : ""}
       />
@@ -260,7 +256,8 @@ export function CreateCommunityForm() {
         />
       ))}
 
-      <div className="overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(13,18,31,0.82),rgba(10,14,24,0.68))] px-5 py-4 shadow-[0_16px_40px_rgba(2,6,23,0.14)] backdrop-blur sm:px-6">
+      {/* Stepper Panel */}
+      <div className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-5 py-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-0">
           {STEP_ITEMS.map((item, index) => {
             const isActive = step === item.id;
@@ -271,61 +268,44 @@ export function CreateCommunityForm() {
                 key={item.id}
                 className="flex min-w-0 flex-1 items-center gap-3"
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <span
                     className={cn(
-                      "grid h-9 w-9 shrink-0 place-items-center rounded-full border text-sm font-semibold transition",
-                      isActive
-                        ? "border-violet-300/30 bg-[linear-gradient(180deg,rgba(109,99,255,0.95),rgba(86,78,222,0.92))] text-white shadow-[0_12px_30px_rgba(89,80,243,0.32)]"
-                        : isCompleted
-                          ? "border-violet-300/20 bg-[var(--primary-soft)] text-violet-100"
-                          : "border-white/12 bg-white/[0.03] text-[var(--text-muted)]",
+                      "grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-semibold transition",
+                      isActive || isCompleted
+                        ? "bg-[var(--console-accent)] text-white"
+                        : "border border-[var(--console-border-strong)] bg-white/[0.02] text-[var(--console-text-muted)]",
                     )}
                   >
                     {isCompleted ? (
-                      <svg
-                        aria-hidden="true"
-                        className="h-4 w-4"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <path
-                          d="M3.5 8.25L6.5 11.25L12.5 4.75"
-                          stroke="currentColor"
-                          strokeWidth="1.75"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      <Check className="h-3.5 w-3.5 stroke-[2]" />
                     ) : (
                       item.id
                     )}
                   </span>
-                  <div className="min-w-0">
-                    <p
-                      className={cn(
-                        "text-sm font-medium transition",
-                        isActive || isCompleted
-                          ? "text-white"
-                          : "text-[var(--text-muted)]",
-                      )}
-                    >
-                      {item.label}
-                    </p>
-                  </div>
+                  <span
+                    className={cn(
+                      "text-sm font-semibold transition truncate",
+                      isActive || isCompleted
+                        ? "text-white"
+                        : "text-[var(--console-text-muted)]",
+                    )}
+                  >
+                    {item.label}
+                  </span>
                 </div>
 
                 {index < STEP_ITEMS.length - 1 ? (
                   <div className="hidden min-w-8 flex-1 md:block">
-                    <div className="h-px w-full bg-white/10">
+                    <div className="h-0.5 w-full rounded-full bg-[var(--console-border)]">
                       <div
                         className={cn(
-                          "h-full transition-all",
+                          "h-full rounded-full transition-all",
                           step > item.id
-                            ? "w-full bg-[var(--primary)]"
+                            ? "w-full bg-[var(--console-accent)]"
                             : isActive
-                              ? "w-1/2 bg-[var(--primary)]"
-                              : "w-0 bg-[var(--primary)]",
+                              ? "w-full bg-[var(--console-accent)]"
+                              : "w-0",
                         )}
                       />
                     </div>
@@ -337,22 +317,24 @@ export function CreateCommunityForm() {
         </div>
       </div>
 
+      {/* Step 1: Details */}
       {step === 1 ? (
-        <section className={cn(panelClassName, "p-6 sm:p-7")}>
-          <div className="mb-6 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-              Step 1
+        <section className={cn(panelClassName, "p-6 sm:p-7 space-y-6")}>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
+              STEP 1
             </p>
-            <h2 className="text-xl font-semibold text-white">Details</h2>
-            <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
-              Start with the core information for the community before enabling
-              features and importing units.
+            <h2 className="mt-1 text-xl font-semibold text-white">Details</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
+              Start with the core information for the community before enabling features and importing units.
             </p>
           </div>
 
+          <div className="border-t border-[var(--console-border)]" />
+
           <div className="grid gap-5 md:grid-cols-2">
-            <div className="space-y-2.5">
-              <label className="text-sm font-medium text-slate-200" htmlFor="name">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]" htmlFor="name">
                 Community name
               </label>
               <input
@@ -364,8 +346,8 @@ export function CreateCommunityForm() {
                 placeholder="Residencial Las Flores"
               />
             </div>
-            <div className="space-y-2.5">
-              <label className="text-sm font-medium text-slate-200" htmlFor="city">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]" htmlFor="city">
                 City
               </label>
               <input
@@ -378,8 +360,8 @@ export function CreateCommunityForm() {
             </div>
           </div>
 
-          <div className="mt-5 space-y-2.5">
-            <label className="text-sm font-medium text-slate-200" htmlFor="unit_label">
+          <div className="space-y-1.5">
+            <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]" htmlFor="unit_label">
               Unit label
             </label>
             <div className="relative">
@@ -389,53 +371,64 @@ export function CreateCommunityForm() {
                 onChange={(event) => setUnitLabel(event.target.value)}
                 className={cn(
                   fieldClassName,
-                  "appearance-none pr-12 text-left text-slate-100",
+                  "appearance-none pr-10 text-slate-100",
                 )}
               >
                 {UNIT_LABEL_OPTIONS.map((option) => (
-                  <option key={option} value={option}>
+                  <option key={option} value={option} className="bg-[#18181b] text-slate-100">
                     {option}
                   </option>
                 ))}
               </select>
-              <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-[var(--text-muted)]">
-                <svg
-                  aria-hidden="true"
-                  className="h-4 w-4"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                >
-                  <path
-                    d="M4 6.5L8 10.5L12 6.5"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[var(--console-text-muted)]">
+                <ChevronDown className="h-4 w-4 stroke-[1.75]" />
               </span>
             </div>
-            <p className="pl-0.5 text-sm leading-6 text-[var(--text-muted)]">
+            <p className="text-xs text-[var(--console-text-muted)]">
               Examples: Casas, Apartamentos, Condominios, Oficinas.
             </p>
+          </div>
+
+          <div className="border-t border-[var(--console-border)] pt-2" />
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              disabled={step === 1}
+              onClick={() => setStep((current) => Math.max(1, current - 1))}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-4 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep((current) => current + 1)}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--console-accent)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+            >
+              Continue
+            </button>
           </div>
         </section>
       ) : null}
 
+      {/* Step 2: Features */}
       {step === 2 ? (
-        <section className={cn(panelClassName, "space-y-5 p-6 sm:p-7")}>
-          <div className="mb-1 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-              Step 2
+        <section className={cn(panelClassName, "p-6 sm:p-7 space-y-6")}>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
+              STEP 2
             </p>
-            <h2 className="text-xl font-semibold text-white">Features</h2>
-            <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
+            <h2 className="mt-1 text-xl font-semibold text-white">Features</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
               Choose the operational tools this community should launch with.
             </p>
           </div>
 
+          <div className="border-t border-[var(--console-border)]" />
+
           <div className="grid gap-4 xl:grid-cols-3">
             {FEATURE_ITEMS.map((item) => {
+              const Icon = item.icon;
               const checked =
                 item.name === "allow_frequent_access"
                   ? allowFrequentAccess
@@ -450,45 +443,45 @@ export function CreateCommunityForm() {
                     : setAllowMessages;
 
               return (
-              <label
-                key={item.name}
-                className={cn(
-                  "flex cursor-pointer items-start gap-4 rounded-[26px] border p-4 transition sm:p-5",
-                  checked
-                    ? "border-violet-300/16 bg-[linear-gradient(180deg,rgba(109,99,255,0.12),rgba(12,17,25,0.72))]"
-                    : "border-white/8 bg-[rgba(12,17,25,0.58)] hover:border-white/12",
-                )}
-              >
-                <div
+                <label
+                  key={item.name}
                   className={cn(
-                    "grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-violet-100",
+                    "flex cursor-pointer items-center justify-between gap-3 rounded-md border p-4 transition",
                     checked
-                      ? "border-violet-300/18 bg-[linear-gradient(180deg,rgba(109,99,255,0.26),rgba(65,50,170,0.28))]"
-                      : "border-white/8 bg-white/[0.03] text-[var(--text-muted)]",
+                      ? "border-[var(--console-accent-border)] bg-[var(--console-surface-raised)]"
+                      : "border-[var(--console-border)] bg-[var(--console-surface-raised)] hover:bg-white/[0.035]",
                   )}
                 >
-                  {item.icon}
-                </div>
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div
+                      className={cn(
+                        "grid h-9 w-9 shrink-0 place-items-center rounded-md border transition",
+                        checked
+                          ? "border-violet-400/30 bg-[var(--console-accent-subtle)] text-violet-100"
+                          : "border-[var(--console-border)] bg-white/[0.025] text-[var(--console-text-muted)]",
+                      )}
+                    >
+                      <Icon className="h-4 w-4 stroke-[1.75]" />
+                    </div>
 
-                <div className="flex min-w-0 flex-1 items-start justify-between gap-4">
-                  <div className="min-w-0">
-                    <span className="text-base font-semibold text-white">
-                      {item.title}
-                    </span>
-                    <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
-                      {item.description}
-                    </p>
+                    <div className="min-w-0">
+                      <span className="text-sm font-semibold text-white truncate block">
+                        {item.title}
+                      </span>
+                      <p className="mt-0.5 text-xs leading-5 text-[var(--console-text-muted)] line-clamp-2">
+                        {item.description}
+                      </p>
+                    </div>
                   </div>
 
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={(event) => onChange(event.target.checked)}
-                    className="mt-1 h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
+                    className="h-4 w-4 shrink-0 rounded border-[var(--console-border-strong)] bg-transparent text-[var(--console-accent)] focus:ring-0 focus:ring-offset-0"
                   />
-                </div>
-              </label>
-            );
+                </label>
+              );
             })}
           </div>
 
@@ -497,11 +490,31 @@ export function CreateCommunityForm() {
             value={facilityNames}
             onChange={setFacilityNames}
           />
+
+          <div className="border-t border-[var(--console-border)] pt-2" />
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStep((current) => Math.max(1, current - 1))}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-4 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+            >
+              Back
+            </button>
+            <button
+              type="button"
+              onClick={() => setStep((current) => current + 1)}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--console-accent)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+            >
+              Continue
+            </button>
+          </div>
         </section>
       ) : null}
 
+      {/* Step 3: Units */}
       {step === 3 ? (
-        <section className={cn(panelClassName, "p-6 sm:p-7")}>
+        <section className={cn(panelClassName, "p-6 sm:p-7 space-y-6")}>
           <BulkUnitsUploader
             advancedValue={advancedUnitsImport}
             mode={unitsMode}
@@ -513,45 +526,63 @@ export function CreateCommunityForm() {
             onSimpleChange={setUnitsInput}
             simpleValue={unitsInput}
           />
+
+          <label className="flex cursor-pointer flex-col gap-3 rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-4 transition hover:bg-white/[0.035] sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <input
+                type="checkbox"
+                checked={useRegistrationLink}
+                onChange={(event) => {
+                  const nextChecked = event.target.checked;
+                  setUseRegistrationLink(nextChecked);
+                  if (nextChecked) {
+                    setClientError("");
+                  }
+                }}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[var(--console-border-strong)] bg-transparent text-[var(--console-accent)] focus:ring-0 focus:ring-offset-0"
+              />
+              <div className="min-w-0">
+                <span className="text-sm font-semibold text-white block">
+                  Use resident registration link to build the resident and unit list
+                </span>
+                <p className="mt-0.5 text-xs text-[var(--console-text-muted)]">
+                  Recommended when residents will register through the onboarding link instead of importing the full unit list manually.
+                </p>
+              </div>
+            </div>
+
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-[4px] border border-violet-400/20 bg-violet-500/[0.08] px-2.5 py-1 text-xs font-medium text-violet-200">
+              <Link2 className="h-3.5 w-3.5 stroke-[1.75]" />
+              <span>Pre-onboarding method</span>
+            </span>
+          </label>
+
+          <div className="border-t border-[var(--console-border)] pt-2" />
+
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setStep((current) => Math.max(1, current - 1))}
+              className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-4 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+            >
+              Back
+            </button>
+            <SubmitButton disabled={!useRegistrationLink} />
+          </div>
         </section>
       ) : null}
 
       {clientError ? (
-        <p className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <p className="rounded-md border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-200">
           {clientError}
         </p>
       ) : null}
 
       {state.message ? (
-        <p className="rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <p className="rounded-md border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-xs font-medium text-rose-200">
           {state.message}
         </p>
       ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-        <div className="flex flex-wrap gap-3">
-          <Button
-            type="button"
-            variant="secondary"
-            className="min-w-20"
-            disabled={step === 1}
-            onClick={() => setStep((current) => Math.max(1, current - 1))}
-          >
-            Back
-          </Button>
-          {step < 3 ? (
-            <Button
-              type="button"
-              className="min-w-28"
-              onClick={() => setStep((current) => current + 1)}
-            >
-              Continue
-            </Button>
-          ) : null}
-        </div>
-
-        {step === 3 ? <SubmitButton /> : null}
-      </div>
     </form>
   );
 }

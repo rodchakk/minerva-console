@@ -1,26 +1,47 @@
 @import "tailwindcss";
 
 :root {
-  --background: #07090d;
-  --foreground: #f3f4f8;
-  --app-bg: #07090d;
-  --surface: #10141d;
-  --surface-muted: #151b26;
-  --surface-strong: #0c1119;
-  --surface-elevated: #131926;
-  --border: rgba(148, 163, 184, 0.14);
-  --border-strong: rgba(129, 140, 248, 0.22);
-  --sidebar: #0a0e15;
-  --sidebar-muted: #121722;
-  --sidebar-foreground: #e2e8f0;
+  /* Visual System v2 Semantic Tokens */
+  --console-bg: #141414;
+  --console-sidebar: #242424;
+  --console-surface: #1c1c1c;
+  --console-surface-raised: #262626;
+  --console-surface-hover: #2c2c2c;
+  --console-border: rgba(255, 255, 255, 0.10);
+  --console-border-strong: rgba(255, 255, 255, 0.16);
+  --console-text: #f1f3f9;
+  --console-text-muted: #8a8f9e;
+  --console-text-soft: #5e6373;
+  --console-accent: #6d63ff;
+  --console-accent-hover: #5c52ed;
+  --console-accent-subtle: rgba(109, 99, 255, 0.12);
+  --console-accent-border: rgba(109, 99, 255, 0.30);
+  --console-status-success: #34d399;
+  --console-status-warning: #f59e0b;
+  --console-status-danger: #f43f5e;
+  --console-status-info: #38bdf8;
+
+  /* Preserved compatibility variables mapped to neutral v2 scale */
+  --background: #141414;
+  --foreground: #f1f3f9;
+  --app-bg: #141414;
+  --surface: #1c1c1c;
+  --surface-muted: #262626;
+  --surface-strong: #202020;
+  --surface-elevated: #262626;
+  --border: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --sidebar: #242424;
+  --sidebar-muted: #262626;
+  --sidebar-foreground: #f1f3f9;
   --primary: #6d63ff;
-  --primary-strong: #5a52ed;
-  --primary-soft: rgba(109, 99, 255, 0.14);
+  --primary-strong: #5c52ed;
+  --primary-soft: rgba(109, 99, 255, 0.12);
   --warning: #f59e0b;
   --danger: #f43f5e;
   --success: #34d399;
-  --text-muted: #8d99ad;
-  --text-soft: #cad2df;
+  --text-muted: #8a8f9e;
+  --text-soft: #5e6373;
 }
 
 @theme inline {
@@ -35,13 +56,13 @@
 }
 
 html {
-  background: linear-gradient(180deg, #0a0d13 0%, #07090d 100%);
+  background: var(--console-bg);
 }
 
 body {
   min-height: 100vh;
-  background: transparent;
-  color: var(--foreground);
+  background: var(--console-bg);
+  color: var(--console-text);
   font-family: var(--font-geist-sans), sans-serif;
 }
 
@@ -58,5 +79,5 @@ select {
 }
 
 ::selection {
-  background: rgba(112, 104, 255, 0.32);
+  background: rgba(109, 99, 255, 0.32);
 }

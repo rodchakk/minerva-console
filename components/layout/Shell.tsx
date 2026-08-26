@@ -13,13 +13,14 @@ export function Shell({ children, email }: ShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-transparent text-[var(--foreground)]">
+    <div className="min-h-screen bg-[var(--console-bg)] text-[var(--console-text)]">
+      <Topbar email={email} onOpenSidebar={() => setIsSidebarOpen(true)} />
       <AppSidebar
+        email={email}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
       <div className="lg:pl-64">
-        <Topbar email={email} onOpenSidebar={() => setIsSidebarOpen(true)} />
         <main className="px-4 py-4 lg:px-6 lg:py-5 2xl:px-7">
           <div className="mx-auto max-w-[1820px]">{children}</div>
         </main>
