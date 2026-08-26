@@ -28,6 +28,17 @@ export type EntryOperationalActivityResult = {
 
 const DASHBOARD_HIDDEN_EVENT_KEYS = new Set(["facilities_configured"]);
 
+function shouldHideDashboardActivity(item: EntryOperationalActivityItem) {
+  if (DASHBOARD_HIDDEN_EVENT_KEYS.has(item.eventKey)) {
+    return true;
+  }
+
+  // PIN generation is useful audit history, but too granular for the global
+  // dashboard. Community-registration conversion already represents the
+  // meaningful "moved to activation" event.
+  return item.source === "superadmin_audit" && item.eventKey === "residents_prepared";
+}
+
 function normalizeSeverity(value: string): EntryOperationalActivitySeverity {
   const normalized = value.trim().toLowerCase();
 
@@ -58,7 +69,7 @@ export async function getEntryOperationalActivity(
   const requestedLimit = clampLimit(limit);
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_entry_operational_activity_v1", {
-    p_limit: Math.min(requestedLimit + 5, 50),
+    p_limit: Math.min(requestedLimit + 10, 50),
   });
 
   if (error) {
@@ -101,7 +112,7 @@ export async function getEntryOperationalActivity(
       } satisfies EntryOperationalActivityItem;
     })
     .filter((item): item is EntryOperationalActivityItem => item !== null)
-    .filter((item) => !DASHBOARD_HIDDEN_EVENT_KEYS.has(item.eventKey))
+    .filter((item) => !shouldHideDashboardActivity(item))
     .slice(0, requestedLimit);
 
   return {
