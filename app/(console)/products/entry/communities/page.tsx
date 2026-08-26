@@ -1,11 +1,18 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import {
+  Archive,
+  CheckCircle2,
+  Clock3,
+  Plus,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
 import { CommunityList } from "@/features/entry/communities/CommunityList";
 import {
   listCommunitiesWithProgress,
   type CommunityWithProgressItem,
 } from "@/features/entry/communities/queries";
+import { cn } from "@/lib/supabase/utils";
 
 type CommunityFilter =
   | "active"
@@ -96,24 +103,120 @@ const summaryCards = [
   {
     label: "Total communities",
     hint: "Across all statuses",
-    iconTone: "border-violet-400/16 bg-violet-500/10 text-violet-200",
+    icon: UsersRound,
+    dotClassName: "bg-violet-400",
   },
   {
     label: "Active communities",
     hint: "Shown by default",
-    iconTone: "border-emerald-400/16 bg-emerald-500/10 text-emerald-200",
+    icon: CheckCircle2,
+    dotClassName: "bg-emerald-400",
   },
   {
     label: "Pending setup",
     hint: "Active communities awaiting completion",
-    iconTone: "border-amber-400/16 bg-amber-500/10 text-amber-200",
+    icon: Clock3,
+    dotClassName: "bg-amber-400",
   },
   {
     label: "Inactive communities",
     hint: "Archived from the main view",
-    iconTone: "border-slate-400/16 bg-slate-500/10 text-slate-200",
+    icon: Archive,
+    dotClassName: "bg-slate-400",
   },
 ] as const;
+
+function ActionLink({
+  href,
+  children,
+  variant = "secondary",
+}: {
+  href: string;
+  children: React.ReactNode;
+  variant?: "primary" | "secondary";
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
+        variant === "primary"
+          ? "border border-transparent bg-[var(--console-accent)] text-white hover:bg-[var(--console-accent-hover)]"
+          : "border border-[var(--console-border-strong)] bg-white/[0.025] text-slate-100 hover:border-white/20 hover:bg-white/[0.05]",
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function MetricItem({
+  icon: Icon,
+  label,
+  value,
+  note,
+  dotClassName,
+  className,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: React.ReactNode;
+  note: string;
+  dotClassName: string;
+  className?: string;
+}) {
+  return (
+    <article
+      className={cn(
+        "flex h-full items-center justify-center px-5 py-4",
+        className,
+      )}
+    >
+      <div className="w-full max-w-[250px]">
+        <p className="text-xs font-medium text-[var(--console-text-muted)]">
+          {label}
+        </p>
+        <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] items-center gap-3.5">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--console-border-strong)] bg-white/[0.025] text-slate-300">
+            <Icon className="h-4.5 w-4.5 stroke-[1.75]" />
+          </span>
+          <p className="min-w-0 text-2xl font-semibold tracking-tight text-white">
+            {value}
+          </p>
+        </div>
+        <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] gap-3.5">
+          <span aria-hidden="true" />
+          <p className="flex min-w-0 items-center gap-2 text-xs text-[var(--console-text-muted)]">
+            <span className={cn("h-1.5 w-1.5 rounded-full", dotClassName)} />
+            <span>{note}</span>
+          </p>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function EmptyDirectory({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-5 py-10 text-center">
+      <h2 className="text-lg font-semibold text-white">{title}</h2>
+      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
+        {description}
+      </p>
+      <div className="mt-6">
+        <ActionLink href="/products/entry/communities" variant="secondary">
+          View active communities
+        </ActionLink>
+      </div>
+    </section>
+  );
+}
 
 export default async function CommunitiesPage(
   props: PageProps<"/products/entry/communities">,
@@ -171,79 +274,76 @@ export default async function CommunitiesPage(
   const cardValues = [totalCount, activeCount, pendingCount, inactiveCount];
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 lg:px-6">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-violet-200">
-              ENTRY Directory
+    <div className="space-y-5">
+      <section className="px-0.5 pt-5">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+          <div className="min-w-0 max-w-3xl">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+              ENTRY DIRECTORY
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[2rem]">
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[2.05rem]">
               ENTRY communities
             </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
+            <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
               Directory and onboarding workspace for active ENTRY communities.
               Archived communities remain available through the inactive filter.
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
-            <Link href="/products/entry/communities/new">
-              <Button>Onboard new community</Button>
-            </Link>
-            <Link href="/products/entry/communities?filter=pending_setup">
-              <Button variant="secondary">View pending setup</Button>
-            </Link>
+            <ActionLink href="/products/entry/communities/new" variant="primary">
+              <Plus className="h-4 w-4 stroke-[1.75]" />
+              Onboard new community
+            </ActionLink>
+            <ActionLink href="/products/entry/communities?filter=pending_setup">
+              <Clock3 className="h-4 w-4 stroke-[1.75]" />
+              View pending setup
+            </ActionLink>
           </div>
-        </div>
-
-        <div className="mt-5 flex flex-wrap gap-2">
-          {filters.map((filter) => {
-            const isActive = currentFilter === filter.value;
-
-            return (
-              <Link
-                key={filter.value}
-                href={filter.href}
-                className={`rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "border-violet-400/18 bg-violet-500/12 text-white"
-                    : "border-[var(--border)] bg-[var(--surface-strong)] text-[var(--text-muted)] hover:border-white/12 hover:bg-[var(--surface-muted)] hover:text-white"
-                }`}
-              >
-                {filter.label}
-              </Link>
-            );
-          })}
         </div>
       </section>
 
-      {communities.length > 0 ? (
-        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {summaryCards.map((card, index) => (
-            <article
-              key={card.label}
-              className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-4 py-4"
+      <nav
+        aria-label="Community filters"
+        className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-1"
+      >
+        {filters.map((filter) => {
+          const isActive = currentFilter === filter.value;
+
+          return (
+            <Link
+              key={filter.value}
+              href={filter.href}
+              className={cn(
+                "inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
+                isActive
+                  ? "bg-[var(--console-accent-subtle)] text-violet-100 ring-1 ring-inset ring-[var(--console-accent-border)]"
+                  : "text-[var(--console-text-muted)] hover:bg-white/[0.035] hover:text-slate-100",
+              )}
             >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-semibold ${card.iconTone}`}
-                >
-                  {index + 1}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs font-medium uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                    {card.label}
-                  </p>
-                  <p className="mt-2 text-3xl font-semibold text-white">
-                    {cardValues[index]}
-                  </p>
-                  <p className="mt-2 text-sm text-[var(--text-muted)]">
-                    {card.hint}
-                  </p>
-                </div>
-              </div>
-            </article>
+              {filter.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {communities.length > 0 ? (
+        <section className="grid overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] md:grid-cols-2 xl:grid-cols-4">
+          {summaryCards.map((card, index) => (
+            <MetricItem
+              key={card.label}
+              icon={card.icon}
+              label={card.label}
+              value={cardValues[index]}
+              note={card.hint}
+              dotClassName={card.dotClassName}
+              className={cn(
+                index < 2 ? "border-b border-[var(--console-border)]" : "",
+                index === 0 ? "md:border-r xl:border-b-0" : "",
+                index === 1 ? "xl:border-r xl:border-b-0" : "",
+                index === 2 ? "md:border-r md:border-b-0 xl:border-r" : "",
+              )}
+            />
           ))}
         </section>
       ) : null}
@@ -251,11 +351,9 @@ export default async function CommunitiesPage(
       {filteredCommunities.length > 0 ? (
         <CommunityList communities={filteredCommunities} />
       ) : (
-        <EmptyState
+        <EmptyDirectory
           title={emptyState.title}
           description={emptyState.description}
-          actionHref="/products/entry/communities"
-          actionLabel="View active communities"
         />
       )}
     </div>

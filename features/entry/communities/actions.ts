@@ -248,6 +248,18 @@ export async function createCommunityAction(
     return { message: previewReadOnlyError, success: false };
   }
 
+  const useRegistrationLink = parseBooleanField(
+    formData.get("use_registration_link"),
+  );
+
+  if (!useRegistrationLink) {
+    return {
+      message:
+        "Resident registration link must be enabled before creating the community.",
+      success: false,
+    };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const city = String(formData.get("city") ?? "").trim();
   const unitLabel = String(formData.get("unit_label") ?? "Casas").trim() || "Casas";

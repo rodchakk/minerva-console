@@ -14,13 +14,14 @@ export function Shell({ children, email, previewReadOnly = false }: ShellProps) 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-transparent text-[var(--foreground)]">
+    <div className="min-h-screen bg-[var(--console-bg)] text-[var(--console-text)]">
+      <Topbar email={email} onOpenSidebar={() => setIsSidebarOpen(true)} />
       <AppSidebar
+        email={email}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
       />
       <div className="lg:pl-64">
-        <Topbar email={email} onOpenSidebar={() => setIsSidebarOpen(true)} />
         {previewReadOnly ? (
           <div className="sticky top-0 z-30 border-y border-amber-300/60 bg-amber-300 px-4 py-2 text-center text-xs font-black uppercase tracking-[0.24em] text-slate-950 shadow-[0_8px_24px_rgba(245,158,11,0.24)] lg:px-6">
             PREVIEW · READ ONLY

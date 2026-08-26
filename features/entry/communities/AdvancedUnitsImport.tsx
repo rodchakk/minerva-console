@@ -1,8 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { Download, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import {
   type AdvancedUnitsImportPayload,
   downloadAdvancedUnitsTemplate,
@@ -26,7 +26,7 @@ export function AdvancedUnitsImport({
     "Upload a file or paste spreadsheet rows, then parse the data to review it before creating anything.",
   );
   const [isParsing, setIsParsing] = useState(false);
-  const fileName = file?.name ?? "No file chosen";
+  const fileName = file?.name ?? null;
 
   async function handleParse() {
     if (!file && !pasteValue.trim()) {
@@ -73,89 +73,109 @@ export function AdvancedUnitsImport({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
+      <div>
         <h3 className="text-xl font-semibold text-white">Import resident data</h3>
-        <p className="max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
+        <p className="mt-1 text-xs text-[var(--console-text-muted)] max-w-3xl">
           Import units and residents into the Activation Queue. No active ENTRY
           users or final PINs are created from this step.
         </p>
       </div>
 
-      <div className="rounded-[26px] border border-white/8 bg-[rgba(12,17,25,0.58)] p-5">
-        <div className="space-y-1">
-          <h4 className="text-base font-semibold text-white">1. Add source</h4>
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
-            Upload a file or paste spreadsheet data.
-          </p>
+      {/* Step 1: Add source */}
+      <div className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-5 space-y-5">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--console-border)] text-xs font-semibold text-white">
+            1
+          </span>
+          <h4 className="text-sm font-semibold text-white">Add source</h4>
         </div>
 
-        <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_48px_minmax(0,1fr)] lg:items-start">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_48px_minmax(0,1fr)] lg:items-center">
+          {/* File Upload Column */}
           <div className="space-y-3">
-            <label
-              className="text-sm font-medium text-slate-200"
-              htmlFor="units_import_file"
+            <div>
+              <p className="text-sm font-semibold text-white">Upload file</p>
+              <p className="mt-0.5 text-xs text-[var(--console-text-muted)]">
+                Upload a file or spreadsheet.
+              </p>
+            </div>
+
+            <input
+              ref={fileInputRef}
+              id="units_import_file"
+              type="file"
+              accept=".xlsx,.csv"
+              onChange={(event) => {
+                const nextFile = event.target.files?.[0] ?? null;
+                setFile(nextFile);
+                if (nextFile) {
+                  setStatusMessage(
+                    `${nextFile.name} selected. Parse the data to review units and resident rows before community creation.`,
+                  );
+                } else {
+                  setStatusMessage(
+                    "Upload a file or paste spreadsheet rows, then parse the data to review it before creating anything.",
+                  );
+                }
+              }}
+              className="sr-only"
+            />
+
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full rounded-md border border-dashed border-[var(--console-border-strong)] bg-white/[0.015] p-5 text-center transition hover:border-violet-400/40 hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             >
-              Upload file
-            </label>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <input
-                ref={fileInputRef}
-                id="units_import_file"
-                type="file"
-                accept=".xlsx,.csv"
-                onChange={(event) => {
-                  const nextFile = event.target.files?.[0] ?? null;
-                  setFile(nextFile);
-                  if (nextFile) {
-                    setStatusMessage(
-                      `${nextFile.name} selected. Parse the data to review units and resident rows before community creation.`,
-                    );
-                  } else {
-                    setStatusMessage(
-                      "Upload a file or paste spreadsheet rows, then parse the data to review it before creating anything.",
-                    );
-                  }
-                }}
-                className="sr-only"
-              />
+              <Upload className="mx-auto h-6 w-6 stroke-[1.75] text-violet-400" />
+              <p className="mt-2 text-xs font-semibold text-white">
+                {fileName ? fileName : "Choose file"}
+              </p>
+              <p className="mt-0.5 text-[11px] text-[var(--console-text-muted)]">
+                {fileName ? "Click to change file" : "Select a spreadsheet file"}
+              </p>
+            </button>
+
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <p className="text-xs text-[var(--console-text-muted)]">
+                Accepted formats: <code className="text-slate-300">.xlsx</code> and <code className="text-slate-300">.csv</code>
+              </p>
               <button
                 type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="inline-flex h-11 items-center justify-center rounded-xl border border-violet-400/25 bg-[var(--primary-soft)] px-4 text-sm font-semibold text-white transition hover:border-violet-300/35 hover:bg-violet-500/20"
+                onClick={downloadAdvancedUnitsTemplate}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-violet-300 transition-colors hover:text-violet-100"
               >
-                Choose file
+                <Download className="h-3.5 w-3.5 stroke-[1.75]" />
+                <span>Download template</span>
               </button>
-              <span className="text-sm text-[var(--text-muted)]">{fileName}</span>
             </div>
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
-              Accepted formats: <code>.xlsx</code> and <code>.csv</code>.
-            </p>
           </div>
 
-          <div className="hidden h-full items-center justify-center lg:flex">
-            <span className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.03] text-xs font-semibold uppercase tracking-[0.12em] text-[var(--text-muted)]">
-              or
+          {/* OR Separator */}
+          <div className="flex items-center justify-center py-2 lg:flex-col lg:py-0">
+            <span className="grid h-7 w-7 place-items-center rounded-full border border-[var(--console-border)] bg-[var(--console-surface)] text-[10px] font-semibold text-[var(--console-text-muted)]">
+              OR
             </span>
           </div>
 
+          {/* Paste Spreadsheet Column */}
           <div className="space-y-3">
-            <div className="space-y-1">
+            <div>
               <label
-                className="text-sm font-medium text-slate-200"
+                className="block text-sm font-semibold text-white"
                 htmlFor="units_import_paste"
               >
                 Paste spreadsheet data
               </label>
-              <p className="text-sm leading-6 text-[var(--text-muted)]">
+              <p className="mt-0.5 text-xs text-[var(--console-text-muted)]">
                 CSV or tab-separated data is supported.
               </p>
             </div>
             <textarea
               id="units_import_paste"
-              rows={5}
+              rows={6}
               value={pasteValue}
               onChange={(event) => setPasteValue(event.target.value)}
-              className="w-full rounded-[22px] border border-white/10 bg-[var(--surface-strong)] px-4 py-3 text-slate-100 outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+              className="w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface)] p-3 font-mono text-xs text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
               placeholder={
                 "Unit Label,Resident Name,Phone,Email,Is Owner\nCasa 1,Ana Perez,9999-9999,ana@example.com,Yes\nCasa 2,Carlos Lopez,8888-8888,,No"
               }
@@ -163,73 +183,77 @@ export function AdvancedUnitsImport({
           </div>
         </div>
 
-        <div className="mt-5 flex flex-col gap-4 border-t border-white/8 pt-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={downloadAdvancedUnitsTemplate}
-            >
-              Download template
-            </Button>
-            <Button type="button" variant="ghost" onClick={clearImport}>
-              Clear
-            </Button>
-          </div>
+        {/* Footer controls inside Add source */}
+        <div className="flex flex-col gap-3 border-t border-[var(--console-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={clearImport}
+            className="self-start text-xs font-semibold text-[var(--console-text-muted)] transition-colors hover:text-slate-200"
+          >
+            Clear
+          </button>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <p className="text-sm leading-6 text-[var(--text-muted)]">{statusMessage}</p>
-            <Button type="button" onClick={handleParse} disabled={isParsing}>
+          <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+            <p className="hidden max-w-md truncate text-xs text-[var(--console-text-muted)] sm:block">
+              {statusMessage}
+            </p>
+            <button
+              type="button"
+              onClick={handleParse}
+              disabled={isParsing}
+              className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--console-accent)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:opacity-50"
+            >
               {isParsing ? "Parsing import..." : "Preview import"}
-            </Button>
+            </button>
           </div>
         </div>
       </div>
 
+      {/* Step 2: Import preview */}
       {value ? (
-        <div className="rounded-[26px] border border-white/8 bg-[rgba(12,17,25,0.58)] p-5">
+        <div className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-5 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-base font-semibold text-white">2. Import preview</h4>
                 <Badge tone="info">{value.parsedResidentRows} rows</Badge>
               </div>
-              <p className="text-sm leading-6 text-[var(--text-muted)]">
+              <p className="text-xs text-[var(--console-text-muted)]">
                 Review the data before creating the community.
               </p>
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Source: {value.sourceName}</p>
+            <p className="text-xs text-[var(--console-text-muted)]">Source: {value.sourceName}</p>
           </div>
 
-          <div className="mt-5 grid gap-3 lg:grid-cols-3">
-            <div className="rounded-[20px] border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          <div className="grid gap-3 lg:grid-cols-3">
+            <div className="rounded-md border border-[var(--console-border)] bg-[var(--console-surface)] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
                 Units detected
               </p>
-              <p className="mt-2 text-lg font-semibold text-white">
+              <p className="mt-1 text-lg font-semibold text-white">
                 {value.uniqueUnitLabels.length}
               </p>
             </div>
-            <div className="rounded-[20px] border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <div className="rounded-md border border-[var(--console-border)] bg-[var(--console-surface)] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
                 Rows ready
               </p>
-              <p className="mt-2 text-lg font-semibold text-white">
+              <p className="mt-1 text-lg font-semibold text-white">
                 {Math.max(value.parsedResidentRows - value.errors.length, 0)}
               </p>
             </div>
-            <div className="rounded-[20px] border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <div className="rounded-md border border-[var(--console-border)] bg-[var(--console-surface)] p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
                 Errors
               </p>
-              <p className="mt-2 text-lg font-semibold text-white">{value.errors.length}</p>
+              <p className="mt-1 text-lg font-semibold text-white">{value.errors.length}</p>
             </div>
           </div>
 
           {value.errors.length > 0 ? (
-            <div className="mt-5 rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4">
-              <p className="text-sm font-semibold text-rose-200">Blocking errors</p>
-              <ul className="mt-2 space-y-2 text-sm text-rose-100">
+            <div className="rounded-md border border-rose-400/20 bg-rose-500/10 p-4">
+              <p className="text-xs font-semibold text-rose-200">Blocking errors</p>
+              <ul className="mt-2 space-y-1 text-xs text-rose-100">
                 {value.errors.map((issue, index) => (
                   <li key={`error-${issue.rowNumber ?? "general"}-${index}`}>
                     {issue.rowNumber ? `Row ${issue.rowNumber}: ` : ""}
@@ -241,9 +265,9 @@ export function AdvancedUnitsImport({
           ) : null}
 
           {value.warnings.length > 0 ? (
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
-              <p className="text-sm font-semibold text-amber-200">Warnings</p>
-              <ul className="mt-2 space-y-2 text-sm text-amber-100">
+            <div className="rounded-md border border-amber-400/20 bg-amber-500/10 p-4">
+              <p className="text-xs font-semibold text-amber-200">Warnings</p>
+              <ul className="mt-2 space-y-1 text-xs text-amber-100">
                 {value.warnings.map((issue, index) => (
                   <li key={`warning-${issue.rowNumber ?? "general"}-${index}`}>
                     {issue.rowNumber ? `Row ${issue.rowNumber}: ` : ""}
@@ -254,49 +278,49 @@ export function AdvancedUnitsImport({
             </div>
           ) : null}
 
-          <p className="mt-4 text-sm leading-6 text-[var(--text-muted)]">
+          <p className="text-xs text-[var(--console-text-muted)]">
             Blank rows ignored: {value.blankRowsIgnored}. Duplicate unit labels are
             normalized and will only be created once on final submit.
           </p>
 
-          <div className="mt-5 overflow-x-auto rounded-[22px] border border-[var(--border)]">
+          <div className="overflow-x-auto rounded-md border border-[var(--console-border)]">
             <div className="max-h-[24rem] overflow-y-auto">
-                <table className="min-w-full divide-y divide-[var(--border)] text-left text-sm">
-                  <thead className="sticky top-0 bg-[rgba(9,12,24,0.95)] text-slate-300 backdrop-blur">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Unit Label</th>
-                      <th className="px-4 py-3 font-semibold">Resident Name</th>
-                      <th className="px-4 py-3 font-semibold">Phone</th>
-                      <th className="px-4 py-3 font-semibold">Email</th>
-                      <th className="px-4 py-3 font-semibold">Is Owner</th>
-                      <th className="px-4 py-3 font-semibold">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--border)] bg-[var(--surface)] text-slate-200">
-                    {value.rows.length > 0 ? (
-                      value.rows.map((row) => (
-                        <tr key={`preview-row-${row.rowNumber}`}>
-                          <td className="px-4 py-3">{row.unitLabel || "-"}</td>
-                          <td className="px-4 py-3">{row.residentName || "-"}</td>
-                          <td className="px-4 py-3">{row.phone || "-"}</td>
-                          <td className="px-4 py-3">{row.email || "-"}</td>
-                          <td className="px-4 py-3">{row.isOwner || "-"}</td>
-                          <td className="px-4 py-3">
-                            <span className="rounded-full bg-emerald-500/12 px-3 py-1 text-xs font-semibold text-emerald-200">
-                              {row.residentStatus}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td className="px-4 py-6 text-[var(--text-muted)]" colSpan={6}>
-                          No non-blank rows were found in this import.
+              <table className="min-w-full divide-y divide-[var(--console-border)] text-left text-xs">
+                <thead className="sticky top-0 bg-[var(--console-surface-raised)] text-slate-300">
+                  <tr>
+                    <th className="px-4 py-2.5 font-semibold">Unit Label</th>
+                    <th className="px-4 py-2.5 font-semibold">Resident Name</th>
+                    <th className="px-4 py-2.5 font-semibold">Phone</th>
+                    <th className="px-4 py-2.5 font-semibold">Email</th>
+                    <th className="px-4 py-2.5 font-semibold">Is Owner</th>
+                    <th className="px-4 py-2.5 font-semibold">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[var(--console-border)] bg-[var(--console-surface)] text-slate-200">
+                  {value.rows.length > 0 ? (
+                    value.rows.map((row) => (
+                      <tr key={`preview-row-${row.rowNumber}`}>
+                        <td className="px-4 py-2.5">{row.unitLabel || "-"}</td>
+                        <td className="px-4 py-2.5">{row.residentName || "-"}</td>
+                        <td className="px-4 py-2.5">{row.phone || "-"}</td>
+                        <td className="px-4 py-2.5">{row.email || "-"}</td>
+                        <td className="px-4 py-2.5">{row.isOwner || "-"}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center rounded-[4px] border border-emerald-400/20 bg-emerald-500/[0.08] px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                            {row.residentStatus}
+                          </span>
                         </td>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    ))
+                  ) : (
+                    <tr>
+                      <td className="px-4 py-6 text-center text-[var(--console-text-muted)]" colSpan={6}>
+                        No non-blank rows were found in this import.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
