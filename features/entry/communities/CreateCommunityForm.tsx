@@ -77,7 +77,7 @@ export function CreateCommunityForm() {
   const [facilityNames, setFacilityNames] = useState([""]);
   const [unitsInput, setUnitsInput] = useState("");
   const [unitsMode, setUnitsMode] = useState<"advanced" | "simple">("simple");
-  const [useRegistrationLink, setUseRegistrationLink] = useState(true);
+  const [useRegistrationLink, setUseRegistrationLink] = useState(false);
   const [advancedUnitsImport, setAdvancedUnitsImport] =
     useState<AdvancedUnitsImportPayload | null>(null);
   const [clientError, setClientError] = useState("");
@@ -167,10 +167,10 @@ export function CreateCommunityForm() {
           </Link>
           {state.communityId && (state.activationInserted ?? 0) > 0 ? (
             <Link
-              href={`/products/entry/communities/${state.communityId}/users`}
+              href={`/products/entry/activation?community_id=${state.communityId}`}
               className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-4 text-xs font-semibold text-slate-200 hover:bg-white/[0.05]"
             >
-              Manage users
+              Go to Activation Queue
             </Link>
           ) : null}
           <Link

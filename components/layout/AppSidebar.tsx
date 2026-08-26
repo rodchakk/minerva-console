@@ -187,6 +187,10 @@ function SidebarNav({
 
 export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
   const pathname = usePathname();
+  const isSyntheticEmail = email
+    ? email.endsWith("@entry.local") || email.endsWith("@entry.internal")
+    : false;
+  const displayEmail = email && !isSyntheticEmail ? email : null;
 
   return (
     <>
@@ -232,15 +236,17 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
           <div className="flex items-center justify-between rounded-lg border border-white/[0.12] bg-white/[0.025] px-2.5 py-2 text-xs">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 font-semibold text-slate-200">
-                {(email ? email[0] : "M")?.toUpperCase() ?? "M"}
+                {(displayEmail ? displayEmail[0] : "M")?.toUpperCase() ?? "M"}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[13px] font-medium leading-4 text-slate-200">
                   Minerva Console
                 </p>
-                <p className="truncate text-[11px] text-[var(--console-text-muted)]">
-                  {email ?? "admin@minerva.tech"}
-                </p>
+                {displayEmail ? (
+                  <p className="truncate text-[11px] text-[var(--console-text-muted)]">
+                    {displayEmail}
+                  </p>
+                ) : null}
               </div>
             </div>
             <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 text-[var(--console-text-soft)]" />
