@@ -14,6 +14,11 @@ import {
 } from "lucide-react";
 import { listCommunitiesWithProgress } from "@/features/entry/communities/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
+import { OperationalActivityFeed } from "@/features/entry/operations/OperationalActivityFeed";
+import {
+  getEntryOperationalActivity,
+  getEntryPublishedMessagesLast24Hours,
+} from "@/features/entry/operations/queries";
 import { cn } from "@/lib/supabase/utils";
 
 function getProgressWidth(completed: number, total: number) {
@@ -233,7 +238,11 @@ function SectionHeading({
 }
 
 export default async function DashboardPage() {
-  const communities = await listCommunitiesWithProgress();
+  const [communities, operationalActivity, messagesLast24Hours] = await Promise.all([
+    listCommunitiesWithProgress(),
+    getEntryOperationalActivity(15),
+    getEntryPublishedMessagesLast24Hours(),
+  ]);
 
   const activeCommunities = communities.filter((community) => community.isActive);
   const pendingSetup = communities.filter(
@@ -315,10 +324,14 @@ export default async function DashboardPage() {
         />
         <MetricItem
           icon={MessageSquare}
-          label="Messages today"
-          value="Pending"
-          note="Messaging is ready"
-          dotClassName="bg-violet-400"
+          label="Messages (24h)"
+          value={messagesLast24Hours ?? "—"}
+          note={
+            messagesLast24Hours === null
+              ? "Message count unavailable"
+              : "Published community updates"
+          }
+          dotClassName={messagesLast24Hours === null ? "bg-amber-400" : "bg-violet-400"}
         />
       </section>
 
@@ -543,46 +556,15 @@ export default async function DashboardPage() {
               })}
             </div>
           </ConsolePanel>
-
         </div>
       </section>
 
       <ConsolePanel className="overflow-hidden">
         <SectionHeading
           title="Operational activity"
-          description="Real-time system and operational events across ENTRY."
+          description="Important system and operational events across ENTRY."
         />
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
-              <tr>
-                <th className="px-5 py-3 font-medium">Time</th>
-                <th className="px-4 py-3 font-medium">Community</th>
-                <th className="px-4 py-3 font-medium">Event</th>
-                <th className="px-4 py-3 font-medium">Detail</th>
-                <th className="px-5 py-3 font-medium">Actor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td colSpan={5} className="px-5 py-7">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-violet-400" />
-                    <div>
-                      <p className="text-sm font-medium text-white">
-                        Live activity feed coming soon
-                      </p>
-                      <p className="mt-1 max-w-3xl text-sm leading-6 text-[var(--console-text-muted)]">
-                        This space remains reserved for onboarding events, queue
-                        changes, and publishing activity once the feed is connected.
-                      </p>
-                    </div>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <OperationalActivityFeed initialResult={operationalActivity} />
       </ConsolePanel>
     </div>
   );
