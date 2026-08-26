@@ -8,6 +8,7 @@
 - Recon branch: `codex/minerva-field-001a-recon`
 - Base inspected: `origin/master` at `4ea3dc7` (`Brain: capture ENTRY-OPS-001 closeout (#72)`)
 - Scope: documentation/recon only. No Minerva Field UI, auth, Supabase, service-worker, dependency, runtime, or schema changes.
+- MINERVA-FIELD-001B update: older Seshat/future-module references in this recon are superseded by the final product direction in `minerva-field-foundation.md`; the Field foundation exposes ENTRY only, with no Seshat card, route, registry entry, or placeholder.
 
 ## Product Direction Inputs
 
