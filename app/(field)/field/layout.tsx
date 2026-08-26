@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   manifest: "/field/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "black",
     title: "Field",
   },
 };

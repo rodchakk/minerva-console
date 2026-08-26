@@ -8,7 +8,7 @@ const manifest = {
   description: "Mobile field surface for Minerva operations.",
   id: "/field",
   start_url: "/field",
-  scope: "/field/",
+  scope: "/field",
   display: "standalone",
   background_color: "#141414",
   theme_color: "#141414",
