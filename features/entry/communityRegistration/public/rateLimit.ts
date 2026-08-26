@@ -10,9 +10,9 @@ const RATE_LIMIT_PREFIX = "entry-cr:rl";
 const RATE_LIMIT_TIMEOUT_MS = 1500;
 
 export const RATE_LIMIT_INFRASTRUCTURE_MESSAGE =
-  "No pudimos procesar la solicitud en este momento. Intentalo nuevamente.";
+  "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente.";
 export const RATE_LIMIT_QUOTA_MESSAGE =
-  "Has realizado demasiados intentos. Espera un momento e intentalo nuevamente.";
+  "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente.";
 
 const RATE_LIMIT_POLICIES = {
   campaignAccessNetwork: { limit: 10, window: "10 m" },

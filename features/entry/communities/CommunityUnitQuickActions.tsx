@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import type { CommunityUnitPreview } from "@/features/entry/communities/detailQueries";
@@ -15,6 +15,10 @@ type CommunityUnitQuickActionsProps = {
 };
 
 type ModalState = "edit" | "status" | null;
+type UnitLabelDraft = {
+  label: string;
+  unitId: string;
+};
 
 export function CommunityUnitQuickActions({
   communityId,
@@ -22,14 +26,18 @@ export function CommunityUnitQuickActions({
 }: CommunityUnitQuickActionsProps) {
   const router = useRouter();
   const [modalState, setModalState] = useState<ModalState>(null);
-  const [unitLabel, setUnitLabel] = useState(unit.label);
+  const [unitLabelDraft, setUnitLabelDraft] = useState<UnitLabelDraft>(() => ({
+    label: unit.label,
+    unitId: unit.id,
+  }));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const unitLabel = unitLabelDraft.unitId === unit.id ? unitLabelDraft.label : unit.label;
 
-  useEffect(() => {
-    setUnitLabel(unit.label);
-  }, [unit.id, unit.label]);
+  function setUnitLabel(label: string) {
+    setUnitLabelDraft({ label, unitId: unit.id });
+  }
 
   function closeModal() {
     if (isPending) {

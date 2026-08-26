@@ -1,9 +1,12 @@
 "use server";
 
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import {
+  getEntryPreviewReadOnlyError,
+  getResidentFacingBaseUrl,
+} from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -162,27 +165,7 @@ async function getPasswordResetRedirectTo() {
     return configuredRedirect;
   }
 
-  const publicConsoleUrl =
-    process.env.NEXT_PUBLIC_MINERVA_CONSOLE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  if (publicConsoleUrl) {
-    return `${publicConsoleUrl.replace(/\/$/, "")}/reset-password`;
-  }
-
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ??
-    requestHeaders.get("host");
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.includes("localhost") ? "http" : "https");
-
-  if (host && !/^(localhost|127\.0\.0\.1)(:\d+)?$/i.test(host)) {
-    return `${protocol}://${host}/reset-password`;
-  }
-
-  return "entry://reset-password";
+  return `${await getResidentFacingBaseUrl()}/reset-password`;
 }
 
 export async function searchUsersAction(
@@ -296,6 +279,11 @@ export async function updateCommunityUserAction(
   input: UpdateCommunityUserInput,
 ): Promise<CommunityUserActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   if (!input.communityId || !input.userId) {
     return {
@@ -333,6 +321,11 @@ export async function sendPasswordResetEmailAction(
   formData: FormData,
 ): Promise<PasswordResetActionState> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const fullName = String(formData.get("fullName") ?? "").trim();
@@ -375,6 +368,11 @@ export async function generateTemporaryRecoveryCodeAction(
   formData: FormData,
 ): Promise<PasswordResetActionState> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   const userId = String(formData.get("userId") ?? "").trim();
   const communityId = String(formData.get("communityId") ?? "").trim();
@@ -479,6 +477,11 @@ export async function setCommunityUserActiveStatusAction(
   input: SetCommunityUserActiveStatusInput,
 ): Promise<CommunityUserActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
 
   if (!input.communityId || !input.userId) {
     return {

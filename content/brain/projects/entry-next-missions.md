@@ -104,6 +104,33 @@ The El Limonar posted authorization-list observation remains evidence relevant t
 
 The Andalucía founder perception that Waldina may mix digital/QR visitor management with automatic-barrier automation is also **not sufficient evidence for new product scope**. Confirm actual buyer requirements with Eugenio Hernández first.
 
+### Deferred product hypothesis — community payments
+
+Record for future analysis only; **do not reprioritize or build now**.
+
+Operator-provided hypothesis from La Florida and broader residential experience:
+
+- residential communities commonly collect recurring security / patronato fees;
+- transfers are a familiar payment method and may be more comfortable for many residents than entering card details into a residential app;
+- the current observed pain is not only payment execution, but also knowing who owes, who paid, what remains pending, and avoiding manual collection at the entrance;
+- ENTRY currently does **not** include dues, payment, receivables, or accounting functionality.
+
+Potential future design should be evaluated in layers rather than assuming a card gateway is required from day one:
+
+1. **Dues and receivables ledger:** patronato defines charges, homes see balances, administration tracks paid/pending/mora, and transfer receipts can be reconciled.
+2. **Bank/reference integration:** investigate whether banks or payment providers can support referenced transfers, payment links, reconciliation, and callbacks without Minerva holding funds.
+3. **Optional card/recurring payments:** only if real buyer demand supports it; use external tokenization/checkout so ENTRY does not store raw card data.
+
+Future vendor/bank analysis may include BAC, Ficohsa and appropriate Honduran payment processors, but no provider is selected and no integration feasibility, pricing, contractual model, or technical design is approved yet.
+
+Preferred business principle to evaluate:
+
+> Community funds should settle directly to the patronato/community account where possible; ENTRY should manage state, reconciliation and records rather than unnecessarily becoming custodian/intermediary of resident funds.
+
+Validation requirement before roadmap promotion:
+
+> Confirm the problem independently with multiple patronatos/administrations and determine whether dues/payment management materially affects purchase decisions. One community observation must not trigger implementation.
+
 ## Priority 7 — Security and backups
 
 Penultimate planned workstream.
@@ -204,6 +231,27 @@ First direct conversation should:
 - request a short discovery/demo meeting if fit exists.
 
 Do not send pricing before scope is understood.
+
+#### 4. Avenida Junior — next discovery zone
+
+Continue the agreed next-zone plan before opening a broader new territory.
+
+Purpose:
+
+> Investigate the residential cluster along Avenida Junior / Bermejo toward the Segundo Anillo for communities that still operate controlled entrances manually.
+
+Initial map candidates from the operator's map review include Residencial Alondra, Residencial El Bosque, Residencial Bermejo, Residencial Los Ceibos L&M, and Residencial Milla. These are **mapping candidates only**; current access systems and commercial fit remain unconfirmed.
+
+Field objective is discovery, not package delivery. For each candidate, confirm:
+
+- caseta / security presence;
+- manual vs automatic barrier operation;
+- how residents authorize visitors;
+- paper/WhatsApp/calls vs installed visitor-management system;
+- approximate scale and traffic if obtainable;
+- name/role of the correct internal contact.
+
+Do not include Jardines del Valle in this round; operator reports prior approach there, existing system usage, and no productive result.
 
 ### Commercial process learning
 

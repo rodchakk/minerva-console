@@ -220,12 +220,12 @@ assert(
 assert(
   "ambiguous correction outcome has safe UX",
   /No pudimos confirmar si los cambios se guardaron/.test(householdForm) &&
-    /No se reintentara automaticamente/.test(householdForm) &&
+    /No se reintentará automáticamente/.test(householdForm) &&
     /abre de nuevo el enlace oficial/.test(householdForm),
 );
 assert(
   "neutral correction access error mapping",
-  /Este enlace de correccion ya no esta disponible/.test(householdForm) &&
+  /Este enlace de corrección ya no está disponible/.test(householdForm) &&
     !/ENTRY_CR_|P0409|42501/.test(householdForm + correctionSubmitRoute),
 );
 

@@ -17,6 +17,7 @@ export type OnboardingTaskSummary = {
 };
 
 export type CommunityOnboardingDetail = {
+  activationPendingCount: number | null;
   activationQueueReviewedAt: string;
   blockers: string[];
   completedAt: string;
@@ -123,6 +124,77 @@ function normalizeJsonObject(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
+function getOptionalNumber(value: unknown): number | null {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  return coerceNumber(value);
+}
+
+function findFirstNumber(
+  values: Record<string, unknown>[],
+  keys: string[],
+): number | null {
+  for (const value of values) {
+    for (const key of keys) {
+      const candidate = getOptionalNumber(value[key]);
+
+      if (candidate !== null) {
+        return candidate;
+      }
+    }
+  }
+
+  return null;
+}
+
+function sumPendingAndFailed(values: Record<string, unknown>[]) {
+  const pending = findFirstNumber(values, [
+    "activation_queue_pending",
+    "activation_queue_pending_count",
+    "pending_activations",
+    "pending_count",
+    "pending",
+  ]);
+  const failed = findFirstNumber(values, [
+    "activation_queue_failed",
+    "activation_queue_failed_count",
+    "failed_activations",
+    "failed_count",
+    "failed",
+  ]);
+
+  if (pending === null && failed === null) {
+    return null;
+  }
+
+  return (pending ?? 0) + (failed ?? 0);
+}
+
+function extractAuthoritativeActivationPendingCount(
+  record: Record<string, unknown>,
+): number | null {
+  const metrics = normalizeJsonObject(record.metrics);
+  const activationQueueTask = Array.isArray(record.tasks)
+    ? record.tasks
+        .map(normalizeJsonObject)
+        .find((task) =>
+          ["activation_queue", "review_activation_queue"].includes(
+            coerceString(task.key),
+          ),
+        )
+    : undefined;
+  const summary = normalizeJsonObject(activationQueueTask?.summary);
+  const combined = sumPendingAndFailed([record, metrics, summary]);
+
+  if (combined !== null) {
+    return combined;
+  }
+
+  return findFirstNumber([record, metrics, summary], ["pending_activation_count"]);
+}
+
 function normalizeTask(value: unknown): OnboardingTaskSummary | null {
   const record = normalizeJsonObject(value);
   const key = coerceString(record.key);
@@ -148,27 +220,6 @@ function normalizeBlockers(value: unknown): string[] {
   return value.map((item) => coerceString(item)).filter(Boolean);
 }
 
-function mapProgressRecord(value: unknown): CommunityProgressMeta | null {
-  const record = extractFirstRecord(value);
-
-  if (Object.keys(record).length === 0) {
-    return null;
-  }
-
-  return {
-    completedTasks:
-      coerceNumber(record.completed_tasks) ||
-      coerceNumber(record.completed_steps),
-    nextStepKey:
-      coerceString(record.next_step_key) || coerceString(record.next_step) || "units",
-    onboardingStatus:
-      coerceString(record.onboarding_status) ||
-      coerceString(record.status) ||
-      "pending_setup",
-    totalTasks: coerceNumber(record.total_tasks) || coerceNumber(record.total_steps),
-  };
-}
-
 function mapOnboardingDetail(value: unknown): CommunityOnboardingDetail | null {
   const record = extractFirstRecord(value);
 
@@ -183,6 +234,7 @@ function mapOnboardingDetail(value: unknown): CommunityOnboardingDetail | null {
     : [];
 
   return {
+    activationPendingCount: extractAuthoritativeActivationPendingCount(record),
     activationQueueReviewedAt: coerceString(record.activation_queue_reviewed_at),
     blockers: normalizeBlockers(record.blockers),
     completedAt: coerceString(record.completed_at),
@@ -308,7 +360,8 @@ function mergeCommunityProgress(
   const merged = {
     ...community,
     activationPendingCount:
-      progressFromList?.activationPendingCount ?? community.activationPendingCount,
+      progressFromList?.activationPendingCount ??
+      community.activationPendingCount,
     completedTasks:
       progress?.completedTasks ||
       progressFromList?.completedTasks ||
@@ -319,7 +372,8 @@ function mergeCommunityProgress(
 
       if (
         rawNextStepKey === "residents" &&
-        (progressFromList?.activationPendingCount ?? community.activationPendingCount) > 0
+        (progressFromList?.activationPendingCount ??
+          community.activationPendingCount) > 0
       ) {
         return "review_activation_queue";
       }
@@ -418,34 +472,10 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
     communitiesFromProgress.map((community) => [community.id, community]),
   );
 
-  const missingProgressIds = baseCommunities
-    .filter((community) => !progressById.has(community.id))
-    .map((community) => community.id);
-
-  const missingProgressResults = await Promise.all(
-    missingProgressIds.map(async (communityId) => {
-      const { data, error } = await supabase.rpc(
-        "get_community_onboarding_progress_v1",
-        {
-          p_community_id: communityId,
-        },
-      );
-
-      return {
-        communityId,
-        progress: error ? null : mapProgressRecord(data),
-      };
-    }),
-  );
-
-  const missingProgressById = new Map(
-    missingProgressResults.map((item) => [item.communityId, item.progress]),
-  );
-
   return baseCommunities.map((community) =>
     mergeCommunityProgress(
       community,
-      missingProgressById.get(community.id) ?? null,
+      null,
       progressById.get(community.id),
     ),
   );
@@ -485,6 +515,8 @@ export async function getCommunityWithProgress(communityId: string) {
 
   return {
     ...community,
+    activationPendingCount:
+      detail.activationPendingCount ?? community.activationPendingCount,
     completedTasks: detail.completedTasks || community.completedTasks,
     nextStepKey: detail.nextStepKey || community.nextStepKey,
     onboardingStatus: detail.onboardingStatus || community.onboardingStatus,

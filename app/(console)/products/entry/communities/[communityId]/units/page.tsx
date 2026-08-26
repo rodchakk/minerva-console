@@ -251,6 +251,9 @@ export default async function CommunityUnitsPage(
             <Link href={`/products/entry/communities/${community.id}`}>
               <Button variant="secondary">Back to community</Button>
             </Link>
+            <Link href={`/products/entry/communities/${community.id}/units/new`}>
+              <Button variant="secondary">Add unit</Button>
+            </Link>
             <Link href={primaryAction.href}>
               <Button>{primaryAction.label}</Button>
             </Link>
@@ -455,7 +458,10 @@ export default async function CommunityUnitsPage(
               Use the onboarding flow or community creation import to add houses
               or apartments.
             </p>
-            <div className="mt-4">
+            <div className="mt-4 flex flex-wrap gap-3">
+              <Link href={`/products/entry/communities/${community.id}/units/new`}>
+                <Button>Add unit</Button>
+              </Link>
               <Link href={`/products/entry/communities/${community.id}`}>
                 <Button variant="secondary">Back to community</Button>
               </Link>

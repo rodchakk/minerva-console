@@ -15,6 +15,21 @@ export default async function CommunityUsersPage(
     notFound();
   }
 
+  const usersVersion = data.users
+    .map((user) =>
+      [
+        user.userId,
+        user.fullName,
+        user.email,
+        user.username,
+        user.phone,
+        user.houseId,
+        user.role,
+        user.isActive ? "active" : "inactive",
+      ].join(":"),
+    )
+    .join("|");
+
   return (
     <div className="space-y-6">
       <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(8,12,22,0.98))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.28)] backdrop-blur xl:p-7">
@@ -55,6 +70,7 @@ export default async function CommunityUsersPage(
       </section>
 
       <CommunityUsersClient
+        key={`${data.community.id}:${usersVersion}`}
         community={data.community}
         houses={data.houses}
         initialUsers={data.users}

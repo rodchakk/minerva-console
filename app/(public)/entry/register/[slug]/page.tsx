@@ -12,6 +12,11 @@ import {
   isRateLimitDenied,
   rateLimitMessage,
 } from "@/features/entry/communityRegistration/public/rateLimit";
+import {
+  EntryBadge,
+  PublicRegistrationShell,
+  RegistrationStepper,
+} from "@/features/entry/communityRegistration/public/PublicRegistrationShell";
 import { UnitLookupForm } from "@/features/entry/communityRegistration/public/UnitLookupForm";
 
 export const dynamic = "force-dynamic";
@@ -29,61 +34,34 @@ function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-function PublicRegistrationFrame({
-  children,
-  communityName,
-}: {
-  children: React.ReactNode;
-  communityName?: string;
-}) {
-  return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(109,99,255,0.16),transparent_30%),linear-gradient(180deg,#080b12_0%,#07090d_100%)] px-4 py-8 text-white sm:px-6">
-      <div className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-2xl items-center">
-        <section className="w-full rounded-2xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(16,20,29,0.96),rgba(10,14,21,0.98))] p-6 shadow-[0_24px_80px_rgba(2,6,23,0.34)] sm:p-8">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-violet-200">
-            ENTRY
-          </p>
-          {communityName ? (
-            <p className="mt-4 text-sm font-semibold text-[var(--text-soft)]">
-              {communityName}
-            </p>
-          ) : null}
-          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Registro de residentes
-          </h1>
-          {children}
-        </section>
-      </div>
-    </main>
-  );
-}
-
 function UnavailableState() {
   return (
-    <PublicRegistrationFrame>
-      <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-        <p className="text-base font-semibold text-amber-100">
+    <PublicRegistrationShell>
+      <RegistrationStepper currentStep={1} />
+      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+        <p className="text-base font-semibold text-amber-950">
           Enlace no disponible
         </p>
-        <p className="mt-2 text-sm leading-6 text-amber-50/80">
+        <p className="mt-2 text-sm leading-6 text-amber-900">
           No pudimos validar este enlace de registro. Verifica el enlace oficial
-          o comunicate con la administracion de tu comunidad.
+          o comunícate con la administración de tu comunidad.
         </p>
       </div>
-    </PublicRegistrationFrame>
+    </PublicRegistrationShell>
   );
 }
 
 function TemporarilyUnavailableState({ message }: { message: string }) {
   return (
-    <PublicRegistrationFrame>
-      <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-        <p className="text-base font-semibold text-amber-100">
+    <PublicRegistrationShell>
+      <RegistrationStepper currentStep={1} />
+      <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
+        <p className="text-base font-semibold text-amber-950">
           Registro temporalmente no disponible
         </p>
-        <p className="mt-2 text-sm leading-6 text-amber-50/80">{message}</p>
+        <p className="mt-2 text-sm leading-6 text-amber-900">{message}</p>
       </div>
-    </PublicRegistrationFrame>
+    </PublicRegistrationShell>
   );
 }
 
@@ -136,21 +114,27 @@ export default async function EntryRegisterPage(
   }
 
   return (
-    <PublicRegistrationFrame communityName={campaign.communityName}>
-      <div className="mt-6 space-y-4">
-        {campaign.publicInstructions ? (
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
-            {campaign.publicInstructions}
-          </p>
-        ) : (
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
-            Este registro esta listo para iniciar. En el siguiente paso podras
-            identificar tu vivienda y registrar a los residentes del hogar.
-          </p>
-        )}
-
-        <UnitLookupForm slug={slug} />
-      </div>
-    </PublicRegistrationFrame>
+    <PublicRegistrationShell>
+      <UnitLookupForm
+        intro={
+          <div className="space-y-4">
+            <EntryBadge />
+            <p className="text-xl font-semibold text-slate-500">
+              {campaign.communityName}
+            </p>
+            <h1 className="text-4xl font-bold text-slate-950 sm:text-5xl">
+              Registro de residentes
+            </h1>
+            <p className="text-base leading-7 text-slate-600">
+              {campaign.publicInstructions
+                ? campaign.publicInstructions
+                : "Completa la información de las personas que viven en tu vivienda. Primero identifica tu vivienda y luego revisa el registro antes de enviarlo."}
+            </p>
+          </div>
+        }
+        slug={slug}
+        unitLabelPrefix={campaign.unitLabelPrefix}
+      />
+    </PublicRegistrationShell>
   );
 }

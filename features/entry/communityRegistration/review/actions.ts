@@ -1,12 +1,15 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { hashCorrectionToken } from "@/features/entry/communityRegistration/public/correctionAccessState";
+import {
+  getEntryPreviewReadOnlyError,
+  getResidentFacingBaseUrl,
+} from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { coerceString } from "@/lib/supabase/utils";
+import { coerceNumber, coerceString } from "@/lib/supabase/utils";
 
 const CORRECTION_LINK_LIFETIME_HOURS = 72;
 
@@ -14,14 +17,24 @@ export type CommunityRegistrationReviewActionResult =
   | {
       success: true;
       data: {
+        activationQueueUrl?: string;
+        alreadyActiveCount?: number;
+        alreadyComplete?: boolean;
+        alreadyQueuedCount?: number;
+        blockingCount?: number;
+        convertedCount?: number;
         correctionUrl?: string;
+        diagnosticCode?: string;
         expiresAt?: string;
         kind:
           | "start_review"
           | "mark_reviewed"
           | "request_correction"
           | "create_correction_link"
-          | "replace_correction_link";
+          | "replace_correction_link"
+          | "confirm_prepare_activation";
+        message?: string;
+        preparedResidentCount?: number;
         revokedPreviousCount?: number;
         status: string;
         unitLabel?: string;
@@ -45,6 +58,7 @@ function getFormString(formData: FormData, key: string) {
 function revalidateReviewPaths(communityId: string) {
   revalidatePath(`/products/entry/communities/${communityId}`);
   revalidatePath(`/products/entry/communities/${communityId}/registration`);
+  revalidatePath(`/products/entry/activation`);
 }
 
 function mapReviewError(error: {
@@ -71,7 +85,7 @@ function mapReviewError(error: {
 
   if (
     error.code === "P0409" ||
-    /ENTRY_CR_(INVALID_REVIEW_STATE|INVALID_STATE|CAMPAIGN_UNAVAILABLE|CORRECTION_REQUIRED|ALREADY_CONFIRMED)/.test(
+    /ENTRY_CR_(INVALID_REVIEW_STATE|INVALID_STATE|CAMPAIGN_UNAVAILABLE|CORRECTION_REQUIRED|ALREADY_CONFIRMED|CAMPAIGN_INCOMPLETE|CONVERSION_NOT_READY|CONFIRMATION_STALE|CONVERSION_INCOMPLETE|TRACEABILITY_CONFLICT|QUEUE_CONFLICT|IDENTITY_AMBIGUOUS|RESIDENT_CONFLICT)/.test(
       message,
     )
   ) {
@@ -89,21 +103,45 @@ function mapReviewError(error: {
   };
 }
 
-async function getRegistrationBaseUrl() {
-  const publicConsoleUrl =
-    process.env.NEXT_PUBLIC_MINERVA_CONSOLE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim();
+function isAlreadyConfirmed(error: { code?: string | null; message?: string | null }) {
+  return error.code === "P0409" && /ENTRY_CR_ALREADY_CONFIRMED/.test(error.message ?? "");
+}
 
-  if (publicConsoleUrl) return publicConsoleUrl.replace(/\/$/, "");
+function summarizeConversionResult(value: unknown) {
+  const record =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const residents = Array.isArray(record.residents) ? record.residents : [];
+  const preparedResidentCount = residents.filter((resident) => {
+    if (!resident || typeof resident !== "object") return false;
+    const item = resident as Record<string, unknown>;
+    return Boolean(coerceString(item.activation_queue_id).trim());
+  }).length;
 
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.includes("localhost") ? "http" : "https");
-
-  return host ? `${protocol}://${host}` : "";
+  return {
+    alreadyActiveCount:
+      coerceNumber(record.already_active_count) ||
+      residents.filter((resident) => {
+        if (!resident || typeof resident !== "object") return false;
+        return coerceString((resident as Record<string, unknown>).conversion_status) === "already_active";
+      }).length,
+    alreadyComplete: record.already_complete === true,
+    alreadyQueuedCount:
+      coerceNumber(record.already_queued_count) ||
+      residents.filter((resident) => {
+        if (!resident || typeof resident !== "object") return false;
+        return coerceString((resident as Record<string, unknown>).conversion_status) === "already_queued";
+      }).length,
+    blockingCount: coerceNumber(record.blocking_count),
+    convertedCount: coerceNumber(record.converted_count),
+    preparedResidentCount:
+      preparedResidentCount ||
+      coerceNumber(record.converted_count) + coerceNumber(record.already_queued_count),
+    status:
+      coerceString(record.status).trim() ||
+      coerceString(record.unit_status).trim() ||
+      "processed",
+    unitLabel: coerceString(record.unit_label).trim() || undefined,
+  };
 }
 
 function makeCorrectionToken() {
@@ -114,11 +152,27 @@ function correctionExpiry() {
   return new Date(Date.now() + CORRECTION_LINK_LIFETIME_HOURS * 60 * 60 * 1000).toISOString();
 }
 
+function previewReadOnlyResult(): CommunityRegistrationReviewActionResult | null {
+  const error = getEntryPreviewReadOnlyError();
+
+  return error
+    ? {
+        code: "unknown",
+        error,
+        success: false,
+      }
+    : null;
+}
+
 export async function startCommunityRegistrationReview(
   _previousState: CommunityRegistrationReviewActionResult | null,
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignId = getFormString(formData, "campaign_id");
   const communityId = getFormString(formData, "community_id");
 
@@ -154,6 +208,10 @@ export async function markCommunityRegistrationUnitReviewed(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
 
@@ -193,6 +251,10 @@ export async function requestCommunityRegistrationCorrection(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignId = getFormString(formData, "campaign_id");
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
@@ -243,6 +305,10 @@ export async function createOrReplaceCommunityRegistrationCorrectionLink(
   formData: FormData,
 ): Promise<CommunityRegistrationReviewActionResult> {
   const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
   const campaignUnitId = getFormString(formData, "campaign_unit_id");
   const communityId = getFormString(formData, "community_id");
   const mode = getFormString(formData, "mode") === "replace" ? "replace" : "create";
@@ -292,7 +358,7 @@ export async function createOrReplaceCommunityRegistrationCorrectionLink(
   }
 
   revalidateReviewPaths(communityId);
-  const baseUrl = await getRegistrationBaseUrl();
+  const baseUrl = await getResidentFacingBaseUrl();
   const path = `/entry/register/${encodeURIComponent(
     publicSlug,
   )}/correct/access?token=${encodeURIComponent(plaintextToken)}`;
@@ -307,6 +373,130 @@ export async function createOrReplaceCommunityRegistrationCorrectionLink(
           : "create_correction_link",
       revokedPreviousCount: Number(result.revoked_previous_count ?? 0),
       status: "edit_enabled",
+    },
+    success: true,
+  };
+}
+
+export async function confirmAndPrepareCommunityRegistrationActivation(
+  _previousState: CommunityRegistrationReviewActionResult | null,
+  formData: FormData,
+): Promise<CommunityRegistrationReviewActionResult> {
+  const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+
+  if (previewResult) return previewResult;
+
+  const campaignId = getFormString(formData, "campaign_id");
+  const campaignUnitId = getFormString(formData, "campaign_unit_id");
+  const communityId = getFormString(formData, "community_id");
+  const unitLabel = getFormString(formData, "unit_label");
+
+  if (!campaignId || !campaignUnitId || !communityId) {
+    return {
+      code: "invalid_input",
+      error: "Campaign and unit information is missing.",
+      success: false,
+    };
+  }
+
+  const supabase = createAdminClient();
+  const activationQueueUrl = `/products/entry/activation?community_id=${encodeURIComponent(
+    communityId,
+  )}`;
+
+  const existingResult = await supabase.rpc(
+    "get_community_registration_conversion_result_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_id: campaignUnitId,
+    },
+  );
+
+  if (!existingResult.error) {
+    const existing = summarizeConversionResult(existingResult.data);
+    if (existing.status === "processed") {
+      revalidateReviewPaths(communityId);
+      return {
+        data: {
+          activationQueueUrl,
+          alreadyActiveCount: existing.alreadyActiveCount,
+          alreadyComplete: true,
+          alreadyQueuedCount: existing.alreadyQueuedCount,
+          convertedCount: existing.convertedCount,
+          kind: "confirm_prepare_activation",
+          message: "This unit was already prepared for Activation Queue.",
+          preparedResidentCount: existing.preparedResidentCount,
+          status: "processed",
+          unitLabel: existing.unitLabel ?? unitLabel,
+        },
+        success: true,
+      };
+    }
+  }
+
+  const approval = await supabase.rpc(
+    "record_community_registration_unit_external_approval_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_id: campaignUnitId,
+      p_reason: "ENTRY ONB-012 external Patronato approval",
+    },
+  );
+
+  if (approval.error && !isAlreadyConfirmed(approval.error)) {
+    return mapReviewError(approval.error);
+  }
+
+  const conversion = await supabase.rpc(
+    "convert_community_registration_unit_to_activation_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_id: campaignUnitId,
+      p_reason: "ENTRY ONB-012 external Patronato handoff",
+    },
+  );
+
+  if (conversion.error) {
+    const diagnosticCode = "ENTRY_ONB_012_CONVERSION_RPC_FAILED";
+    console.error(diagnosticCode, {
+      dbCode: conversion.error.code ?? "unknown",
+      rpc: "convert_community_registration_unit_to_activation_v1",
+    });
+    revalidateReviewPaths(communityId);
+    return {
+      data: {
+        activationQueueUrl,
+        diagnosticCode,
+        kind: "confirm_prepare_activation",
+        message:
+          "External Patronato approval is recorded for this unit, but Activation Queue preparation did not complete. Refresh and retry after reviewing the conversion status. Reference code: ENTRY_ONB_012_CONVERSION_RPC_FAILED.",
+        status: "confirmed",
+        unitLabel,
+      },
+      success: true,
+    };
+  }
+
+  const converted = summarizeConversionResult(conversion.data);
+
+  revalidateReviewPaths(communityId);
+  return {
+    data: {
+      activationQueueUrl,
+      alreadyActiveCount: converted.alreadyActiveCount,
+      alreadyComplete: converted.alreadyComplete,
+      alreadyQueuedCount: converted.alreadyQueuedCount,
+      blockingCount: converted.blockingCount,
+      convertedCount: converted.convertedCount,
+      kind: "confirm_prepare_activation",
+      message:
+        converted.status === "blocked"
+          ? "Activation Queue preparation found residents that need manual review before activation."
+          : "Residents are prepared in Activation Queue. No users or PINs were created.",
+      preparedResidentCount: converted.preparedResidentCount,
+      status: converted.status,
+      unitLabel: converted.unitLabel ?? unitLabel,
     },
     success: true,
   };

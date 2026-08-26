@@ -4,6 +4,7 @@ import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { generateActivationPins } from "@/features/entry/activation/pinActions";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
 
 type CompleteActivationRpcResult = {
@@ -78,6 +79,11 @@ export async function createActivatedUsers(input: {
   queueIds: string[];
 }): Promise<CreateActivatedUsersActionResult> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, error: previewReadOnlyError };
+  }
 
   const { communityId, queueIds } = input;
 

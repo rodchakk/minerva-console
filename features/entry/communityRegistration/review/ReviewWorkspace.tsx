@@ -5,10 +5,10 @@ import { useActionState, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
+  confirmAndPrepareCommunityRegistrationActivation,
   createOrReplaceCommunityRegistrationCorrectionLink,
   markCommunityRegistrationUnitReviewed,
   requestCommunityRegistrationCorrection,
-  startCommunityRegistrationReview,
   type CommunityRegistrationReviewActionResult,
 } from "@/features/entry/communityRegistration/review/actions";
 import type {
@@ -43,9 +43,9 @@ function statusLabel(status: string) {
     case "reviewed":
       return "Reviewed";
     case "confirmed":
-      return "Confirmed";
+      return "Patronato confirmed";
     case "processed":
-      return "Processed";
+      return "Prepared for activation";
     case "open":
       return "Campaign open";
     case "paused":
@@ -95,78 +95,6 @@ function CopyButton({ url }: { url: string }) {
     <Button type="button" onClick={copy}>
       {copied ? "Copied" : "Copy correction link"}
     </Button>
-  );
-}
-
-function StartReviewDialog({
-  campaign,
-  communityId,
-  onClose,
-}: {
-  campaign: CommunityRegistrationReviewCampaign;
-  communityId: string;
-  onClose: () => void;
-}) {
-  const [state, formAction, pending] = useActionState(
-    startCommunityRegistrationReview,
-    initialActionState,
-  );
-
-  if (state?.success) {
-    return (
-      <Overlay>
-        <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
-          <Badge tone="success">Review active</Badge>
-          <h3 className="mt-4 text-xl font-semibold text-white">Review started</h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-            Public registration is no longer accepting new household submissions.
-            You can now review submitted units.
-          </p>
-          <div className="mt-6 flex justify-end">
-            <Button type="button" onClick={onClose}>
-              Continue review
-            </Button>
-          </div>
-        </div>
-      </Overlay>
-    );
-  }
-
-  return (
-    <Overlay>
-      <form
-        action={formAction}
-        className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-          Resident registration
-        </p>
-        <h3 className="mt-2 text-xl font-semibold text-white">Start internal review?</h3>
-        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-          This moves <strong className="text-white">{campaign.publicTitle}</strong> from
-          open registration into review. New public household submissions stop,
-          while authorized correction links can still be used.
-        </p>
-
-        <input type="hidden" name="campaign_id" value={campaign.id} />
-        <input type="hidden" name="community_id" value={communityId} />
-
-        {state && !state.success ? (
-          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-            {state.error}
-          </p>
-        ) : null}
-
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Starting review..." : "Start review"}
-          </Button>
-        </div>
-      </form>
-    </Overlay>
   );
 }
 
@@ -380,6 +308,157 @@ function CorrectionLinkDialog({
   );
 }
 
+function ActivationHandoffDialog({
+  campaignId,
+  communityId,
+  onClose,
+  unitId,
+  unitLabel,
+}: {
+  campaignId: string;
+  communityId: string;
+  onClose: () => void;
+  unitId: string;
+  unitLabel: string;
+}) {
+  const [state, formAction, pending] = useActionState(
+    confirmAndPrepareCommunityRegistrationActivation,
+    initialActionState,
+  );
+  const result = state?.success ? state.data : null;
+  const preparedCount = result?.preparedResidentCount ?? result?.convertedCount ?? 0;
+
+  if (result) {
+    return (
+      <Overlay>
+        <div className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <Badge tone={result.status === "processed" ? "success" : "warning"}>
+            {statusLabel(result.status)}
+          </Badge>
+          <h3 className="mt-4 text-xl font-semibold text-white">{result.unitLabel ?? unitLabel}</h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+            {result.message}
+          </p>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <Metric label="Prepared" value={preparedCount} />
+            <Metric label="Already queued" value={result.alreadyQueuedCount ?? 0} />
+            <Metric label="Already active" value={result.alreadyActiveCount ?? 0} />
+          </div>
+
+          <div className="mt-6 flex flex-wrap justify-end gap-3">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Done
+            </Button>
+            {result.activationQueueUrl && result.status === "processed" ? (
+              <Link href={result.activationQueueUrl}>
+                <Button type="button">Ver en Activation Queue</Button>
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay>
+      <form
+        action={formAction}
+        className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+          Patronato confirmation
+        </p>
+        <h3 className="mt-2 text-xl font-semibold text-white">
+          Confirmar y preparar activación
+        </h3>
+        <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+          Use this after Patronato has approved the resident information outside
+          ENTRY. ENTRY will record that confirmation and prepare eligible
+          residents in Activation Queue. It will not create users, PINs, or
+          activation messages.
+        </p>
+
+        <input type="hidden" name="campaign_id" value={campaignId} />
+        <input type="hidden" name="campaign_unit_id" value={unitId} />
+        <input type="hidden" name="community_id" value={communityId} />
+        <input type="hidden" name="unit_label" value={unitLabel} />
+
+        {state && !state.success ? (
+          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            {state.error}
+          </p>
+        ) : null}
+
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Preparing..." : "Confirmar y preparar activación"}
+          </Button>
+        </div>
+      </form>
+    </Overlay>
+  );
+}
+
+function HandoffProgress({
+  selectedUnit,
+}: {
+  selectedUnit: CommunityRegistrationReviewUnitDetail;
+}) {
+  const normalized = selectedUnit.status.trim().toLowerCase();
+  const stages = [
+    {
+      done: Boolean(selectedUnit.submittedAt),
+      label: "Submitted",
+    },
+    {
+      done: Boolean(selectedUnit.reviewedAt),
+      label: "Reviewed",
+    },
+    {
+      done: Boolean(selectedUnit.patronatoConfirmedAt),
+      label: "Patronato confirmed",
+    },
+    {
+      done: normalized === "processed",
+      label: "Prepared for activation",
+    },
+  ];
+
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
+      <div className="grid gap-3 sm:grid-cols-4">
+        {stages.map((stage, index) => (
+          <div key={stage.label} className="flex items-center gap-2">
+            <span
+              className={`grid size-6 shrink-0 place-items-center rounded-full text-xs font-semibold ${
+                stage.done
+                  ? "bg-emerald-500 text-white"
+                  : "bg-white/8 text-[var(--text-muted)] ring-1 ring-inset ring-white/10"
+              }`}
+            >
+              {index + 1}
+            </span>
+            <span
+              className={
+                stage.done
+                  ? "text-xs font-semibold text-white"
+                  : "text-xs text-[var(--text-muted)]"
+              }
+            >
+              {stage.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Metric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
@@ -400,27 +479,35 @@ export function ReviewWorkspace({
   summary,
   units,
 }: ReviewWorkspaceProps) {
-  const [showStartReview, setShowStartReview] = useState(false);
   const [showCorrectionRequest, setShowCorrectionRequest] = useState(false);
   const [correctionLinkMode, setCorrectionLinkMode] = useState<
     "create" | "replace" | null
   >(null);
+  const [showActivationHandoff, setShowActivationHandoff] = useState(false);
   const [reviewState, reviewAction, reviewPending] = useActionState(
     markCommunityRegistrationUnitReviewed,
     initialActionState,
   );
 
   const campaignStatus = campaign.status.trim().toLowerCase();
-  const reviewActive = campaignStatus === "review";
-  const canStartReview = campaignStatus === "open" && summary.submitted > 0;
+  const reviewCapable = ["open", "review"].includes(campaignStatus);
   const selectedStatus = selectedUnit?.status.trim().toLowerCase() ?? "";
-  const canMarkReviewed = reviewActive && selectedStatus === "submitted";
+  const canMarkReviewed = reviewCapable && selectedStatus === "submitted";
   const canRequestCorrection =
-    reviewActive && ["submitted", "reviewed"].includes(selectedStatus);
+    reviewCapable && ["submitted", "reviewed"].includes(selectedStatus);
   const canCreateCorrectionLink =
-    reviewActive && selectedStatus === "needs_correction";
+    reviewCapable && selectedStatus === "needs_correction";
   const canReplaceCorrectionLink =
-    reviewActive && selectedStatus === "edit_enabled";
+    reviewCapable && selectedStatus === "edit_enabled";
+  const activationQueueUrl = `/products/entry/activation?community_id=${encodeURIComponent(
+    communityId,
+  )}`;
+  const canConfirmAndPrepare = Boolean(
+    selectedUnitId &&
+      ((reviewCapable && ["reviewed", "confirmed"].includes(selectedStatus)) ||
+        (campaignStatus === "confirmed" && selectedStatus === "confirmed")),
+  );
+  const isPreparedForActivation = selectedStatus === "processed";
 
   return (
     <div className="space-y-4">
@@ -456,24 +543,10 @@ export function ReviewWorkspace({
         </div>
 
         {campaignStatus === "open" ? (
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-            <p className="max-w-2xl text-sm leading-6 text-amber-50/90">
-              Registration is still open. You may inspect submissions now, but
-              review decisions remain disabled until you deliberately start review.
-            </p>
-            <Button
-              type="button"
-              onClick={() => setShowStartReview(true)}
-              disabled={!canStartReview || Boolean(loadError)}
-              title={
-                summary.submitted === 0
-                  ? "At least one submitted unit is required before review starts."
-                  : "Stop new registrations and begin internal review."
-              }
-            >
-              Start review
-            </Button>
-          </div>
+          <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-amber-50/90">
+            Registration is open. Submitted households can be reviewed and
+            prepared for activation while other units continue registering.
+          </p>
         ) : null}
 
         {campaignStatus === "paused" ? (
@@ -579,6 +652,8 @@ export function ReviewWorkspace({
                 </div>
               ) : null}
 
+              <HandoffProgress selectedUnit={selectedUnit} />
+
               <div className="mt-5 space-y-3">
                 {selectedUnit.residents.map((resident) => (
                   <div
@@ -614,13 +689,19 @@ export function ReviewWorkspace({
                 </p>
               ) : null}
 
-              {!reviewActive ? (
+              {!reviewCapable && !isPreparedForActivation && !canConfirmAndPrepare ? (
                 <p className="mt-5 text-sm leading-6 text-[var(--text-muted)]">
-                  Review actions are read-only until the campaign enters review.
+                  Review actions are read-only until the campaign can accept review.
                 </p>
               ) : null}
 
               <div className="mt-5 flex flex-wrap justify-end gap-3">
+                {isPreparedForActivation ? (
+                  <Link href={activationQueueUrl}>
+                    <Button type="button">Ver en Activation Queue</Button>
+                  </Link>
+                ) : null}
+
                 {canRequestCorrection ? (
                   <Button
                     type="button"
@@ -650,6 +731,16 @@ export function ReviewWorkspace({
                   </Button>
                 ) : null}
 
+                {canConfirmAndPrepare ? (
+                  <Button
+                    type="button"
+                    onClick={() => setShowActivationHandoff(true)}
+                    disabled={Boolean(loadError)}
+                  >
+                    Confirmar y preparar activación
+                  </Button>
+                ) : null}
+
                 {canMarkReviewed ? (
                   <form action={reviewAction}>
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
@@ -664,14 +755,6 @@ export function ReviewWorkspace({
           )}
         </section>
       </div>
-
-      {showStartReview ? (
-        <StartReviewDialog
-          campaign={campaign}
-          communityId={communityId}
-          onClose={() => setShowStartReview(false)}
-        />
-      ) : null}
 
       {showCorrectionRequest && selectedUnit && selectedUnitId ? (
         <CorrectionRequestDialog
@@ -688,6 +771,16 @@ export function ReviewWorkspace({
           communityId={communityId}
           mode={correctionLinkMode}
           onClose={() => setCorrectionLinkMode(null)}
+          unitId={selectedUnitId}
+          unitLabel={selectedUnit.unitLabel}
+        />
+      ) : null}
+
+      {showActivationHandoff && selectedUnit && selectedUnitId ? (
+        <ActivationHandoffDialog
+          campaignId={campaign.id}
+          communityId={communityId}
+          onClose={() => setShowActivationHandoff(false)}
           unitId={selectedUnitId}
           unitLabel={selectedUnit.unitLabel}
         />

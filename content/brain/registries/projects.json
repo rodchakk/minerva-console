@@ -16,11 +16,11 @@
     "type": "project",
     "status": "approved",
     "title": "Seshat",
-    "summary": "Financial operating system for freelancers, developers, and small studios. Has its own Supabase project. Brain does not store Seshat operational data.",
+    "summary": "Minerva financial operating system and management-accounting product. Approved direction: evolve incrementally around real company/product/client economics, add business-unit and multi-currency controls before real Minerva financial use, and eventually migrate away from the current Supabase backend through a separate reviewed mission.",
     "created": "2026-06-16",
-    "updated": "2026-06-16",
-    "tags": ["product", "fintech", "supabase"],
-    "related": ["PRJ-0004"],
+    "updated": "2026-08-20",
+    "tags": ["product", "fintech", "management-accounting", "financial-intelligence", "supabase", "migration-planned"],
+    "related": ["PRJ-0001", "PRJ-0004"],
     "path": "content/brain/projects/seshat.md"
   },
   {
@@ -46,5 +46,17 @@
     "tags": ["brain", "internal", "intelligence-layer"],
     "related": ["PRJ-0001", "PRJ-0002", "PRJ-0003"],
     "path": "content/brain/harness/00_PROJECT_CHARTER.md"
+  },
+  {
+    "id": "ENTRY-ONB-000",
+    "type": "project",
+    "status": "approved",
+    "title": "ENTRY Community Registration Foundation Contract",
+    "summary": "Foundation contract for ENTRY Community Registration. Confirms Minerva Console ownership, the resident_activation_queue activation lane, legacy-lane boundaries, and readiness for ENTRY-ONB-001 without product implementation or migrations.",
+    "created": "2026-08-05",
+    "updated": "2026-08-05",
+    "tags": ["entry", "onboarding", "community-registration", "foundation"],
+    "related": ["PRJ-0001", "DEC-0007"],
+    "path": "content/brain/projects/entry-community-registration-foundation-contract.md"
   }
 ]

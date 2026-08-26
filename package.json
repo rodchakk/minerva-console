@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "node --test tests/*.test.mjs",
     "brain:capture": "node scripts/brain-capture.mjs",
     "brain:loop-state": "node scripts/brain-loop-state.mjs",
     "brain:export-context": "node scripts/brain-export-context.mjs",

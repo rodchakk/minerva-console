@@ -7,6 +7,10 @@ import {
   parseActivationQueueImportResult,
 } from "@/features/entry/activation/actions";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import {
+  getEntryPreviewReadOnlyError,
+  requireEntryMutationAllowed,
+} from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
 import {
   coerceNumber,
@@ -202,6 +206,7 @@ function parseNamedList(values: string[]) {
 
 export async function addCommunityUnitsAction(formData: FormData) {
   await requireSuperadmin();
+  requireEntryMutationAllowed();
 
   const communityId = String(formData.get("community_id") ?? "").trim();
   const unitsInput = String(formData.get("units_input") ?? "");
@@ -237,6 +242,11 @@ export async function createCommunityAction(
   formData: FormData,
 ): Promise<CreateCommunityState> {
   await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { message: previewReadOnlyError, success: false };
+  }
 
   const useRegistrationLink = parseBooleanField(
     formData.get("use_registration_link"),

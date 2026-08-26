@@ -4,7 +4,10 @@ import {
   normalizePublicSlug,
   readCampaignAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/accessState";
-import { lookupCommunityRegistrationUnit } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  lookupCommunityRegistrationUnit,
+  resolveCommunityRegistrationUnitPrefix,
+} from "@/features/entry/communityRegistration/public/gateway";
 import {
   enforceUnitLookupRateLimit,
   isRateLimitDenied,
@@ -14,6 +17,10 @@ import {
   hasSameOriginBoundary,
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
+import {
+  buildCommunityUnitLookupLabel,
+  hasCommunityUnitPrefix,
+} from "@/features/entry/communityRegistration/public/unitLabelPrefix";
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +49,27 @@ async function readUnitLabel(request: NextRequest) {
 
   const unitLabel = (body as { unitLabel?: unknown }).unitLabel;
   return typeof unitLabel === "string" ? unitLabel.trim() : "";
+}
+
+function normalizeLookupCandidate(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function buildUnitLookupCandidates(input: string, unitLabelPrefix: string) {
+  const raw = normalizeLookupCandidate(input);
+  if (!raw) return [];
+
+  const candidates = new Set<string>();
+
+  if (!hasCommunityUnitPrefix(raw, unitLabelPrefix)) {
+    candidates.add(buildCommunityUnitLookupLabel(unitLabelPrefix, raw));
+  }
+
+  candidates.add(raw);
+
+  return Array.from(candidates).filter(
+    (candidate) => candidate.length <= MAX_UNIT_LABEL_LENGTH,
+  );
 }
 
 export async function POST(
@@ -83,11 +111,28 @@ export async function POST(
     return jsonResponse({ available: false });
   }
 
-  const lookup = await lookupCommunityRegistrationUnit({
+  const unitLabelPrefix = await resolveCommunityRegistrationUnitPrefix({
     publicSlug: slug,
-    tokenHash: accessState.tokenHash,
-    unitLabel,
   });
+  if (!unitLabelPrefix) {
+    return jsonResponse({ available: false });
+  }
+
+  let lookup: Awaited<ReturnType<typeof lookupCommunityRegistrationUnit>> = {
+    available: false,
+  };
+
+  for (const candidate of buildUnitLookupCandidates(unitLabel, unitLabelPrefix)) {
+    lookup = await lookupCommunityRegistrationUnit({
+      publicSlug: slug,
+      tokenHash: accessState.tokenHash,
+      unitLabel: candidate,
+    });
+
+    if (lookup.available) {
+      break;
+    }
+  }
 
   if (!lookup.available) {
     return jsonResponse({ available: false });

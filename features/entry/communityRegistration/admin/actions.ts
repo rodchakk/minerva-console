@@ -1,9 +1,12 @@
 "use server";
 
 import { randomBytes } from "node:crypto";
-import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import {
+  getEntryPreviewReadOnlyError,
+  getResidentFacingBaseUrl,
+} from "@/features/entry/deploymentBoundary";
 import {
   decryptCampaignRegistrationToken,
   encryptCampaignRegistrationToken,
@@ -101,25 +104,6 @@ function makeCampaignSlug(communityName: string) {
   return normalizePublicSlug(`${safeBase.slice(0, 72)}-${suffix}`);
 }
 
-async function getRegistrationBaseUrl() {
-  const publicConsoleUrl =
-    process.env.NEXT_PUBLIC_MINERVA_CONSOLE_URL?.trim() ||
-    process.env.NEXT_PUBLIC_SITE_URL?.trim();
-
-  if (publicConsoleUrl) {
-    return publicConsoleUrl.replace(/\/$/, "");
-  }
-
-  const requestHeaders = await headers();
-  const host =
-    requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host");
-  const protocol =
-    requestHeaders.get("x-forwarded-proto") ??
-    (host?.includes("localhost") ? "http" : "https");
-
-  return host ? `${protocol}://${host}` : "";
-}
-
 function mapCampaignError(error: { code?: string | null; message?: string | null }) {
   const message = error.message ?? "";
 
@@ -192,6 +176,15 @@ export async function launchCommunityRegistrationCampaign(
   formData: FormData,
 ): Promise<LaunchCommunityRegistrationCampaignResult> {
   const auth = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return {
+      code: "unknown",
+      error: previewReadOnlyError,
+      success: false,
+    };
+  }
 
   const communityId = getFormString(formData, "community_id");
   const communityName = getFormString(formData, "community_name");
@@ -266,7 +259,7 @@ export async function launchCommunityRegistrationCampaign(
 
   revalidatePath(`/products/entry/communities/${communityId}`);
 
-  const baseUrl = await getRegistrationBaseUrl();
+  const baseUrl = await getResidentFacingBaseUrl();
   const path = `/entry/register/${encodeURIComponent(
     returnedSlug,
   )}/access?token=${encodeURIComponent(plaintextToken)}`;
@@ -290,6 +283,15 @@ export async function replaceCommunityRegistrationLink(
   formData: FormData,
 ): Promise<ReplaceCommunityRegistrationLinkResult> {
   const auth = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return {
+      code: "unknown",
+      error: previewReadOnlyError,
+      success: false,
+    };
+  }
 
   const campaignId = getFormString(formData, "campaign_id");
   const communityId = getFormString(formData, "community_id");
@@ -344,7 +346,7 @@ export async function replaceCommunityRegistrationLink(
 
   revalidatePath(`/products/entry/communities/${communityId}`);
 
-  const baseUrl = await getRegistrationBaseUrl();
+  const baseUrl = await getResidentFacingBaseUrl();
   const path = `/entry/register/${encodeURIComponent(
     returnedSlug,
   )}/access?token=${encodeURIComponent(plaintextToken)}`;
@@ -459,7 +461,7 @@ export async function recoverCommunityRegistrationLink(input: {
       return mapRecoverError();
     }
 
-    const baseUrl = await getRegistrationBaseUrl();
+    const baseUrl = await getResidentFacingBaseUrl();
     const path = `/entry/register/${encodeURIComponent(
       publicSlug,
     )}/access?token=${encodeURIComponent(plaintextToken)}`;

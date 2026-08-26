@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
 
 export type GeneratePinItem = {
@@ -34,6 +35,12 @@ export async function generateActivationPins(input: {
 }): Promise<GeneratePinsActionResult> {
   // requireSuperadmin redirects on failure — no try/catch needed here
   await requireSuperadmin();
+
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { success: false, error: previewReadOnlyError };
+  }
 
   const { communityId, queueIds } = input;
 
