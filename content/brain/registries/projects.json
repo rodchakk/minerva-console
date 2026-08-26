@@ -70,5 +70,17 @@
     "tags": ["entry", "operations", "dashboard", "activity-feed", "supabase", "console"],
     "related": ["PRJ-0001", "DEC-0004"],
     "path": "content/brain/projects/entry-operational-activity-feed.md"
+  },
+  {
+    "id": "MINERVA-FIELD-001",
+    "type": "project",
+    "status": "planned",
+    "title": "Minerva Field Foundation",
+    "summary": "Planned mobile-first installable PWA surface inside Minerva Console for field operations. ENTRY is the first and only current product module; products without an approved field workflow, including Seshat, are excluded from the Field surface.",
+    "created": "2026-08-26",
+    "updated": "2026-08-26",
+    "tags": ["minerva-console", "field", "pwa", "mobile", "entry"],
+    "related": ["PRJ-0001", "PRJ-0004"],
+    "path": "content/brain/projects/minerva-field-foundation.md"
   }
 ]
