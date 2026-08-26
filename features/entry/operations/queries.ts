@@ -26,6 +26,8 @@ export type EntryOperationalActivityResult = {
   state: "live" | "empty" | "unavailable";
 };
 
+const DASHBOARD_HIDDEN_EVENT_KEYS = new Set(["facilities_configured"]);
+
 function normalizeSeverity(value: string): EntryOperationalActivitySeverity {
   const normalized = value.trim().toLowerCase();
 
@@ -53,9 +55,10 @@ export async function getEntryOperationalActivity(
 ): Promise<EntryOperationalActivityResult> {
   await requireSuperadmin();
 
+  const requestedLimit = clampLimit(limit);
   const supabase = await createClient();
   const { data, error } = await supabase.rpc("list_entry_operational_activity_v1", {
-    p_limit: clampLimit(limit),
+    p_limit: Math.min(requestedLimit + 5, 50),
   });
 
   if (error) {
@@ -97,7 +100,9 @@ export async function getEntryOperationalActivity(
         source: coerceString(record.source, "operations"),
       } satisfies EntryOperationalActivityItem;
     })
-    .filter((item): item is EntryOperationalActivityItem => item !== null);
+    .filter((item): item is EntryOperationalActivityItem => item !== null)
+    .filter((item) => !DASHBOARD_HIDDEN_EVENT_KEYS.has(item.eventKey))
+    .slice(0, requestedLimit);
 
   return {
     items,
