@@ -2,7 +2,7 @@
 
 Canonical quick-resume page for the active ENTRY commercial pipeline. Detailed evidence remains in the dated field/commercial reports.
 
-> **Current through:** 2026-08-25
+> **Current through:** 2026-08-27
 >
 > Evidence discipline: direct buyer statements are distinguished from guard/security reports and operator observations. Home counts, organizational structure, competitor identity, prior-price comments and buyer authority remain unverified unless explicitly stated otherwise.
 
@@ -23,7 +23,7 @@ Canonical quick-resume page for the active ENTRY commercial pipeline. Detailed e
 
 Current progression:
 
-> Manual process confirmed → personalized FIRST DOOR contact → direct Eugenio Hernández channel → phone discovery → ~98 homes stated by Eugenio → prior-price reference disclosed → opportunity-specific match commitment made → executive proposal + ENTRY webpage sent → Eugenio confirms information shared with patronato → **decision pending**.
+> Manual process confirmed → direct Eugenio Hernández channel → phone discovery → ~98 homes stated by Eugenio → prior-price reference disclosed → opportunity-specific match commitment made → executive proposal + ENTRY webpage sent → Eugenio confirms information shared with patronato → **decision pending**.
 
 Key buyer-side facts:
 
@@ -41,24 +41,83 @@ Key buyer-side facts:
 
 ### 2026-08-25 follow-up
 
-Rudy followed up with Eugenio. Eugenio replied, as reported verbatim:
+Eugenio replied, as reported verbatim:
 
 > "hola buenas tardes, ya comparti la informacion, solo falta tomar la decision esperamos."
 
-This confirms internal circulation to the patronato and places the opportunity at **decision pending**. It does **not** confirm approval, timing, or likelihood of closing.
-
-Rudy acknowledged briefly and did not add pressure.
+This confirms internal circulation to the patronato and places the opportunity at **decision pending**. It does not confirm approval, timing or likelihood of closing.
 
 Next move:
 
-> Give the patronato space. Do not immediately follow up again. Be ready for questions/demo. Before formal economic documentation or final commercial commitment, complete `ENTRY Unit Economics v1` against the promised scope and L35,000/year reference.
+> Give the patronato space. Be ready for questions/demo. Before formal economic documentation or final commercial commitment, complete `ENTRY Unit Economics v1` against the promised scope and L35,000/year reference.
 
 Detailed updates:
 
 - [entry-field-update-2026-08-20.md](entry-field-update-2026-08-20.md)
 - [entry-field-update-2026-08-25.md](entry-field-update-2026-08-25.md)
 
-## 2. Los Robles — independent passage/sector
+## 2. Residencial Bermejo
+
+**Current stage:** `Qualified → Package delivered to security → patronato receipt unconfirmed → patronato president name reported → follow-up pending`.
+
+Known operational fit:
+
+- manual barrier;
+- residents call security to authorize/announce visitors;
+- visitor records kept on paper;
+- approximately **50–60 houses**, according to guard;
+- previous vendors/people reportedly approached;
+- an earlier guard vaguely remembered an unspecified proposal being called "expensive", but could not identify whether it concerned QR, barrier automation or another scope. This remains ambiguous and is **not** a confirmed buyer objection.
+
+Final package:
+
+> `ENTRY_Patronato_Package_Residencial_Bermejo`
+
+Customer-facing material excludes the unverified home count, vague price recollection, prior-vendor claims and pricing. It is personalized around the confirmed manual workflow.
+
+Key positioning:
+
+> "De la llamada a la entrada, una operación más clara."
+>
+> "El QR es la credencial. ENTRY es la operación."
+
+### 2026-08-27 delivery
+
+Rudy physically delivered the finalized package at Residencial Bermejo.
+
+The guard on duty was **not the same guard from the original discovery visit**. Rudy described this guard as friendly/receptive.
+
+Security reported:
+
+- the president of the patronato is **Raúl Orellana**;
+- Rudy should return on **Wednesday** to see whether there has been movement on the information/package.
+
+Evidence status:
+
+- package physically delivered to security: **confirmed**;
+- patronato receipt: **not yet confirmed**;
+- Raúl Orellana as patronato president: **guard-reported, not yet patronato-verified**;
+- direct Raúl/patronato phone or WhatsApp route: **not yet obtained**.
+
+Next move:
+
+1. Confirm whether the folder reached the patronato / Raúl Orellana.
+2. Obtain a direct buyer contact route if possible.
+3. If only internal delivery can be confirmed, ask the preferred follow-up method.
+4. Do not repeat the full pitch at the gate; the next milestone is confirmed patronato receipt or direct buyer contact.
+
+Suggested follow-up language:
+
+> “Buenas tardes. Dejé el folder de ENTRY para el patronato y me comentaron que don Raúl Orellana es el presidente. Solo quería confirmar si logró llegarle la información y saber cuál sería la mejor forma de darle seguimiento directamente.”
+
+Detailed updates:
+
+- [entry-field-report-2026-08-22.md](entry-field-report-2026-08-22.md)
+- [entry-package-prep-update-2026-08-22.md](entry-package-prep-update-2026-08-22.md)
+- [entry-field-update-2026-08-25.md](entry-field-update-2026-08-25.md)
+- [entry-field-update-2026-08-27.md](entry-field-update-2026-08-27.md)
+
+## 3. Los Robles — independent passage/sector
 
 **Current stage:** `Qualified → Package delivered to security → patronato receipt unconfirmed → follow-up pending`.
 
@@ -101,52 +160,6 @@ Detailed updates:
 
 - [entry-field-report-2026-08-22.md](entry-field-report-2026-08-22.md)
 - [entry-field-update-2026-08-23.md](entry-field-update-2026-08-23.md)
-
-## 3. Residencial Bermejo
-
-**Current stage:** `Qualified → Package fully prepared → physical delivery planned 2026-08-25`.
-
-Known fit:
-
-- manual barrier;
-- residents call security to authorize/announce visitors;
-- visitor records kept on paper;
-- approximately **50–60 houses**, according to guard;
-- receptive guard;
-- previous vendors/people reportedly approached;
-- guard vaguely remembered an unspecified proposal being called "expensive", but could not identify whether it concerned QR, barrier automation or another scope.
-
-Final package:
-
-> `ENTRY_Patronato_Package_Residencial_Bermejo`
-
-Customer-facing material excludes the unverified home count, vague price recollection, prior-vendor claims and pricing. It is personalized around the confirmed manual workflow.
-
-Key positioning:
-
-> "De la llamada a la entrada, una operación más clara."
->
-> "El QR es la credencial. ENTRY es la operación."
-
-Scheduling update:
-
-- guard had invited Rudy to bring documentation on **2026-08-24**;
-- Rudy could not make that delivery;
-- no buyer/contact event occurred, so this is a scheduling slip rather than a failed handoff;
-- package remains fully ready and delivery moved to **2026-08-25**.
-
-Delivery objective:
-
-1. Hand over the package as previously invited.
-2. Ask who in the patronato is responsible for security/access.
-3. Seek a direct follow-up route.
-4. Preserve price discussion for buyer discovery; do not treat price as a confirmed objection.
-
-Detailed updates:
-
-- [entry-field-report-2026-08-22.md](entry-field-report-2026-08-22.md)
-- [entry-package-prep-update-2026-08-22.md](entry-package-prep-update-2026-08-22.md)
-- [entry-field-update-2026-08-25.md](entry-field-update-2026-08-25.md)
 
 ## 4. Colonia El Carmen
 
@@ -236,12 +249,7 @@ Working hypothesis:
 >
 > **New developments:** ENTRY as an access-management amenity and operating layer included from launch.
 
-Evidence/signals currently include:
-
-- Marsella: existing digital access while development is still sales-linked and has no patronato;
-- Provenza: reportedly similar pattern;
-- Jardines del Este: operator surfaced residential marketing showing a controlled-access/barrier signal; workflow/vendor unverified;
-- Residencial Paraíso: operator surfaced marketing that explicitly presented gatehouse/controlled access and QR access; treat as operator-observed marketing evidence until independently qualified.
+Current signals include Marsella, Provenza and operator-surfaced marketing from Jardines del Este and Residencial Paraíso. Social-media content remains prospecting evidence until independently qualified.
 
 Potential decision actors to investigate:
 
@@ -255,8 +263,6 @@ Do not assume a generic real-estate agency is the buyer.
 
 ### Brand/app discipline
 
-Preferred default:
-
 > **ENTRY remains the product. Communities receive their identity/configuration inside ENTRY.**
 
 Do not promise a separate branded application for every residential community. White-label is only a possible enterprise exception if contract value and economics justify release/support/maintenance complexity.
@@ -264,8 +270,6 @@ Do not promise a separate branded application for every residential community. W
 ### Research target
 
 Collect roughly **10–15 useful new-project observations** before deciding whether to formalize a developer sales motion. Capture developer/operator, project stage, security/access claims, QR/app evidence, provider if identifiable, who chooses/pays, developer-to-patronato handoff, repeated developer names and decision-maker route.
-
-Instagram/social-media content is a **prospecting radar, not technical confirmation**.
 
 Critical question:
 
@@ -279,10 +283,10 @@ Commercial discipline:
 - no white-label promise;
 - collect evidence before formalizing outreach.
 
-## Immediate priority order — 2026-08-25
+## Immediate priority order — 2026-08-27
 
 1. **Andalucía:** decision pending at patronato; give space and be ready for questions/demo; Unit Economics before final economic documentation.
-2. **Bermejo:** execute physical package delivery on 2026-08-25 and seek direct patronato route.
+2. **Bermejo:** package delivered; next milestone is patronato receipt confirmation and/or direct route to Raúl Orellana.
 3. **Los Robles passage/sector:** confirm patronato receipt and obtain buyer route / decision-structure clarity.
 4. **El Carmen / El Limonar:** continue disciplined follow-up; avoid indefinite guard-only selling.
 5. **Boran:** revisit on another shift to improve patronato route.
