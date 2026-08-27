@@ -19,6 +19,18 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
+function assertOccursBefore(source, earlier, later) {
+  const earlierIndex = source.indexOf(earlier);
+  const laterIndex = source.indexOf(later);
+
+  assert.notEqual(earlierIndex, -1, earlier);
+  assert.notEqual(laterIndex, -1, later);
+  assert.ok(
+    earlierIndex < laterIndex,
+    `${earlier} should appear before ${later}`,
+  );
+}
+
 const peopleFiles = [
   "app/(field)/field/entry/communities/[communityId]/people/page.tsx",
   "app/(field)/field/entry/communities/[communityId]/people/residents/[userId]/page.tsx",
@@ -161,6 +173,39 @@ test("Create Account stays confirmation-driven and does not persist password", (
   assert.match(activationActions, /isReadOnlyPreview/);
   assert.match(activationActions, /This activation row is not eligible for account creation/);
   assert.match(activationActions, /Save or share these credentials now/);
+});
+
+test("Create Account clears stale activation PIN before invoking account action", () => {
+  const activationActions = read("features/entry/field/FieldActivationActions.tsx");
+  const handleStart = activationActions.indexOf("function handleCreateAccount()");
+  const handleEnd = activationActions.indexOf("async function handleCopy()");
+  const handleSource = activationActions.slice(handleStart, handleEnd);
+
+  assert.match(handleSource, /setPinResult\(null\)/);
+  assert.match(handleSource, /setCopied\(false\)/);
+  assertOccursBefore(handleSource, "setPinResult(null)", "startTransition");
+  assertOccursBefore(handleSource, "setCopied(false)", "startTransition");
+  assertOccursBefore(
+    handleSource,
+    "setPinResult(null)",
+    "createFieldActivationAccount",
+  );
+  assert.match(
+    activationActions,
+    /Creating the account replaces any previously generated activation\s+PIN/,
+  );
+});
+
+test("Activation PIN remains standalone and shareable only before Create Account starts", () => {
+  const activationActions = read("features/entry/field/FieldActivationActions.tsx");
+
+  assert.match(activationActions, /const activationMessage = useMemo/);
+  assert.match(activationActions, /if \(!pinResult\?\.pin\)/);
+  assert.match(activationActions, /handleGeneratePin/);
+  assert.match(activationActions, /generateFieldActivationPin/);
+  assert.match(activationActions, /pinResult\?\.pin \?/);
+  assert.match(activationActions, /Copy activation message/);
+  assert.match(activationActions, /Share activation message/);
 });
 
 test("Assignment refreshes resident detail and only targets active units", () => {

@@ -148,6 +148,8 @@ export function FieldActivationActions({
   function handleCreateAccount() {
     setMessage(null);
     setAccountResult(null);
+    setPinResult(null);
+    setCopied(false);
 
     startTransition(async () => {
       const result = await createFieldActivationAccount({
@@ -357,6 +359,8 @@ export function FieldActivationActions({
           <div className="space-y-3 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
             <p className="break-words text-sm leading-6 text-amber-100">
               Confirm account creation for {row.resident} in {row.unit}.
+              Creating the account replaces any previously generated activation
+              PIN.
             </p>
             <button
               type="button"
