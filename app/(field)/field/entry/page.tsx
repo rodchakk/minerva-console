@@ -1,54 +1,45 @@
-import { ShieldCheck } from "lucide-react";
+import { CommunityFinder } from "@/features/entry/field/CommunityFinder";
+import {
+  getFieldCommunitySetupLabel,
+  getFieldCommunityStatusLabel,
+} from "@/features/entry/field/formatting";
+import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
+import { listCommunitiesWithProgress } from "@/features/entry/communities/queries";
 
-const statuses = [
-  { label: "Surface", value: "Mobile" },
-  { label: "Mode", value: "Read-only" },
-  { label: "Product", value: "ENTRY" },
-];
+export default async function FieldEntryPage() {
+  const communities = await listCommunitiesWithProgress();
+  const fieldCommunities = communities.map((community) => ({
+    activationPendingCount: community.activationPendingCount,
+    city: community.city,
+    completedTasks: community.completedTasks,
+    href: `/field/entry/communities/${encodeURIComponent(community.id)}`,
+    id: community.id,
+    isActive: community.isActive,
+    name: community.name,
+    nextStepLabel: getOnboardingNextStepLabel(community.nextStepKey),
+    setupLabel: getFieldCommunitySetupLabel(community),
+    statusLabel: getFieldCommunityStatusLabel(community),
+    totalMembers: community.totalMembers,
+    totalTasks: community.totalTasks,
+    totalUnits: community.totalUnits,
+  }));
 
-export default function FieldEntryPage() {
   return (
     <div className="space-y-5">
       <section className="pt-2">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--console-accent)]">
-          Product
+          ENTRY Field
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--console-text)]">
-          ENTRY
+          Community finder
         </h1>
+        <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--console-text-muted)]">
+          Find an ENTRY community by name or city, then open its read-only field
+          overview.
+        </p>
       </section>
 
-      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
-            <ShieldCheck aria-hidden="true" className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-lg font-semibold text-[var(--console-text)]">
-              Field foundation
-            </p>
-            <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
-              ENTRY is available as the only Field module in this release.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-3">
-        {statuses.map((status) => (
-          <div
-            key={status.label}
-            className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4"
-          >
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-text-soft)]">
-              {status.label}
-            </p>
-            <p className="mt-2 text-base font-semibold text-[var(--console-text)]">
-              {status.value}
-            </p>
-          </div>
-        ))}
-      </section>
+      <CommunityFinder communities={fieldCommunities} />
     </div>
   );
 }
