@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
+import { ArrowLeft, AlertTriangle, ArrowRight, UsersRound } from "lucide-react";
 import {
   getCommunityDetailPreviews,
   type CommunityDetailPreviews,
@@ -229,6 +229,29 @@ export default async function FieldCommunityDetailPage({
         isReadOnlyPreview={isEntryPreviewReadOnly()}
         registrationState={registrationState}
       />
+
+      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+        <div className="flex items-center gap-2">
+          <UsersRound
+            aria-hidden="true"
+            className="h-4 w-4 text-[var(--console-accent)]"
+          />
+          <h2 className="text-lg font-semibold text-[var(--console-text)]">
+            Residents & units
+          </h2>
+        </div>
+        <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
+          Find residents, manage unit assignments, reset access, and support
+          activation queue work onsite.
+        </p>
+        <Link
+          href={`/field/entry/communities/${encodeURIComponent(community.id)}/people`}
+          className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-4 text-sm font-semibold text-[var(--console-text)] transition-colors hover:bg-white/[0.06] active:bg-white/[0.08]"
+        >
+          <span>Open residents & units</span>
+          <ArrowRight aria-hidden="true" className="h-4 w-4" />
+        </Link>
+      </section>
 
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
