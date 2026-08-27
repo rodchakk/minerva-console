@@ -3,6 +3,9 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { loginAction } from "@/features/auth/actions";
+import {
+  getSafePostLoginDestination,
+} from "@/features/auth/postLoginDestination";
 import { Button } from "@/components/ui/Button";
 
 function SubmitButton() {
@@ -19,11 +22,18 @@ function SubmitButton() {
   );
 }
 
-export function LoginForm() {
+type LoginFormProps = {
+  next?: string;
+};
+
+export function LoginForm({ next }: LoginFormProps) {
   const [state, formAction] = useActionState(loginAction, {});
+  const postLoginDestination = getSafePostLoginDestination(next);
 
   return (
     <form action={formAction} className="space-y-4">
+      <input type="hidden" name="next" value={postLoginDestination} />
+
       <div className="space-y-2">
         <label className="text-sm font-medium text-white/88" htmlFor="email">
           Email

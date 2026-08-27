@@ -9,7 +9,7 @@
 - Base inspected: `origin/master` at `4ea3dc7` (`Brain: capture ENTRY-OPS-001 closeout (#72)`)
 - Scope: documentation/recon only. No Minerva Field UI, auth, Supabase, service-worker, dependency, runtime, or schema changes.
 - MINERVA-FIELD-001B update: older Seshat/future-module references in this recon are superseded by the final product direction in `minerva-field-foundation.md`; the Field foundation exposes ENTRY only, with no Seshat card, route, registry entry, or placeholder.
-- Known limitation after MINERVA-FIELD-001B: if a Field session expires and the operator authenticates again, the current global login flow may return the superadmin to `/dashboard` instead of the original `/field` destination. This is intentionally deferred to MINERVA-FIELD-001C because changing post-login destination behavior affects global authentication.
+- MINERVA-FIELD-001C resolved the 001B login-return limitation by preserving safe `/field` and `/field/*` post-login destinations while keeping all missing, unsafe, or non-Field destinations on the normal `/dashboard` fallback.
 
 ## Product Direction Inputs
 
