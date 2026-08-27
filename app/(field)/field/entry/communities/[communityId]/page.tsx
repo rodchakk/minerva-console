@@ -17,6 +17,10 @@ import {
   getFieldCommunityStatusLabel,
   getFieldStatusToneClass,
 } from "@/features/entry/field/formatting";
+import {
+  getCommunityRegistrationAdminState,
+} from "@/features/entry/communityRegistration/admin/queries";
+import { FieldRegistrationCard } from "@/features/entry/field/FieldRegistrationCard";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 
 type FieldCommunityDetailPageProps = {
@@ -110,11 +114,13 @@ export default async function FieldCommunityDetailPage({
   params,
 }: FieldCommunityDetailPageProps) {
   const { communityId } = await params;
-  const [community, onboardingDetail, previews] = await Promise.all([
-    getCommunityWithProgress(communityId),
-    getCommunityOnboardingDetail(communityId),
-    getCommunityDetailPreviews(communityId, { allowMessages: false }),
-  ]);
+  const [community, onboardingDetail, previews, registrationState] =
+    await Promise.all([
+      getCommunityWithProgress(communityId),
+      getCommunityOnboardingDetail(communityId),
+      getCommunityDetailPreviews(communityId, { allowMessages: false }),
+      getCommunityRegistrationAdminState(communityId),
+    ]);
 
   if (!community) {
     notFound();
@@ -215,6 +221,12 @@ export default async function FieldCommunityDetailPage({
           ))}
         </div>
       </section>
+
+      <FieldRegistrationCard
+        communityId={community.id}
+        communityName={community.name}
+        registrationState={registrationState}
+      />
 
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
