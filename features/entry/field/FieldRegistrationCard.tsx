@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { Copy, ExternalLink, Play, Share2 } from "lucide-react";
+import { ArrowRight, Copy, ExternalLink, Play, Share2 } from "lucide-react";
 import { recoverCommunityRegistrationLink } from "@/features/entry/communityRegistration/admin/actions";
 import type { CommunityRegistrationAdminState } from "@/features/entry/communityRegistration/admin/queries";
 import { formatFieldCount } from "@/features/entry/field/formatting";
@@ -53,6 +53,18 @@ function campaignStatusToneClass(status: string) {
     return "border-sky-300/30 bg-sky-300/10 text-sky-100";
   }
   return "border-white/12 bg-white/[0.03] text-[var(--console-text-muted)]";
+}
+
+function UnitProgressLink({ communityId }: { communityId: string }) {
+  return (
+    <Link
+      href={`/field/entry/communities/${encodeURIComponent(communityId)}/registration`}
+      className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-4 text-sm font-semibold text-[var(--console-text)] transition-colors hover:bg-white/[0.06] active:bg-white/[0.08]"
+    >
+      <span>View unit progress</span>
+      <ArrowRight aria-hidden="true" className="h-4 w-4" />
+    </Link>
+  );
 }
 
 export function FieldRegistrationCard({
@@ -281,6 +293,8 @@ export function FieldRegistrationCard({
           Registration link sharing is available only while the campaign is open.
         </p>
 
+        <UnitProgressLink communityId={communityId} />
+
         {isReadOnlyPreview ? (
           <p className="mt-2 text-xs text-amber-200">
             Registration campaign creation is unavailable in read-only Preview mode.
@@ -345,6 +359,8 @@ export function FieldRegistrationCard({
           The current registration link cannot be recovered from Field. It must be
           replaced from Console before it can be re-shared.
         </p>
+
+        <UnitProgressLink communityId={communityId} />
       </section>
     );
   }
@@ -396,6 +412,8 @@ export function FieldRegistrationCard({
           {message}
         </p>
       ) : null}
+
+      <UnitProgressLink communityId={communityId} />
 
       <div className="mt-4 flex flex-col gap-2.5">
         <button
