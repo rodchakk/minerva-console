@@ -24,3 +24,15 @@ export function getFieldRegistrationStateKind(
 
   return "open_recoverable";
 }
+
+export function isRegistrationLaunchEligible({
+  hasOperationalCampaign,
+  isReadOnlyPreview,
+  unitCount,
+}: {
+  hasOperationalCampaign: boolean;
+  isReadOnlyPreview: boolean;
+  unitCount: number;
+}): boolean {
+  return !hasOperationalCampaign && unitCount > 0 && !isReadOnlyPreview;
+}

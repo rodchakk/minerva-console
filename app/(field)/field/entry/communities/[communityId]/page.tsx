@@ -20,6 +20,7 @@ import {
 import {
   getCommunityRegistrationAdminState,
 } from "@/features/entry/communityRegistration/admin/queries";
+import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldRegistrationCard } from "@/features/entry/field/FieldRegistrationCard";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 
@@ -225,6 +226,7 @@ export default async function FieldCommunityDetailPage({
       <FieldRegistrationCard
         communityId={community.id}
         communityName={community.name}
+        isReadOnlyPreview={isEntryPreviewReadOnly()}
         registrationState={registrationState}
       />
 
