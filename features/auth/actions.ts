@@ -1,6 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import {
+  getSafePostLoginDestination,
+} from "@/features/auth/postLoginDestination";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -13,6 +16,7 @@ export async function loginAction(
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const postLoginDestination = getSafePostLoginDestination(formData.get("next"));
 
   if (!email || !password) {
     return { message: "Enter both email and password to continue." };
@@ -34,7 +38,7 @@ export async function loginAction(
     redirect("/unauthorized?reason=authorization_error");
   }
 
-  redirect(data === true ? "/dashboard" : "/unauthorized");
+  redirect(data === true ? postLoginDestination : "/unauthorized");
 }
 
 export async function signOutAction() {

@@ -1,7 +1,14 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/features/auth/LoginForm";
+import {
+  getSafePostLoginDestination,
+} from "@/features/auth/postLoginDestination";
 import { getAuthContext } from "@/features/auth/requireSuperadmin";
+
+type LoginPageProps = {
+  searchParams?: Promise<{ next?: string | string[] }>;
+};
 
 const infoCards = [
   { label: "Access", text: "Authorized only" },
@@ -9,11 +16,16 @@ const infoCards = [
   { label: "Status", text: "Production" },
 ];
 
-export default async function LoginPage() {
-  const context = await getAuthContext();
+function getSingleParam(value: string | string[] | undefined) {
+  return typeof value === "string" ? value : undefined;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const [context, params] = await Promise.all([getAuthContext(), searchParams]);
+  const postLoginDestination = getSafePostLoginDestination(getSingleParam(params?.next));
 
   if (context.status === "authorized") {
-    redirect("/dashboard");
+    redirect(postLoginDestination);
   }
 
   if (context.status === "forbidden") {
@@ -89,7 +101,7 @@ export default async function LoginPage() {
               Sign in to continue.
             </p>
             <div className="mt-7">
-              <LoginForm />
+              <LoginForm next={postLoginDestination} />
             </div>
             <div className="mt-7 flex items-center gap-4 text-white/28">
               <div className="h-px flex-1 bg-white/10" />

@@ -77,10 +77,9 @@ test("Field account keeps logout inside the Field surface", () => {
   assert.match(account, /requireSuperadmin/);
 });
 
-test("Field login-return limitation is documented for 001C", () => {
+test("Field login-return limitation is documented as resolved by 001C", () => {
   const recon = read("content/brain/projects/minerva-field-technical-recon.md");
 
-  assert.match(recon, /Known limitation after MINERVA-FIELD-001B/);
-  assert.match(recon, /`\/dashboard` instead of the original `\/field` destination/);
-  assert.match(recon, /deferred to MINERVA-FIELD-001C/);
+  assert.match(recon, /MINERVA-FIELD-001C resolved the 001B login-return limitation/);
+  assert.match(recon, /safe `\/field` and `\/field\/\*` post-login destinations/);
 });
