@@ -258,6 +258,7 @@ export async function launchCommunityRegistrationCampaign(
   }
 
   revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/field/entry/communities/${communityId}`);
 
   const baseUrl = await getResidentFacingBaseUrl();
   const path = `/entry/register/${encodeURIComponent(

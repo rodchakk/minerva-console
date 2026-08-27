@@ -1,15 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { Copy, ExternalLink, Share2 } from "lucide-react";
+import { Copy, ExternalLink, Play, Share2 } from "lucide-react";
 import { recoverCommunityRegistrationLink } from "@/features/entry/communityRegistration/admin/actions";
 import type { CommunityRegistrationAdminState } from "@/features/entry/communityRegistration/admin/queries";
 import { formatFieldCount } from "@/features/entry/field/formatting";
-import { getFieldRegistrationStateKind } from "@/features/entry/field/registrationState";
+import {
+  getFieldRegistrationStateKind,
+  isRegistrationLaunchEligible,
+} from "@/features/entry/field/registrationState";
 
 type FieldRegistrationCardProps = {
   communityId: string;
   communityName: string;
+  isReadOnlyPreview?: boolean;
   registrationState: CommunityRegistrationAdminState;
 };
 
@@ -53,9 +58,10 @@ function campaignStatusToneClass(status: string) {
 export function FieldRegistrationCard({
   communityId,
   communityName,
+  isReadOnlyPreview = false,
   registrationState,
 }: FieldRegistrationCardProps) {
-  const { campaign, submittedUnitCount, totalCampaignUnitCount, units } =
+  const { campaign, hasOperationalCampaign, submittedUnitCount, totalCampaignUnitCount, units } =
     registrationState;
 
   const [isPending, startTransition] = useTransition();
@@ -65,6 +71,11 @@ export function FieldRegistrationCard({
   const canShare = useSyncExternalStore(subscribe, getShareSnapshot, getServerSnapshot);
 
   const stateKind = getFieldRegistrationStateKind(campaign);
+  const canLaunchNewCampaign = isRegistrationLaunchEligible({
+    hasOperationalCampaign,
+    isReadOnlyPreview,
+    unitCount: units.length,
+  });
 
   function handleCopy() {
     if (!campaign) return;
@@ -172,26 +183,53 @@ export function FieldRegistrationCard({
               Not started
             </h2>
           </div>
-          <span className="rounded-full border border-white/12 bg-white/[0.03] px-2.5 py-1 text-xs font-bold text-[var(--console-text-muted)]">
-            Console required
-          </span>
+          {isReadOnlyPreview ? (
+            <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs font-bold text-amber-100">
+              Preview read-only
+            </span>
+          ) : units.length === 0 ? (
+            <span className="rounded-full border border-white/12 bg-white/[0.03] px-2.5 py-1 text-xs font-bold text-[var(--console-text-muted)]">
+              Needs units
+            </span>
+          ) : (
+            <span className="rounded-full border border-sky-300/30 bg-sky-300/10 px-2.5 py-1 text-xs font-bold text-sky-100">
+              Ready to start
+            </span>
+          )}
         </div>
 
         <p className="mt-3 text-sm leading-6 text-[var(--console-text-muted)]">
           No resident registration campaign is active for this community.
-          Campaign creation must be performed from Console.
         </p>
 
-        {units.length > 0 ? (
-          <p className="mt-2 text-xs text-[var(--console-text-soft)]">
-            {formatFieldCount(units.length)} community unit(s) available for future campaign creation.
+        {isReadOnlyPreview ? (
+          <p className="mt-2 text-xs text-amber-200">
+            Registration campaign creation is unavailable in read-only Preview mode.
           </p>
+        ) : units.length === 0 ? (
+          <p className="mt-2 text-xs text-[var(--console-text-soft)]">
+            Unit records are required before starting a registration campaign.
+          </p>
+        ) : (
+          <p className="mt-2 text-xs text-[var(--console-text-soft)]">
+            {formatFieldCount(units.length)} community unit(s) available for registration campaign creation.
+          </p>
+        )}
+
+        {canLaunchNewCampaign ? (
+          <Link
+            href={`/field/entry/communities/${communityId}/registration/start`}
+            className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 active:opacity-80"
+          >
+            <Play aria-hidden="true" className="h-4 w-4" />
+            <span>Start registration</span>
+          </Link>
         ) : null}
       </section>
     );
   }
 
-  // STATE 2: CAMPAIGN EXISTS BUT IS NOT OPEN
+  // STATE 2: CAMPAIGN EXISTS BUT IS NOT OPEN (e.g. closed, processed, paused, review, confirmed)
   if (stateKind === "non_open_campaign") {
     return (
       <section
@@ -242,6 +280,20 @@ export function FieldRegistrationCard({
         <p className="mt-3 text-sm leading-6 text-[var(--console-text-muted)]">
           Registration link sharing is available only while the campaign is open.
         </p>
+
+        {isReadOnlyPreview ? (
+          <p className="mt-2 text-xs text-amber-200">
+            Registration campaign creation is unavailable in read-only Preview mode.
+          </p>
+        ) : canLaunchNewCampaign ? (
+          <Link
+            href={`/field/entry/communities/${communityId}/registration/start`}
+            className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/5 px-4 text-sm font-semibold text-[var(--console-text)] transition-colors hover:bg-white/10 active:bg-white/15"
+          >
+            <Play aria-hidden="true" className="h-4 w-4" />
+            <span>Start new registration</span>
+          </Link>
+        ) : null}
       </section>
     );
   }
