@@ -29,6 +29,9 @@ function revalidateUnitPaths(communityId: string, unitId: string) {
   revalidatePath(`/products/entry/communities/${communityId}/units/${unitId}`);
   revalidatePath(`/products/entry/communities/${communityId}/users`);
   revalidatePath("/products/entry/users");
+  revalidatePath(`/field/entry/communities/${communityId}`);
+  revalidatePath(`/field/entry/communities/${communityId}/people`);
+  revalidatePath(`/field/entry/communities/${communityId}/people/units/${unitId}`);
 }
 
 export async function updateCommunityUnitAction(
@@ -60,15 +63,24 @@ export async function updateCommunityUnitAction(
   }
 
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("houses")
     .update({ house_label: unitLabel })
     .eq("community_id", communityId)
-    .eq("id", unitId);
+    .eq("id", unitId)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return {
       error: error.message,
+      success: false,
+    };
+  }
+
+  if (!data) {
+    return {
+      error: "Unit not found in this community.",
       success: false,
     };
   }
