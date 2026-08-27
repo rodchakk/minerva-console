@@ -8,6 +8,8 @@
 - Recon branch: `codex/minerva-field-001a-recon`
 - Base inspected: `origin/master` at `4ea3dc7` (`Brain: capture ENTRY-OPS-001 closeout (#72)`)
 - Scope: documentation/recon only. No Minerva Field UI, auth, Supabase, service-worker, dependency, runtime, or schema changes.
+- MINERVA-FIELD-001B update: older Seshat/future-module references in this recon are superseded by the final product direction in `minerva-field-foundation.md`; the Field foundation exposes ENTRY only, with no Seshat card, route, registry entry, or placeholder.
+- Known limitation after MINERVA-FIELD-001B: if a Field session expires and the operator authenticates again, the current global login flow may return the superadmin to `/dashboard` instead of the original `/field` destination. This is intentionally deferred to MINERVA-FIELD-001C because changing post-login destination behavior affects global authentication.
 
 ## Product Direction Inputs
 
@@ -109,7 +111,7 @@ Recommended architecture:
 - Shared tokens: keep using `app/globals.css` semantic tokens and shared UI primitives where they fit.
 - Dedicated manifest URL: `/field.webmanifest` or `/field/manifest.webmanifest`, linked from `app/(field)/field/layout.tsx` via metadata.
 - Manifest `start_url`: `/field`
-- Manifest `scope`: `/field/`
+- Manifest `scope`: `/field`
 - Manifest `id`: `/field`
 - Display: `standalone`
 - No custom service worker in v1 unless later required for push/offline.
@@ -124,7 +126,7 @@ Platform notes verified against local Next 16 docs and public platform docs:
 
 - Next docs say a PWA needs a valid manifest and HTTPS for installability, and explicitly note install prompts can be supported without offline support.
 - Chromium/Android supports manifest-driven install and can launch to `start_url`; MDN notes `start_url` is a browser hint, must be same-origin with the installing page, and should not contain user-specific tracking/fingerprinting data.
-- MDN documents `scope` as the URL prefix that controls which pages remain in the installed app context. Use a trailing slash, `/field/`, to avoid prefix matches such as `/field-other`.
+- MINERVA-FIELD-001B uses `scope: "/field"` so the exact `start_url: "/field"` is inside the installed app scope.
 - iOS Safari Add to Home Screen is manual. It does not support the same `beforeinstallprompt` flow as Chromium, so Field cannot depend on a custom install prompt as the primary iPhone UX.
 - iOS installed web apps have platform-specific limitations around install prompting, browser UI, storage lifecycle, background execution, and service-worker behavior. Architecture should degrade to "Field opens in browser or installed standalone" with server-fresh data, not assume native-app parity.
 
