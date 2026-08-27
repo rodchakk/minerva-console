@@ -1,29 +1,7 @@
-import { CommunityFinder } from "@/features/entry/field/CommunityFinder";
-import {
-  getFieldCommunitySetupLabel,
-  getFieldCommunityStatusLabel,
-} from "@/features/entry/field/formatting";
-import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
-import { listCommunitiesWithProgress } from "@/features/entry/communities/queries";
+import Link from "next/link";
+import { ArrowRight, MapPinHouse, UserRoundSearch } from "lucide-react";
 
 export default async function FieldEntryPage() {
-  const communities = await listCommunitiesWithProgress();
-  const fieldCommunities = communities.map((community) => ({
-    activationPendingCount: community.activationPendingCount,
-    city: community.city,
-    completedTasks: community.completedTasks,
-    href: `/field/entry/communities/${encodeURIComponent(community.id)}`,
-    id: community.id,
-    isActive: community.isActive,
-    name: community.name,
-    nextStepLabel: getOnboardingNextStepLabel(community.nextStepKey),
-    setupLabel: getFieldCommunitySetupLabel(community),
-    statusLabel: getFieldCommunityStatusLabel(community),
-    totalMembers: community.totalMembers,
-    totalTasks: community.totalTasks,
-    totalUnits: community.totalUnits,
-  }));
-
   return (
     <div className="space-y-5">
       <section className="pt-2">
@@ -31,15 +9,56 @@ export default async function FieldEntryPage() {
           ENTRY Field
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--console-text)]">
-          Community finder
+          ENTRY
         </h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-[var(--console-text-muted)]">
-          Find an ENTRY community by name or city, then open its read-only field
-          overview.
+          What are you working on?
         </p>
       </section>
 
-      <CommunityFinder communities={fieldCommunities} />
+      <section className="grid gap-3" aria-label="ENTRY task choices">
+        <Link
+          href="/field/entry/communities"
+          className="group flex min-h-32 items-center gap-4 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-5 transition-colors hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)] active:bg-white/[0.08]"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
+            <MapPinHouse aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xl font-semibold text-[var(--console-text)]">
+              Communities
+            </span>
+            <span className="mt-2 block break-words text-sm leading-6 text-[var(--console-text-muted)]">
+              Registration, units, setup and community work
+            </span>
+          </span>
+          <ArrowRight
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-[var(--console-text)]"
+          />
+        </Link>
+
+        <Link
+          href="/field/entry/people"
+          className="group flex min-h-32 items-center gap-4 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-5 transition-colors hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)] active:bg-white/[0.08]"
+        >
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
+            <UserRoundSearch aria-hidden="true" className="h-6 w-6" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xl font-semibold text-[var(--console-text)]">
+              People
+            </span>
+            <span className="mt-2 block break-words text-sm leading-6 text-[var(--console-text-muted)]">
+              Access, activation and resident support
+            </span>
+          </span>
+          <ArrowRight
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-[var(--console-text)]"
+          />
+        </Link>
+      </section>
     </div>
   );
 }
