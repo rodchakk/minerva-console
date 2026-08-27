@@ -3,7 +3,13 @@ import "server-only";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coerceString } from "@/lib/supabase/utils";
-import type { FieldRegistrationProgressUnit } from "@/features/entry/field/registrationProgressStatus";
+import {
+  createReadyRegistrationProgressState,
+  createUnavailableRegistrationProgressState,
+  type FieldRegistrationProgressCampaign,
+  type FieldRegistrationProgressState,
+  type FieldRegistrationProgressUnit,
+} from "@/features/entry/field/registrationProgressStatus";
 
 const OPERATIONAL_CAMPAIGN_STATUSES = [
   "open",
@@ -11,17 +17,6 @@ const OPERATIONAL_CAMPAIGN_STATUSES = [
   "review",
   "confirmed",
 ] as const;
-
-type FieldRegistrationProgressCampaign = {
-  id: string;
-  publicTitle: string;
-  status: string;
-};
-
-export type FieldRegistrationProgressState = {
-  campaign: FieldRegistrationProgressCampaign | null;
-  units: FieldRegistrationProgressUnit[];
-};
 
 function normalizeProgressCampaign(
   value: unknown,
@@ -71,12 +66,16 @@ export async function getFieldRegistrationProgressState(
   await requireSuperadmin();
 
   const supabase = createAdminClient();
-  const { data: campaignsData } = await supabase
+  const { data: campaignsData, error: campaignsError } = await supabase
     .from("community_registration_campaigns")
     .select("id,public_title,status,created_at")
     .eq("community_id", communityId)
     .order("created_at", { ascending: false })
     .limit(10);
+
+  if (campaignsError) {
+    return createUnavailableRegistrationProgressState();
+  }
 
   const campaigns = Array.isArray(campaignsData)
     ? campaignsData
@@ -92,25 +91,26 @@ export async function getFieldRegistrationProgressState(
   const campaign = operationalCampaign ?? campaigns[0] ?? null;
 
   if (!campaign) {
-    return {
-      campaign: null,
-      units: [],
-    };
+    return createReadyRegistrationProgressState(null, []);
   }
 
-  const { data: campaignUnitsData } = await supabase
+  const { data: campaignUnitsData, error: campaignUnitsError } = await supabase
     .from("community_registration_units")
     .select("id,unit_label_snapshot,status")
     .eq("campaign_id", campaign.id)
     .order("unit_label_snapshot", { ascending: true })
     .order("id", { ascending: true });
 
-  return {
+  if (campaignUnitsError) {
+    return createUnavailableRegistrationProgressState();
+  }
+
+  return createReadyRegistrationProgressState(
     campaign,
-    units: Array.isArray(campaignUnitsData)
+    Array.isArray(campaignUnitsData)
       ? campaignUnitsData
           .map(normalizeProgressUnit)
           .filter((item): item is FieldRegistrationProgressUnit => item !== null)
       : [],
-  };
+  );
 }

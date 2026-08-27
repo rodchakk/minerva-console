@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import {
+  createReadyRegistrationProgressState,
+  createUnavailableRegistrationProgressState,
   filterRegistrationProgressUnits,
   getRegistrationProgressCounts,
   getRegistrationProgressStatusGroup,
@@ -36,6 +38,8 @@ test("registration progress route exists under Field and uses authorized server-
 test("registration progress query selects only safe campaign-unit fields", () => {
   const data = read("features/entry/field/registrationProgressData.ts");
 
+  assert.match(data, /error: campaignsError/);
+  assert.match(data, /error: campaignUnitsError/);
   assert.match(data, /\.from\("community_registration_units"\)/);
   assert.match(data, /\.select\("id,unit_label_snapshot,status"\)/);
   assert.match(data, /\.eq\("campaign_id", campaign\.id\)/);
@@ -60,6 +64,60 @@ test("registration progress route and components are read-only and Field-only", 
   for (const file of progressFiles) {
     assert.doesNotMatch(read(file), forbidden, file);
   }
+});
+
+test("registration progress query failures render unavailable instead of false empty states", () => {
+  const route = read("app/(field)/field/entry/communities/[communityId]/registration/page.tsx");
+  const data = read("features/entry/field/registrationProgressData.ts");
+  const unavailableBlock = route.slice(
+    route.indexOf('if (progressState.state === "unavailable")'),
+    route.indexOf("if (!progressState.campaign)"),
+  );
+
+  assert.match(data, /if \(campaignsError\) \{\s*return createUnavailableRegistrationProgressState\(\);/);
+  assert.match(data, /if \(campaignUnitsError\) \{\s*return createUnavailableRegistrationProgressState\(\);/);
+  assert.match(route, /Resident registration progress unavailable/);
+  assert.match(route, /We could not load registration progress right now\./);
+  assert.ok(
+    route.indexOf('if (progressState.state === "unavailable")') <
+      route.indexOf("if (!progressState.campaign)"),
+  );
+  assert.doesNotMatch(unavailableBlock, /No registration campaign/);
+  assert.doesNotMatch(unavailableBlock, /No participating units/);
+  assert.doesNotMatch(unavailableBlock, /Aggregate progress|formatFieldCount|0 \/ 0/);
+});
+
+test("registration progress state keeps legitimate empty states distinct", () => {
+  const unavailable = createUnavailableRegistrationProgressState();
+  const noCampaign = createReadyRegistrationProgressState(null, []);
+  const emptyCampaign = createReadyRegistrationProgressState(
+    {
+      id: "campaign-1",
+      publicTitle: "Registro de residentes",
+      status: "open",
+    },
+    [],
+  );
+
+  assert.deepEqual(unavailable, {
+    campaign: null,
+    state: "unavailable",
+    units: [],
+  });
+  assert.deepEqual(noCampaign, {
+    campaign: null,
+    state: "ready",
+    units: [],
+  });
+  assert.deepEqual(emptyCampaign, {
+    campaign: {
+      id: "campaign-1",
+      publicTitle: "Registro de residentes",
+      status: "open",
+    },
+    state: "ready",
+    units: [],
+  });
 });
 
 test("registration progress search filters by unit label", () => {

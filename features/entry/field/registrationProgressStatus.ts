@@ -16,6 +16,24 @@ export type FieldRegistrationProgressUnit = {
   status: string;
 };
 
+export type FieldRegistrationProgressCampaign = {
+  id: string;
+  publicTitle: string;
+  status: string;
+};
+
+export type FieldRegistrationProgressState =
+  | {
+      state: "ready";
+      campaign: FieldRegistrationProgressCampaign | null;
+      units: FieldRegistrationProgressUnit[];
+    }
+  | {
+      state: "unavailable";
+      campaign: null;
+      units: FieldRegistrationProgressUnit[];
+    };
+
 export const FIELD_REGISTRATION_PROGRESS_FILTERS = [
   { id: "all", label: "All" },
   { id: "not_registered", label: "Not registered" },
@@ -30,6 +48,25 @@ export const FIELD_REGISTRATION_PROGRESS_FILTERS = [
 
 export function normalizeRegistrationUnitStatus(status: string) {
   return status.trim().toLowerCase();
+}
+
+export function createUnavailableRegistrationProgressState(): FieldRegistrationProgressState {
+  return {
+    campaign: null,
+    state: "unavailable",
+    units: [],
+  };
+}
+
+export function createReadyRegistrationProgressState(
+  campaign: FieldRegistrationProgressCampaign | null,
+  units: FieldRegistrationProgressUnit[],
+): FieldRegistrationProgressState {
+  return {
+    campaign,
+    state: "ready",
+    units,
+  };
 }
 
 export function getRegistrationProgressStatusGroup(

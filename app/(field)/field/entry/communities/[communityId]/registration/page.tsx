@@ -53,6 +53,32 @@ export default async function FieldRegistrationProgressPage({
 
   const overviewHref = `/field/entry/communities/${encodeURIComponent(community.id)}`;
 
+  if (progressState.state === "unavailable") {
+    return (
+      <div className="space-y-5">
+        <Link
+          href={overviewHref}
+          className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]"
+        >
+          <ArrowLeft aria-hidden="true" className="h-4 w-4" />
+          Back to community overview
+        </Link>
+
+        <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-5">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
+            Resident registration
+          </p>
+          <h1 className="mt-2 text-2xl font-semibold text-[var(--console-text)]">
+            Resident registration progress unavailable
+          </h1>
+          <p className="mt-3 text-sm leading-6 text-[var(--console-text-muted)]">
+            We could not load registration progress right now.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   if (!progressState.campaign) {
     return (
       <div className="space-y-5">
