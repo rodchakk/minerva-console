@@ -10,18 +10,16 @@ import {
   filterFieldActivationRows,
   filterFieldResidents,
   filterFieldUnits,
+  formatFieldUnitResidentCount,
   isActivationPinEligible,
 } from "@/features/entry/field/peopleModel";
 
 type FieldPeopleOverviewProps = {
-  activationError?: string;
   activationRows: FieldActivationRow[];
   activationState: "ready" | "unavailable";
   communityId: string;
-  residentError?: string;
   residentState: "ready" | "unavailable";
   residents: FieldResident[];
-  unitError?: string;
   unitState: "ready" | "unavailable";
   units: FieldUnit[];
 };
@@ -52,10 +50,10 @@ function SearchBox({
   );
 }
 
-function UnavailableState({ error, label }: { error?: string; label: string }) {
+function UnavailableState({ label }: { label: string }) {
   return (
     <div className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-      {label} unavailable{error ? `: ${error}` : "."}
+      {label} unavailable.
     </div>
   );
 }
@@ -69,14 +67,11 @@ function EmptyState({ label }: { label: string }) {
 }
 
 export function FieldPeopleOverview({
-  activationError,
   activationRows,
   activationState,
   communityId,
-  residentError,
   residentState,
   residents,
-  unitError,
   unitState,
   units,
 }: FieldPeopleOverviewProps) {
@@ -107,7 +102,7 @@ export function FieldPeopleOverview({
         </div>
 
         {residentState === "unavailable" ? (
-          <UnavailableState error={residentError} label="Resident list" />
+          <UnavailableState label="Resident list" />
         ) : (
           <>
             <SearchBox
@@ -160,7 +155,7 @@ export function FieldPeopleOverview({
         </div>
 
         {unitState === "unavailable" ? (
-          <UnavailableState error={unitError} label="Unit list" />
+          <UnavailableState label="Unit list" />
         ) : (
           <>
             <SearchBox
@@ -181,7 +176,7 @@ export function FieldPeopleOverview({
                         {unit.label}
                       </span>
                       <span className="mt-1 block text-sm text-[var(--console-text-muted)]">
-                        {unit.residentCount} linked resident(s) - {unit.isActive ? "Active" : "Inactive"}
+                        {formatFieldUnitResidentCount(unit)} - {unit.isActive ? "Active" : "Inactive"}
                       </span>
                     </span>
                     <ArrowRight
@@ -213,7 +208,7 @@ export function FieldPeopleOverview({
         </div>
 
         {activationState === "unavailable" ? (
-          <UnavailableState error={activationError} label="Activation queue" />
+          <UnavailableState label="Activation queue" />
         ) : (
           <>
             <SearchBox

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Copy, House, KeyRound, Share2 } from "lucide-react";
 import {
   assignFieldResidentToUnit,
@@ -10,6 +11,7 @@ import {
 import {
   canSendResidentResetEmail,
   canUseResidentRecoveryCode,
+  getFieldResidentAssignmentUnits,
   type FieldResident,
   type FieldUnit,
 } from "@/features/entry/field/peopleModel";
@@ -18,6 +20,7 @@ type FieldResidentActionsProps = {
   communityId: string;
   isReadOnlyPreview: boolean;
   resident: FieldResident;
+  unitState: "ready" | "unavailable";
   units: FieldUnit[];
 };
 
@@ -51,8 +54,10 @@ export function FieldResidentActions({
   communityId,
   isReadOnlyPreview,
   resident,
+  unitState,
   units,
 }: FieldResidentActionsProps) {
+  const router = useRouter();
   const [selectedUnitId, setSelectedUnitId] = useState(resident.houseId);
   const [confirmingMove, setConfirmingMove] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
@@ -68,11 +73,19 @@ export function FieldResidentActions({
     getServerSnapshot,
   );
 
-  const selectedUnit = useMemo(
-    () => units.find((unit) => unit.id === selectedUnitId) ?? null,
-    [selectedUnitId, units],
+  const assignmentUnits = useMemo(
+    () => getFieldResidentAssignmentUnits(units, resident.houseId),
+    [resident.houseId, units],
   );
-  const canMove = Boolean(selectedUnitId && selectedUnitId !== resident.houseId);
+  const selectedUnit = useMemo(
+    () => assignmentUnits.find((unit) => unit.id === selectedUnitId) ?? null,
+    [assignmentUnits, selectedUnitId],
+  );
+  const canMove = Boolean(
+    selectedUnit?.isActive &&
+      selectedUnitId &&
+      selectedUnitId !== resident.houseId,
+  );
   const resetMode = canSendResidentResetEmail(resident)
     ? "email"
     : canUseResidentRecoveryCode(resident)
@@ -105,6 +118,7 @@ export function FieldResidentActions({
 
       setConfirmingMove(false);
       setMessage("Unit assignment updated.");
+      router.refresh();
     });
   }
 
@@ -180,22 +194,31 @@ export function FieldResidentActions({
             Change unit
           </h2>
         </div>
-        <select
-          value={selectedUnitId}
-          onChange={(event) => {
-            setSelectedUnitId(event.target.value);
-            setConfirmingMove(false);
-          }}
-          disabled={isReadOnlyPreview || isPending}
-          className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
-        >
-          <option value="">Select unit</option>
-          {units.map((unit) => (
-            <option key={unit.id} value={unit.id}>
-              {unit.label}
-            </option>
-          ))}
-        </select>
+        {unitState === "unavailable" ? (
+          <p className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+            Unit list unavailable.
+          </p>
+        ) : (
+          <select
+            value={selectedUnitId}
+            onChange={(event) => {
+              setSelectedUnitId(event.target.value);
+              setConfirmingMove(false);
+            }}
+            disabled={isReadOnlyPreview || isPending}
+            className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
+          >
+            <option value="">Select unit</option>
+            {assignmentUnits.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.label}
+                {!unit.isActive && unit.id === resident.houseId
+                  ? " (current, inactive)"
+                  : ""}
+              </option>
+            ))}
+          </select>
+        )}
 
         {isReadOnlyPreview ? (
           <p className="text-xs leading-5 text-amber-200">
@@ -207,7 +230,9 @@ export function FieldResidentActions({
           <button
             type="button"
             onClick={() => setConfirmingMove(true)}
-            disabled={!canMove || isPending || isReadOnlyPreview}
+            disabled={
+              !canMove || isPending || isReadOnlyPreview || unitState !== "ready"
+            }
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-4 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Check aria-hidden="true" className="h-4 w-4" />
@@ -222,7 +247,7 @@ export function FieldResidentActions({
             <button
               type="button"
               onClick={handleMove}
-              disabled={isPending || isReadOnlyPreview}
+              disabled={isPending || isReadOnlyPreview || !canMove}
               className="min-h-12 w-full rounded-lg bg-amber-300 px-4 text-sm font-black text-slate-950 transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {isPending ? "Saving..." : "Confirm unit change"}

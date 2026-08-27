@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldUnitActions } from "@/features/entry/field/FieldUnitActions";
 import { getFieldUnitDetailData } from "@/features/entry/field/peopleData";
+import { formatFieldUnitResidentCount } from "@/features/entry/field/peopleModel";
 
 type FieldUnitDetailPageProps = {
   params: Promise<{ communityId: string; unitId: string }>;
@@ -30,7 +31,7 @@ export default async function FieldUnitDetailPage({
           Residents and units
         </Link>
         <section className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-          Unit detail unavailable{data.units.error ? `: ${data.units.error}` : "."}
+          Unit detail unavailable.
         </section>
       </div>
     );
@@ -63,7 +64,7 @@ export default async function FieldUnitDetailPage({
           {data.unit.label}
         </h1>
         <p className="text-sm leading-6 text-[var(--console-text-muted)]">
-          {data.unit.residentCount} linked resident(s) - {data.unit.isActive ? "Active" : "Inactive"}
+          {formatFieldUnitResidentCount(data.unit)} - {data.unit.isActive ? "Active" : "Inactive"}
         </p>
       </section>
 
@@ -71,9 +72,13 @@ export default async function FieldUnitDetailPage({
         <h2 className="text-lg font-semibold text-[var(--console-text)]">
           Linked residents
         </h2>
-        {data.residentsForUnit.length > 0 ? (
+        {data.residentsForUnit.state === "unavailable" ? (
+          <p className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
+            Linked residents unavailable.
+          </p>
+        ) : data.residentsForUnit.items.length > 0 ? (
           <div className="space-y-2">
-            {data.residentsForUnit.map((resident) => (
+            {data.residentsForUnit.items.map((resident) => (
               <Link
                 key={resident.userId}
                 href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/residents/${encodeURIComponent(resident.userId)}`}
@@ -99,6 +104,7 @@ export default async function FieldUnitDetailPage({
         communityId={data.community.id}
         eligibleResidents={eligibleResidents}
         isReadOnlyPreview={isEntryPreviewReadOnly()}
+        residentState={data.residents.state}
         unit={data.unit}
       />
     </div>

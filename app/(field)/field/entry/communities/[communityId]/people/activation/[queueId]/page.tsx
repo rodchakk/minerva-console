@@ -43,7 +43,7 @@ export default async function FieldActivationDetailPage({
           Residents and units
         </Link>
         <section className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-          Activation queue unavailable{data.activation.error ? `: ${data.activation.error}` : "."}
+          Activation queue unavailable.
         </section>
       </div>
     );

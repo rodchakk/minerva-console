@@ -188,7 +188,7 @@ async function loadResidents(
 async function loadUnits(
   supabase: SupabaseServerClient,
   communityId: string,
-  residents: FieldResident[],
+  residents: FieldPeopleResult<FieldResident>,
 ): Promise<FieldPeopleResult<FieldUnit>> {
   const { data, error } = await supabase
     .from("houses")
@@ -204,14 +204,17 @@ async function loadUnits(
     };
   }
 
-  const residentCountsByUnit = residents.reduce((counts, resident) => {
-    if (!resident.houseId) {
-      return counts;
-    }
+  const residentCountsByUnit =
+    residents.state === "ready"
+      ? residents.items.reduce((counts, resident) => {
+          if (!resident.houseId) {
+            return counts;
+          }
 
-    counts.set(resident.houseId, (counts.get(resident.houseId) ?? 0) + 1);
-    return counts;
-  }, new Map<string, number>());
+          counts.set(resident.houseId, (counts.get(resident.houseId) ?? 0) + 1);
+          return counts;
+        }, new Map<string, number>())
+      : null;
 
   const items = Array.isArray(data)
     ? data
@@ -224,7 +227,9 @@ async function loadUnits(
             isActive:
               item.is_active === undefined ? true : coerceBoolean(item.is_active),
             label: formatFallback(coerceString(item.house_label), "Unnamed unit"),
-            residentCount: residentCountsByUnit.get(id) ?? 0,
+            residentCount: residentCountsByUnit
+              ? residentCountsByUnit.get(id) ?? 0
+              : null,
           };
         })
         .filter((unit): unit is FieldUnit => unit !== null)
@@ -275,9 +280,8 @@ export async function getFieldPeoplePageData(
     loadCommunity(supabase, communityId),
     loadResidents(supabase, communityId),
   ]);
-  const safeResidents = residents.state === "ready" ? residents.items : [];
   const [units, activation] = await Promise.all([
-    loadUnits(supabase, communityId, safeResidents),
+    loadUnits(supabase, communityId, residents),
     loadActivation(supabase, communityId),
   ]);
 
@@ -314,14 +318,21 @@ export async function getFieldUnitDetailData(
     data.units.state === "ready"
       ? data.units.items.find((item) => item.id === unitId) ?? null
       : null;
-  const residents =
+  const residentsForUnit =
     data.residents.state === "ready"
-      ? data.residents.items.filter((resident) => resident.houseId === unitId)
-      : [];
+      ? {
+          items: data.residents.items.filter((resident) => resident.houseId === unitId),
+          state: "ready" as const,
+        }
+      : {
+          error: data.residents.error,
+          items: [],
+          state: "unavailable" as const,
+        };
 
   return {
     ...data,
-    residentsForUnit: residents,
+    residentsForUnit,
     unit,
   };
 }

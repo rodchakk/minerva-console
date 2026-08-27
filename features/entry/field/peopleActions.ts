@@ -3,6 +3,10 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import {
+  createActivatedUsers,
+  type CreateActivatedUserItem,
+} from "@/features/entry/activation/createUserActions";
 import { generateActivationPins } from "@/features/entry/activation/pinActions";
 import { updateCommunityUnitAction } from "@/features/entry/communities/unitActions";
 import {
@@ -41,6 +45,13 @@ export type FieldActivationPinResult = FieldActionResult & {
   unitLabel?: string | null;
 };
 
+export type FieldCreateAccountResult = FieldActionResult & {
+  loginIdentity?: string | null;
+  residentName?: string | null;
+  temporaryPassword?: string | null;
+  unitLabel?: string | null;
+};
+
 type CanonicalResident = {
   email: string;
   fullName: string;
@@ -60,6 +71,14 @@ function revalidateFieldPeoplePaths(communityId: string, unitId?: string | null)
   if (unitId) {
     revalidatePath(`/field/entry/communities/${communityId}/people/units/${unitId}`);
   }
+}
+
+function revalidateFieldActivationPaths(communityId: string, queueId: string) {
+  revalidateFieldPeoplePaths(communityId);
+  revalidatePath(`/field/entry/communities/${communityId}/people/activation`);
+  revalidatePath(
+    `/field/entry/communities/${communityId}/people/activation/${queueId}`,
+  );
 }
 
 function normalizeFunctionMessage(value: unknown) {
@@ -226,6 +245,7 @@ async function loadCommunityUnit(communityId: string, unitId: string) {
 
   return {
     id: coerceString(data.id),
+    isActive: data.is_active === undefined ? true : coerceBoolean(data.is_active),
     label: coerceString(data.house_label, "Unnamed unit"),
   };
 }
@@ -279,6 +299,13 @@ export async function assignFieldResidentToUnit(input: {
     };
   }
 
+  if (!unit.isActive) {
+    return {
+      error: "This unit is inactive. Resident assignment from Field is unavailable.",
+      success: false,
+    };
+  }
+
   const supabase = await createClient();
   const { error } = await supabase.rpc("sa_update_community_user", {
     p_community_id: communityId,
@@ -301,6 +328,9 @@ export async function assignFieldResidentToUnit(input: {
   revalidatePath(`/products/entry/communities/${communityId}/users`);
   revalidateFieldPeoplePaths(communityId, resident.houseId);
   revalidateFieldPeoplePaths(communityId, unit.id);
+  revalidatePath(
+    `/field/entry/communities/${communityId}/people/residents/${userId}`,
+  );
 
   return { success: true };
 }
@@ -461,11 +491,7 @@ export async function generateFieldActivationPin(input: {
     };
   }
 
-  revalidateFieldPeoplePaths(communityId);
-  revalidatePath(`/field/entry/communities/${communityId}/people/activation`);
-  revalidatePath(
-    `/field/entry/communities/${communityId}/people/activation/${queueId}`,
-  );
+  revalidateFieldActivationPaths(communityId, queueId);
 
   return {
     activationMethod: item.activation_method,
@@ -474,6 +500,69 @@ export async function generateFieldActivationPin(input: {
     residentName: item.resident_name,
     suggestedUsername: item.suggested_username,
     success: true,
+    unitLabel: item.unit_label,
+  };
+}
+
+function getSingleCreatedAccountItem(
+  items: CreateActivatedUserItem[],
+  queueId: string,
+) {
+  return items.find((candidate) => candidate.queue_id === queueId) ?? null;
+}
+
+export async function createFieldActivationAccount(input: {
+  communityId: string;
+  queueId: string;
+}): Promise<FieldCreateAccountResult> {
+  await requireSuperadmin();
+
+  const communityId = input.communityId.trim();
+  const queueId = input.queueId.trim();
+
+  if (!communityId || !queueId) {
+    return {
+      error: "Community and activation row are required.",
+      success: false,
+    };
+  }
+
+  const result = await createActivatedUsers({
+    communityId,
+    queueIds: [queueId],
+  });
+
+  if (!result.success) {
+    return {
+      error: result.error,
+      success: false,
+    };
+  }
+
+  const item = getSingleCreatedAccountItem(result.data.items, queueId);
+
+  if (!item || item.status !== "activated") {
+    return {
+      error: item?.message || "Account could not be created for this row.",
+      success: false,
+    };
+  }
+
+  if (!item.login_identity || !item.temporary_password) {
+    return {
+      error: "Account was created, but credentials were not returned for Field display.",
+      success: false,
+    };
+  }
+
+  revalidateFieldActivationPaths(communityId, queueId);
+  revalidatePath(`/products/entry/communities/${communityId}/users`);
+
+  return {
+    loginIdentity: item.login_identity,
+    residentName: item.resident_name,
+    success: true,
+    temporaryPassword: item.temporary_password,
     unitLabel: item.unit_label,
   };
 }

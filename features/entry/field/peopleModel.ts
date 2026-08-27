@@ -19,7 +19,7 @@ export type FieldUnit = {
   id: string;
   isActive: boolean;
   label: string;
-  residentCount: number;
+  residentCount: number | null;
 };
 
 export type FieldActivationRow = {
@@ -108,6 +108,21 @@ export function filterFieldUnits(units: FieldUnit[], query: string) {
   }
 
   return units.filter((unit) => unit.label.toLowerCase().includes(normalized));
+}
+
+export function formatFieldUnitResidentCount(unit: FieldUnit) {
+  if (unit.residentCount === null) {
+    return "Resident count unavailable";
+  }
+
+  return `${unit.residentCount} linked resident(s)`;
+}
+
+export function getFieldResidentAssignmentUnits(
+  units: FieldUnit[],
+  currentUnitId: string,
+) {
+  return units.filter((unit) => unit.isActive || unit.id === currentUnitId);
 }
 
 export function filterFieldActivationRows(

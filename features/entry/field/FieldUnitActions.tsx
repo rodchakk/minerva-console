@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Edit3, UserPlus } from "lucide-react";
 import {
   assignFieldResidentToUnit,
@@ -15,6 +16,7 @@ type FieldUnitActionsProps = {
   communityId: string;
   eligibleResidents: FieldResident[];
   isReadOnlyPreview: boolean;
+  residentState: "ready" | "unavailable";
   unit: FieldUnit;
 };
 
@@ -22,8 +24,10 @@ export function FieldUnitActions({
   communityId,
   eligibleResidents,
   isReadOnlyPreview,
+  residentState,
   unit,
 }: FieldUnitActionsProps) {
+  const router = useRouter();
   const [label, setLabel] = useState(unit.label);
   const [confirmingRename, setConfirmingRename] = useState(false);
   const [selectedResidentId, setSelectedResidentId] = useState("");
@@ -39,6 +43,7 @@ export function FieldUnitActions({
   );
   const trimmedLabel = label.trim();
   const canRename = trimmedLabel.length > 0 && trimmedLabel !== unit.label;
+  const canAssignResident = residentState === "ready" && unit.isActive;
 
   function handleRename() {
     setMessage(null);
@@ -79,6 +84,7 @@ export function FieldUnitActions({
       setConfirmingAssign(false);
       setSelectedResidentId("");
       setMessage("Resident assigned to unit.");
+      router.refresh();
     });
   }
 
@@ -151,22 +157,32 @@ export function FieldUnitActions({
             Add resident
           </h2>
         </div>
-        <select
-          value={selectedResidentId}
-          onChange={(event) => {
-            setSelectedResidentId(event.target.value);
-            setConfirmingAssign(false);
-          }}
-          disabled={isReadOnlyPreview || isPending}
-          className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
-        >
-          <option value="">Select resident</option>
-          {eligibleResidents.map((resident) => (
-            <option key={resident.userId} value={resident.userId}>
-              {resident.fullName} - {resident.houseLabel}
-            </option>
-          ))}
-        </select>
+        {!unit.isActive ? (
+          <p className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+            This unit is inactive. Resident assignment from Field is unavailable.
+          </p>
+        ) : residentState === "unavailable" ? (
+          <p className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+            Resident choices unavailable.
+          </p>
+        ) : (
+          <select
+            value={selectedResidentId}
+            onChange={(event) => {
+              setSelectedResidentId(event.target.value);
+              setConfirmingAssign(false);
+            }}
+            disabled={isReadOnlyPreview || isPending}
+            className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
+          >
+            <option value="">Select resident</option>
+            {eligibleResidents.map((resident) => (
+              <option key={resident.userId} value={resident.userId}>
+                {resident.fullName} - {resident.houseLabel}
+              </option>
+            ))}
+          </select>
+        )}
         {isReadOnlyPreview ? (
           <p className="text-xs leading-5 text-amber-200">
             Preview is read-only. Resident assignment is disabled.
@@ -176,7 +192,12 @@ export function FieldUnitActions({
           <button
             type="button"
             onClick={() => setConfirmingAssign(true)}
-            disabled={!selectedResidentId || isPending || isReadOnlyPreview}
+            disabled={
+              !selectedResidentId ||
+              isPending ||
+              isReadOnlyPreview ||
+              !canAssignResident
+            }
             className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/5 px-4 text-sm font-semibold text-[var(--console-text)] transition-colors hover:bg-white/10 disabled:opacity-50"
           >
             <UserPlus aria-hidden="true" className="h-4 w-4" />
@@ -190,7 +211,7 @@ export function FieldUnitActions({
             <button
               type="button"
               onClick={handleAssign}
-              disabled={isPending || isReadOnlyPreview}
+              disabled={isPending || isReadOnlyPreview || !canAssignResident}
               className="min-h-12 w-full rounded-lg bg-amber-300 px-4 text-sm font-black text-slate-950 transition-opacity hover:opacity-90 disabled:opacity-50"
             >
               {isPending ? "Saving..." : "Confirm assignment"}

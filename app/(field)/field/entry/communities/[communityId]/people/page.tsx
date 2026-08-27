@@ -46,14 +46,11 @@ export default async function FieldPeoplePage({ params }: FieldPeoplePageProps) 
       </section>
 
       <FieldPeopleOverview
-        activationError={data.activation.error}
         activationRows={data.activation.items}
         activationState={data.activation.state}
         communityId={data.community.id}
-        residentError={data.residents.error}
         residentState={data.residents.state}
         residents={data.residents.items}
-        unitError={data.units.error}
         unitState={data.units.state}
         units={data.units.items}
       />

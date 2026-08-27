@@ -43,7 +43,7 @@ export default async function FieldResidentDetailPage({
           Residents and units
         </Link>
         <section className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-          Resident detail unavailable{data.residents.error ? `: ${data.residents.error}` : "."}
+          Resident detail unavailable.
         </section>
       </div>
     );
@@ -83,6 +83,7 @@ export default async function FieldResidentDetailPage({
         communityId={data.community.id}
         isReadOnlyPreview={isEntryPreviewReadOnly()}
         resident={data.resident}
+        unitState={data.units.state}
         units={data.units.state === "ready" ? data.units.items : []}
       />
     </div>

@@ -8,6 +8,8 @@ import {
   filterFieldActivationRows,
   filterFieldResidents,
   filterFieldUnits,
+  formatFieldUnitResidentCount,
+  getFieldResidentAssignmentUnits,
   isActivationPinEligible,
 } from "../features/entry/field/peopleModel.ts";
 
@@ -56,15 +58,32 @@ test("Field people routes exist and stay Field-only", () => {
 test("Field people read model preserves unavailable states", () => {
   const data = read("features/entry/field/peopleData.ts");
   const overview = read("features/entry/field/FieldPeopleOverview.tsx");
+  const unitPage = read(
+    "app/(field)/field/entry/communities/[communityId]/people/units/[unitId]/page.tsx",
+  );
+  const residentPage = read(
+    "app/(field)/field/entry/communities/[communityId]/people/residents/[userId]/page.tsx",
+  );
+  const residentActions = read("features/entry/field/FieldResidentActions.tsx");
+  const unitActions = read("features/entry/field/FieldUnitActions.tsx");
 
   assert.match(data, /state: "unavailable"/);
   assert.match(data, /loadResidents/);
   assert.match(data, /loadUnits/);
   assert.match(data, /loadActivation/);
+  assert.match(data, /residentCount: residentCountsByUnit[\s\S]*: null/);
+  assert.doesNotMatch(data, /safeResidents/);
   assert.match(overview, /UnavailableState/);
   assert.match(overview, /Resident list/);
   assert.match(overview, /Unit list/);
   assert.match(overview, /Activation queue/);
+  assert.match(overview, /formatFieldUnitResidentCount/);
+  assert.match(unitPage, /Linked residents unavailable/);
+  assert.match(unitPage, /No residents are linked to this unit/);
+  assert.match(unitPage, /data\.residentsForUnit\.state === "unavailable"/);
+  assert.match(residentPage, /unitState=\{data\.units\.state\}/);
+  assert.match(residentActions, /Unit list unavailable/);
+  assert.match(unitActions, /Resident choices unavailable/);
 });
 
 test("Field assignment and reset actions resolve canonical server-side data", () => {
@@ -89,6 +108,7 @@ test("Field mutations require explicit confirmation and Preview disables control
   assert.match(unitActions, /Confirm rename/);
   assert.match(unitActions, /Confirm assignment/);
   assert.match(activationActions, /Confirm PIN generation/);
+  assert.match(activationActions, /Confirm account creation/);
 
   for (const source of [residentActions, unitActions, activationActions]) {
     assert.match(source, /isReadOnlyPreview/);
@@ -105,17 +125,62 @@ test("Unit rename hardening checks zero-row update and Field revalidation", () =
   assert.match(unitActions, /\/field\/entry\/communities\/\$\{communityId\}\/people/);
 });
 
-test("Activation PIN is single-row and create account is blocked", () => {
+test("Activation PIN and Create Account are single-row Field actions", () => {
   const actions = read("features/entry/field/peopleActions.ts");
   const activationActions = read("features/entry/field/FieldActivationActions.tsx");
 
   assert.match(actions, /generateActivationPins/);
   assert.match(actions, /queueIds: \[queueId\]/);
-  assert.doesNotMatch(actions, /createActivatedUsers/);
+  assert.match(actions, /createActivatedUsers/);
+  assert.match(actions, /queueIds: \[queueId\]/);
+  assert.match(actions, /getSingleCreatedAccountItem/);
+  assert.match(actions, /item\.status !== "activated"/);
   assert.match(activationActions, /Create account now/);
-  assert.match(activationActions, /Blocked for Field/);
+  assert.match(activationActions, /createFieldActivationAccount/);
+  assert.match(activationActions, /Confirm account creation/);
+  assert.match(activationActions, /Account created/);
+  assert.match(activationActions, /Temporary password/);
+  assert.match(activationActions, /Copy credentials/);
+  assert.match(activationActions, /Share credentials/);
+  assert.doesNotMatch(activationActions, /Blocked for Field/);
   assert.match(activationActions, /navigator\.share/);
   assert.match(activationActions, /AbortError/);
+  assert.doesNotMatch(activationActions, /localStorage|sessionStorage|document\.cookie/);
+});
+
+test("Create Account stays confirmation-driven and does not persist password", () => {
+  const activationActions = read("features/entry/field/FieldActivationActions.tsx");
+  const activationPage = read(
+    "app/(field)/field/entry/communities/[communityId]/people/activation/[queueId]/page.tsx",
+  );
+
+  assert.match(activationActions, /onClick=\{\(\) => setConfirmingAccount\(true\)\}/);
+  assert.match(activationActions, /onClick=\{handleCreateAccount\}/);
+  assert.doesNotMatch(activationActions, /useEffect/);
+  assert.doesNotMatch(activationPage, /temporaryPassword|temporary_password/);
+  assert.match(activationActions, /isReadOnlyPreview/);
+  assert.match(activationActions, /This activation row is not eligible for account creation/);
+  assert.match(activationActions, /Save or share these credentials now/);
+});
+
+test("Assignment refreshes resident detail and only targets active units", () => {
+  const actions = read("features/entry/field/peopleActions.ts");
+  const residentActions = read("features/entry/field/FieldResidentActions.tsx");
+  const unitActions = read("features/entry/field/FieldUnitActions.tsx");
+
+  assert.match(
+    actions,
+    /\/field\/entry\/communities\/\$\{communityId\}\/people\/residents\/\$\{userId\}/,
+  );
+  assert.match(actions, /!unit\.isActive/);
+  assert.match(actions, /This unit is inactive/);
+  assert.match(residentActions, /getFieldResidentAssignmentUnits/);
+  assert.match(residentActions, /selectedUnit\?\.isActive/);
+  assert.match(residentActions, /current, inactive/);
+  assert.match(residentActions, /router\.refresh\(\)/);
+  assert.match(unitActions, /!unit\.isActive/);
+  assert.match(unitActions, /This unit is inactive\. Resident assignment from Field is unavailable/);
+  assert.match(unitActions, /router\.refresh\(\)/);
 });
 
 test("Resident and unit search helpers filter expected fields", () => {
@@ -171,6 +236,35 @@ test("Resident and unit search helpers filter expected fields", () => {
   assert.deepEqual(filterFieldResidents(residents, "unassigned").map((item) => item.userId), ["r2"]);
   assert.deepEqual(filterFieldUnits(units, "norte").map((item) => item.id), ["u2"]);
   assert.deepEqual(filterFieldActivationRows(activationRows, "username").map((item) => item.id), ["q1"]);
+});
+
+test("Unit resident count and active assignment helpers preserve dependency state", () => {
+  const activeUnit = { id: "u1", isActive: true, label: "Casa 1", residentCount: 0 };
+  const inactiveCurrentUnit = {
+    id: "u2",
+    isActive: false,
+    label: "Casa 2",
+    residentCount: null,
+  };
+  const inactiveOtherUnit = {
+    id: "u3",
+    isActive: false,
+    label: "Casa 3",
+    residentCount: 0,
+  };
+
+  assert.equal(formatFieldUnitResidentCount(activeUnit), "0 linked resident(s)");
+  assert.equal(
+    formatFieldUnitResidentCount(inactiveCurrentUnit),
+    "Resident count unavailable",
+  );
+  assert.deepEqual(
+    getFieldResidentAssignmentUnits(
+      [activeUnit, inactiveCurrentUnit, inactiveOtherUnit],
+      "u2",
+    ).map((unit) => unit.id),
+    ["u1", "u2"],
+  );
 });
 
 test("Reset and activation helper decisions are conservative", () => {
