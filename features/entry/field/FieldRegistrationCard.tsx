@@ -5,6 +5,7 @@ import { Copy, ExternalLink, Share2 } from "lucide-react";
 import { recoverCommunityRegistrationLink } from "@/features/entry/communityRegistration/admin/actions";
 import type { CommunityRegistrationAdminState } from "@/features/entry/communityRegistration/admin/queries";
 import { formatFieldCount } from "@/features/entry/field/formatting";
+import { getFieldRegistrationStateKind } from "@/features/entry/field/registrationState";
 
 type FieldRegistrationCardProps = {
   communityId: string;
@@ -54,7 +55,7 @@ export function FieldRegistrationCard({
   communityName,
   registrationState,
 }: FieldRegistrationCardProps) {
-  const { campaign, hasOperationalCampaign, submittedUnitCount, totalCampaignUnitCount, units } =
+  const { campaign, submittedUnitCount, totalCampaignUnitCount, units } =
     registrationState;
 
   const [isPending, startTransition] = useTransition();
@@ -63,8 +64,7 @@ export function FieldRegistrationCard({
   const [message, setMessage] = useState<string | null>(null);
   const canShare = useSyncExternalStore(subscribe, getShareSnapshot, getServerSnapshot);
 
-  const isCampaignOpen = campaign?.status.trim().toLowerCase() === "open";
-  const isRecoverable = campaign?.activeCampaignAccessRecoverable ?? false;
+  const stateKind = getFieldRegistrationStateKind(campaign);
 
   function handleCopy() {
     if (!campaign) return;
@@ -153,8 +153,8 @@ export function FieldRegistrationCard({
     });
   }
 
-  // STATE 1: NO CAMPAIGN
-  if (!campaign || !hasOperationalCampaign) {
+  // STATE 1: NO CAMPAIGN (ONLY when campaign === null)
+  if (stateKind === "no_campaign" || !campaign) {
     return (
       <section
         aria-labelledby="field-registration-title"
@@ -192,7 +192,7 @@ export function FieldRegistrationCard({
   }
 
   // STATE 2: CAMPAIGN EXISTS BUT IS NOT OPEN
-  if (!isCampaignOpen) {
+  if (stateKind === "non_open_campaign") {
     return (
       <section
         aria-labelledby="field-registration-title"
@@ -247,7 +247,7 @@ export function FieldRegistrationCard({
   }
 
   // STATE 4: OPEN + UNRECOVERABLE LEGACY LINK
-  if (!isRecoverable) {
+  if (stateKind === "open_unrecoverable") {
     return (
       <section
         aria-labelledby="field-registration-title"
