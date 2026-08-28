@@ -49,6 +49,26 @@ export type CommunityListItem = {
 
 export type CommunityWithProgressItem = CommunityListItem;
 
+export type CommunitySearchItem = Pick<
+  CommunityListItem,
+  | "allowFrequentAccess"
+  | "allowMessages"
+  | "allowReservations"
+  | "city"
+  | "id"
+  | "isActive"
+  | "name"
+  | "totalMembers"
+  | "totalUnits"
+  | "unitLabel"
+>;
+
+export type CommunityListResult = {
+  error?: string;
+  items: CommunitySearchItem[];
+  state: "ready" | "unavailable";
+};
+
 type CommunityProgressMeta = {
   completedTasks: number;
   nextStepKey: string;
@@ -98,6 +118,29 @@ function mapCommunityRecord(item: unknown): CommunityWithProgressItem | null {
     totalTasks:
       coerceNumber(record.total_tasks) ||
       coerceNumber(record.total_steps),
+    totalUnits: coerceNumber(record.total_units),
+    unitLabel: coerceString(record.unit_label, "Casas"),
+  };
+}
+
+function mapCommunitySearchRecord(item: unknown): CommunitySearchItem | null {
+  const record = item as Record<string, unknown>;
+  const communityId =
+    coerceString(record.community_id) || coerceString(record.id);
+
+  if (!communityId) {
+    return null;
+  }
+
+  return {
+    allowFrequentAccess: coerceBoolean(record.allow_frequent_access),
+    allowMessages: coerceBoolean(record.allow_messages),
+    allowReservations: coerceBoolean(record.allow_reservations),
+    city: coerceString(record.city, "Not set"),
+    id: communityId,
+    isActive: coerceBoolean(record.is_active),
+    name: coerceString(record.name, "Untitled community"),
+    totalMembers: coerceNumber(record.total_members),
     totalUnits: coerceNumber(record.total_units),
     unitLabel: coerceString(record.unit_label, "Casas"),
   };
@@ -421,7 +464,33 @@ function mergeCommunityProgress(
   return merged;
 }
 
-export async function listCommunitiesWithProgress(): Promise<CommunityWithProgressItem[]> {
+export async function getCommunitiesWithProgressResult(): Promise<CommunityListResult> {
+  await requireSuperadmin();
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_superadmin_communities_v1");
+
+  if (error || !Array.isArray(data)) {
+    return {
+      error: error?.message || "Community list unavailable.",
+      items: [],
+      state: "unavailable",
+    };
+  }
+
+  return {
+    items: data
+      .map(mapCommunitySearchRecord)
+      .filter(
+        (community): community is CommunitySearchItem => community !== null,
+      ),
+    state: "ready",
+  };
+}
+
+async function listCommunitiesWithProgressItems(): Promise<
+  CommunityWithProgressItem[]
+> {
   await requireSuperadmin();
 
   const supabase = await createClient();
@@ -435,6 +504,10 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
     supabase.from("communities").select("id,name,city,is_active"),
   ]);
 
+  if (communityListError || !Array.isArray(communityListData)) {
+    return [];
+  }
+
   const activeStateById = new Map(
     Array.isArray(activeStateData)
       ? activeStateData
@@ -442,21 +515,6 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
           .filter((item): item is [string, CommunityActiveState] => item !== null)
       : [],
   );
-
-  const communitiesFromProgress =
-    !progressListError && Array.isArray(progressListData)
-      ? progressListData
-          .map(mapCommunityRecord)
-          .filter(
-            (community): community is CommunityWithProgressItem => community !== null,
-          )
-          .map((community) => applyActiveState(community, activeStateById))
-      : [];
-
-  if (communityListError || !Array.isArray(communityListData)) {
-    return communitiesFromProgress;
-  }
-
   const baseCommunities = communityListData
     .map(mapCommunityRecord)
     .filter(
@@ -465,11 +523,19 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
     .map((community) => applyActiveState(community, activeStateById));
 
   if (baseCommunities.length === 0) {
-    return communitiesFromProgress;
+    return [];
   }
 
   const progressById = new Map(
-    communitiesFromProgress.map((community) => [community.id, community]),
+    !progressListError && Array.isArray(progressListData)
+      ? progressListData
+          .map(mapCommunityRecord)
+          .filter(
+            (community): community is CommunityWithProgressItem => community !== null,
+          )
+          .map((community) => applyActiveState(community, activeStateById))
+          .map((community) => [community.id, community] as const)
+      : [],
   );
 
   return baseCommunities.map((community) =>
@@ -479,6 +545,10 @@ export async function listCommunitiesWithProgress(): Promise<CommunityWithProgre
       progressById.get(community.id),
     ),
   );
+}
+
+export async function listCommunitiesWithProgress(): Promise<CommunityWithProgressItem[]> {
+  return listCommunitiesWithProgressItems();
 }
 
 export async function getCommunityOnboardingDetail(

@@ -169,7 +169,7 @@ export default async function FieldCommunityDetailPage({
   return (
     <div className="space-y-5">
       <Link
-        href="/field/entry"
+        href="/field/entry/communities"
         className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]"
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />

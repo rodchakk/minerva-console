@@ -1,16 +1,11 @@
 export type FieldCommunityListItem = {
-  activationPendingCount: number;
   city: string;
-  completedTasks: number;
   href: string;
   id: string;
   isActive: boolean;
   name: string;
-  nextStepLabel: string;
-  setupLabel: string;
   statusLabel: string;
   totalMembers: number;
-  totalTasks: number;
   totalUnits: number;
 };
 
