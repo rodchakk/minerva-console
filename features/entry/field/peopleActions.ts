@@ -11,8 +11,8 @@ import { generateActivationPins } from "@/features/entry/activation/pinActions";
 import { updateCommunityUnitAction } from "@/features/entry/communities/unitActions";
 import {
   getEntryPreviewReadOnlyError,
-  getResidentFacingBaseUrl,
 } from "@/features/entry/deploymentBoundary";
+import { getPasswordResetRedirectTo } from "@/features/entry/passwordResetRedirect";
 import {
   canSendResidentResetEmail,
   canUseResidentRecoveryCode,
@@ -165,17 +165,6 @@ function extractExpiration(data: unknown) {
   }
 
   return null;
-}
-
-async function getPasswordResetRedirectTo() {
-  const configuredRedirect =
-    process.env.NEXT_PUBLIC_ENTRY_PASSWORD_RESET_REDIRECT?.trim();
-
-  if (configuredRedirect && configuredRedirect !== "entry://reset-password") {
-    return configuredRedirect;
-  }
-
-  return `${await getResidentFacingBaseUrl()}/reset-password`;
 }
 
 function mapCanonicalResident(item: unknown): CanonicalResident | null {

@@ -3,24 +3,29 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { buildEntryResetUrl } from "@/app/reset-password/bridgeUrl";
 
-function buildEntryResetUrl() {
+function buildCurrentEntryResetUrl() {
   if (typeof window === "undefined") {
-    return "entry://reset-password";
+    return buildEntryResetUrl();
   }
 
   const search = window.location.search ?? "";
   const hash = window.location.hash ?? "";
 
-  return `entry://reset-password${search}${hash}`;
+  return buildEntryResetUrl(search, hash);
 }
 
 export default function ResetPasswordBridgePage() {
-  const entryResetUrl = useMemo(() => buildEntryResetUrl(), []);
+  const entryResetUrl = useMemo(() => buildCurrentEntryResetUrl(), []);
 
   useEffect(() => {
     window.location.replace(entryResetUrl);
   }, [entryResetUrl]);
+
+  function openEntryApp() {
+    window.location.assign(buildCurrentEntryResetUrl());
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
@@ -37,9 +42,7 @@ export default function ResetPasswordBridgePage() {
         </p>
 
         <div className="mt-6 flex flex-col items-center justify-center gap-3 sm:flex-row">
-          <a href={entryResetUrl}>
-            <Button>Open ENTRY app</Button>
-          </a>
+          <Button onClick={openEntryApp}>Open ENTRY app</Button>
           <Link href="/login">
             <Button variant="secondary">Back to console login</Button>
           </Link>
