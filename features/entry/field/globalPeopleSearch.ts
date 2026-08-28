@@ -2,11 +2,20 @@ import "server-only";
 
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getResidentIdentity } from "@/features/entry/field/peopleModel";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   coerceBoolean,
   coerceString,
 } from "@/lib/supabase/utils";
+import {
+  isResidentRole,
+  keyFor,
+  mergeResidents,
+  type MembershipCandidate,
+  type ProfileCandidate,
+  type ResidentCandidate,
+} from "./globalPeopleSearchModel";
 
 export const FIELD_PEOPLE_MIN_QUERY_LENGTH = 2;
 export const FIELD_PEOPLE_RESULT_LIMIT = 24;
@@ -46,37 +55,7 @@ export type FieldPeopleSearchData = {
   state: "idle" | "too_short" | "ready" | "unavailable";
 };
 
-type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
-
-type ResidentCandidate = {
-  communityId: string;
-  communityName: string;
-  email: string;
-  houseId: string;
-  houseLabel: string;
-  isActive: boolean;
-  name: string;
-  userId: string;
-  username: string;
-};
-
-type ProfileCandidate = {
-  authType: string;
-  communityId: string;
-  houseId: string;
-  isActive: boolean;
-  name: string;
-  syntheticEmail: string;
-  userId: string;
-  username: string;
-};
-
-type MembershipCandidate = {
-  communityId: string;
-  isActive: boolean;
-  role: string;
-  userId: string;
-};
+type SupabaseAdminClient = ReturnType<typeof createAdminClient>;
 
 type ActivationCandidate = {
   activationMethod: string;
@@ -104,20 +83,11 @@ function buildPostgrestIlikePattern(query: string) {
   return normalized ? `%${normalized}%` : "";
 }
 
-function isResidentRole(role: string) {
-  const normalized = role.trim().toUpperCase();
-  return normalized === "RESIDENT" || normalized === "UNASSIGNED";
-}
-
 function fallback(value: string, fallbackValue: string) {
   const trimmed = value.trim();
   return trimmed && trimmed !== "-" && trimmed !== "\u2014"
     ? trimmed
     : fallbackValue;
-}
-
-function keyFor(communityId: string, userId: string) {
-  return `${communityId}::${userId}`;
 }
 
 function mapResidentFromRpc(item: unknown): ResidentCandidate | null {
@@ -246,7 +216,7 @@ function mapActivationCandidate(item: unknown): ActivationCandidate | null {
 }
 
 async function fetchMemberships(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseAdminClient,
   profiles: ProfileCandidate[],
 ) {
   const userIds = Array.from(new Set(profiles.map((profile) => profile.userId)));
@@ -275,7 +245,7 @@ async function fetchMemberships(
 }
 
 async function fetchResidentProfiles(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseAdminClient,
   residents: ResidentCandidate[],
 ) {
   const userIds = Array.from(new Set(residents.map((resident) => resident.userId)));
@@ -304,7 +274,7 @@ async function fetchResidentProfiles(
 }
 
 async function fetchCommunities(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseAdminClient,
   communityIds: string[],
 ) {
   const ids = Array.from(new Set(communityIds.filter(Boolean)));
@@ -330,7 +300,7 @@ async function fetchCommunities(
 }
 
 async function fetchHouses(
-  supabase: SupabaseServerClient,
+  supabase: SupabaseAdminClient,
   houseIds: string[],
 ) {
   const ids = Array.from(new Set(houseIds.filter(Boolean)));
@@ -353,50 +323,6 @@ async function fetchHouses(
       ]),
     ),
   };
-}
-
-function mergeResidents(
-  rpcResidents: ResidentCandidate[],
-  profileResidents: ProfileCandidate[],
-  memberships: MembershipCandidate[],
-) {
-  const membershipByKey = new Map(
-    memberships.map((membership) => [
-      keyFor(membership.communityId, membership.userId),
-      membership,
-    ]),
-  );
-  const merged = new Map<string, ResidentCandidate>();
-
-  for (const resident of rpcResidents) {
-    merged.set(keyFor(resident.communityId, resident.userId), resident);
-  }
-
-  for (const profile of profileResidents) {
-    const membership = membershipByKey.get(
-      keyFor(profile.communityId, profile.userId),
-    );
-
-    if (!membership || !isResidentRole(membership.role)) {
-      continue;
-    }
-
-    const existing = merged.get(keyFor(profile.communityId, profile.userId));
-
-    merged.set(keyFor(profile.communityId, profile.userId), {
-      communityId: profile.communityId,
-      communityName: existing?.communityName ?? "",
-      email: existing?.email || profile.syntheticEmail,
-      houseId: existing?.houseId || profile.houseId,
-      houseLabel: existing?.houseLabel || "No unit linked",
-      isActive: existing?.isActive ?? membership.isActive ?? profile.isActive,
-      name: existing?.name || profile.name,
-      userId: profile.userId,
-      username: existing?.username || profile.username,
-    });
-  }
-
-  return Array.from(merged.values());
 }
 
 function sortResults(results: FieldPeopleSearchResult[]) {
@@ -445,6 +371,7 @@ export async function searchFieldPeople(
   }
 
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const [residentRpcResult, profileResult, activationResult] = await Promise.all([
     supabase
       .rpc("sa_list_users", {
@@ -454,14 +381,14 @@ export async function searchFieldPeople(
       .order("full_name", { ascending: true })
       .order("user_id", { ascending: true })
       .limit(RESIDENT_SOURCE_LIMIT),
-    supabase
+    adminSupabase
       .from("profiles")
       .select("user_id,community_id,house_id,full_name,username,synthetic_email,auth_type,is_active")
       .or(`full_name.ilike.${pattern},username.ilike.${pattern},synthetic_email.ilike.${pattern}`)
       .order("full_name", { ascending: true })
       .order("user_id", { ascending: true })
       .limit(PROFILE_SOURCE_LIMIT),
-    supabase
+    adminSupabase
       .from("resident_activation_queue")
       .select("id,community_id,house_id,unit_label,resident_name,email,suggested_username,activation_method,status")
       .in("status", ACTIONABLE_ACTIVATION_STATUSES)
@@ -500,7 +427,7 @@ export async function searchFieldPeople(
         .filter((item): item is ActivationCandidate => item !== null)
     : [];
 
-  const memberships = await fetchMemberships(supabase, matchingProfiles);
+  const memberships = await fetchMemberships(adminSupabase, matchingProfiles);
 
   if (memberships.error) {
     return {
@@ -516,7 +443,10 @@ export async function searchFieldPeople(
     matchingProfiles,
     memberships.items,
   );
-  const residentProfiles = await fetchResidentProfiles(supabase, mergedResidents);
+  const residentProfiles = await fetchResidentProfiles(
+    adminSupabase,
+    mergedResidents,
+  );
 
   if (residentProfiles.error) {
     return {
@@ -542,8 +472,8 @@ export async function searchFieldPeople(
     ...activationCandidates.map((row) => row.houseId),
   ];
   const [communities, houses] = await Promise.all([
-    fetchCommunities(supabase, communityIds),
-    fetchHouses(supabase, houseIds),
+    fetchCommunities(adminSupabase, communityIds),
+    fetchHouses(adminSupabase, houseIds),
   ]);
 
   if (communities.error || houses.error) {

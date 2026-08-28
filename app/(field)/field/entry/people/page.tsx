@@ -125,11 +125,6 @@ export default async function FieldEntryPeoplePage({
             We could not search people right now. Try again before treating this
             as no matches.
           </p>
-          {data.error ? (
-            <p className="mt-3 break-words text-xs leading-5 text-amber-100/75">
-              {data.error}
-            </p>
-          ) : null}
         </section>
       ) : null}
 

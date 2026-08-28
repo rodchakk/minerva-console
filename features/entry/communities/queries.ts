@@ -49,9 +49,23 @@ export type CommunityListItem = {
 
 export type CommunityWithProgressItem = CommunityListItem;
 
+export type CommunitySearchItem = Pick<
+  CommunityListItem,
+  | "allowFrequentAccess"
+  | "allowMessages"
+  | "allowReservations"
+  | "city"
+  | "id"
+  | "isActive"
+  | "name"
+  | "totalMembers"
+  | "totalUnits"
+  | "unitLabel"
+>;
+
 export type CommunityListResult = {
   error?: string;
-  items: CommunityWithProgressItem[];
+  items: CommunitySearchItem[];
   state: "ready" | "unavailable";
 };
 
@@ -104,6 +118,29 @@ function mapCommunityRecord(item: unknown): CommunityWithProgressItem | null {
     totalTasks:
       coerceNumber(record.total_tasks) ||
       coerceNumber(record.total_steps),
+    totalUnits: coerceNumber(record.total_units),
+    unitLabel: coerceString(record.unit_label, "Casas"),
+  };
+}
+
+function mapCommunitySearchRecord(item: unknown): CommunitySearchItem | null {
+  const record = item as Record<string, unknown>;
+  const communityId =
+    coerceString(record.community_id) || coerceString(record.id);
+
+  if (!communityId) {
+    return null;
+  }
+
+  return {
+    allowFrequentAccess: coerceBoolean(record.allow_frequent_access),
+    allowMessages: coerceBoolean(record.allow_messages),
+    allowReservations: coerceBoolean(record.allow_reservations),
+    city: coerceString(record.city, "Not set"),
+    id: communityId,
+    isActive: coerceBoolean(record.is_active),
+    name: coerceString(record.name, "Untitled community"),
+    totalMembers: coerceNumber(record.total_members),
     totalUnits: coerceNumber(record.total_units),
     unitLabel: coerceString(record.unit_label, "Casas"),
   };
@@ -431,6 +468,32 @@ export async function getCommunitiesWithProgressResult(): Promise<CommunityListR
   await requireSuperadmin();
 
   const supabase = await createClient();
+  const { data, error } = await supabase.rpc("list_superadmin_communities_v1");
+
+  if (error || !Array.isArray(data)) {
+    return {
+      error: error?.message || "Community list unavailable.",
+      items: [],
+      state: "unavailable",
+    };
+  }
+
+  return {
+    items: data
+      .map(mapCommunitySearchRecord)
+      .filter(
+        (community): community is CommunitySearchItem => community !== null,
+      ),
+    state: "ready",
+  };
+}
+
+async function listCommunitiesWithProgressItems(): Promise<
+  CommunityWithProgressItem[]
+> {
+  await requireSuperadmin();
+
+  const supabase = await createClient();
   const [
     { data: progressListData, error: progressListError },
     { data: communityListData, error: communityListError },
@@ -441,18 +504,8 @@ export async function getCommunitiesWithProgressResult(): Promise<CommunityListR
     supabase.from("communities").select("id,name,city,is_active"),
   ]);
 
-  if (
-    (progressListError || !Array.isArray(progressListData)) &&
-    (communityListError || !Array.isArray(communityListData))
-  ) {
-    return {
-      error:
-        progressListError?.message ||
-        communityListError?.message ||
-        "Community list unavailable.",
-      items: [],
-      state: "unavailable",
-    };
+  if (communityListError || !Array.isArray(communityListData)) {
+    return [];
   }
 
   const activeStateById = new Map(
@@ -462,24 +515,6 @@ export async function getCommunitiesWithProgressResult(): Promise<CommunityListR
           .filter((item): item is [string, CommunityActiveState] => item !== null)
       : [],
   );
-
-  const communitiesFromProgress =
-    !progressListError && Array.isArray(progressListData)
-      ? progressListData
-          .map(mapCommunityRecord)
-          .filter(
-            (community): community is CommunityWithProgressItem => community !== null,
-          )
-          .map((community) => applyActiveState(community, activeStateById))
-      : [];
-
-  if (communityListError || !Array.isArray(communityListData)) {
-    return {
-      items: communitiesFromProgress,
-      state: "ready",
-    };
-  }
-
   const baseCommunities = communityListData
     .map(mapCommunityRecord)
     .filter(
@@ -488,32 +523,32 @@ export async function getCommunitiesWithProgressResult(): Promise<CommunityListR
     .map((community) => applyActiveState(community, activeStateById));
 
   if (baseCommunities.length === 0) {
-    return {
-      items: communitiesFromProgress,
-      state: "ready",
-    };
+    return [];
   }
 
   const progressById = new Map(
-    communitiesFromProgress.map((community) => [community.id, community]),
+    !progressListError && Array.isArray(progressListData)
+      ? progressListData
+          .map(mapCommunityRecord)
+          .filter(
+            (community): community is CommunityWithProgressItem => community !== null,
+          )
+          .map((community) => applyActiveState(community, activeStateById))
+          .map((community) => [community.id, community] as const)
+      : [],
   );
 
-  return {
-    items: baseCommunities.map((community) =>
-      mergeCommunityProgress(
-        community,
-        null,
-        progressById.get(community.id),
-      ),
+  return baseCommunities.map((community) =>
+    mergeCommunityProgress(
+      community,
+      null,
+      progressById.get(community.id),
     ),
-    state: "ready",
-  };
+  );
 }
 
 export async function listCommunitiesWithProgress(): Promise<CommunityWithProgressItem[]> {
-  const result = await getCommunitiesWithProgressResult();
-
-  return result.items;
+  return listCommunitiesWithProgressItems();
 }
 
 export async function getCommunityOnboardingDetail(

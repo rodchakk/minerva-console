@@ -12,6 +12,7 @@ import {
   getFieldResidentAssignmentUnits,
   isActivationPinEligible,
 } from "../features/entry/field/peopleModel.ts";
+import { mergeResidents } from "../features/entry/field/globalPeopleSearchModel.ts";
 
 const root = process.cwd();
 
@@ -89,10 +90,12 @@ test("global People route is search-first and does not render all people", () =>
 });
 
 test("global People search uses bounded server-side resident and activation queries", () => {
+  const page = read("app/(field)/field/entry/people/page.tsx");
   const search = read("features/entry/field/globalPeopleSearch.ts");
 
   assert.match(search, /import "server-only"/);
   assert.match(search, /requireSuperadmin/);
+  assert.match(search, /createAdminClient/);
   assert.match(search, /sa_list_users/);
   assert.match(search, /p_community_id: null/);
   assert.match(search, /\.from\("profiles"\)/);
@@ -105,7 +108,114 @@ test("global People search uses bounded server-side resident and activation quer
   assert.match(search, /\.limit\(ACTIVATION_SOURCE_LIMIT\)/);
   assert.match(search, /FIELD_PEOPLE_RESULT_LIMIT = 24/);
   assert.match(search, /sortResults/);
-  assert.doesNotMatch(search, /for .*communities|forEach\(.*community|createAdminClient|SUPABASE_SERVICE_ROLE_KEY/);
+  assertOccursBefore(
+    search,
+    "await requireSuperadmin();",
+    "const adminSupabase = createAdminClient();",
+  );
+  assert.doesNotMatch(search, /for .*communities|forEach\(.*community|SUPABASE_SERVICE_ROLE_KEY/);
+  assert.doesNotMatch(page, /createAdminClient|SUPABASE_SERVICE_ROLE_KEY/);
+});
+
+test("global People username profile matches require resident membership", () => {
+  const profileResidents = [
+    {
+      authType: "username",
+      communityId: "community-a",
+      houseId: "unit-a",
+      isActive: true,
+      name: "Uma Username",
+      syntheticEmail: "resident-uma@entry.internal",
+      userId: "resident-user",
+      username: "uma",
+    },
+    {
+      authType: "username",
+      communityId: "community-a",
+      houseId: "unit-b",
+      isActive: true,
+      name: "Gary Guard",
+      syntheticEmail: "guard-gary@entry.internal",
+      userId: "guard-user",
+      username: "gary",
+    },
+    {
+      authType: "email",
+      communityId: "community-b",
+      houseId: "unit-c",
+      isActive: true,
+      name: "Ada Admin",
+      syntheticEmail: "admin-ada@entry.internal",
+      userId: "admin-user",
+      username: "ada",
+    },
+    {
+      authType: "username",
+      communityId: "community-a",
+      houseId: "unit-e",
+      isActive: true,
+      name: "Una Unassigned",
+      syntheticEmail: "resident-una@entry.internal",
+      userId: "unassigned-user",
+      username: "una",
+    },
+    {
+      authType: "username",
+      communityId: "community-c",
+      houseId: "unit-d",
+      isActive: true,
+      name: "No Membership",
+      syntheticEmail: "resident-none@entry.internal",
+      userId: "missing-member",
+      username: "nomember",
+    },
+  ];
+  const memberships = [
+    {
+      communityId: "community-a",
+      isActive: true,
+      role: "RESIDENT",
+      userId: "resident-user",
+    },
+    {
+      communityId: "community-a",
+      isActive: true,
+      role: "UNASSIGNED",
+      userId: "unassigned-user",
+    },
+    {
+      communityId: "community-a",
+      isActive: true,
+      role: "GUARD",
+      userId: "guard-user",
+    },
+    {
+      communityId: "community-b",
+      isActive: true,
+      role: "ADMIN",
+      userId: "admin-user",
+    },
+  ];
+
+  assert.deepEqual(
+    mergeResidents([], profileResidents, memberships).map((resident) => ({
+      communityId: resident.communityId,
+      userId: resident.userId,
+      username: resident.username,
+    })),
+    [
+      {
+        communityId: "community-a",
+        userId: "resident-user",
+        username: "uma",
+      },
+      {
+        communityId: "community-a",
+        userId: "unassigned-user",
+        username: "una",
+      },
+    ],
+  );
 });
 
 test("global People result model keeps residents and pending activation distinct", () => {
@@ -135,6 +245,7 @@ test("global People search preserves privacy and honest zero/error states", () =
 
   assert.match(page, /People search unavailable/);
   assert.match(page, /No people found/);
+  assert.doesNotMatch(page, /data\.error/);
   assert.match(search, /state: "unavailable"/);
   assert.match(search, /state: "ready"/);
 });

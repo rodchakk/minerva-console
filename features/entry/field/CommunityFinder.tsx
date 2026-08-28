@@ -6,10 +6,7 @@ import {
   filterFieldCommunities,
   type FieldCommunityListItem,
 } from "@/features/entry/field/communitySearch";
-import {
-  formatFieldCount,
-  getFieldStatusToneClass,
-} from "@/features/entry/field/formatting";
+import { formatFieldCount } from "@/features/entry/field/formatting";
 import { useMemo, useState } from "react";
 
 type CommunityFinderProps = {
@@ -39,7 +36,6 @@ function CommunityMeta({
 
 export function CommunityFinder({
   communities,
-  error,
   state = "ready",
 }: CommunityFinderProps) {
   const [query, setQuery] = useState("");
@@ -78,11 +74,6 @@ export function CommunityFinder({
             We could not load communities right now. Try again before treating
             this as a zero-result search.
           </p>
-          {error ? (
-            <p className="mt-3 break-words text-xs leading-5 text-amber-100/70">
-              {error}
-            </p>
-          ) : null}
         </div>
       ) : null}
 
@@ -138,19 +129,9 @@ export function CommunityFinder({
                 <div className="flex min-w-0 items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={[
-                          "rounded-full border px-2.5 py-1 text-xs font-bold",
-                          getFieldStatusToneClass(community.statusLabel),
-                        ].join(" ")}
-                      >
+                      <span className="rounded-full border border-[var(--console-border)] bg-white/[0.03] px-2.5 py-1 text-xs font-bold text-[var(--console-text-muted)]">
                         {community.statusLabel}
                       </span>
-                      {community.activationPendingCount > 0 ? (
-                        <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-2.5 py-1 text-xs font-bold text-amber-100">
-                          {formatFieldCount(community.activationPendingCount)} pending
-                        </span>
-                      ) : null}
                     </div>
                     <p className="mt-3 text-xl font-semibold leading-6 text-[var(--console-text)]">
                       {community.name}
@@ -177,7 +158,8 @@ export function CommunityFinder({
                 </div>
 
                 <p className="mt-3 text-sm leading-6 text-[var(--console-text-muted)]">
-                  {community.setupLabel}. Next: {community.nextStepLabel}.
+                  Open this community for registration, units, setup and
+                  community work.
                 </p>
               </Link>
             ))

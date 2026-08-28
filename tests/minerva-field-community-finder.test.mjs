@@ -33,42 +33,34 @@ test("/field/entry renders the ENTRY task hub without immediate lists", () => {
 
 test("/field/entry/communities uses the authorized community list query", () => {
   const page = read("app/(field)/field/entry/communities/page.tsx");
+  const queries = read("features/entry/communities/queries.ts");
 
   assert.match(page, /getCommunitiesWithProgressResult/);
   assert.match(page, /CommunityFinder/);
   assert.match(page, /Search by name or city|Communities/);
+  assert.match(queries, /list_superadmin_communities_v1/);
 });
 
 test("Field community finder search matches community name and city", () => {
   const communities = [
     {
-      activationPendingCount: 0,
       city: "Tegucigalpa",
-      completedTasks: 3,
       href: "/field/entry/communities/alpha",
       id: "alpha",
       isActive: true,
       name: "Residencial Aurora",
-      nextStepLabel: "Complete setup",
-      setupLabel: "Complete",
       statusLabel: "Active",
       totalMembers: 42,
-      totalTasks: 3,
       totalUnits: 12,
     },
     {
-      activationPendingCount: 2,
       city: "San Pedro Sula",
-      completedTasks: 2,
       href: "/field/entry/communities/beta",
       id: "beta",
       isActive: true,
       name: "Las Palmas",
-      nextStepLabel: "Review activation queue",
-      setupLabel: "Activation review",
       statusLabel: "Setup",
       totalMembers: 8,
-      totalTasks: 3,
       totalUnits: 5,
     },
   ];
@@ -120,14 +112,26 @@ test("Field overview does not silently turn unavailable aggregate counts into ze
   const detail = read("app/(field)/field/entry/communities/[communityId]/page.tsx");
   const finder = read("features/entry/field/CommunityFinder.tsx");
   const queries = read("features/entry/communities/queries.ts");
+  const getResultStart = queries.indexOf(
+    "export async function getCommunitiesWithProgressResult",
+  );
+  const listStart = queries.indexOf(
+    "async function listCommunitiesWithProgressItems",
+  );
+  const fieldSearchResult = queries.slice(getResultStart, listStart);
 
   assert.match(detail, /state === "unavailable"/);
   assert.match(detail, /value: "Unavailable"/);
   assert.match(detail, /Preview unavailable/);
   assert.match(finder, /Community search unavailable/);
   assert.match(finder, /zero-result search/);
+  assert.doesNotMatch(finder, /\{error\}|data\.error|result\.error/);
   assert.match(queries, /state: "unavailable"/);
-  assert.match(queries, /progressListError|communityListError/);
+  assert.match(fieldSearchResult, /list_superadmin_communities_v1/);
+  assert.doesNotMatch(fieldSearchResult, /list_superadmin_communities_with_progress_v1/);
+  assert.doesNotMatch(fieldSearchResult, /progressListData|progressListError/);
+  assert.match(fieldSearchResult, /if \(error \|\| !Array\.isArray\(data\)\)/);
+  assert.match(fieldSearchResult, /items: \[\]/);
 });
 
 test("Field community pages stay read-only and do not link to desktop management", () => {

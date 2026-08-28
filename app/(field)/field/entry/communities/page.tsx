@@ -1,26 +1,16 @@
 import { CommunityFinder } from "@/features/entry/field/CommunityFinder";
-import {
-  getFieldCommunitySetupLabel,
-  getFieldCommunityStatusLabel,
-} from "@/features/entry/field/formatting";
-import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 import { getCommunitiesWithProgressResult } from "@/features/entry/communities/queries";
 
 export default async function FieldEntryCommunitiesPage() {
   const result = await getCommunitiesWithProgressResult();
   const fieldCommunities = result.items.map((community) => ({
-    activationPendingCount: community.activationPendingCount,
     city: community.city,
-    completedTasks: community.completedTasks,
     href: `/field/entry/communities/${encodeURIComponent(community.id)}`,
     id: community.id,
     isActive: community.isActive,
     name: community.name,
-    nextStepLabel: getOnboardingNextStepLabel(community.nextStepKey),
-    setupLabel: getFieldCommunitySetupLabel(community),
-    statusLabel: getFieldCommunityStatusLabel(community),
+    statusLabel: community.isActive ? "Active" : "Inactive",
     totalMembers: community.totalMembers,
-    totalTasks: community.totalTasks,
     totalUnits: community.totalUnits,
   }));
 
