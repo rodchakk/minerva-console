@@ -82,5 +82,17 @@
     "tags": ["minerva-console", "field", "pwa", "mobile", "entry"],
     "related": ["PRJ-0001", "PRJ-0004"],
     "path": "content/brain/projects/minerva-field-foundation.md"
+  },
+  {
+    "id": "MAU-WEB-001",
+    "type": "project",
+    "status": "planned",
+    "title": "Modern Atlantic Upholstery Web Modernization",
+    "summary": "Planned full modernization of Modern Atlantic Upholstery's website and supporting infrastructure: replace WordPress/Bluehost with a low-cost static-first stack, preserve existing SEO and Google Business authority, migrate the active info@ mailbox safely, improve mobile quote conversion, and reduce recurring infrastructure cost for Minerva Technologies.",
+    "created": "2026-08-30",
+    "updated": "2026-08-30",
+    "tags": ["client", "web", "migration", "seo", "local-seo", "astro", "cloudflare", "email"],
+    "related": ["PRJ-0003"],
+    "path": "content/brain/projects/modern-atlantic-upholstery-web-modernization.md"
   }
 ]
