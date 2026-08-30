@@ -39,7 +39,7 @@ test("Production resident-facing URLs cannot fall back to request host", () => {
     "features/entry/users/actions.ts",
   ]) {
     const source = read(path);
-    assert.match(source, /getResidentFacingBaseUrl/);
+    assert.match(source, /getResidentFacingBaseUrl|getPasswordResetRedirectTo/);
     assert.doesNotMatch(source, /getRegistrationBaseUrl|getActivationBaseUrl/);
   }
 });

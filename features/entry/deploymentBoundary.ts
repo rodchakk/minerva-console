@@ -1,4 +1,5 @@
 import { headers } from "next/headers";
+import { getUrlHost, isLoopbackHost } from "@/features/entry/urlSafety";
 
 const DEFAULT_PRODUCTION_RESIDENT_BASE_URL = "https://console.minervatechs.com";
 
@@ -41,7 +42,7 @@ function isProductionRuntime() {
 }
 
 function isLocalHost(host: string) {
-  return /^(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/i.test(host);
+  return isLoopbackHost(host.replace(/:\d+$/, ""));
 }
 
 function isVercelPreviewHost(host: string) {
@@ -73,7 +74,9 @@ export async function getResidentFacingBaseUrl() {
   const configured = configuredResidentBaseUrl();
 
   if (isProductionRuntime()) {
-    return configured || DEFAULT_PRODUCTION_RESIDENT_BASE_URL;
+    return configured && !isLoopbackHost(getUrlHost(configured))
+      ? configured
+      : DEFAULT_PRODUCTION_RESIDENT_BASE_URL;
   }
 
   if (configured) {

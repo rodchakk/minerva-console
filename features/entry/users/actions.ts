@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import {
   getEntryPreviewReadOnlyError,
-  getResidentFacingBaseUrl,
 } from "@/features/entry/deploymentBoundary";
+import { getPasswordResetRedirectTo } from "@/features/entry/passwordResetRedirect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -156,16 +156,6 @@ function extractExpiration(data: unknown) {
   }
 
   return null;
-}
-
-async function getPasswordResetRedirectTo() {
-  const configuredRedirect = process.env.NEXT_PUBLIC_ENTRY_PASSWORD_RESET_REDIRECT?.trim();
-
-  if (configuredRedirect && configuredRedirect !== "entry://reset-password") {
-    return configuredRedirect;
-  }
-
-  return `${await getResidentFacingBaseUrl()}/reset-password`;
 }
 
 export async function searchUsersAction(
