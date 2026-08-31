@@ -27,7 +27,20 @@ export function RealtimeTicketsRefresh() {
         { event: "UPDATE", schema: "public", table: "support_tickets" },
         scheduleRefresh,
       )
-      .subscribe();
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "support_ticket_messages",
+        },
+        scheduleRefresh,
+      )
+      .subscribe((status) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.warn("[entry-support] realtime channel status:", status);
+        }
+      });
 
     return () => {
       if (refreshTimer.current) {
