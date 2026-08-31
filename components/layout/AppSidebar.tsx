@@ -15,6 +15,7 @@ import {
   Hexagon,
   Inbox,
   LayoutDashboard,
+  LifeBuoy,
   MessageSquare,
   Network,
   Search,
@@ -53,6 +54,7 @@ const navGroups: NavGroup[] = [
       { label: "Communities", href: "/products/entry/communities", icon: Building2 },
       { label: "Users", href: "/products/entry/users", icon: Users },
       { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
+      { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
       { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
     ],
   },
@@ -141,7 +143,6 @@ function SidebarNav({
                 />
                 <span className="truncate">{group.label}</span>
               </span>
-
             </button>
 
             {isGroupExpanded ? (
