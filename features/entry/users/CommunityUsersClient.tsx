@@ -484,38 +484,37 @@ export function CommunityUsersClient({
   return (
     <>
       <div className="space-y-5">
-        <section className="rounded-xl border border-[var(--border)] bg-[linear-gradient(180deg,rgba(17,24,39,0.96),rgba(8,12,22,0.98))] p-5 shadow-[0_20px_55px_rgba(2,6,23,0.24)] xl:p-6">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <section className="flex flex-col gap-5 pt-5 xl:flex-row xl:items-start xl:justify-between">
+          <div>
             <div>
-              <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-                <span>Minerva Console</span>
-                <span className="rounded-sm border border-violet-400/20 bg-violet-500/10 px-2 py-0.5">ENTRY</span>
-              </div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                MINERVA CONSOLE / ENTRY
+              </p>
               <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Community users</h1>
               <p className="mt-1 text-sm font-semibold text-violet-100">{community.name}</p>
               <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
                 Manage residents, admins, and guards for this community.
               </p>
             </div>
+          </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link href={`/products/entry/communities/${community.id}`}>
-                <Button variant="secondary">
-                  <Building2 className="mr-2 h-4 w-4" aria-hidden />
-                  Community detail
-                </Button>
-              </Link>
-              <Link href="/products/entry/communities">
-                <Button variant="secondary">
-                  <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
-                  Back to communities
-                </Button>
-              </Link>
-              <Button onClick={openCreate}>
-                <Plus className="mr-2 h-4 w-4" aria-hidden />
-                Create user
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/products/entry/communities/${community.id}`}>
+              <Button variant="secondary">
+                <Building2 className="mr-2 h-4 w-4" aria-hidden />
+                Community detail
               </Button>
-            </div>
+            </Link>
+            <Link href="/products/entry/communities">
+              <Button variant="secondary">
+                <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
+                Back to communities
+              </Button>
+            </Link>
+            <Button onClick={openCreate}>
+              <Plus className="mr-2 h-4 w-4" aria-hidden />
+              Create user
+            </Button>
           </div>
         </section>
 
