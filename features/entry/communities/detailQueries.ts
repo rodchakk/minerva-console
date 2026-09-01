@@ -6,6 +6,7 @@ import {
   type CommunityWithProgressItem,
 } from "@/features/entry/communities/queries";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   coerceBoolean,
   coerceNumber,
@@ -18,6 +19,9 @@ export type CommunityUnitsStatusFilter =
   | "all"
   | "active"
   | "inactive"
+  | "occupied"
+  | "no_residents"
+  | "pending_activation"
   | "has_residents"
   | "has_passes"
   | "recent_access";
@@ -47,6 +51,12 @@ export type CommunityUnitPreview = {
   label: string;
   lastAccess: string;
   ownerName: string;
+  pendingActivations: number;
+  primaryResidentName: string;
+  residentCount: number;
+  residents: CommunityUnitResident[];
+  activePassItems: CommunityUnitPass[];
+  pendingActivationItems: CommunityUnitPendingActivation[];
 };
 
 export type CommunityUnitsSummary = {
@@ -54,12 +64,15 @@ export type CommunityUnitsSummary = {
   activeResidents: number;
   activeUnits: number;
   inactiveUnits: number;
+  pendingActivations: number;
+  residentCount: number;
   totalUnits: number;
   unitsWithRecentAccess: number;
 };
 
 export type CommunityUnitsPageData = {
   filteredItems: CommunityUnitPreview[];
+  houses: CommunityUnitHouseOption[];
   items: CommunityUnitPreview[];
   query: string;
   state: CommunityPreviewResult<CommunityUnitPreview>["state"];
@@ -72,6 +85,46 @@ export type CommunityUnitDetailPageData = {
   community: CommunityWithProgressItem | null;
   state: CommunityPreviewResult<CommunityUnitPreview>["state"];
   unit: CommunityUnitPreview | null;
+  houses: CommunityUnitHouseOption[];
+};
+
+export type CommunityUnitHouseOption = {
+  id: string;
+  isActive: boolean;
+  label: string;
+};
+
+export type CommunityUnitResident = {
+  account: string;
+  authType: string;
+  email: string;
+  fullName: string;
+  houseId: string;
+  houseLabel: string;
+  isActive: boolean;
+  phone: string;
+  role: string;
+  status: "active" | "inactive" | "no_account";
+  userId: string;
+  username: string;
+};
+
+export type CommunityUnitPendingActivation = {
+  id: string;
+  method: string;
+  residentName: string;
+  status: string;
+  unitLabel: string;
+};
+
+export type CommunityUnitPass = {
+  expiresAt: string;
+  houseId: string;
+  holderName: string;
+  id: string;
+  passName: string;
+  residentName: string;
+  status: string;
 };
 
 export type CommunityFacilityPreview = {
@@ -211,6 +264,104 @@ function formatRole(value: string) {
     .filter(Boolean)
     .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1)}`)
     .join(" ");
+}
+
+function normalizeRole(value: string) {
+  const normalized = value.trim().toUpperCase();
+  return normalized || "UNASSIGNED";
+}
+
+function isSyntheticEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return (
+    !normalized ||
+    normalized.endsWith("@entry.local") ||
+    normalized.endsWith("@entry.internal")
+  );
+}
+
+function getResidentAccount(email: string, username: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+
+  if (username.trim()) {
+    return username.trim();
+  }
+
+  if (normalizedEmail && !isSyntheticEmail(normalizedEmail)) {
+    return email.trim();
+  }
+
+  return "No login identity visible";
+}
+
+function getComputedPassStatus(record: Record<string, unknown>) {
+  const explicit =
+    coerceString(record.computed_status) ||
+    coerceString(record.status);
+
+  if (explicit) {
+    return explicit
+      .trim()
+      .split(/[_\s-]+/)
+      .filter(Boolean)
+      .map((part) => `${part[0]?.toUpperCase() ?? ""}${part.slice(1).toLowerCase()}`)
+      .join(" ");
+  }
+
+  if (record.is_active !== undefined && !coerceBoolean(record.is_active)) {
+    return "Revoked";
+  }
+
+  const expiresAt = coerceString(record.expires_at);
+  const parsedExpiresAt = expiresAt ? new Date(expiresAt) : null;
+
+  if (parsedExpiresAt && !Number.isNaN(parsedExpiresAt.getTime()) && parsedExpiresAt <= new Date()) {
+    return "Expired";
+  }
+
+  return "Active";
+}
+
+function parseDateValue(value: string) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function hasInactivePassStatus(record: Record<string, unknown>) {
+  const explicit =
+    coerceString(record.computed_status) ||
+    coerceString(record.status);
+  const normalized = explicit.trim().toLowerCase();
+
+  return ["expired", "revoked", "inactive", "cancelled", "canceled", "suspended"].includes(
+    normalized,
+  );
+}
+
+function isCurrentlyActivePass(record: Record<string, unknown>, now: Date) {
+  if (record.is_active !== undefined && !coerceBoolean(record.is_active)) {
+    return false;
+  }
+
+  if (hasInactivePassStatus(record)) {
+    return false;
+  }
+
+  const startsAt = parseDateValue(coerceString(record.starts_at));
+  const expiresAt = parseDateValue(coerceString(record.expires_at));
+
+  if (startsAt && startsAt > now) {
+    return false;
+  }
+
+  if (expiresAt && expiresAt <= now) {
+    return false;
+  }
+
+  return true;
 }
 
 function formatSourceType(value: string) {
@@ -586,6 +737,16 @@ async function loadUnitsPreview(
               coerceString(record.last_access),
           ),
           ownerName,
+          pendingActivations: 0,
+          primaryResidentName: ownerName === "No owner linked" ? "" : ownerName,
+          residentCount:
+            coerceNumber(record.resident_count) ||
+            coerceNumber(record.total_residents) ||
+            coerceNumber(record.linked_residents_count) ||
+            coerceNumber(record.residents_count),
+          residents: [],
+          activePassItems: [],
+          pendingActivationItems: [],
         };
       })
       .filter((item) => item.id);
@@ -602,12 +763,243 @@ async function loadUnitsPreview(
   }
 }
 
+async function loadHouseOptions(
+  supabase: SupabaseServerClient,
+  communityId: string,
+): Promise<CommunityUnitHouseOption[]> {
+  const { data, error } = await supabase
+    .from("houses")
+    .select("id,house_label,is_active")
+    .eq("community_id", communityId)
+    .order("house_label", { ascending: true });
+
+  if (error || !Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item) => {
+      const id = coerceString(item.id);
+      if (!id) return null;
+
+      return {
+        id,
+        isActive: item.is_active === undefined ? true : coerceBoolean(item.is_active),
+        label: coerceString(item.house_label, "Unnamed unit"),
+      };
+    })
+    .filter((item): item is CommunityUnitHouseOption => item !== null);
+}
+
+async function loadUnitResidents(
+  supabase: SupabaseServerClient,
+  communityId: string,
+): Promise<CommunityUnitResident[]> {
+  const { data, error } = await supabase.rpc("sa_list_community_users", {
+    p_community_id: communityId,
+    p_include_inactive: true,
+  });
+
+  if (error || !Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const userId = coerceString(record.user_id) || coerceString(record.id);
+      const houseId = coerceString(record.house_id) || coerceString(record.unit_id);
+      const role = normalizeRole(coerceString(record.role));
+
+      if (!userId || !houseId || (role !== "RESIDENT" && role !== "ADMIN" && role !== "UNASSIGNED")) {
+        return null;
+      }
+
+      const email = coerceString(record.email).trim();
+      const username = coerceString(record.username).trim();
+      const isActive =
+        record.is_active === undefined ? true : coerceBoolean(record.is_active);
+
+      const resident: CommunityUnitResident = {
+        account: getResidentAccount(email, username),
+        authType: coerceString(record.auth_type) || (username ? "username" : "email"),
+        email,
+        fullName:
+          coerceString(record.full_name) ||
+          username ||
+          "Unnamed resident",
+        houseId,
+        houseLabel:
+          coerceString(record.house_label) ||
+          coerceString(record.unit_label) ||
+          "No unit linked",
+        isActive,
+        phone: coerceString(record.phone),
+        role,
+        status: isActive ? "active" : "inactive",
+        userId,
+        username,
+      };
+
+      return resident;
+    })
+    .filter((item): item is CommunityUnitResident => item !== null);
+}
+
+async function loadPendingActivations(
+  supabase: SupabaseServerClient,
+  communityId: string,
+): Promise<CommunityUnitPendingActivation[]> {
+  const { data, error } = await supabase.rpc("list_resident_activation_queue_v1", {
+    p_community_id: communityId,
+    p_status: null,
+  });
+
+  if (error || !Array.isArray(data)) {
+    return [];
+  }
+
+  return data
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const record = item as Record<string, unknown>;
+      const id = coerceString(record.id) || coerceString(record.queue_id);
+      const status = coerceString(record.status, "pending").trim().toLowerCase();
+
+      if (!id || !["pending", "invited", "pin_generated", "failed"].includes(status)) {
+        return null;
+      }
+
+      return {
+        id,
+        method:
+          coerceString(record.activation_method) ||
+          coerceString(record.method) ||
+          "not_configured",
+        residentName:
+          coerceString(record.resident_name) ||
+          coerceString(record.full_name) ||
+          "Unnamed resident",
+        status,
+        unitLabel:
+          coerceString(record.unit_label) ||
+          coerceString(record.house_label) ||
+          "Unknown unit",
+      };
+    })
+    .filter((item): item is CommunityUnitPendingActivation => item !== null);
+}
+
+async function loadUnitPasses(communityId: string): Promise<CommunityUnitPass[]> {
+  try {
+    const adminSupabase = createAdminClient();
+    const { data, error } = await adminSupabase
+      .from("authorized_frequent_visitors")
+      .select("id,house_id,full_name,expires_at,is_active,starts_at,created_at")
+      .eq("community_id", communityId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+
+    if (error || !Array.isArray(data)) {
+      return [];
+    }
+
+    const now = new Date();
+
+    return data
+      .filter((item) => item && typeof item === "object")
+      .filter((item) => isCurrentlyActivePass(item as Record<string, unknown>, now))
+      .map((item) => {
+        const record = item as Record<string, unknown>;
+        const id = coerceString(record.id);
+        const houseId = coerceString(record.house_id);
+
+        if (!id || !houseId) return null;
+
+        return {
+          expiresAt: formatDate(coerceString(record.expires_at)),
+          houseId,
+          holderName: coerceString(record.full_name, "Unnamed visitor"),
+          id,
+          passName: "Frequent visitor pass",
+          residentName: "",
+          status: getComputedPassStatus(record),
+        };
+      })
+      .filter((item): item is CommunityUnitPass => item !== null);
+  } catch {
+    return [];
+  }
+}
+
+function normalizeUnitLabel(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function enrichUnits(
+  items: CommunityUnitPreview[],
+  residents: CommunityUnitResident[],
+  pendingActivations: CommunityUnitPendingActivation[],
+  passes: CommunityUnitPass[],
+) {
+  const residentsByHouseId = residents.reduce((map, resident) => {
+    const current = map.get(resident.houseId) ?? [];
+    current.push(resident);
+    map.set(resident.houseId, current);
+    return map;
+  }, new Map<string, CommunityUnitResident[]>());
+
+  const pendingByUnitLabel = pendingActivations.reduce((map, item) => {
+    const key = normalizeUnitLabel(item.unitLabel);
+    const current = map.get(key) ?? [];
+    current.push(item);
+    map.set(key, current);
+    return map;
+  }, new Map<string, CommunityUnitPendingActivation[]>());
+
+  const passesByHouseId = passes.reduce((map, item) => {
+    const current = map.get(item.houseId) ?? [];
+    current.push(item);
+    map.set(item.houseId, current);
+    return map;
+  }, new Map<string, CommunityUnitPass[]>());
+
+  return items.map((unit) => {
+    const unitResidents = residentsByHouseId.get(unit.id) ?? [];
+    const activeResidents = unitResidents.filter((resident) => resident.isActive);
+    const primaryResident =
+      unitResidents.find((resident) => resident.role === "ADMIN") ??
+      activeResidents[0] ??
+      unitResidents[0] ??
+      null;
+    const activePassItems = passesByHouseId.get(unit.id) ?? [];
+    const pendingActivationItems = pendingByUnitLabel.get(normalizeUnitLabel(unit.label)) ?? [];
+    const residentCount = Math.max(unit.residentCount, unitResidents.length);
+
+    return {
+      ...unit,
+      activePasses: Math.max(unit.activePasses, activePassItems.length),
+      activeResidents: activeResidents.length,
+      ownerName: primaryResident?.fullName || "No residents",
+      pendingActivations: pendingActivationItems.length,
+      primaryResidentName: primaryResident?.fullName || "",
+      residentCount,
+      residents: unitResidents,
+      activePassItems,
+      pendingActivationItems,
+    };
+  });
+}
+
 function getEmptyUnitsSummary(): CommunityUnitsSummary {
   return {
     activePasses: 0,
     activeResidents: 0,
     activeUnits: 0,
     inactiveUnits: 0,
+    pendingActivations: 0,
+    residentCount: 0,
     totalUnits: 0,
     unitsWithRecentAccess: 0,
   };
@@ -619,6 +1011,8 @@ function buildUnitsSummary(items: CommunityUnitPreview[]): CommunityUnitsSummary
       acc.totalUnits += 1;
       acc.activeResidents += item.activeResidents;
       acc.activePasses += item.activePasses;
+      acc.pendingActivations += item.pendingActivations;
+      acc.residentCount += item.residentCount;
 
       if (item.isActive) {
         acc.activeUnits += 1;
@@ -642,6 +1036,9 @@ function normalizeUnitsStatusFilter(
   if (
     value === "active" ||
     value === "inactive" ||
+    value === "occupied" ||
+    value === "no_residents" ||
+    value === "pending_activation" ||
     value === "has_residents" ||
     value === "has_passes" ||
     value === "recent_access"
@@ -663,7 +1060,22 @@ function filterCommunityUnits(
     const matchesQuery =
       !normalizedQuery ||
       item.label.toLowerCase().includes(normalizedQuery) ||
-      item.ownerName.toLowerCase().includes(normalizedQuery);
+      item.ownerName.toLowerCase().includes(normalizedQuery) ||
+      item.residents.some((resident) =>
+        [
+          resident.fullName,
+          resident.account,
+          resident.email,
+          resident.username,
+          resident.phone,
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(normalizedQuery),
+      ) ||
+      item.pendingActivationItems.some((activation) =>
+        activation.residentName.toLowerCase().includes(normalizedQuery),
+      );
 
     if (!matchesQuery) {
       return false;
@@ -674,8 +1086,13 @@ function filterCommunityUnits(
         return item.isActive;
       case "inactive":
         return !item.isActive;
+      case "occupied":
       case "has_residents":
-        return item.activeResidents > 0;
+        return item.residentCount > 0;
+      case "no_residents":
+        return item.residentCount === 0;
+      case "pending_activation":
+        return item.pendingActivations > 0;
       case "has_passes":
         return item.activePasses > 0;
       case "recent_access":
@@ -911,12 +1328,22 @@ export async function getCommunityUnitsPageData(input: {
   const query = input.q?.trim() ?? "";
   const status = normalizeUnitsStatusFilter(input.status);
   const supabase = await createClient();
-  const units = await loadUnitsPreview(supabase, input.communityId);
-  const items = units.state === "live" ? units.items : [];
+  const [units, residents, pendingActivations, passes, houses] = await Promise.all([
+    loadUnitsPreview(supabase, input.communityId),
+    loadUnitResidents(supabase, input.communityId),
+    loadPendingActivations(supabase, input.communityId),
+    loadUnitPasses(input.communityId),
+    loadHouseOptions(supabase, input.communityId),
+  ]);
+  const items =
+    units.state === "live"
+      ? enrichUnits(units.items, residents, pendingActivations, passes)
+      : [];
   const filteredItems = filterCommunityUnits(items, query, status);
 
   return {
     filteredItems,
+    houses,
     items,
     query,
     state: units.state,
@@ -935,18 +1362,24 @@ export async function getCommunityUnitDetailPageData(
   if (!community) {
     return {
       community: null,
+      houses: [],
       state: "empty",
       unit: null,
     };
   }
 
-  const unitsData = await getCommunityUnitsPageData({
-    communityId: community.id,
-  });
+  const supabase = await createClient();
+  const [unitsData, houses] = await Promise.all([
+    getCommunityUnitsPageData({
+      communityId: community.id,
+    }),
+    loadHouseOptions(supabase, community.id),
+  ]);
 
   if (unitsData.state === "unavailable") {
     return {
       community,
+      houses,
       state: "unavailable",
       unit: null,
     };
@@ -954,6 +1387,7 @@ export async function getCommunityUnitDetailPageData(
 
   return {
     community,
+    houses,
     state: unitsData.state,
     unit: unitsData.items.find((item) => item.id === unitId) ?? null,
   };

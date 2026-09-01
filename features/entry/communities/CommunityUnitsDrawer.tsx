@@ -26,7 +26,7 @@ function getStatusLabel(unit: CommunityUnitPreview) {
     return "Inactive";
   }
 
-  if (unit.activeResidents <= 0) {
+  if (unit.residentCount <= 0) {
     return "No residents";
   }
 
@@ -38,7 +38,7 @@ function getStatusClass(unit: CommunityUnitPreview) {
     return "border-white/10 bg-white/7 text-[var(--text-muted)]";
   }
 
-  if (unit.activeResidents <= 0) {
+  if (unit.residentCount <= 0) {
     return "border-indigo-400/20 bg-indigo-400/10 text-indigo-200";
   }
 
@@ -94,7 +94,7 @@ export function CommunityUnitsDrawer({
         case "inactive":
           return !unit.isActive;
         case "has_residents":
-          return unit.activeResidents > 0;
+          return unit.residentCount > 0;
         case "has_passes":
           return unit.activePasses > 0;
         default:
@@ -249,7 +249,7 @@ export function CommunityUnitsDrawer({
                             {unit.ownerName}
                           </span>
                           <span className="text-center font-semibold text-white">
-                            {unit.activeResidents}
+                            {unit.residentCount}
                           </span>
                           <span className="text-center font-semibold text-white">
                             {unit.activePasses}
@@ -293,10 +293,11 @@ export function CommunityUnitsDrawer({
                     </Link>
                   </div>
 
-                  <div className="mt-5 grid gap-3 md:grid-cols-5">
+                  <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
                     {[
                       ["Owner", selectedUnit.ownerName],
-                      ["Active residents", selectedUnit.activeResidents],
+                      ["Residents", selectedUnit.residentCount],
+                      ["Active accounts", selectedUnit.activeResidents],
                       ["Active passes", selectedUnit.activePasses],
                       ["Last access", selectedUnit.lastAccess],
                       ["Created", selectedUnit.createdAt],

@@ -1,173 +1,104 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { PageHeader } from "@/components/layout/PageHeader";
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  Clock3,
+  DoorOpen,
+  Filter,
+  Home,
+  MinusCircle,
+  Search,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
 import {
   getCommunityUnitsPageData,
   type CommunityUnitsStatusFilter,
 } from "@/features/entry/communities/detailQueries";
-import {
-  getCommunityWithProgress,
-  type CommunityWithProgressItem,
-} from "@/features/entry/communities/queries";
+import { getCommunityWithProgress } from "@/features/entry/communities/queries";
 
-const statusFilters: Array<{
-  label: string;
-  value: CommunityUnitsStatusFilter;
-}> = [
-  { label: "All units", value: "all" },
+const statusFilters: Array<{ label: string; value: CommunityUnitsStatusFilter }> = [
+  { label: "All", value: "all" },
   { label: "Active", value: "active" },
   { label: "Inactive", value: "inactive" },
-  { label: "Has residents", value: "has_residents" },
-  { label: "Has passes", value: "has_passes" },
-  { label: "Recent access", value: "recent_access" },
+  { label: "Occupied", value: "occupied" },
+  { label: "No residents", value: "no_residents" },
+  { label: "Pending activation", value: "pending_activation" },
 ];
 
-const unitDisplayLimits = [10, 20, 50, 100] as const;
+const unitDisplayLimits = [6, 12, 24, 48] as const;
 
-type UnitsMetricTone = "default" | "success" | "warning" | "info";
-
-function formatCommunityUnitLabel(label: string) {
-  const normalized = label.trim().toLowerCase();
-
-  if (normalized === "condominios") {
-    return "Condominiums";
-  }
-
-  if (normalized === "casas") {
-    return "Houses";
-  }
-
-  if (normalized === "apartamentos") {
-    return "Apartments";
-  }
-
-  return label;
+function buildUnitsHref(
+  communityId: string,
+  params: { limit?: number; q?: string; status?: CommunityUnitsStatusFilter },
+) {
+  const search = new URLSearchParams();
+  if (params.q?.trim()) search.set("q", params.q.trim());
+  if (params.status && params.status !== "all") search.set("status", params.status);
+  if (params.limit && params.limit !== 6) search.set("limit", String(params.limit));
+  const queryString = search.toString();
+  return `/products/entry/communities/${communityId}/units${queryString ? `?${queryString}` : ""}`;
 }
 
-function UnitsMetricCard({
-  badgeLabel,
-  description,
+function Metric({
+  hint,
   icon,
   label,
-  tone = "default",
+  tone = "info",
   value,
 }: {
-  badgeLabel?: string;
-  description: string;
+  hint: string;
   icon: ReactNode;
   label: string;
-  tone?: UnitsMetricTone;
-  value: string;
+  tone?: "default" | "success" | "warning" | "info";
+  value: string | number;
 }) {
-  const toneClasses: Record<UnitsMetricTone, string> = {
-    default:
-      "border-slate-400/14 bg-slate-500/10 text-slate-200 ring-slate-300/10",
-    success:
-      "border-emerald-400/14 bg-emerald-500/10 text-emerald-200 ring-emerald-300/10",
-    warning:
-      "border-amber-400/14 bg-amber-500/10 text-amber-200 ring-amber-300/10",
-    info:
-      "border-violet-400/14 bg-violet-500/10 text-violet-100 ring-violet-300/20",
-  };
+  const iconClass = {
+    default: "border-white/10 bg-white/6 text-slate-200",
+    success: "border-emerald-400/20 bg-emerald-500/12 text-emerald-300",
+    warning: "border-amber-400/20 bg-amber-500/12 text-amber-300",
+    info: "border-violet-400/20 bg-violet-500/12 text-violet-200",
+  }[tone];
 
   return (
-    <article className="rounded-[24px] border border-[var(--border)] bg-[var(--surface)] px-4 py-4 shadow-[0_18px_40px_rgba(2,6,23,0.18)]">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div
-            className={`grid h-11 w-11 shrink-0 place-items-center rounded-2xl border text-sm ${toneClasses[tone]}`}
-          >
-            {icon}
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-slate-100">{label}</p>
-            <p className="mt-1 text-3xl font-semibold tracking-tight text-white">
-              {value}
-            </p>
-          </div>
+    <article className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_16px_42px_rgba(0,0,0,0.18)]">
+      <div className="flex items-center gap-3">
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg border ${iconClass}`}>
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-slate-100">{label}</p>
+          <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
         </div>
-        {badgeLabel ? <Badge tone={tone}>{badgeLabel}</Badge> : null}
       </div>
-      <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-        {description}
-      </p>
+      <p className="mt-3 text-sm text-[var(--text-muted)]">{hint}</p>
     </article>
   );
 }
 
-function UnitsMetricIcon({ children }: { children: string }) {
-  return <span className="text-xs font-semibold">{children}</span>;
-}
+function UnitIcon({ label }: { label: string }) {
+  const normalized = label.trim().toLowerCase();
+  const Icon = normalized.includes("casa") || normalized.includes("house") ? Home : Building2;
 
-function needsSetupAttention(community: CommunityWithProgressItem) {
   return (
-    community.totalUnits <= 0 ||
-    community.nextStepKey === "units" ||
-    (!community.isActive && community.onboardingStatus === "complete_active")
+    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-violet-400/18 bg-violet-500/12 text-violet-200">
+      <Icon className="h-4 w-4" aria-hidden />
+    </span>
   );
 }
 
-function getPrimaryAction(community: CommunityWithProgressItem) {
-  if (
-    community.activationPendingCount > 0 ||
-    community.nextStepKey === "review_activation_queue"
-  ) {
-    return {
-      href: `/products/entry/activation?community_id=${community.id}`,
-      label: "Open activation queue",
-    };
-  }
-
-  if (needsSetupAttention(community)) {
-    return {
-      href: `/products/entry/communities/${community.id}`,
-      label: "Review setup",
-    };
-  }
-
-  if (community.onboardingStatus !== "complete_active") {
-    return {
-      href: `/products/entry/communities/${community.id}`,
-      label: "Continue setup",
-    };
-  }
-
-  return {
-    href: `/products/entry/activation?community_id=${community.id}`,
-    label: "Open activation queue",
-  };
-}
-
-function buildUnitsHref(
-  communityId: string,
-  params: {
-    limit?: number;
-    q?: string;
-    status?: CommunityUnitsStatusFilter;
-  },
-) {
-  const search = new URLSearchParams();
-
-  if (params.q?.trim()) {
-    search.set("q", params.q.trim());
-  }
-
-  if (params.status && params.status !== "all") {
-    search.set("status", params.status);
-  }
-
-  if (params.limit && params.limit !== 10) {
-    search.set("limit", String(params.limit));
-  }
-
-  const queryString = search.toString();
-
-  return `/products/entry/communities/${communityId}/units${
-    queryString ? `?${queryString}` : ""
-  }`;
+function unitLabelPlural(label: string) {
+  const normalized = label.trim().toLowerCase();
+  if (normalized === "casas") return "houses";
+  if (normalized === "apartamentos") return "apartments";
+  if (normalized === "condominios") return "condominiums";
+  return label.toLowerCase();
 }
 
 export default async function CommunityUnitsPage(
@@ -177,9 +108,7 @@ export default async function CommunityUnitsPage(
   const searchParams = await props.searchParams;
   const community = await getCommunityWithProgress(communityId);
 
-  if (!community) {
-    notFound();
-  }
+  if (!community) notFound();
 
   const unitsData = await getCommunityUnitsPageData({
     communityId: community.id,
@@ -190,391 +119,257 @@ export default async function CommunityUnitsPage(
     typeof searchParams.limit === "string" ? Number(searchParams.limit) : NaN;
   const visibleLimit = unitDisplayLimits.includes(rawLimit as (typeof unitDisplayLimits)[number])
     ? (rawLimit as (typeof unitDisplayLimits)[number])
-    : 10;
+    : 6;
   const visibleItems = unitsData.filteredItems.slice(0, visibleLimit);
-  const primaryAction = getPrimaryAction(community);
   const hasFilters = Boolean(unitsData.query) || unitsData.status !== "all";
-  const metricBadge = unitsData.state === "unavailable" ? "Preview" : "Live";
-  const communityUnitLabel = formatCommunityUnitLabel(community.unitLabel);
-  const metrics = [
-    {
-      label: "Total units",
-      value: String(unitsData.summary.totalUnits),
-      description: "All known houses or apartments returned by the admin RPC.",
-      tone: "info" as const,
-      icon: <UnitsMetricIcon>UT</UnitsMetricIcon>,
-    },
-    {
-      label: "Active units",
-      value: String(unitsData.summary.activeUnits),
-      description: "Units currently marked as active.",
-      tone: "success" as const,
-      icon: <UnitsMetricIcon>AC</UnitsMetricIcon>,
-    },
-    {
-      label: "Inactive units",
-      value: String(unitsData.summary.inactiveUnits),
-      description: "Units not currently active.",
-      tone: "default" as const,
-      icon: <UnitsMetricIcon>IN</UnitsMetricIcon>,
-    },
-    {
-      label: "Active residents",
-      value: String(unitsData.summary.activeResidents),
-      description: "Sum of active residents across all units.",
-      tone: "info" as const,
-      icon: <UnitsMetricIcon>RS</UnitsMetricIcon>,
-    },
-    {
-      label: "Active passes",
-      value: String(unitsData.summary.activePasses),
-      description: "Sum of active passes currently linked to units.",
-      tone: unitsData.summary.activePasses > 0 ? ("warning" as const) : ("info" as const),
-      icon: <UnitsMetricIcon>PS</UnitsMetricIcon>,
-    },
-    {
-      label: "Units with recent access",
-      value: String(unitsData.summary.unitsWithRecentAccess),
-      description: "Units where a recent access timestamp is available.",
-      tone: "success" as const,
-      icon: <UnitsMetricIcon>RA</UnitsMetricIcon>,
-    },
-  ];
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Units"
-        description="Review houses, apartments, and operational unit records for this community."
-        actions={
-          <div className="flex flex-wrap gap-3">
-            <Link href={`/products/entry/communities/${community.id}`}>
-              <Button variant="secondary">Back to community</Button>
-            </Link>
-            <Link href={`/products/entry/communities/${community.id}/units/new`}>
-              <Button variant="secondary">Add unit</Button>
-            </Link>
-            <Link href={primaryAction.href}>
-              <Button>{primaryAction.label}</Button>
-            </Link>
-          </div>
-        }
-      />
-
-      <section className="rounded-[32px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(112,104,255,0.16),rgba(14,19,29,0.96))] p-6 shadow-[0_24px_70px_rgba(2,6,23,0.24)] backdrop-blur xl:p-7">
-        <div className="flex flex-col gap-6 xl:flex-row xl:items-stretch xl:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <Badge tone="info">ENTRY community</Badge>
-              <Badge tone={community.isActive ? "success" : "default"}>
-                {community.isActive ? "Active" : "Inactive"}
-              </Badge>
-              <Badge tone="info">{communityUnitLabel}</Badge>
-            </div>
-            <div className="mt-5">
-              <h2 className="text-3xl font-semibold text-white">{community.name}</h2>
-              <p className="mt-3 inline-flex items-center gap-2 text-sm leading-6 text-[var(--text-muted)]">
-                <span className="grid h-5 w-5 place-items-center rounded-full border border-white/10 bg-white/5 text-[10px] text-slate-300">
-                  •
-                </span>
-                {community.city}
-              </p>
-            </div>
-          </div>
-
-          <div className="rounded-[24px] border border-white/10 bg-[rgba(9,12,24,0.46)] px-5 py-5 xl:max-w-[24rem] xl:border-l xl:border-l-white/12">
-            <div className="flex items-start gap-4">
-              <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-violet-300/20 bg-[linear-gradient(180deg,rgba(103,80,255,0.22),rgba(50,38,119,0.34))] text-sm font-semibold text-violet-100">
-                UD
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-                  Unit directory
-                </p>
-                <p className="mt-2 text-base font-semibold text-white">
-                  Read-only operational record of houses and apartments.
-                </p>
-                <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                  Use this view to inspect occupancy, access activity, and current
-                  setup coverage before editing tools are wired in.
-                </p>
-              </div>
-            </div>
-          </div>
+    <div className="space-y-4">
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-violet-200">
+            MINERVA CONSOLE <span className="text-[var(--text-muted)]">·</span> ENTRY
+          </p>
+          <h1 className="mt-4 text-3xl font-semibold text-white">Units</h1>
+          <p className="mt-2 text-sm text-[var(--text-muted)]">
+            Manage houses, apartments, and their residents for this community.
+          </p>
+          <h2 className="mt-5 text-2xl font-semibold text-white">{community.name}</h2>
         </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {metrics.map((metric) => (
-          <UnitsMetricCard
-            key={metric.label}
-            badgeLabel={metricBadge}
-            description={metric.description}
-            icon={metric.icon}
-            label={metric.label}
-            tone={metric.tone}
-            value={metric.value}
-          />
-        ))}
-      </section>
-
-      <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-7">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
-              Filters
-            </p>
-            <h3 className="mt-2 text-xl font-semibold text-white">
-              Search the unit directory
-            </h3>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Filter by unit status or search by house label and owner name.
-            </p>
-          </div>
-          {hasFilters ? (
-            <Link href={buildUnitsHref(community.id, {})}>
-              <Button variant="secondary">Clear filters</Button>
-            </Link>
-          ) : null}
-        </div>
-
-        <form className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px_auto]">
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-              Search
-            </span>
-            <input
-              name="q"
-              defaultValue={unitsData.query}
-              placeholder="Search by unit label or owner"
-              className="w-full rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/40"
-            />
-          </label>
-
-          <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-              Status
-            </span>
-            <select
-              name="status"
-              defaultValue={unitsData.status}
-              className="w-full rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 py-3 text-sm text-white outline-none transition focus:border-violet-400/40"
-            >
-              {statusFilters.map((filter) => (
-                <option key={filter.value} value={filter.value}>
-                  {filter.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="flex items-end">
-            <input type="hidden" name="limit" value={String(visibleLimit)} />
-            <Button type="submit" className="w-full lg:w-auto">
-              Apply filters
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/products/entry/communities/${community.id}`}>
+            <Button variant="secondary">
+              <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
+              Back to community
             </Button>
+          </Link>
+          <Link href={`/products/entry/activation?community_id=${community.id}`}>
+            <Button variant="secondary">Activation queue</Button>
+          </Link>
+          <Link href={`/products/entry/communities/${community.id}/units/new`}>
+            <Button variant="secondary">Add unit</Button>
+          </Link>
+          <ResidentQuickCreate communityId={community.id} houses={unitsData.houses} />
+        </div>
+      </header>
+
+      <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+        <Metric
+          label="Total units"
+          value={unitsData.summary.totalUnits}
+          hint={`All ${unitLabelPlural(community.unitLabel)} in this community`}
+          icon={<Building2 className="h-5 w-5" aria-hidden />}
+        />
+        <Metric
+          label="Active units"
+          value={unitsData.summary.activeUnits}
+          hint="Currently active"
+          tone="success"
+          icon={<CheckCircle2 className="h-5 w-5" aria-hidden />}
+        />
+        <Metric
+          label="Inactive units"
+          value={unitsData.summary.inactiveUnits}
+          hint="Currently inactive"
+          tone="default"
+          icon={<MinusCircle className="h-5 w-5" aria-hidden />}
+        />
+        <Metric
+          label="Residents"
+          value={unitsData.summary.residentCount}
+          hint="Linked to units"
+          icon={<UserRound className="h-5 w-5" aria-hidden />}
+        />
+        <Metric
+          label="Pending activations"
+          value={unitsData.summary.pendingActivations}
+          hint="Residents to activate"
+          tone="warning"
+          icon={<Clock3 className="h-5 w-5" aria-hidden />}
+        />
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
+        <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_18px_50px_rgba(0,0,0,0.2)]">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="text-xl font-semibold text-white">Unit directory</h3>
+              <form className="mt-4 flex min-w-0 items-center gap-3">
+                <label className="relative block w-full max-w-3xl">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
+                  <input
+                    name="q"
+                    defaultValue={unitsData.query}
+                    placeholder="Search unit, resident, or owner"
+                    className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+                  />
+                </label>
+                <input type="hidden" name="status" value={unitsData.status} />
+                <input type="hidden" name="limit" value={String(visibleLimit)} />
+                <Button type="submit" variant="secondary">
+                  <Search className="mr-2 h-4 w-4" aria-hidden />
+                  Search
+                </Button>
+              </form>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+              <Filter className="h-4 w-4" aria-hidden />
+              <span>{unitsData.totalMatching} matching</span>
+            </div>
           </div>
-        </form>
 
-        <div className="mt-5 flex flex-wrap gap-2.5">
-          {statusFilters.map((filter) => {
-            const href = buildUnitsHref(community.id, {
-              limit: visibleLimit,
-              q: unitsData.query,
-              status: filter.value,
-            });
-            const active = unitsData.status === filter.value;
-
-            return (
-              <Link key={filter.value} href={href}>
-                <span
+          <div className="mt-4 flex flex-wrap gap-2">
+            {statusFilters.map((filter) => {
+              const active = unitsData.status === filter.value;
+              return (
+                <Link
+                  key={filter.value}
+                  href={buildUnitsHref(community.id, {
+                    limit: visibleLimit,
+                    q: unitsData.query,
+                    status: filter.value,
+                  })}
                   className={[
-                    "inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition",
+                    "rounded-lg border px-3 py-2 text-sm font-semibold transition",
                     active
-                      ? "bg-violet-500/18 text-violet-100 ring-1 ring-inset ring-violet-400/30"
-                      : "bg-white/6 text-slate-200 ring-1 ring-inset ring-white/8 hover:bg-white/10",
+                      ? "border-violet-400/30 bg-violet-500/16 text-white"
+                      : "border-[var(--border)] bg-white/[0.03] text-[var(--text-muted)] hover:text-white",
                   ].join(" ")}
                 >
                   {filter.label}
-                </span>
+                </Link>
+              );
+            })}
+            {hasFilters ? (
+              <Link
+                href={buildUnitsHref(community.id, {})}
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-semibold text-[var(--text-muted)] transition hover:text-white"
+              >
+                Clear
               </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="rounded-[32px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_18px_50px_rgba(2,6,23,0.22)] backdrop-blur xl:p-7">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h3 className="text-xl font-semibold text-white">
-              Community unit directory
-            </h3>
+            ) : null}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Badge tone="info">{unitsData.totalMatching} matching units</Badge>
-            <form
-              action={`/products/entry/communities/${community.id}/units`}
-              className="flex items-center gap-2"
-            >
+
+          {unitsData.state === "unavailable" ? (
+            <div className="mt-5 rounded-lg border border-dashed border-white/10 bg-white/[0.03] px-4 py-8 text-center">
+              <p className="font-semibold text-white">Units unavailable</p>
+              <p className="mt-2 text-sm text-[var(--text-muted)]">
+                The unit directory could not be loaded right now.
+              </p>
+            </div>
+          ) : unitsData.items.length === 0 ? (
+            <div className="mt-5 rounded-lg border border-dashed border-white/10 bg-white/[0.03] px-4 py-8 text-center">
+              <p className="font-semibold text-white">No units created yet.</p>
+              <div className="mt-4">
+                <Link href={`/products/entry/communities/${community.id}/units/new`}>
+                  <Button>Add unit</Button>
+                </Link>
+              </div>
+            </div>
+          ) : unitsData.filteredItems.length === 0 ? (
+            <div className="mt-5 rounded-lg border border-dashed border-white/10 bg-white/[0.03] px-4 py-8 text-center">
+              <p className="font-semibold text-white">No units match these filters.</p>
+              <div className="mt-4">
+                <Link href={buildUnitsHref(community.id, {})}>
+                  <Button variant="secondary">Clear filters</Button>
+                </Link>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-5 overflow-x-auto rounded-lg border border-white/8">
+              <table className="min-w-[980px] w-full text-left text-sm">
+                <thead className="bg-white/[0.03] text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                  <tr>
+                    <th className="px-4 py-3">Unit</th>
+                    <th className="px-4 py-3">Primary resident</th>
+                    <th className="px-4 py-3">Residents</th>
+                    <th className="px-4 py-3">Pending</th>
+                    <th className="px-4 py-3">Active passes</th>
+                    <th className="px-4 py-3">Last access</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/8">
+                  {visibleItems.map((unit) => (
+                    <tr key={unit.id} className="bg-[var(--surface-strong)] text-slate-200">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <UnitIcon label={unit.label} />
+                          <span className="font-semibold text-white">{unit.label}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">{unit.primaryResidentName || "No residents"}</td>
+                      <td className="px-4 py-3">{unit.residentCount}</td>
+                      <td className="px-4 py-3">{unit.pendingActivations}</td>
+                      <td className="px-4 py-3">{unit.activePasses}</td>
+                      <td className="px-4 py-3">
+                        {unit.lastAccess === "Not available" ? "No access recorded" : unit.lastAccess}
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge tone={unit.isActive ? "success" : "default"}>
+                          {unit.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link href={`/products/entry/communities/${community.id}/units/${unit.id}`}>
+                            <Button type="button" variant="secondary">View details</Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm text-[var(--text-muted)]">
+            <span>Showing {visibleItems.length} of {unitsData.totalMatching} units</span>
+            <form action={`/products/entry/communities/${community.id}/units`} className="flex items-center gap-2">
               <input type="hidden" name="q" value={unitsData.query} />
               <input type="hidden" name="status" value={unitsData.status} />
-              <div className="flex items-center gap-2">
-                <label className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
-                  <span>Show</span>
-                  <select
-                    name="limit"
-                    defaultValue={String(visibleLimit)}
-                    className="h-10 rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/40"
-                  >
-                    {unitDisplayLimits.map((limit) => (
-                      <option key={limit} value={String(limit)}>
-                        {limit}
-                      </option>
-                    ))}
-                  </select>
-                  <span>units</span>
-                </label>
-                <Button type="submit" variant="secondary">
-                  Apply
-                </Button>
-              </div>
+              <span>Show</span>
+              <select
+                name="limit"
+                defaultValue={String(visibleLimit)}
+                className="h-9 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-2 text-sm text-white outline-none"
+              >
+                {unitDisplayLimits.map((limit) => (
+                  <option key={limit} value={String(limit)}>
+                    {limit}
+                  </option>
+                ))}
+              </select>
+              <Button type="submit" variant="secondary">Apply</Button>
             </form>
           </div>
         </div>
 
-        {unitsData.state === "unavailable" ? (
-          <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/3 px-5 py-6">
-            <p className="text-base font-semibold text-white">
-              Units preview unavailable
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              The unit directory could not be loaded right now.
-            </p>
+        <aside className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+          <span className="grid h-10 w-10 place-items-center rounded-lg border border-violet-400/20 bg-violet-500/12 text-violet-200">
+            <DoorOpen className="h-5 w-5" aria-hidden />
+          </span>
+          <h3 className="mt-5 text-lg font-semibold text-white">Keep your units up to date</h3>
+          <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
+            Add residents to units so they can access the community. New residents appear after they are assigned to a unit.
+          </p>
+          <div className="mt-5">
+            <ResidentQuickCreate
+              communityId={community.id}
+              houses={unitsData.houses}
+              triggerClassName="inline-flex items-center justify-center gap-2 rounded-lg border border-violet-400/30 bg-violet-500/12 px-3.5 py-2 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/18"
+            />
           </div>
-        ) : unitsData.items.length === 0 ? (
-          <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/3 px-5 py-6">
-            <p className="text-base font-semibold text-white">No units created yet</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Use the onboarding flow or community creation import to add houses
-              or apartments.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              <Link href={`/products/entry/communities/${community.id}/units/new`}>
-                <Button>Add unit</Button>
-              </Link>
-              <Link href={`/products/entry/communities/${community.id}`}>
-                <Button variant="secondary">Back to community</Button>
-              </Link>
-            </div>
-          </div>
-        ) : unitsData.filteredItems.length === 0 ? (
-          <div className="mt-6 rounded-[28px] border border-dashed border-white/10 bg-white/3 px-5 py-6">
-            <p className="text-base font-semibold text-white">
-              No units match this filter
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-              Adjust the search or clear the current filters to review all unit
-              records again.
-            </p>
-            <div className="mt-4">
-              <Link href={buildUnitsHref(community.id, {})}>
-                <Button variant="secondary">Clear filters</Button>
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-6 overflow-hidden rounded-[28px] border border-white/8 bg-[rgba(8,12,24,0.34)]">
-            <div className="hidden grid-cols-[minmax(0,1.25fr)_1fr_130px_110px_110px_150px_160px_220px] gap-3 border-b border-white/8 bg-white/[0.03] px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)] xl:grid">
-              <span>Unit</span>
-              <span>Owner</span>
-              <span>Status</span>
-              <span>Residents</span>
-              <span>Passes</span>
-              <span>Last access</span>
-              <span>Created</span>
-              <span>Actions</span>
-            </div>
-
-            <div className="divide-y divide-white/8">
-              {visibleItems.map((unit) => (
-                <div
-                  key={unit.id}
-                  className="grid gap-4 bg-[var(--surface-strong)] px-5 py-5 xl:grid-cols-[minmax(0,1.25fr)_1fr_130px_110px_110px_150px_160px_220px] xl:items-center"
-                >
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-2xl border border-violet-300/14 bg-violet-500/10 text-xs font-semibold text-violet-100 ring-1 ring-inset ring-violet-300/12">
-                        {unit.label.slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-white">
-                          {unit.label}
-                        </p>
-                        <p className="mt-1 text-xs text-[var(--text-muted)] xl:hidden">
-                          {unit.ownerName || "No owner linked"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="hidden xl:block">
-                    <p className="text-sm text-white">
-                      {unit.ownerName || "No owner linked"}
-                    </p>
-                  </div>
-                  <div>
-                    <Badge tone={unit.isActive ? "success" : "default"}>
-                      {unit.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] xl:hidden">
-                      Active residents
-                    </p>
-                    <p className="mt-1 text-sm text-white xl:mt-0">
-                      {unit.activeResidents}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] xl:hidden">
-                      Active passes
-                    </p>
-                    <p className="mt-1 text-sm text-white xl:mt-0">
-                      {unit.activePasses}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] xl:hidden">
-                      Last access
-                    </p>
-                    <p className="mt-1 text-sm text-white xl:mt-0">
-                      {unit.lastAccess}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)] xl:hidden">
-                      Created
-                    </p>
-                    <p className="mt-1 text-sm text-white xl:mt-0">
-                      {unit.createdAt}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 xl:justify-end">
-                    <Link
-                      href={`/products/entry/communities/${community.id}/units/${unit.id}`}
-                    >
-                      <Button type="button" variant="secondary">
-                        View details
-                      </Button>
-                    </Link>
-                    <Button type="button" variant="ghost" disabled>
-                      Disable
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          <Link
+            href={`/products/entry/activation?community_id=${community.id}`}
+            className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-violet-200 transition hover:text-white"
+          >
+            <ShieldCheck className="h-4 w-4" aria-hidden />
+            Review activation queue
+          </Link>
+        </aside>
       </section>
     </div>
   );
