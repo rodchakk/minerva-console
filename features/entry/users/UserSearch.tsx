@@ -3,7 +3,6 @@
 import Link from "next/link";
 import {
   useActionState,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -484,19 +483,25 @@ function UserAvatar({ name }: { name: string }) {
 
 export function UserSearch() {
   const [state, formAction] = useActionState(searchUsersAction, { results: [] });
-  const [results, setResults] = useState<UserSearchItem[]>([]);
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, boolean>>({});
 
-  useEffect(() => {
-    setResults(state.results ?? []);
-  }, [state.results]);
-
+  const results = useMemo(
+    () =>
+      (state.results ?? []).map((user) =>
+        Object.prototype.hasOwnProperty.call(statusOverrides, user.id)
+          ? { ...user, isActive: statusOverrides[user.id] }
+          : user,
+      ),
+    [state.results, statusOverrides],
+  );
   const hasQuery = Boolean(state.query);
   const hasResults = results.length > 0;
 
   function syncUser(nextUser: UserSearchItem) {
-    setResults((current) =>
-      current.map((user) => (user.id === nextUser.id ? nextUser : user)),
-    );
+    setStatusOverrides((current) => ({
+      ...current,
+      [nextUser.id]: nextUser.isActive,
+    }));
   }
 
   return (
