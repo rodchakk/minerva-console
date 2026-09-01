@@ -26,6 +26,7 @@ import {
   getCommunityUnitDetailPageData,
   type CommunityUnitResident,
 } from "@/features/entry/communities/detailQueries";
+import { getUsersLastSignIn } from "@/features/entry/users/lastSignIn";
 
 type ResidentStatusFilter = "all" | "active" | "pending" | "inactive";
 
@@ -38,6 +39,18 @@ const residentFilters: Array<{ label: string; value: ResidentStatusFilter }> = [
 
 function formatMetricValue(value: string) {
   return value === "Not available" ? "No access recorded" : value;
+}
+
+function formatLastSignIn(value?: string | null) {
+  if (!value) return "Never signed in";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Never signed in";
+
+  return new Intl.DateTimeFormat("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function getUnitTypeLabel(label: string) {
@@ -207,6 +220,9 @@ export default async function CommunityUnitDetailPage(
   }
 
   const unit = data.unit;
+  const lastSignInByUserId = await getUsersLastSignIn(
+    unit.residents.map((resident) => resident.userId),
+  );
   const unitDisplayLabel = formatUnitDisplayLabel(unit.label, community.unitLabel);
   const residentQuery = typeof searchParams.q === "string" ? searchParams.q : "";
   const residentFilter = normalizeResidentFilter(
@@ -412,7 +428,7 @@ export default async function CommunityUnitDetailPage(
                       <th className="px-4 py-3">Resident</th>
                       <th className="px-4 py-3">Account</th>
                       <th className="px-4 py-3">Role</th>
-                      <th className="px-4 py-3">Last access</th>
+                      <th className="px-4 py-3">Last sign-in</th>
                       <th className="px-4 py-3">Status</th>
                       <th className="px-4 py-3 text-right">Actions</th>
                     </tr>
@@ -439,7 +455,9 @@ export default async function CommunityUnitDetailPage(
                             {roleLabel(resident.role)}
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-200">No access recorded</td>
+                        <td className="px-4 py-3 text-slate-200">
+                          {formatLastSignIn(lastSignInByUserId[resident.userId])}
+                        </td>
                         <td className="px-4 py-3">
                           <Badge tone={getResidentStatusTone(resident)}>
                             {residentStatus(resident)}
@@ -472,7 +490,7 @@ export default async function CommunityUnitDetailPage(
                             Pending activation
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-slate-200">No access recorded</td>
+                        <td className="px-4 py-3 text-slate-200">Not activated</td>
                         <td className="px-4 py-3">
                           <Badge tone="warning">Pending activation</Badge>
                         </td>

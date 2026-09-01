@@ -1,7 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useActionState,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useFormStatus } from "react-dom";
 import {
   Building2,
@@ -10,13 +16,18 @@ import {
   Home,
   KeyRound,
   Mail,
+  Power,
+  RotateCcw,
   Search,
   Users,
+  X,
 } from "lucide-react";
+import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
   generateTemporaryRecoveryCodeAction,
   searchUsersAction,
   sendPasswordResetEmailAction,
+  setCommunityUserActiveStatusAction,
   type UserSearchItem,
 } from "@/features/entry/users/actions";
 import { cn } from "@/lib/supabase/utils";
@@ -189,7 +200,7 @@ function PasswordResetControl({ user }: { user: UserSearchItem }) {
             type="button"
             role="menuitem"
             disabled
-            className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-400 opacity-60 cursor-not-allowed"
+            className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-400 opacity-60"
             title="PIN reset required"
           >
             <KeyRound className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
@@ -202,7 +213,7 @@ function PasswordResetControl({ user }: { user: UserSearchItem }) {
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-300/80">
               Temporary code
             </p>
-            <p className="mt-1 font-mono text-sm font-semibold text-emerald-100 select-all">
+            <p className="mt-1 select-all font-mono text-sm font-semibold text-emerald-100">
               {codeState.code}
             </p>
             {expirationLabel ? (
@@ -249,54 +260,74 @@ function PasswordResetControl({ user }: { user: UserSearchItem }) {
   );
 }
 
-function UserActionsMenu({ user }: { user: UserSearchItem }) {
+function UserActionsMenu({
+  onStatusChanged,
+  user,
+}: {
+  onStatusChanged: (user: UserSearchItem) => void;
+  user: UserSearchItem;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+  const [isStatusPending, startStatusTransition] = useTransition();
 
-  useEffect(() => {
-    if (!isOpen) return;
+  function openStatusModal() {
+    setIsOpen(false);
+    setStatusError(null);
+    setStatusModalOpen(true);
+  }
 
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setIsOpen(false);
+  function closeStatusModal() {
+    if (isStatusPending) return;
+    setStatusModalOpen(false);
+    setStatusError(null);
+  }
+
+  function submitStatusChange() {
+    if (!user.communityId) return;
+
+    const nextIsActive = !user.isActive;
+    setStatusError(null);
+
+    startStatusTransition(async () => {
+      const result = await setCommunityUserActiveStatusAction({
+        communityId: user.communityId,
+        isActive: nextIsActive,
+        userId: user.id,
+      });
+
+      if (!result.success) {
+        setStatusError(result.error ?? "Could not update this user status.");
+        return;
       }
-    }
 
-    function handlePointerDown(event: PointerEvent) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("pointerdown", handlePointerDown);
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("pointerdown", handlePointerDown);
-    };
-  }, [isOpen]);
+      onStatusChanged({ ...user, isActive: nextIsActive });
+      setStatusModalOpen(false);
+    });
+  }
 
   return (
-    <div ref={containerRef} className="relative flex justify-end">
-      <button
-        type="button"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-        aria-label={`Actions for ${user.fullName}`}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
-        onClick={() => setIsOpen((prev) => !prev)}
-      >
-        <Ellipsis className="h-4 w-4 stroke-[1.75]" />
-      </button>
+    <>
+      <div className="flex justify-end">
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-expanded={isOpen}
+          aria-haspopup="menu"
+          aria-label={`Actions for ${user.fullName}`}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+          onClick={() => setIsOpen((prev) => !prev)}
+        >
+          <Ellipsis className="h-4 w-4 stroke-[1.75]" />
+        </button>
 
-      {isOpen ? (
-        <div
-          role="menu"
-          className="absolute right-0 top-full z-50 mt-1.5 w-56 overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.5)]"
+        <FloatingActionMenu
+          anchorRef={triggerRef}
+          open={isOpen}
+          onClose={() => setIsOpen(false)}
+          className="w-56 p-1.5"
         >
           {user.communityId ? (
             <Link
@@ -327,9 +358,109 @@ function UserActionsMenu({ user }: { user: UserSearchItem }) {
           ) : null}
 
           <PasswordResetControl user={user} />
+
+          {user.communityId ? (
+            <>
+              <div className="my-1 border-t border-[var(--console-border)]" />
+              <button
+                type="button"
+                role="menuitem"
+                onClick={openStatusModal}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-left text-xs font-semibold transition-colors hover:bg-white/[0.06] focus-visible:bg-white/[0.06] focus-visible:outline-none",
+                  user.isActive
+                    ? "text-rose-200 hover:text-rose-100"
+                    : "text-emerald-200 hover:text-emerald-100",
+                )}
+              >
+                {user.isActive ? (
+                  <Power className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                ) : (
+                  <RotateCcw className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                )}
+                <span>{user.isActive ? "Deactivate user" : "Reactivate user"}</span>
+              </button>
+            </>
+          ) : null}
+        </FloatingActionMenu>
+      </div>
+
+      {statusModalOpen ? (
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+          <button
+            type="button"
+            aria-label="Close user status dialog"
+            className="absolute inset-0"
+            onClick={closeStatusModal}
+          />
+          <section className="relative z-10 w-full max-w-lg rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                  User status
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-white">
+                  {user.isActive
+                    ? `Deactivate ${user.fullName}?`
+                    : `Reactivate ${user.fullName}?`}
+                </h2>
+              </div>
+              <button
+                type="button"
+                aria-label="Close"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] text-[var(--console-text-muted)] hover:text-white"
+                onClick={closeStatusModal}
+                disabled={isStatusPending}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div
+              className={cn(
+                "mt-5 rounded-lg border p-4 text-sm leading-6",
+                user.isActive
+                  ? "border-rose-400/20 bg-rose-500/10 text-rose-100"
+                  : "border-emerald-400/20 bg-emerald-500/10 text-emerald-100",
+              )}
+            >
+              {user.isActive
+                ? "This blocks ENTRY access for this community. The user record and unit relationship are preserved."
+                : "This restores ENTRY access for this community."}
+            </div>
+
+            {statusError ? (
+              <p className="mt-4 rounded-md border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+                {statusError}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex justify-end gap-2 border-t border-[var(--console-border)] pt-4">
+              <button
+                type="button"
+                className={buttonClass("secondary")}
+                onClick={closeStatusModal}
+                disabled={isStatusPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={buttonClass(user.isActive ? "danger" : "primary")}
+                onClick={submitStatusChange}
+                disabled={isStatusPending}
+              >
+                {isStatusPending
+                  ? "Updating..."
+                  : user.isActive
+                    ? "Deactivate user"
+                    : "Reactivate user"}
+              </button>
+            </div>
+          </section>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -344,7 +475,7 @@ function UserAvatar({ name }: { name: string }) {
       .join("") || "U";
 
   return (
-    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--console-border-strong)] bg-[var(--console-accent-subtle)] text-xs font-semibold text-violet-100">
+    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-accent-subtle)] text-xs font-semibold text-violet-100">
       {initials}
     </span>
   );
@@ -352,23 +483,41 @@ function UserAvatar({ name }: { name: string }) {
 
 export function UserSearch() {
   const [state, formAction] = useActionState(searchUsersAction, { results: [] });
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, boolean>>({});
+
+  const results = useMemo(
+    () =>
+      (state.results ?? []).map((user) =>
+        Object.prototype.hasOwnProperty.call(statusOverrides, user.id)
+          ? { ...user, isActive: statusOverrides[user.id] }
+          : user,
+      ),
+    [state.results, statusOverrides],
+  );
   const hasQuery = Boolean(state.query);
-  const hasResults = Boolean(state.results && state.results.length > 0);
+  const hasResults = results.length > 0;
+
+  function syncUser(nextUser: UserSearchItem) {
+    setStatusOverrides((current) => ({
+      ...current,
+      [nextUser.id]: nextUser.isActive,
+    }));
+  }
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-5 py-4">
+    <div className="space-y-4">
+      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-3">
         <form action={formAction}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <label className="relative min-w-0 flex-1">
-              <span className="sr-only">Search by full name or email</span>
+              <span className="sr-only">Search by name, email, or username</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[1.75] text-[var(--console-text-soft)]" />
               <input
                 name="query"
                 type="text"
                 defaultValue={state.query}
                 className="h-9 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] pl-9 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
-                placeholder="Search by full name or email"
+                placeholder="Search by name, email, or username"
               />
             </label>
             <SearchButton />
@@ -396,7 +545,7 @@ export function UserSearch() {
               </div>
 
               <div className="divide-y divide-[var(--console-border)]">
-                {state.results?.map((user) => {
+                {results.map((user) => {
                   const primaryIdentity = getPrimaryIdentity(
                     user.email,
                     user.username,
@@ -472,7 +621,7 @@ export function UserSearch() {
                       </div>
 
                       <div className="flex items-center justify-end">
-                        <UserActionsMenu user={user} />
+                        <UserActionsMenu user={user} onStatusChanged={syncUser} />
                       </div>
                     </article>
                   );
@@ -483,7 +632,7 @@ export function UserSearch() {
         </section>
       ) : null}
 
-      {state.results && state.results.length === 0 && hasQuery ? (
+      {!hasResults && hasQuery ? (
         <section className="rounded-lg border border-dashed border-[var(--console-border-strong)] bg-[var(--console-surface)] px-6 py-10 text-center">
           <p className="text-sm text-[var(--console-text-muted)]">
             No users matched <span className="font-semibold">{state.query}</span>.

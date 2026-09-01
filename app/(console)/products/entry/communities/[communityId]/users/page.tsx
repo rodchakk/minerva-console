@@ -28,12 +28,14 @@ export default async function CommunityUsersPage(
     .join("|");
 
   return (
-    <CommunityUsersClient
-      key={`${data.community.id}:${usersVersion}`}
-      community={data.community}
-      houses={data.houses}
-      initialUsers={data.users}
-      loadError={data.usersError}
-    />
+    <div className="space-y-6">
+      <CommunityUsersClient
+        key={`${data.community.id}:${usersVersion}`}
+        community={data.community}
+        houses={data.houses}
+        initialUsers={data.users}
+        loadError={data.usersError}
+      />
+    </div>
   );
 }
