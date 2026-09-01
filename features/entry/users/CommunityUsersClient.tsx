@@ -14,8 +14,8 @@ import {
   Pencil,
   Plus,
   Search,
+  Shield,
   ShieldCheck,
-  ShieldUser,
   UserCheck,
   UserRound,
   UsersRound,
@@ -115,7 +115,7 @@ function getUserInitials(user: CommunityUserRecord) {
   return initials || "MU";
 }
 
-function createDraft(user: CommunityUserRecord): UserDraft {
+function buildUserDraft(user: CommunityUserRecord): UserDraft {
   return {
     fullName: user.fullName,
     houseId: user.houseId,
@@ -198,7 +198,7 @@ function RoleBadge({ role }: { role: string }) {
           ? "border-sky-400/20 bg-sky-500/10 text-sky-200"
           : "border-white/10 bg-white/5 text-slate-300";
 
-  const Icon = role === "ADMIN" ? ShieldCheck : role === "GUARD" ? ShieldUser : Home;
+  const Icon = role === "ADMIN" ? ShieldCheck : role === "GUARD" ? Shield : Home;
 
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-semibold ${styles}`}>
@@ -315,7 +315,7 @@ export function CommunityUsersClient({
   function openManage(user: CommunityUserRecord, mode: ManageMode = "view") {
     resetFeedback();
     setSelectedUserId(user.userId);
-    setDraft(createDraft(user));
+    setDraft(buildUserDraft(user));
     setManageMode(mode);
     setPassword("");
     setConfirmPassword("");
@@ -537,7 +537,7 @@ export function CommunityUsersClient({
           <MetricCard icon={<UserX className="h-5 w-5" />} label="Inactive" value={inactiveCount} hint="Blocked from access" tone="orange" />
           <MetricCard icon={<Home className="h-5 w-5" />} label="Residents" value={residentCount} hint="Resident accounts" tone="blue" />
           <MetricCard icon={<ShieldCheck className="h-5 w-5" />} label="Admins" value={adminCount} hint="Community admins" tone="amber" />
-          <MetricCard icon={<ShieldUser className="h-5 w-5" />} label="Guards" value={guardCount} hint="Guard operators" tone="cyan" />
+          <MetricCard icon={<Shield className="h-5 w-5" />} label="Guards" value={guardCount} hint="Guard operators" tone="cyan" />
         </section>
 
         <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_14px_36px_rgba(2,6,23,0.18)]">
@@ -887,7 +887,7 @@ export function CommunityUsersClient({
                     <div className="mt-5 grid gap-2 sm:grid-cols-3">
                       <button
                         type="button"
-                        onClick={() => { setDraft(createDraft(selectedUser)); setManageMode("edit"); setError(null); }}
+                        onClick={() => { setDraft(buildUserDraft(selectedUser)); setManageMode("edit"); setError(null); }}
                         className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/[0.025] p-3 text-left text-sm font-semibold text-white transition hover:border-violet-400/25 hover:bg-violet-500/[0.06]"
                       >
                         <Pencil className="h-4 w-4 text-violet-200" /> Edit user
