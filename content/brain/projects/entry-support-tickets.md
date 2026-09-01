@@ -7,13 +7,30 @@ This document records product and architecture knowledge only. Brain does not co
 ## Status
 
 - **Feature:** `ENTRY-SUP-001 — Native Support Tickets`
-- **Status:** Completed, QA-validated, and merged.
-- **Date closed:** 2026-08-31.
-- **ENTRY Mobile:** `rodchakk/node-bridge-foundation` PR `#14`, merged to `main` as `283366a3ae9e782923e52445564c8ff4e60ec860`.
+- **Feature status:** Completed, QA-validated, merged, and security-hardened.
+- **Feature closeout date:** 2026-08-31.
+- **Release status updated:** 2026-09-01.
+- **ENTRY Mobile MVP:** `rodchakk/node-bridge-foundation` PR `#14`, merged to `main` as `283366a3ae9e782923e52445564c8ff4e60ec860`.
+- **ENTRY Mobile support UI polish:** PR `#15`, merged to `main` as `295d46a4d0737b364aab236b7ebe041c15504541`.
 - **ENTRY Web:** `rodchakk/Entry-Web` PR `#1`, merged to `master` as `f6c3229bdea2e519d48bd13246bc2f9696857aca`.
-- **Minerva Console:** `rodchakk/minerva-console` PR `#95`, merged to `master` as `97aedabe717fd025d00286242fd334f6310e28d7`.
-- **Console production:** Vercel deployment for `97aedabe717fd025d00286242fd334f6310e28d7` reached `READY` and is aliased to `console.minervatechs.com`.
-- **Mobile store release:** not performed by this closeout; merge to `main` does not publish a new App Store / Play Store version.
+- **Minerva Console MVP:** `rodchakk/minerva-console` PR `#95`, merged to `master` as `97aedabe717fd025d00286242fd334f6310e28d7`.
+- **Minerva Console support workspace polish / Quick Tools:** PR `#97`, merged as `10836744dae0272bf3fddc587c8b38b8e9d37a67`.
+- **Support security hardening:** PR `#98`, merged as `4ea893112dc0ebcf74767128c166cbab68716137`; production migration applied and verified.
+- **Migration-history sync:** PR `#99`, merged as `8cbaa82da081374cf311f3f5884f8f518ac3ad52`.
+- **Mobile release prep:** `rodchakk/node-bridge-foundation` PR `#16`, merged as `2c2df22098002bf16da34343a0628945b5d10bd8`; app version `1.0.2` and EAS `production` channel configured.
+- **Console production:** current Support workspace changes were deployed through the normal Vercel production path and reached `READY` during the implementation/hardening passes.
+- **Public mobile distribution:** in progress; do not yet claim ENTRY `1.0.2` as publicly distributed on both stores.
+
+### Store release checkpoint — 2026-09-01
+
+- **Android:** production EAS build finished successfully as ENTRY `1.0.2`, `versionCode 12`, build ID `69a74390-a7d8-4021-bb81-15c643535575`.
+- **Android Internal Testing:** `1.0.2` is active and available to internal testers in Google Play.
+- **Android Production:** the `1.0.2` full-rollout production change has been staged in Google Play Publishing overview. At the last verified checkpoint it was still listed under **Changes not yet submitted for review**; final review submission / rollout confirmation was not yet captured in Brain evidence.
+- **iOS:** production EAS build finished successfully as ENTRY `1.0.2`, build `11`, build ID `d2f6937d-e8b3-49ec-b09c-7d2c96b201b7`.
+- **iOS 1.0.1:** released and now `Ready for Distribution`, which unlocked creation of the next App Store version.
+- **iOS 1.0.2 (11):** submitted to Apple App Review and currently `Waiting for Review`.
+- **TestFlight:** no final TestFlight QA was performed for this release path; release submission proceeded after the owner reported completed testing looked correct.
+- **Apple metadata follow-up:** App Store Connect shows new Age Ratings / Social Media questions due by 2026-09-07. They did not block submission of `1.0.2`, but remain an account-maintenance follow-up.
 
 ## Product purpose
 
@@ -47,6 +64,9 @@ Applied and versioned migrations:
 - `20260831173348_entry_support_tickets_mvp`
 - `20260831180244_entry_support_tickets_perf_hardening`
 - `20260831232627_entry_support_tickets_realtime`
+- `20260901042453_entry_support_security_hardening`
+
+The first three migrations originated in the ENTRY Mobile repository and were later restored verbatim into Minerva Console source control so the Support database layer is auditable from the Console repository as well. The hardening migration filename in source control was synchronized to the exact migration version recorded by production.
 
 Primary tables:
 
@@ -78,12 +98,25 @@ Behavioral rules:
 
 ## Security and authorization contract
 
-- Authenticated residents can read only their own tickets and ticket messages.
-- Minerva superadmins can read all support tickets and conversations.
-- Direct authenticated table inserts/updates/deletes are not the supported write path; writes go through reviewed RPCs.
+A defensive security review and direct production-schema verification were completed after the MVP closeout.
+
+Verified production posture after `20260901042453_entry_support_security_hardening`:
+
+- RLS remains enabled on `support_tickets` and `support_ticket_messages`.
+- Authenticated residents can select only their own tickets/messages through owner-or-superadmin policies.
+- Minerva superadmins can read all support tickets and conversations through the same policies / reviewed admin RPC boundary.
+- `authenticated` has direct `SELECT` only on the two Support tables; direct table writes, `TRUNCATE`, `TRIGGER`, and `REFERENCES` privileges were removed from browser roles.
+- `anon` has no direct Support table access.
+- Browser roles have no privileges on `support_ticket_number_seq`; ticket numbering continues through the reviewed SECURITY DEFINER create-ticket RPC.
+- The five Support RPCs expose `EXECUTE` to `authenticated` and not to `anon`.
+- Both Support tables remain in `supabase_realtime`.
+- Support writes continue through reviewed RPCs rather than direct client table writes.
 - Admin RPCs independently require superadmin authorization.
-- Support-specific RLS performance findings discovered during implementation were hardened before merge.
+- No password-reset behavior, RLS policy logic, Realtime subscription behavior, or Support workflow semantics were changed by the hardening migration.
+- Raw Supabase/Postgres load errors are logged server-side in Console while user-facing Support errors are generic.
 - The ticket system does not expose service-role credentials to clients.
+
+The security hardening deliberately did **not** expand scope into resident rate limiting, metadata-size limits, or recovery-code audit infrastructure. Those remain separate defense-in-depth candidates rather than release blockers.
 
 ## ENTRY Mobile implementation
 
@@ -97,13 +130,24 @@ The resident support surface now:
 - sends limited technical context useful for support triage, including app/build/platform/OS/device and resident role/unit context;
 - uses Supabase Realtime on the ticket detail screen so new Minerva replies and ticket-state changes appear without manual refresh.
 
+### Mobile support UI polish
+
+PR `#15` refined the resident Support landing screen without adding native dependencies or changing the backend contract:
+
+- `Reportar un problema` is the primary action;
+- category starts unselected and is chosen through a compact bottom sheet;
+- submit remains disabled until category and valid description are present;
+- password reset is a compact expandable row rather than a competing full section;
+- `Mis solicitudes` initially shows at most two tickets with `Ver todas` / `Ver menos` when needed;
+- ticket cards remain directly tappable.
+
 ### Keyboard QA fix
 
 Physical Android QA identified that the on-screen keyboard covered the conversation/composer. Before merge, the detail screen was corrected so Android resizes the conversation area, keeps the composer usable, and scrolls toward the latest conversation content when the keyboard opens.
 
 ## Minerva Console implementation
 
-Minerva Console now includes `Tickets` under ENTRY with:
+Minerva Console includes `Tickets` under ENTRY with:
 
 - responsive ticket inbox;
 - status filters;
@@ -115,6 +159,20 @@ Minerva Console now includes `Tickets` under ENTRY with:
 - Supabase Realtime-triggered server refreshes.
 
 During physical QA, the first Console realtime implementation did not update when the resident sent a new message. The final fix subscribed Console directly to inserts on `support_ticket_messages` in addition to ticket inserts/updates. The corrected behavior was validated before merge.
+
+### Console support workspace polish
+
+PR `#97` converted the detail screen into a denser operational support workspace while preserving backend behavior:
+
+- fixed-height chat-style conversation area with internal scrolling and anchored composer;
+- English system/chrome labels on the detailed Console surface while user/source data remains as authored;
+- right rail with `Quick Tools`, `Context`, and `Technical Context`;
+- approved Quick Tools v1: Reset password, View resident, View community, Copy diagnostics;
+- reset-password action derives the target user/community server-side from authoritative ticket data and reuses the canonical reset flow;
+- reset requires explicit confirmation and can return the existing email-success or recovery-code fallback result;
+- no destructive Quick Tools were added.
+
+The older Support ticket-list surface may still contain Spanish system labels; that language cleanup was intentionally not mixed into the workspace PR.
 
 ## ENTRY Web implementation
 
@@ -145,15 +203,17 @@ Validated end-to-end behavior:
 - Minerva can mark ticket resolved;
 - resident sees resolved state;
 - resident reply to resolved ticket reopens it;
-- keyboard no longer obscures the mobile composer/conversation.
+- keyboard no longer obscures the mobile composer/conversation;
+- polished Android Support landing flow was physically rechecked and accepted.
 
-Minerva Console CI passed TypeScript, lint, build, and Brain guardrails before merge. Vercel preview validation also passed and the final production deployment reached `READY`.
+Minerva Console CI passed TypeScript, lint, build, and Brain guardrails on the relevant Support implementation/security PRs. Vercel checks passed on the reviewed Console Support changes.
 
-### QA not claimed
+### QA / distribution boundaries not claimed
 
-- No physical iOS support-ticket QA was completed in this closeout.
-- No new production mobile store build/release was performed.
+- No final TestFlight-based iOS Support QA was completed for ENTRY `1.0.2`.
 - ENTRY Web resident realtime behavior was not part of the validated realtime loop.
+- Android `1.0.2` should not be called publicly released until Google Play production review/rollout is confirmed.
+- iOS `1.0.2 (11)` should not be called publicly released while App Store Connect remains `Waiting for Review`.
 
 ## Deliberate MVP exclusions
 
@@ -186,12 +246,17 @@ This should be treated as a separate mission because background push delivery, n
 
 ## Release boundary
 
-`ENTRY-SUP-001` is code-complete and merged, but mobile distribution remains a separate release operation.
+`ENTRY-SUP-001` is code-complete, merged, production-security-hardened, and included in the ENTRY `1.0.2` production binaries.
 
-Before claiming the feature is available in public store builds, verify the target ENTRY release includes merge commit `283366a3ae9e782923e52445564c8ff4e60ec860` (or a descendant), complete the intended release QA, and publish through the normal Play Store / App Store process.
+Release operations are still in progress at this checkpoint:
+
+- Android `1.0.2` / `versionCode 12` exists in Internal Testing and has a Production full-rollout change staged, but final production submission/approval is not yet recorded here.
+- iOS `1.0.2` / build `11` is `Waiting for Review` in App Store Connect.
+
+Only update this Brain record to **publicly distributed** after each store independently confirms the production release.
 
 ## Final verdict
 
-`ENTRY-SUP-001` is **COMPLETED AND MERGED**.
+`ENTRY-SUP-001` is **COMPLETED, MERGED, AND SECURITY-HARDENED**.
 
-The support workflow is now first-party, ticket-based, conversational, status-aware, and realtime between the validated Android resident flow and Minerva Console. Remaining push notification work is explicitly deferred rather than silently included in this closure.
+The support workflow is first-party, ticket-based, conversational, status-aware, and Realtime-enabled across the validated Android resident ↔ Minerva Console flow. ENTRY `1.0.2` release binaries contain the completed Support work; store distribution is the only remaining release-state checkpoint. Push notification work remains explicitly deferred as a separate future mission.
