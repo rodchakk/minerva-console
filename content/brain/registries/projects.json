@@ -6,9 +6,9 @@
     "title": "ENTRY",
     "summary": "Residential and community access control system. Has its own Supabase project. Brain may reference ENTRY decisions and architecture but must not read ENTRY operational data.",
     "created": "2026-06-16",
-    "updated": "2026-08-26",
+    "updated": "2026-08-31",
     "tags": ["product", "access-control", "supabase"],
-    "related": ["PRJ-0004", "ENTRY-OPS-001"],
+    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001"],
     "path": "content/brain/projects/entry.md"
   },
   {
@@ -94,5 +94,17 @@
     "tags": ["client", "web", "migration", "seo", "local-seo", "astro", "cloudflare", "email"],
     "related": ["PRJ-0003"],
     "path": "content/brain/projects/modern-atlantic-upholstery-web-modernization.md"
+  },
+  {
+    "id": "ENTRY-SUP-001",
+    "type": "project",
+    "status": "approved",
+    "title": "ENTRY Native Support Tickets",
+    "summary": "Completed first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, and Minerva Console, with owner/superadmin authorization, three-state workflow, conversations, Android keyboard hardening, and validated Realtime between ENTRY Mobile and Console. Push notifications and mobile store release remain separate follow-up work.",
+    "created": "2026-08-31",
+    "updated": "2026-08-31",
+    "tags": ["entry", "support", "tickets", "supabase", "realtime", "mobile", "console", "web"],
+    "related": ["PRJ-0001"],
+    "path": "content/brain/projects/entry-support-tickets.md"
   }
 ]
