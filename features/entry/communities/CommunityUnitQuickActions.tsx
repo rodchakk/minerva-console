@@ -94,8 +94,8 @@ export function CommunityUnitQuickActions({
       setModalState(null);
       setSuccessMessage(
         unit.isActive
-          ? "Unit disabled successfully. Linked residents were also disabled."
-          : "Unit enabled successfully. Linked residents were also enabled.",
+          ? "Unit disabled successfully. Linked resident account states were not changed."
+          : "Unit enabled successfully. Linked resident account states were not changed.",
       );
       router.refresh();
     });
@@ -193,8 +193,8 @@ export function CommunityUnitQuickActions({
                 }`}
               >
                 {unit.isActive
-                  ? "This will mark this unit as inactive in ENTRY and deactivate all residents currently linked to this unit. Existing records are not deleted."
-                  : "This will reactivate this unit in ENTRY and reactivate all residents currently linked to this unit."}
+                  ? "This will mark this unit as inactive in ENTRY. Linked resident account states are not changed."
+                  : "This will reactivate this unit in ENTRY. Linked resident account states are not changed."}
               </div>
             )}
 

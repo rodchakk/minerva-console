@@ -975,7 +975,7 @@ function enrichUnits(
       null;
     const activePassItems = passesByHouseId.get(unit.id) ?? [];
     const pendingActivationItems = pendingByUnitLabel.get(normalizeUnitLabel(unit.label)) ?? [];
-    const residentCount = unitResidents.length || unit.residentCount;
+    const residentCount = Math.max(unit.residentCount, unitResidents.length);
 
     return {
       ...unit,
