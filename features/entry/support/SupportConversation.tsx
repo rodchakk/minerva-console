@@ -49,7 +49,7 @@ function SendReplyButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-400/25 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-transparent bg-[var(--console-accent)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <Send className="h-4 w-4 stroke-[1.75]" />
       {pending ? "Sending..." : "Send"}
@@ -72,26 +72,31 @@ function MessageBubble({
     <div className={cn("flex", staff ? "justify-end" : "justify-start")}>
       <article
         className={cn(
-          "max-w-[92%] rounded-md border px-3.5 py-3 sm:max-w-[76%]",
+          "max-w-[92%] rounded-lg border px-3.5 py-3 sm:max-w-[76%]",
           staff
-            ? "border-violet-400/28 bg-violet-500/14"
-            : "border-[var(--border)] bg-[var(--surface-strong)]",
+            ? "border-violet-400/25 bg-violet-500/[0.10]"
+            : "border-[var(--console-border)] bg-[var(--console-surface-raised)]",
         )}
       >
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p
             className={cn(
-              "text-[10px] font-semibold uppercase text-[var(--text-muted)]",
-              staff ? "text-violet-200" : "",
+              "text-[10px] font-semibold uppercase tracking-[0.14em]",
+              staff ? "text-violet-200" : "text-[var(--console-text-muted)]",
             )}
           >
             {author}
           </p>
-          <span className="text-[11px] text-[var(--text-soft)]">
+          <span
+            className={cn(
+              "text-[11px]",
+              staff ? "text-violet-300/70" : "text-[var(--console-text-soft)]",
+            )}
+          >
             {formatDateTime(createdAt)}
           </span>
         </div>
-        <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-6 text-white">
+        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">
           {body}
         </p>
       </article>
@@ -154,28 +159,28 @@ export function SupportConversation({
   }, [latestMessageKey, scrollToLatest]);
 
   return (
-    <section className="flex h-[clamp(560px,72vh,720px)] flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+    <section className="flex h-[clamp(560px,72vh,720px)] flex-col overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase text-violet-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
             Conversation
           </p>
           <h2 className="mt-1 truncate text-base font-semibold text-white">
             Ticket activity
           </h2>
         </div>
-        <p className="shrink-0 rounded-md border border-[var(--border)] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-muted)]">
+        <p className="shrink-0 rounded-lg border border-[var(--console-border)] bg-white/[0.025] px-2.5 py-1 text-[11px] font-semibold text-[var(--console-text-muted)]">
           {messageCount} {messageCount === 1 ? "message" : "messages"}
         </p>
       </div>
 
       {loadError ? (
-        <div className="mx-4 mt-4 rounded-md border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200 sm:mx-5">
+        <div className="mx-4 mt-4 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 sm:mx-5">
           Some messages could not be loaded.
         </div>
       ) : null}
 
-      <div className="relative min-h-0 flex-1 border-t border-[var(--border)]">
+      <div className="relative min-h-0 flex-1 border-t border-[var(--console-border)]">
         <div
           ref={scrollRef}
           className="h-full overflow-y-auto px-4 py-5 sm:px-5"
@@ -185,7 +190,7 @@ export function SupportConversation({
             if (nearBottomRef.current) setHasNewMessages(false);
           }}
         >
-          <div className="space-y-9 pb-3">
+          <div className="space-y-4 pb-3">
             <MessageBubble
               author={ticket.requesterName}
               body={ticket.description}
@@ -212,18 +217,18 @@ export function SupportConversation({
         {hasNewMessages ? (
           <button
             type="button"
-            className="absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-100 shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition hover:border-violet-400/24 hover:bg-[var(--surface-muted)]"
+            className="absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 text-xs font-semibold text-slate-100 shadow-[0_10px_28px_rgba(0,0,0,0.4)] transition hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             onClick={() => scrollToLatest()}
           >
             New messages
-            <ChevronDown className="h-3.5 w-3.5" />
+            <ChevronDown className="h-3.5 w-3.5 stroke-[1.75]" />
           </button>
         ) : null}
       </div>
 
       <form
         action={replyToEntrySupportTicket}
-        className="shrink-0 border-t border-[var(--border)] bg-[var(--surface)] px-4 py-4 sm:px-5"
+        className="shrink-0 border-t border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-4 sm:px-5"
       >
         <input type="hidden" name="ticketId" value={ticket.id} />
         <label
@@ -239,7 +244,7 @@ export function SupportConversation({
           maxLength={4000}
           rows={3}
           placeholder="Write a reply to the requester..."
-          className="max-h-32 min-h-24 w-full resize-y rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/40"
+          className="max-h-32 min-h-24 w-full resize-y rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--console-text-muted)] hover:border-white/20 focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
         />
         <div className="mt-3 flex items-center justify-end">
           <SendReplyButton />

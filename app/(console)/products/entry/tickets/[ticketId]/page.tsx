@@ -101,11 +101,11 @@ function DetailSection({
   return (
     <section
       className={cn(
-        "rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4",
+        "rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4",
         className,
       )}
     >
-      <p className="text-[11px] font-semibold uppercase text-violet-200">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
         {title}
       </p>
       <dl className={cn("mt-4 space-y-2.5 text-sm", contentClassName)}>
@@ -115,11 +115,11 @@ function DetailSection({
             className={cn(
               "grid grid-cols-[88px_minmax(0,1fr)] gap-3",
               title === "Context" && item.label === "Created"
-                ? "mt-3 border-t border-[var(--border)] pt-3"
+                ? "mt-3 border-t border-[var(--console-border)] pt-3"
                 : "",
             )}
           >
-            <dt className="text-xs leading-5 text-[var(--text-muted)]">
+            <dt className="text-xs leading-5 text-[var(--console-text-muted)]">
               {item.label}
             </dt>
             <dd className="break-words text-xs font-semibold leading-5 text-white">
@@ -227,17 +227,17 @@ export default async function EntrySupportTicketPage({
     <div className="mx-auto max-w-[1680px] space-y-4 pt-5">
       <Link
         href="/products/entry/tickets"
-        className="inline-flex min-h-9 items-center gap-2 rounded-md px-1 text-sm font-semibold text-[var(--text-muted)] transition hover:text-white"
+        className="inline-flex min-h-9 items-center gap-2 rounded-md px-1 text-sm font-semibold text-[var(--console-text-muted)] transition hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/40"
       >
-        <ArrowLeft className="h-4 w-4" />
+        <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
         Back to tickets
       </Link>
 
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-5 sm:px-6">
+      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-5 py-5 sm:px-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase text-violet-200">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
                 {ticket.ticketNumber}
               </p>
               <span
@@ -249,15 +249,15 @@ export default async function EntrySupportTicketPage({
                 {status.label}
               </span>
             </div>
-            <h1 className="mt-2 truncate text-3xl font-semibold text-white">
+            <h1 className="mt-2 truncate text-3xl font-semibold tracking-tight text-white lg:text-[2.05rem]">
               {category}
             </h1>
-            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
-              <UserCircle className="h-6 w-6 shrink-0 rounded-full border border-[var(--border)] p-1 text-slate-300" />
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--console-text-muted)]">
+              <UserCircle className="h-6 w-6 shrink-0 rounded-full border border-[var(--console-border)] p-1 text-slate-300 stroke-[1.75]" />
               <span className="min-w-0 truncate">{ticket.requesterName}</span>
-              <span className="text-[var(--text-soft)]">·</span>
+              <span className="text-[var(--console-text-soft)]">·</span>
               <span className="min-w-0 truncate">{ticket.communityName}</span>
-              <span className="text-[var(--text-soft)]">·</span>
+              <span className="text-[var(--console-text-soft)]">·</span>
               <span>{source}</span>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default async function EntrySupportTicketPage({
               id="ticket-status"
               name="status"
               defaultValue={ticket.status}
-              className="h-10 min-w-36 rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-semibold text-white outline-none transition focus:border-violet-400/40"
+              className="h-9 min-w-36 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3 text-sm font-semibold text-white outline-none transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             >
               <option value="open">Received</option>
               <option value="in_progress">In progress</option>
@@ -282,7 +282,7 @@ export default async function EntrySupportTicketPage({
             </select>
             <button
               type="submit"
-              className="h-10 rounded-md border border-violet-400/25 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20"
+              className="h-9 rounded-lg border border-transparent bg-[var(--console-accent)] px-3.5 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             >
               Save status
             </button>
@@ -291,17 +291,17 @@ export default async function EntrySupportTicketPage({
       </section>
 
       {query.sent === "1" ? (
-        <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Reply sent.
         </div>
       ) : null}
       {query.updated === "1" ? (
-        <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Status updated.
         </div>
       ) : null}
       {query.error ? (
-        <div className="rounded-md border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-lg border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
           We could not complete the action. Try again.
         </div>
       ) : null}
@@ -320,8 +320,8 @@ export default async function EntrySupportTicketPage({
         />
 
         <aside className="space-y-4 xl:flex xl:h-[clamp(560px,72vh,720px)] xl:flex-col xl:gap-4 xl:space-y-0 xl:overflow-hidden">
-          <section className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-            <p className="text-[11px] font-semibold uppercase text-violet-200">
+          <section className="space-y-3 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
               Quick Tools
             </p>
             <SupportQuickTools
