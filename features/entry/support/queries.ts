@@ -110,7 +110,14 @@ export async function getEntrySupportTickets(status?: SupportStatus | null) {
   });
 
   if (error) {
-    return { tickets: [] as EntrySupportTicket[], loadError: error.message };
+    console.error("[entry-support] failed to list support tickets", {
+      code: error.code,
+      message: error.message,
+    });
+    return {
+      tickets: [] as EntrySupportTicket[],
+      loadError: "Tickets could not be loaded. Try again.",
+    };
   }
 
   const tickets = (Array.isArray(data) ? data : [])
@@ -135,7 +142,15 @@ export async function getEntrySupportTicket(ticketId: string) {
     ]);
 
   if (ticketError) {
-    return { ticket: null, messages: [] as EntrySupportMessage[], loadError: ticketError.message };
+    console.error("[entry-support] failed to load support ticket", {
+      code: ticketError.code,
+      message: ticketError.message,
+    });
+    return {
+      ticket: null,
+      messages: [] as EntrySupportMessage[],
+      loadError: "Ticket could not be loaded. Try again.",
+    };
   }
 
   const firstTicket = Array.isArray(ticketData) ? ticketData[0] : ticketData;
@@ -152,6 +167,13 @@ export async function getEntrySupportTicket(ticketId: string) {
       (Array.isArray(requesterData) ? requesterData : [])
         .map(toRequester)
         .find((item) => item?.userId === ticket.createdBy) ?? null;
+  }
+
+  if (messageError) {
+    console.error("[entry-support] failed to load support conversation", {
+      code: messageError.code,
+      message: messageError.message,
+    });
   }
 
   const messages: EntrySupportMessage[] = (Array.isArray(messageData) ? messageData : [])
@@ -173,6 +195,8 @@ export async function getEntrySupportTicket(ticketId: string) {
     ticket,
     messages,
     requester,
-    loadError: messageError?.message ?? null,
+    loadError: messageError
+      ? "The ticket loaded, but the conversation could not be loaded. Try again."
+      : null,
   };
 }
