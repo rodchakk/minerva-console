@@ -1,44 +1,116 @@
 import Link from "next/link";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
-import {
-  replyToEntrySupportTicket,
-  updateEntrySupportTicketStatus,
-} from "@/features/entry/support/actions";
+import { updateEntrySupportTicketStatus } from "@/features/entry/support/actions";
+import { SupportConversation } from "@/features/entry/support/SupportConversation";
+import { SupportQuickTools } from "@/features/entry/support/SupportQuickTools";
 import { getEntrySupportTicket } from "@/features/entry/support/queries";
+import { cn } from "@/lib/supabase/utils";
 
 export const dynamic = "force-dynamic";
 
+type DetailRow = {
+  label: string;
+  value: string;
+};
+
 const statusCopy = {
-  open: { label: "Recibido", className: "border-sky-400/20 bg-sky-500/10 text-sky-200" },
-  in_progress: { label: "En revisión", className: "border-amber-400/20 bg-amber-500/10 text-amber-200" },
-  resolved: { label: "Resuelto", className: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200" },
+  open: {
+    className: "border-sky-400/20 bg-sky-500/10 text-sky-200",
+    label: "Received",
+  },
+  in_progress: {
+    className: "border-amber-400/20 bg-amber-500/10 text-amber-200",
+    label: "In progress",
+  },
+  resolved: {
+    className: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200",
+    label: "Resolved",
+  },
 } as const;
 
+const categoryCopy: Record<string, string> = {
+  accesos: "Access",
+  cuenta: "Account",
+  notificaciones: "Notifications",
+  otro: "Other",
+  pases: "Passes",
+  reservas: "Reservations",
+};
+
 function formatDateTime(value: string) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("es-HN", {
+  if (!value) return "Not available";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-US", {
     day: "2-digit",
-    month: "short",
-    year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(value));
+    month: "short",
+    year: "numeric",
+  }).format(date);
 }
 
-function metadataRows(metadata: Record<string, unknown>) {
-  const labels: Record<string, string> = {
-    platform: "Platform",
-    app_version: "App version",
-    build: "Build",
-    os: "OS",
-    surface: "Surface",
-  };
+function formatCategory(value: string) {
+  return categoryCopy[value.trim().toLowerCase()] ?? value;
+}
 
-  return Object.entries(metadata)
-    .filter(([, value]) => typeof value === "string" || typeof value === "number" || typeof value === "boolean")
-    .slice(0, 6)
-    .map(([key, value]) => ({ label: labels[key] ?? key.replaceAll("_", " "), value: String(value) }));
+function formatSource(value: "mobile" | "web") {
+  return value === "mobile" ? "ENTRY Mobile" : "ENTRY Web";
+}
+
+function metadataString(
+  metadata: Record<string, unknown>,
+  keys: string[],
+  fallback = "",
+) {
+  for (const key of keys) {
+    const value = metadata[key];
+    if (
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      const text = String(value).trim();
+      if (text) return text;
+    }
+  }
+
+  return fallback;
+}
+
+function compactRows(rows: DetailRow[]) {
+  return rows.filter((row) => row.value.trim());
+}
+
+function DetailSection({
+  rows,
+  title,
+}: {
+  rows: DetailRow[];
+  title: string;
+}) {
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+      <p className="text-[11px] font-semibold uppercase text-violet-200">
+        {title}
+      </p>
+      <dl className="mt-4 space-y-3 text-sm">
+        {rows.map((item) => (
+          <div key={item.label}>
+            <dt className="text-xs text-[var(--text-muted)]">{item.label}</dt>
+            <dd className="mt-1 break-words font-medium text-white">
+              {item.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
 }
 
 export default async function EntrySupportTicketPage({
@@ -50,156 +122,230 @@ export default async function EntrySupportTicketPage({
 }) {
   const { ticketId } = await params;
   const query = await searchParams;
-  const { ticket, messages, loadError } = await getEntrySupportTicket(ticketId);
+  const { ticket, messages, requester, loadError } = await getEntrySupportTicket(ticketId);
 
   if (!ticket) notFound();
 
   const status = statusCopy[ticket.status];
-  const metadata = metadataRows(ticket.metadata);
+  const category = formatCategory(ticket.category);
+  const source = formatSource(ticket.source);
+  const requesterRole = requester?.role || metadataString(ticket.metadata, ["role"]);
+  const houseLabel =
+    requester?.houseLabel ||
+    metadataString(ticket.metadata, [
+      "house_label",
+      "houseLabel",
+      "unit_label",
+      "unitLabel",
+      "unit",
+      "house",
+    ]);
+  const contactRows = compactRows([
+    { label: "Email", value: requester?.email ?? "" },
+    { label: "Username", value: requester?.username ?? "" },
+    { label: "Requester user ID", value: ticket.createdBy },
+  ]);
+  const contextRows = compactRows([
+    { label: "Community", value: ticket.communityName },
+    { label: "Source", value: source },
+    { label: "Category", value: category },
+    { label: "Role", value: requesterRole },
+    { label: "House / unit", value: houseLabel },
+    { label: "Created", value: formatDateTime(ticket.createdAt) },
+    { label: "Updated", value: formatDateTime(ticket.updatedAt) },
+  ]);
+  const technicalRows = compactRows([
+    {
+      label: "App version",
+      value: metadataString(ticket.metadata, ["app_version", "appVersion"]),
+    },
+    { label: "Build", value: metadataString(ticket.metadata, ["build"]) },
+    {
+      label: "Platform",
+      value: metadataString(ticket.metadata, ["platform"]),
+    },
+    {
+      label: "OS version",
+      value: metadataString(ticket.metadata, ["os_version", "osVersion", "os"]),
+    },
+    {
+      label: "Device model",
+      value: metadataString(ticket.metadata, [
+        "device_model",
+        "deviceModel",
+        "device",
+      ]),
+    },
+    {
+      label: "Surface",
+      value: metadataString(ticket.metadata, ["surface"]),
+    },
+  ]);
+  const diagnostics = compactRows([
+    { label: "Ticket", value: ticket.ticketNumber },
+    { label: "Requester", value: ticket.requesterName },
+    { label: "Requester user ID", value: ticket.createdBy },
+    { label: "Community", value: ticket.communityName },
+    { label: "Community ID", value: ticket.communityId ?? "" },
+    { label: "Source", value: source },
+    { label: "Category", value: category },
+    { label: "Status", value: status.label },
+    ...technicalRows,
+    { label: "Role", value: requesterRole },
+    { label: "House / unit", value: houseLabel },
+  ]);
+  const residentHref =
+    ticket.communityId && ticket.createdBy
+      ? `/field/entry/communities/${encodeURIComponent(
+          ticket.communityId,
+        )}/people/residents/${encodeURIComponent(ticket.createdBy)}`
+      : null;
+  const communityHref = ticket.communityId
+    ? `/products/entry/communities/${encodeURIComponent(ticket.communityId)}`
+    : null;
+  const resetDisabledReason = !ticket.communityId
+    ? "Community ID is unavailable."
+    : !ticket.createdBy
+      ? "Requester user ID is unavailable."
+      : undefined;
 
   return (
-    <div className="space-y-5 pt-5">
+    <div className="space-y-4 pt-5">
       <Link
         href="/products/entry/tickets"
-        className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--text-muted)] transition hover:text-white"
+        className="inline-flex min-h-9 items-center gap-2 rounded-md px-1 text-sm font-semibold text-[var(--text-muted)] transition hover:text-white"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to tickets
       </Link>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_18px_60px_rgba(2,6,23,0.18)] sm:p-5">
+        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">{ticket.ticketNumber}</p>
-              <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${status.className}`}>{status.label}</span>
+              <p className="text-[11px] font-semibold uppercase text-violet-200">
+                {ticket.ticketNumber}
+              </p>
+              <span
+                className={cn(
+                  "rounded-md border px-2.5 py-1 text-[11px] font-semibold",
+                  status.className,
+                )}
+              >
+                {status.label}
+              </span>
             </div>
-            <h1 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">{ticket.category}</h1>
+            <h1 className="mt-2 truncate text-2xl font-semibold text-white sm:text-3xl">
+              {category}
+            </h1>
             <p className="mt-2 text-sm text-[var(--text-muted)]">
-              {ticket.requesterName} · {ticket.communityName} · {ticket.source === "mobile" ? "Mobile" : "Web"}
+              {ticket.requesterName} · {ticket.communityName} · {source}
             </p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Creado {formatDateTime(ticket.createdAt)} · Actualizado {formatDateTime(ticket.updatedAt)}</p>
           </div>
 
-          <form action={updateEntrySupportTicketStatus} className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+          <form
+            action={updateEntrySupportTicketStatus}
+            className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center"
+          >
             <input type="hidden" name="ticketId" value={ticket.id} />
+            <label className="sr-only" htmlFor="ticket-status">
+              Ticket status
+            </label>
             <select
+              id="ticket-status"
               name="status"
               defaultValue={ticket.status}
-              className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm text-white outline-none focus:border-violet-400/40"
+              className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/40"
             >
-              <option value="open">Recibido</option>
-              <option value="in_progress">En revisión</option>
-              <option value="resolved">Resuelto</option>
+              <option value="open">Received</option>
+              <option value="in_progress">In progress</option>
+              <option value="resolved">Resolved</option>
             </select>
-            <button type="submit" className="rounded-lg border border-violet-400/20 bg-violet-500/12 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/18">
-              Guardar estado
+            <button
+              type="submit"
+              className="h-10 rounded-md border border-violet-400/20 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20"
+            >
+              Save status
             </button>
           </form>
         </div>
       </section>
 
       {query.sent === "1" ? (
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">Respuesta enviada.</div>
+        <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          Reply sent.
+        </div>
       ) : null}
       {query.updated === "1" ? (
-        <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">Estado actualizado.</div>
+        <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+          Status updated.
+        </div>
       ) : null}
       {query.error ? (
-        <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">No pudimos completar la acción. Intenta nuevamente.</div>
+        <div className="rounded-md border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+          We could not complete the action. Try again.
+        </div>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 sm:p-5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">Conversation</p>
-              <h2 className="mt-1 text-lg font-semibold text-white">Ticket activity</h2>
-            </div>
-          </div>
-
-          {loadError ? (
-            <div className="mt-4 rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">Algunos mensajes no pudieron cargarse.</div>
-          ) : null}
-
-          <div className="mt-5 space-y-4">
-            <div className="flex justify-start">
-              <div className="max-w-[92%] rounded-2xl rounded-bl-md border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 sm:max-w-[78%]">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-200">{ticket.requesterName}</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-white">{ticket.description}</p>
-                <p className="mt-2 text-[11px] text-[var(--text-muted)]">{formatDateTime(ticket.createdAt)}</p>
-              </div>
-            </div>
-
-            {messages.map((message) => {
-              const staff = message.authorType === "staff";
-              return (
-                <div key={message.id} className={`flex ${staff ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[92%] rounded-2xl px-4 py-3 sm:max-w-[78%] ${staff ? "rounded-br-md border border-violet-400/18 bg-violet-500/12" : "rounded-bl-md border border-[var(--border)] bg-[var(--surface-strong)]"}`}>
-                    <p className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${staff ? "text-violet-200" : "text-[var(--text-muted)]"}`}>
-                      {staff ? "Minerva Support" : ticket.requesterName}
-                    </p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-white">{message.body}</p>
-                    <p className="mt-2 text-[11px] text-[var(--text-muted)]">{formatDateTime(message.createdAt)}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <form action={replyToEntrySupportTicket} className="mt-6 border-t border-[var(--border)] pt-5">
-            <input type="hidden" name="ticketId" value={ticket.id} />
-            <label className="block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]" htmlFor="support-reply">
-              Reply
-            </label>
-            <textarea
-              id="support-reply"
-              name="body"
-              required
-              maxLength={4000}
-              rows={4}
-              placeholder="Escribe una respuesta para el usuario..."
-              className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3.5 py-3 text-sm leading-6 text-white outline-none placeholder:text-[var(--text-muted)] focus:border-violet-400/40"
-            />
-            <button type="submit" className="mt-3 inline-flex items-center gap-2 rounded-lg border border-violet-400/20 bg-violet-500/12 px-4 py-2.5 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/18">
-              <Send className="h-4 w-4" />
-              Send reply
-            </button>
-          </form>
-        </section>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <SupportConversation
+          loadError={loadError}
+          messages={messages}
+          ticket={{
+            createdAt: ticket.createdAt,
+            description: ticket.description,
+            id: ticket.id,
+            requesterName: ticket.requesterName,
+            ticketNumber: ticket.ticketNumber,
+          }}
+        />
 
         <aside className="space-y-4">
-          <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">Context</p>
-            <dl className="mt-4 space-y-3 text-sm">
-              <div>
-                <dt className="text-xs text-[var(--text-muted)]">Requester</dt>
-                <dd className="mt-1 font-medium text-white">{ticket.requesterName}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-[var(--text-muted)]">Community</dt>
-                <dd className="mt-1 font-medium text-white">{ticket.communityName}</dd>
-              </div>
-              <div>
-                <dt className="text-xs text-[var(--text-muted)]">Source</dt>
-                <dd className="mt-1 font-medium text-white">{ticket.source === "mobile" ? "ENTRY Mobile" : "ENTRY Web"}</dd>
-              </div>
-            </dl>
-          </section>
-
-          {metadata.length > 0 ? (
-            <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">Technical context</p>
+          <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+            <p className="text-[11px] font-semibold uppercase text-violet-200">
+              Contact / identity
+            </p>
+            <div className="mt-4">
+              <p className="break-words text-lg font-semibold text-white">
+                {ticket.requesterName}
+              </p>
+              <p className="mt-1 text-xs font-semibold uppercase text-[var(--text-muted)]">
+                {[requesterRole, houseLabel].filter(Boolean).join(" · ") ||
+                  "Identity details unavailable"}
+              </p>
+            </div>
+            {contactRows.length > 0 ? (
               <dl className="mt-4 space-y-3 text-sm">
-                {metadata.map((item) => (
+                {contactRows.map((item) => (
                   <div key={item.label}>
-                    <dt className="capitalize text-xs text-[var(--text-muted)]">{item.label}</dt>
-                    <dd className="mt-1 break-words font-medium text-white">{item.value}</dd>
+                    <dt className="text-xs text-[var(--text-muted)]">
+                      {item.label}
+                    </dt>
+                    <dd className="mt-1 break-words font-medium text-white">
+                      {item.value}
+                    </dd>
                   </div>
                 ))}
               </dl>
-            </section>
-          ) : null}
+            ) : null}
+          </section>
+
+          <section className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+            <p className="text-[11px] font-semibold uppercase text-violet-200">
+              Quick Tools
+            </p>
+            <SupportQuickTools
+              communityHref={communityHref}
+              diagnostics={diagnostics}
+              requesterName={ticket.requesterName}
+              resetDisabledReason={resetDisabledReason}
+              residentHref={residentHref}
+              ticketId={ticket.id}
+            />
+          </section>
+
+          <DetailSection rows={contextRows} title="Context" />
+          <DetailSection rows={technicalRows} title="Technical Context" />
         </aside>
       </div>
     </div>
