@@ -59,13 +59,13 @@ export default async function EntrySupportTicketsPage({
               Revisa, responde y resuelve solicitudes enviadas desde ENTRY.
             </p>
           </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-400/15 bg-violet-500/10 text-violet-200">
-            <LifeBuoy className="h-5 w-5" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-violet-400/15 bg-violet-500/10 text-violet-200">
+            <LifeBuoy className="h-5 w-5 stroke-[1.75]" />
           </div>
         </div>
       </section>
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-3 sm:p-4">
+      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-3 sm:p-4">
         <div className="flex flex-wrap gap-2">
           {filters.map((filter) => {
             const active = activeStatus === filter.value;
@@ -76,10 +76,10 @@ export default async function EntrySupportTicketsPage({
               <Link
                 key={filter.label}
                 href={href}
-                className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+                className={`rounded-md border px-3 py-1.5 text-xs font-semibold transition ${
                   active
                     ? "border-violet-400/25 bg-violet-500/12 text-violet-100"
-                    : "border-[var(--border)] bg-[var(--surface-strong)] text-[var(--text-muted)] hover:text-white"
+                    : "border-[var(--console-border)] bg-white/[0.025] text-[var(--console-text-muted)] hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
                 }`}
               >
                 {filter.label}
@@ -90,23 +90,23 @@ export default async function EntrySupportTicketsPage({
       </section>
 
       {loadError ? (
-        <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 text-sm text-red-200">
+        <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           No se pudieron cargar los tickets: {loadError}
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-[var(--border)] bg-[var(--surface)]">
+      <section className="overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
         {tickets.length === 0 && !loadError ? (
           <div className="px-6 py-14 text-center">
-            <LifeBuoy className="mx-auto h-7 w-7 text-[var(--text-muted)]" />
+            <LifeBuoy className="mx-auto h-7 w-7 text-[var(--console-text-muted)]" />
             <p className="mt-3 text-sm font-semibold text-white">No hay tickets en esta vista</p>
-            <p className="mt-1 text-xs text-[var(--text-muted)]">Las nuevas solicitudes aparecerán aquí.</p>
+            <p className="mt-1 text-xs text-[var(--console-text-muted)]">Las nuevas solicitudes aparecerán aquí.</p>
           </div>
         ) : (
           <>
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[850px] text-left text-sm">
-                <thead className="border-b border-[var(--border)] bg-[var(--surface-strong)] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                <thead className="border-b border-[var(--console-border)] bg-[var(--console-surface-raised)] text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
                   <tr>
                     <th className="px-4 py-3">Ticket</th>
                     <th className="px-4 py-3">Usuario</th>
@@ -117,7 +117,7 @@ export default async function EntrySupportTicketsPage({
                     <th className="px-4 py-3 text-right">Actualizado</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--border)]">
+                <tbody className="divide-y divide-[var(--console-border)]">
                   {tickets.map((ticket) => {
                     const status = statusCopy[ticket.status];
                     return (
@@ -128,15 +128,15 @@ export default async function EntrySupportTicketsPage({
                           </Link>
                         </td>
                         <td className="px-4 py-4 text-white">{ticket.requesterName}</td>
-                        <td className="px-4 py-4 text-[var(--text-muted)]">{ticket.communityName}</td>
-                        <td className="max-w-48 truncate px-4 py-4 text-[var(--text-muted)]">{ticket.category}</td>
-                        <td className="px-4 py-4 text-[var(--text-muted)]">{ticket.source === "mobile" ? "Mobile" : "Web"}</td>
+                        <td className="px-4 py-4 text-[var(--console-text-muted)]">{ticket.communityName}</td>
+                        <td className="max-w-48 truncate px-4 py-4 text-[var(--console-text-muted)]">{ticket.category}</td>
+                        <td className="px-4 py-4 text-[var(--console-text-muted)]">{ticket.source === "mobile" ? "Mobile" : "Web"}</td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${status.className}`}>
+                          <span className={`inline-flex rounded-md border px-2.5 py-0.5 text-[11px] font-semibold ${status.className}`}>
                             {status.label}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-right text-xs text-[var(--text-muted)]">{formatDate(ticket.updatedAt)}</td>
+                        <td className="px-4 py-4 text-right text-xs text-[var(--console-text-muted)]">{formatDate(ticket.updatedAt)}</td>
                       </tr>
                     );
                   })}
@@ -144,7 +144,7 @@ export default async function EntrySupportTicketsPage({
               </table>
             </div>
 
-            <div className="divide-y divide-[var(--border)] md:hidden">
+            <div className="divide-y divide-[var(--console-border)] md:hidden">
               {tickets.map((ticket) => {
                 const status = statusCopy[ticket.status];
                 return (
@@ -158,12 +158,12 @@ export default async function EntrySupportTicketsPage({
                         <p className="text-sm font-semibold text-violet-200">{ticket.ticketNumber}</p>
                         <p className="mt-1 truncate text-sm font-semibold text-white">{ticket.requesterName}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${status.className}`}>
+                      <span className={`shrink-0 rounded-md border px-2.5 py-0.5 text-[10px] font-semibold ${status.className}`}>
                         {status.label}
                       </span>
                     </div>
-                    <p className="mt-3 text-sm text-[var(--text-muted)]">{ticket.category}</p>
-                    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[var(--text-muted)]">
+                    <p className="mt-3 text-sm text-[var(--console-text-muted)]">{ticket.category}</p>
+                    <div className="mt-3 flex items-center justify-between gap-3 text-xs text-[var(--console-text-muted)]">
                       <span className="truncate">{ticket.communityName} · {ticket.source === "mobile" ? "Mobile" : "Web"}</span>
                       <span className="shrink-0">{formatDate(ticket.updatedAt)}</span>
                     </div>

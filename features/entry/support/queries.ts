@@ -22,6 +22,15 @@ export type EntrySupportTicket = {
   resolvedAt: string | null;
 };
 
+export type EntrySupportRequester = {
+  email: string;
+  fullName: string;
+  houseLabel: string;
+  role: string;
+  userId: string;
+  username: string;
+};
+
 export type EntrySupportMessage = {
   id: string;
   authorId: string;
@@ -56,16 +65,40 @@ function toTicket(value: unknown): EntrySupportTicket | null {
     ticketNumber,
     createdBy: asString(row.created_by),
     communityId: asString(row.community_id) || null,
-    communityName: asString(row.community_name, "Sin comunidad"),
-    requesterName: asString(row.requester_name, "Usuario ENTRY"),
+    communityName: asString(row.community_name, "No community"),
+    requesterName: asString(row.requester_name, "ENTRY user"),
     source: asString(row.source) === "mobile" ? "mobile" : "web",
-    category: asString(row.category, "Soporte"),
+    category: asString(row.category, "Support"),
     description: asString(row.description),
     status,
     metadata: asRecord(row.metadata),
     createdAt: asString(row.created_at),
     updatedAt: asString(row.updated_at),
     resolvedAt: asString(row.resolved_at) || null,
+  };
+}
+
+function toRequester(value: unknown): EntrySupportRequester | null {
+  const row = asRecord(value);
+  const userId = asString(row.user_id) || asString(row.id);
+
+  if (!userId) return null;
+
+  return {
+    email: asString(row.email).trim().toLowerCase(),
+    fullName:
+      asString(row.full_name) ||
+      asString(row.name) ||
+      asString(row.display_name) ||
+      asString(row.username) ||
+      "ENTRY user",
+    houseLabel:
+      asString(row.house_label) ||
+      asString(row.unit_label) ||
+      "",
+    role: asString(row.role).trim().toUpperCase(),
+    userId,
+    username: asString(row.username),
   };
 }
 
@@ -107,6 +140,19 @@ export async function getEntrySupportTicket(ticketId: string) {
 
   const firstTicket = Array.isArray(ticketData) ? ticketData[0] : ticketData;
   const ticket = toTicket(firstTicket);
+  let requester: EntrySupportRequester | null = null;
+
+  if (ticket?.communityId && ticket.createdBy) {
+    const { data: requesterData } = await supabase.rpc("sa_list_community_users", {
+      p_community_id: ticket.communityId,
+      p_include_inactive: true,
+    });
+
+    requester =
+      (Array.isArray(requesterData) ? requesterData : [])
+        .map(toRequester)
+        .find((item) => item?.userId === ticket.createdBy) ?? null;
+  }
 
   const messages: EntrySupportMessage[] = (Array.isArray(messageData) ? messageData : [])
     .map((value) => {
@@ -126,6 +172,7 @@ export async function getEntrySupportTicket(ticketId: string) {
   return {
     ticket,
     messages,
+    requester,
     loadError: messageError?.message ?? null,
   };
 }
