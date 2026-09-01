@@ -132,7 +132,7 @@ export default async function EntrySupportTicketsPage({
                         <td className="max-w-48 truncate px-4 py-4 text-[var(--text-muted)]">{ticket.category}</td>
                         <td className="px-4 py-4 text-[var(--text-muted)]">{ticket.source === "mobile" ? "Mobile" : "Web"}</td>
                         <td className="px-4 py-4">
-                          <span className={`inline-flex rounded-full border px-2.5 py-1 text-[11px] font-semibold ${status.className}`}>
+                          <span className={`inline-flex rounded-md border px-2.5 py-0.5 text-[11px] font-semibold ${status.className}`}>
                             {status.label}
                           </span>
                         </td>
@@ -158,7 +158,7 @@ export default async function EntrySupportTicketsPage({
                         <p className="text-sm font-semibold text-violet-200">{ticket.ticketNumber}</p>
                         <p className="mt-1 truncate text-sm font-semibold text-white">{ticket.requesterName}</p>
                       </div>
-                      <span className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-semibold ${status.className}`}>
+                      <span className={`shrink-0 rounded-md border px-2.5 py-0.5 text-[10px] font-semibold ${status.className}`}>
                         {status.label}
                       </span>
                     </div>
