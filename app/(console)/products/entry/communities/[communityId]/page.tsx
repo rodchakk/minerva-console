@@ -8,7 +8,6 @@ import { CommunityAdminActivityDrawer } from "@/features/entry/communities/Commu
 import { CommunityFacilitiesDrawer } from "@/features/entry/communities/CommunityFacilitiesDrawer";
 import { CommunityOnboardingReadinessPanel } from "@/features/entry/communities/CommunityOnboardingReadinessPanel";
 import { CommunityUsersDrawer } from "@/features/entry/communities/CommunityUsersDrawer";
-import { CommunityUnitsDrawer } from "@/features/entry/communities/CommunityUnitsDrawer";
 import { CommunityRegistrationCard } from "@/features/entry/communityRegistration/admin/CommunityRegistrationCard";
 import { getCommunityRegistrationAdminState } from "@/features/entry/communityRegistration/admin/queries";
 import { getCommunityAdminActivityPreview } from "@/features/entry/communities/activityQueries";
@@ -540,11 +539,12 @@ export default async function CommunitySetupPage(
                   Add units ›
                 </Link>
               ) : (
-                <CommunityUnitsDrawer
-                  communityId={community.id}
-                  units={previews.units.items}
-                  triggerLabel="View full units directory"
-                />
+                <Link
+                  href={`/products/entry/communities/${community.id}/units`}
+                  className="text-sm font-semibold text-violet-200 transition hover:text-white"
+                >
+                  View full units directory ›
+                </Link>
               )}
             </div>
             {previews.units.state === "unavailable" ? (
