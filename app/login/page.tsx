@@ -48,16 +48,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 className="h-auto w-[300px] sm:w-[360px]"
               />
             </div>
-
-            <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.22em] text-red-400">
-              MINERVA TECHNOLOGIES
-            </p>
-            <h1 className="mt-3 text-4xl font-semibold tracking-[-0.045em] text-white sm:text-5xl">
-              Minerva Console
-            </h1>
-            <p className="mt-4 max-w-md text-sm leading-6 text-white/52 sm:text-base sm:leading-7">
-              Operations, support, and administration in one place.
-            </p>
           </div>
         </div>
 
