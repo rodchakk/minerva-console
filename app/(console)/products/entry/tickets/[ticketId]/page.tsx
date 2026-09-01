@@ -224,7 +224,7 @@ export default async function EntrySupportTicketPage({
       : undefined;
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-4 pt-5">
+    <div className="mx-auto max-w-[1680px] space-y-4 pt-5">
       <Link
         href="/products/entry/tickets"
         className="inline-flex min-h-9 items-center gap-2 rounded-md px-1 text-sm font-semibold text-[var(--text-muted)] transition hover:text-white"
@@ -306,7 +306,7 @@ export default async function EntrySupportTicketPage({
         </div>
       ) : null}
 
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <SupportConversation
           loadError={loadError}
           messages={messages}
