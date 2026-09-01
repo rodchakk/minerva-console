@@ -86,20 +86,29 @@ function compactRows(rows: DetailRow[]) {
 }
 
 function DetailSection({
+  className,
+  contentClassName,
   rows,
   title,
 }: {
+  className?: string;
+  contentClassName?: string;
   rows: DetailRow[];
   title: string;
 }) {
   if (rows.length === 0) return null;
 
   return (
-    <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
+    <section
+      className={cn(
+        "rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4",
+        className,
+      )}
+    >
       <p className="text-[11px] font-semibold uppercase text-violet-200">
         {title}
       </p>
-      <dl className="mt-4 space-y-2.5 text-sm">
+      <dl className={cn("mt-4 space-y-2.5 text-sm", contentClassName)}>
         {rows.map((item) => (
           <div
             key={item.label}
@@ -310,7 +319,7 @@ export default async function EntrySupportTicketPage({
           }}
         />
 
-        <aside className="space-y-4">
+        <aside className="space-y-4 xl:flex xl:h-[clamp(560px,72vh,720px)] xl:flex-col xl:gap-4 xl:space-y-0 xl:overflow-hidden">
           <section className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
             <p className="text-[11px] font-semibold uppercase text-violet-200">
               Quick Tools
@@ -325,8 +334,18 @@ export default async function EntrySupportTicketPage({
             />
           </section>
 
-          <DetailSection rows={contextRows} title="Context" />
-          <DetailSection rows={technicalRows} title="Technical Context" />
+          <DetailSection
+            className="xl:flex xl:min-h-0 xl:shrink xl:flex-col xl:overflow-hidden"
+            contentClassName="xl:min-h-0 xl:overflow-y-auto"
+            rows={contextRows}
+            title="Context"
+          />
+          <DetailSection
+            className="xl:mt-auto xl:flex xl:min-h-0 xl:shrink-0 xl:flex-col xl:overflow-hidden"
+            contentClassName="xl:min-h-0 xl:overflow-y-auto"
+            rows={technicalRows}
+            title="Technical Context"
+          />
         </aside>
       </div>
     </div>
