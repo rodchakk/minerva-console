@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserCircle } from "lucide-react";
 import { notFound } from "next/navigation";
 import { updateEntrySupportTicketStatus } from "@/features/entry/support/actions";
 import { SupportConversation } from "@/features/entry/support/SupportConversation";
@@ -99,11 +99,21 @@ function DetailSection({
       <p className="text-[11px] font-semibold uppercase text-violet-200">
         {title}
       </p>
-      <dl className="mt-4 space-y-3 text-sm">
+      <dl className="mt-4 space-y-2.5 text-sm">
         {rows.map((item) => (
-          <div key={item.label}>
-            <dt className="text-xs text-[var(--text-muted)]">{item.label}</dt>
-            <dd className="mt-1 break-words font-medium text-white">
+          <div
+            key={item.label}
+            className={cn(
+              "grid grid-cols-[88px_minmax(0,1fr)] gap-3",
+              title === "Context" && item.label === "Created"
+                ? "mt-3 border-t border-[var(--border)] pt-3"
+                : "",
+            )}
+          >
+            <dt className="text-xs leading-5 text-[var(--text-muted)]">
+              {item.label}
+            </dt>
+            <dd className="break-words text-xs font-semibold leading-5 text-white">
               {item.value}
             </dd>
           </div>
@@ -140,11 +150,6 @@ export default async function EntrySupportTicketPage({
       "unit",
       "house",
     ]);
-  const contactRows = compactRows([
-    { label: "Email", value: requester?.email ?? "" },
-    { label: "Username", value: requester?.username ?? "" },
-    { label: "Requester user ID", value: ticket.createdBy },
-  ]);
   const contextRows = compactRows([
     { label: "Community", value: ticket.communityName },
     { label: "Source", value: source },
@@ -210,7 +215,7 @@ export default async function EntrySupportTicketPage({
       : undefined;
 
   return (
-    <div className="space-y-4 pt-5">
+    <div className="mx-auto max-w-[1400px] space-y-4 pt-5">
       <Link
         href="/products/entry/tickets"
         className="inline-flex min-h-9 items-center gap-2 rounded-md px-1 text-sm font-semibold text-[var(--text-muted)] transition hover:text-white"
@@ -219,8 +224,8 @@ export default async function EntrySupportTicketPage({
         Back to tickets
       </Link>
 
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_18px_60px_rgba(2,6,23,0.18)] sm:p-5">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-5 py-5 sm:px-6">
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[11px] font-semibold uppercase text-violet-200">
@@ -235,12 +240,17 @@ export default async function EntrySupportTicketPage({
                 {status.label}
               </span>
             </div>
-            <h1 className="mt-2 truncate text-2xl font-semibold text-white sm:text-3xl">
+            <h1 className="mt-2 truncate text-3xl font-semibold text-white">
               {category}
             </h1>
-            <p className="mt-2 text-sm text-[var(--text-muted)]">
-              {ticket.requesterName} · {ticket.communityName} · {source}
-            </p>
+            <div className="mt-2 flex min-w-0 flex-wrap items-center gap-2 text-sm text-[var(--text-muted)]">
+              <UserCircle className="h-6 w-6 shrink-0 rounded-full border border-[var(--border)] p-1 text-slate-300" />
+              <span className="min-w-0 truncate">{ticket.requesterName}</span>
+              <span className="text-[var(--text-soft)]">·</span>
+              <span className="min-w-0 truncate">{ticket.communityName}</span>
+              <span className="text-[var(--text-soft)]">·</span>
+              <span>{source}</span>
+            </div>
           </div>
 
           <form
@@ -255,7 +265,7 @@ export default async function EntrySupportTicketPage({
               id="ticket-status"
               name="status"
               defaultValue={ticket.status}
-              className="h-10 rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/40"
+              className="h-10 min-w-36 rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-semibold text-white outline-none transition focus:border-violet-400/40"
             >
               <option value="open">Received</option>
               <option value="in_progress">In progress</option>
@@ -263,7 +273,7 @@ export default async function EntrySupportTicketPage({
             </select>
             <button
               type="submit"
-              className="h-10 rounded-md border border-violet-400/20 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20"
+              className="h-10 rounded-md border border-violet-400/25 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20"
             >
               Save status
             </button>
@@ -287,7 +297,7 @@ export default async function EntrySupportTicketPage({
         </div>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <SupportConversation
           loadError={loadError}
           messages={messages}
@@ -301,35 +311,6 @@ export default async function EntrySupportTicketPage({
         />
 
         <aside className="space-y-4">
-          <section className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
-            <p className="text-[11px] font-semibold uppercase text-violet-200">
-              Contact / identity
-            </p>
-            <div className="mt-4">
-              <p className="break-words text-lg font-semibold text-white">
-                {ticket.requesterName}
-              </p>
-              <p className="mt-1 text-xs font-semibold uppercase text-[var(--text-muted)]">
-                {[requesterRole, houseLabel].filter(Boolean).join(" · ") ||
-                  "Identity details unavailable"}
-              </p>
-            </div>
-            {contactRows.length > 0 ? (
-              <dl className="mt-4 space-y-3 text-sm">
-                {contactRows.map((item) => (
-                  <div key={item.label}>
-                    <dt className="text-xs text-[var(--text-muted)]">
-                      {item.label}
-                    </dt>
-                    <dd className="mt-1 break-words font-medium text-white">
-                      {item.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </section>
-
           <section className="space-y-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4">
             <p className="text-[11px] font-semibold uppercase text-violet-200">
               Quick Tools

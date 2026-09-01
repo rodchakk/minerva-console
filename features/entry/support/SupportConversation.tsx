@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef } from "react";
-import { Send } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, Send } from "lucide-react";
 import { useFormStatus } from "react-dom";
 import { replyToEntrySupportTicket } from "@/features/entry/support/actions";
 import { cn } from "@/lib/supabase/utils";
@@ -49,7 +49,7 @@ function SendReplyButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-violet-400/20 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-violet-400/25 bg-violet-500/14 px-4 text-sm font-semibold text-violet-100 transition hover:bg-violet-500/20 disabled:cursor-not-allowed disabled:opacity-60"
     >
       <Send className="h-4 w-4 stroke-[1.75]" />
       {pending ? "Sending..." : "Send"}
@@ -72,9 +72,9 @@ function MessageBubble({
     <div className={cn("flex", staff ? "justify-end" : "justify-start")}>
       <article
         className={cn(
-          "max-w-[92%] rounded-lg border px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.16)] sm:max-w-[78%]",
+          "max-w-[92%] rounded-md border px-3.5 py-3 sm:max-w-[76%]",
           staff
-            ? "border-violet-400/20 bg-violet-500/12"
+            ? "border-violet-400/28 bg-violet-500/14"
             : "border-[var(--border)] bg-[var(--surface-strong)]",
         )}
       >
@@ -91,7 +91,7 @@ function MessageBubble({
             {formatDateTime(createdAt)}
           </span>
         </div>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-white">
+        <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-6 text-white">
           {body}
         </p>
       </article>
@@ -105,24 +105,57 @@ export function SupportConversation({
   ticket,
 }: SupportConversationProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const nearBottomRef = useRef(true);
+  const mountedRef = useRef(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const latestMessageKey = useMemo(() => {
     const latest = messages[messages.length - 1];
     return latest ? `${latest.id}:${latest.createdAt}` : ticket.createdAt;
   }, [messages, ticket.createdAt]);
+  const messageCount = messages.length + 1;
+
+  const isNearBottom = useCallback((node: HTMLDivElement) => {
+    return node.scrollHeight - node.scrollTop - node.clientHeight < 96;
+  }, []);
+
+  const scrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {
+    const node = scrollRef.current;
+    if (!node) return;
+
+    node.scrollTo({
+      behavior,
+      top: node.scrollHeight,
+    });
+    nearBottomRef.current = true;
+    setHasNewMessages(false);
+  }, []);
 
   useEffect(() => {
     const node = scrollRef.current;
     if (!node) return;
 
-    node.scrollTo({
-      behavior: "smooth",
-      top: node.scrollHeight,
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      node.scrollTop = node.scrollHeight;
+      nearBottomRef.current = true;
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      if (nearBottomRef.current) {
+        scrollToLatest();
+        return;
+      }
+
+      setHasNewMessages(true);
     });
-  }, [latestMessageKey]);
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [latestMessageKey, scrollToLatest]);
 
   return (
-    <section className="flex h-[min(72vh,760px)] min-h-[540px] flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-[0_24px_70px_rgba(2,6,23,0.22)]">
-      <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3 sm:px-5">
+    <section className="flex h-[clamp(560px,72vh,720px)] flex-col overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+      <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase text-violet-200">
             Conversation
@@ -132,7 +165,7 @@ export function SupportConversation({
           </h2>
         </div>
         <p className="shrink-0 rounded-md border border-[var(--border)] bg-white/[0.03] px-2.5 py-1 text-[11px] font-semibold text-[var(--text-muted)]">
-          {messages.length + 1} messages
+          {messageCount} {messageCount === 1 ? "message" : "messages"}
         </p>
       </div>
 
@@ -142,32 +175,50 @@ export function SupportConversation({
         </div>
       ) : null}
 
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-5"
-      >
-        <div className="space-y-4">
-          <MessageBubble
-            author={ticket.requesterName}
-            body={ticket.description}
-            createdAt={ticket.createdAt}
-            staff={false}
-          />
-
-          {messages.map((message) => (
+      <div className="relative min-h-0 flex-1 border-t border-[var(--border)]">
+        <div
+          ref={scrollRef}
+          className="h-full overflow-y-auto px-4 py-5 sm:px-5"
+          onScroll={(event) => {
+            const node = event.currentTarget;
+            nearBottomRef.current = isNearBottom(node);
+            if (nearBottomRef.current) setHasNewMessages(false);
+          }}
+        >
+          <div className="space-y-9 pb-3">
             <MessageBubble
-              key={message.id}
-              author={
-                message.authorType === "staff"
-                  ? "Minerva Support"
-                  : ticket.requesterName
-              }
-              body={message.body}
-              createdAt={message.createdAt}
-              staff={message.authorType === "staff"}
+              author={ticket.requesterName}
+              body={ticket.description}
+              createdAt={ticket.createdAt}
+              staff={false}
             />
-          ))}
+
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                author={
+                  message.authorType === "staff"
+                    ? "Minerva Support"
+                    : ticket.requesterName
+                }
+                body={message.body}
+                createdAt={message.createdAt}
+                staff={message.authorType === "staff"}
+              />
+            ))}
+          </div>
         </div>
+
+        {hasNewMessages ? (
+          <button
+            type="button"
+            className="absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-3 text-xs font-semibold text-slate-100 shadow-[0_10px_28px_rgba(0,0,0,0.35)] transition hover:border-violet-400/24 hover:bg-[var(--surface-muted)]"
+            onClick={() => scrollToLatest()}
+          >
+            New messages
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
       </div>
 
       <form
@@ -188,7 +239,7 @@ export function SupportConversation({
           maxLength={4000}
           rows={3}
           placeholder="Write a reply to the requester..."
-          className="max-h-36 min-h-24 w-full resize-y rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/40"
+          className="max-h-32 min-h-24 w-full resize-y rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/40"
         />
         <div className="mt-3 flex items-center justify-end">
           <SendReplyButton />

@@ -4,11 +4,12 @@ import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  Building2,
   Clipboard,
   ClipboardCheck,
-  ExternalLink,
   KeyRound,
   Loader2,
+  UserRound,
   X,
 } from "lucide-react";
 import {
@@ -45,10 +46,10 @@ function formatExpiration(expiresAt?: string | null) {
 
 function toolClass(disabled?: boolean) {
   return cn(
-    "flex min-h-10 w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-xs font-semibold transition",
+    "flex min-h-9 w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-xs font-semibold transition",
     disabled
       ? "cursor-not-allowed border-[var(--border)] bg-white/[0.015] text-[var(--text-soft)]"
-      : "border-[var(--border)] bg-white/[0.025] text-slate-100 hover:border-violet-400/24 hover:bg-violet-500/10 hover:text-white",
+      : "border-[var(--border)] bg-white/[0.025] text-slate-100 hover:border-violet-400/24 hover:bg-white/[0.05] hover:text-white",
   );
 }
 
@@ -184,24 +185,24 @@ export function SupportQuickTools({
 
         {residentHref ? (
           <Link href={residentHref} className={toolClass()}>
-            <ExternalLink className="h-4 w-4 shrink-0 stroke-[1.75]" />
+            <UserRound className="h-4 w-4 shrink-0 stroke-[1.75]" />
             <span className="min-w-0 flex-1">View resident</span>
           </Link>
         ) : (
           <span className={toolClass(true)}>
-            <ExternalLink className="h-4 w-4 shrink-0 stroke-[1.75]" />
+            <UserRound className="h-4 w-4 shrink-0 stroke-[1.75]" />
             <span className="min-w-0 flex-1">View resident</span>
           </span>
         )}
 
         {communityHref ? (
           <Link href={communityHref} className={toolClass()}>
-            <ExternalLink className="h-4 w-4 shrink-0 stroke-[1.75]" />
+            <Building2 className="h-4 w-4 shrink-0 stroke-[1.75]" />
             <span className="min-w-0 flex-1">View community</span>
           </Link>
         ) : (
           <span className={toolClass(true)}>
-            <ExternalLink className="h-4 w-4 shrink-0 stroke-[1.75]" />
+            <Building2 className="h-4 w-4 shrink-0 stroke-[1.75]" />
             <span className="min-w-0 flex-1">View community</span>
           </span>
         )}
