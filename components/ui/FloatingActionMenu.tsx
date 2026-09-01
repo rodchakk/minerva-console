@@ -81,6 +81,14 @@ export function FloatingActionMenu({
     }
 
     const frame = window.requestAnimationFrame(updatePosition);
+    const resizeObserver =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => updatePosition());
+
+    if (menuRef.current) {
+      resizeObserver?.observe(menuRef.current);
+    }
 
     function handlePointerDown(event: PointerEvent) {
       const target = event.target as Node;
@@ -105,6 +113,7 @@ export function FloatingActionMenu({
 
     return () => {
       window.cancelAnimationFrame(frame);
+      resizeObserver?.disconnect();
       document.removeEventListener("pointerdown", handlePointerDown);
       document.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("resize", updatePosition);
