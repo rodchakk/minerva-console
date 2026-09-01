@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { KeyRound, MoreVertical, Power, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import type { CommunityUnitResident } from "@/features/entry/communities/detailQueries";
 import {
   setResidentPasswordAction,
@@ -22,6 +23,7 @@ export function UnitResidentActions({
   resident,
 }: UnitResidentActionsProps) {
   const router = useRouter();
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
   const [password, setPassword] = useState("");
@@ -92,53 +94,61 @@ export function UnitResidentActions({
   }
 
   return (
-    <div className="relative flex items-center gap-2">
+    <div className="flex items-center gap-2">
       {message ? (
         <span className="text-xs font-semibold text-emerald-300">{message}</span>
       ) : null}
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setMenuOpen((current) => !current)}
-        className="grid h-8 w-8 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition hover:border-violet-400/30 hover:text-white"
+        className="grid h-8 w-8 place-items-center rounded-md border border-[var(--border)] text-[var(--text-muted)] transition hover:border-violet-400/30 hover:text-white"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
         aria-label={`Open actions for ${resident.fullName}`}
       >
         <MoreVertical className="h-4 w-4" aria-hidden />
       </button>
 
-      {menuOpen ? (
-        <div className="absolute right-0 top-10 z-20 w-52 rounded-lg border border-[var(--border)] bg-[var(--surface-elevated)] p-1 shadow-[0_18px_40px_rgba(0,0,0,0.35)]">
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/6"
-            onClick={() => openModal("password")}
-          >
-            <KeyRound className="h-4 w-4 text-violet-200" aria-hidden />
-            Reset password
-          </button>
-          <button
-            type="button"
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/6"
-            onClick={() => openModal("status")}
-          >
-            {resident.isActive ? (
-              <Power className="h-4 w-4 text-rose-300" aria-hidden />
-            ) : (
-              <RotateCcw className="h-4 w-4 text-emerald-300" aria-hidden />
-            )}
-            {resident.isActive ? "Deactivate account" : "Reactivate account"}
-          </button>
-        </div>
-      ) : null}
+      <FloatingActionMenu
+        anchorRef={triggerRef}
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        className="w-52 p-1"
+      >
+        <button
+          type="button"
+          role="menuitem"
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/6"
+          onClick={() => openModal("password")}
+        >
+          <KeyRound className="h-4 w-4 text-violet-200" aria-hidden />
+          Reset password
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/6"
+          onClick={() => openModal("status")}
+        >
+          {resident.isActive ? (
+            <Power className="h-4 w-4 text-rose-300" aria-hidden />
+          ) : (
+            <RotateCcw className="h-4 w-4 text-emerald-300" aria-hidden />
+          )}
+          {resident.isActive ? "Deactivate account" : "Reactivate account"}
+        </button>
+      </FloatingActionMenu>
 
       {modal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-sm">
           <button
             type="button"
             aria-label="Close resident action"
             className="absolute inset-0"
             onClick={closeModal}
           />
-          <section className="relative z-10 w-full max-w-lg rounded-xl border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.5)]">
+          <section className="relative z-10 w-full max-w-lg rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.5)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
@@ -155,7 +165,7 @@ export function UnitResidentActions({
               <button
                 type="button"
                 onClick={closeModal}
-                className="grid h-9 w-9 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition hover:text-white"
+                className="grid h-9 w-9 place-items-center rounded-md border border-[var(--border)] text-[var(--text-muted)] transition hover:text-white"
                 aria-label="Close"
               >
                 <X className="h-4 w-4" aria-hidden />
@@ -172,7 +182,7 @@ export function UnitResidentActions({
                     type="password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
+                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
                   />
                 </label>
                 <label>
@@ -183,7 +193,7 @@ export function UnitResidentActions({
                     type="password"
                     value={confirmPassword}
                     onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
+                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
                   />
                 </label>
               </div>
