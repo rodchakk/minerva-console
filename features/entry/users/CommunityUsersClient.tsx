@@ -340,7 +340,7 @@ export function CommunityUsersClient({
     }
 
     if (createDraft.role === "RESIDENT" && !createDraft.houseId) {
-      setError(`Select a ${community.unitLabel.toLowerCase()} for this resident.`);
+      setError("Select a unit for this resident.");
       return;
     }
 
@@ -381,7 +381,7 @@ export function CommunityUsersClient({
     }
 
     if ((selectedUser.role === "RESIDENT" || selectedUser.role === "UNASSIGNED") && !draft.houseId) {
-      setError(`${community.unitLabel} is required for this user role.`);
+      setError("Unit is required for this user role.");
       return;
     }
 
@@ -552,7 +552,7 @@ export function CommunityUsersClient({
                     setQuery(event.target.value);
                     setVisibleCount(DEFAULT_VISIBLE_COUNT);
                   }}
-                  placeholder={`Search name, email, username, phone, or ${community.unitLabel.toLowerCase()}...`}
+                  placeholder="Search name, email, username, phone, or unit..."
                   className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
                 />
               </div>
@@ -625,7 +625,7 @@ export function CommunityUsersClient({
                   <span>Name</span>
                   <span>Access identity</span>
                   <span>Role</span>
-                  <span>{community.unitLabel}</span>
+                  <span>Unit</span>
                   <span>Phone</span>
                   <span>Status</span>
                   <span className="text-right">Actions</span>
@@ -836,13 +836,13 @@ export function CommunityUsersClient({
                   </label>
                   {createDraft.role === "RESIDENT" ? (
                     <label>
-                      <FieldLabel>{community.unitLabel} *</FieldLabel>
+                      <FieldLabel>Unit *</FieldLabel>
                       <select
                         value={createDraft.houseId}
                         onChange={(event) => setCreateDraft((current) => ({ ...current, houseId: event.target.value }))}
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                       >
-                        <option value="">Select {community.unitLabel.toLowerCase()}</option>
+                        <option value="">Select unit</option>
                         {activeHouses.map((house) => (
                           <option key={house.id} value={house.id}>{house.label}</option>
                         ))}
@@ -873,7 +873,7 @@ export function CommunityUsersClient({
                       {[
                         ["Access identity", getIdentityLabel(selectedUser)],
                         ["Role", getRoleLabel(selectedUser.role)],
-                        [community.unitLabel, selectedUser.houseLabel],
+                        ["Unit", selectedUser.houseLabel],
                         ["Phone", selectedUser.phone || "Not provided"],
                         ["Status", selectedUser.isActive ? "Active" : "Inactive"],
                         ["Identity type", getIdentityType(selectedUser)],
@@ -935,13 +935,13 @@ export function CommunityUsersClient({
                     </label>
                     {(selectedUser.role === "RESIDENT" || selectedUser.role === "UNASSIGNED") ? (
                       <label>
-                        <FieldLabel>{community.unitLabel} *</FieldLabel>
+                        <FieldLabel>Unit *</FieldLabel>
                         <select
                           value={draft.houseId}
                           onChange={(event) => setDraft((current) => current ? { ...current, houseId: event.target.value } : current)}
                           className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                         >
-                          <option value="">Select {community.unitLabel.toLowerCase()}</option>
+                          <option value="">Select unit</option>
                           {houses.map((house) => (
                             <option key={house.id} value={house.id}>{house.label}{house.isActive ? "" : " (inactive)"}</option>
                           ))}
