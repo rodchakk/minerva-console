@@ -100,10 +100,10 @@
     "type": "project",
     "status": "approved",
     "title": "ENTRY Native Support Tickets",
-    "summary": "Completed first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, and Minerva Console, with owner/superadmin authorization, three-state workflow, conversations, Android keyboard hardening, and validated Realtime between ENTRY Mobile and Console. Push notifications and mobile store release remain separate follow-up work.",
+    "summary": "Completed and security-hardened first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, and Minerva Console. ENTRY 1.0.2 production binaries include the Support work; Android production rollout is staged but final review/rollout confirmation is not yet recorded, while iOS 1.0.2 build 11 is Waiting for Review. Push notifications remain separate follow-up work.",
     "created": "2026-08-31",
-    "updated": "2026-08-31",
-    "tags": ["entry", "support", "tickets", "supabase", "realtime", "mobile", "console", "web"],
+    "updated": "2026-09-01",
+    "tags": ["entry", "support", "tickets", "supabase", "realtime", "mobile", "console", "web", "security", "release"],
     "related": ["PRJ-0001"],
     "path": "content/brain/projects/entry-support-tickets.md"
   },
