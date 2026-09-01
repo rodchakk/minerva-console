@@ -34,12 +34,7 @@ export function FloatingActionMenu({
   open,
 }: FloatingActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const [mounted, setMounted] = useState(false);
   const [position, setPosition] = useState<MenuPosition | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const updatePosition = useCallback(() => {
     const anchor = anchorRef.current;
@@ -75,10 +70,7 @@ export function FloatingActionMenu({
   }, [anchorRef]);
 
   useEffect(() => {
-    if (!open) {
-      setPosition(null);
-      return;
-    }
+    if (!open) return;
 
     const frame = window.requestAnimationFrame(updatePosition);
     const resizeObserver =
@@ -121,7 +113,7 @@ export function FloatingActionMenu({
     };
   }, [anchorRef, onClose, open, updatePosition]);
 
-  if (!mounted || !open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   return createPortal(
     <div
