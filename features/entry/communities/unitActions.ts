@@ -5,7 +5,7 @@ import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { coerceString } from "@/lib/supabase/utils";
+import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
 
 export type CommunityUnitActionResult = {
   error?: string;
@@ -108,7 +108,7 @@ async function loadUnitInCommunity(input: {
   const adminSupabase = createAdminClient();
   const { data, error } = await adminSupabase
     .from("houses")
-    .select("id,house_label")
+    .select("id,house_label,is_active")
     .eq("community_id", input.communityId)
     .eq("id", input.unitId)
     .maybeSingle();
@@ -120,6 +120,7 @@ async function loadUnitInCommunity(input: {
   return data
     ? {
         id: coerceString(data.id),
+        isActive: data.is_active === undefined ? true : coerceBoolean(data.is_active),
         label: coerceString(data.house_label, "Unnamed unit"),
       }
     : null;
@@ -360,6 +361,13 @@ export async function createQuickResidentAction(
 
   if (!unit) {
     return { error: "Unit not found in this community.", success: false };
+  }
+
+  if (!unit.isActive) {
+    return {
+      error: "Activate this unit before creating a resident account.",
+      success: false,
+    };
   }
 
   let username: string;

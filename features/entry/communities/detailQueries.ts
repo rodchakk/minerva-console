@@ -53,6 +53,7 @@ export type CommunityUnitPreview = {
   ownerName: string;
   pendingActivations: number;
   primaryResidentName: string;
+  residentCount: number;
   residents: CommunityUnitResident[];
   activePassItems: CommunityUnitPass[];
   pendingActivationItems: CommunityUnitPendingActivation[];
@@ -64,6 +65,7 @@ export type CommunityUnitsSummary = {
   activeUnits: number;
   inactiveUnits: number;
   pendingActivations: number;
+  residentCount: number;
   totalUnits: number;
   unitsWithRecentAccess: number;
 };
@@ -318,6 +320,48 @@ function getComputedPassStatus(record: Record<string, unknown>) {
   }
 
   return "Active";
+}
+
+function parseDateValue(value: string) {
+  if (!value) return null;
+
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function hasInactivePassStatus(record: Record<string, unknown>) {
+  const explicit =
+    coerceString(record.computed_status) ||
+    coerceString(record.status);
+  const normalized = explicit.trim().toLowerCase();
+
+  return ["expired", "revoked", "inactive", "cancelled", "canceled", "suspended"].includes(
+    normalized,
+  );
+}
+
+function isCurrentlyActivePass(record: Record<string, unknown>, now: Date) {
+  if (record.is_active !== undefined && !coerceBoolean(record.is_active)) {
+    return false;
+  }
+
+  if (hasInactivePassStatus(record)) {
+    return false;
+  }
+
+  const startsAt = parseDateValue(coerceString(record.starts_at));
+  const expiresAt = parseDateValue(coerceString(record.expires_at));
+
+  if (startsAt && startsAt > now) {
+    return false;
+  }
+
+  if (expiresAt && expiresAt <= now) {
+    return false;
+  }
+
+  return true;
 }
 
 function formatSourceType(value: string) {
@@ -695,6 +739,11 @@ async function loadUnitsPreview(
           ownerName,
           pendingActivations: 0,
           primaryResidentName: ownerName === "No owner linked" ? "" : ownerName,
+          residentCount:
+            coerceNumber(record.resident_count) ||
+            coerceNumber(record.total_residents) ||
+            coerceNumber(record.linked_residents_count) ||
+            coerceNumber(record.residents_count),
           residents: [],
           activePassItems: [],
           pendingActivationItems: [],
@@ -856,7 +905,11 @@ async function loadUnitPasses(communityId: string): Promise<CommunityUnitPass[]>
       return [];
     }
 
+    const now = new Date();
+
     return data
+      .filter((item) => item && typeof item === "object")
+      .filter((item) => isCurrentlyActivePass(item as Record<string, unknown>, now))
       .map((item) => {
         const record = item as Record<string, unknown>;
         const id = coerceString(record.id);
@@ -922,14 +975,16 @@ function enrichUnits(
       null;
     const activePassItems = passesByHouseId.get(unit.id) ?? [];
     const pendingActivationItems = pendingByUnitLabel.get(normalizeUnitLabel(unit.label)) ?? [];
+    const residentCount = unitResidents.length || unit.residentCount;
 
     return {
       ...unit,
-      activePasses: activePassItems.length || unit.activePasses,
+      activePasses: Math.max(unit.activePasses, activePassItems.length),
       activeResidents: activeResidents.length,
       ownerName: primaryResident?.fullName || "No residents",
       pendingActivations: pendingActivationItems.length,
       primaryResidentName: primaryResident?.fullName || "",
+      residentCount,
       residents: unitResidents,
       activePassItems,
       pendingActivationItems,
@@ -944,6 +999,7 @@ function getEmptyUnitsSummary(): CommunityUnitsSummary {
     activeUnits: 0,
     inactiveUnits: 0,
     pendingActivations: 0,
+    residentCount: 0,
     totalUnits: 0,
     unitsWithRecentAccess: 0,
   };
@@ -956,6 +1012,7 @@ function buildUnitsSummary(items: CommunityUnitPreview[]): CommunityUnitsSummary
       acc.activeResidents += item.activeResidents;
       acc.activePasses += item.activePasses;
       acc.pendingActivations += item.pendingActivations;
+      acc.residentCount += item.residentCount;
 
       if (item.isActive) {
         acc.activeUnits += 1;
@@ -1031,9 +1088,9 @@ function filterCommunityUnits(
         return !item.isActive;
       case "occupied":
       case "has_residents":
-        return item.activeResidents > 0;
+        return item.residentCount > 0;
       case "no_residents":
-        return item.activeResidents === 0;
+        return item.residentCount === 0;
       case "pending_activation":
         return item.pendingActivations > 0;
       case "has_passes":

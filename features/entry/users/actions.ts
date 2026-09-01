@@ -158,6 +158,21 @@ function extractExpiration(data: unknown) {
   return null;
 }
 
+function revalidateCommunityUserPaths(communityId: string, houseId?: string) {
+  revalidatePath("/products/entry/communities");
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/products/entry/communities/${communityId}/users`);
+  revalidatePath(`/products/entry/communities/${communityId}/units`);
+  revalidatePath("/products/entry/users");
+
+  if (houseId) {
+    revalidatePath(`/products/entry/communities/${communityId}/units/${houseId}`);
+    revalidatePath(`/field/entry/communities/${communityId}`);
+    revalidatePath(`/field/entry/communities/${communityId}/people`);
+    revalidatePath(`/field/entry/communities/${communityId}/people/units/${houseId}`);
+  }
+}
+
 export async function searchUsersAction(
   _previousState: UserSearchState,
   formData: FormData,
@@ -299,9 +314,7 @@ export async function updateCommunityUserAction(
     };
   }
 
-  revalidatePath("/products/entry/communities");
-  revalidatePath(`/products/entry/communities/${input.communityId}`);
-  revalidatePath(`/products/entry/communities/${input.communityId}/users`);
+  revalidateCommunityUserPaths(input.communityId, input.houseId?.trim() || undefined);
 
   return { success: true };
 }
@@ -494,9 +507,17 @@ export async function setCommunityUserActiveStatusAction(
     };
   }
 
-  revalidatePath("/products/entry/communities");
-  revalidatePath(`/products/entry/communities/${input.communityId}`);
-  revalidatePath(`/products/entry/communities/${input.communityId}/users`);
+  const { data: profileData } = await supabase
+    .from("profiles")
+    .select("house_id")
+    .eq("community_id", input.communityId)
+    .eq("user_id", input.userId)
+    .maybeSingle();
+
+  revalidateCommunityUserPaths(
+    input.communityId,
+    coerceString(profileData?.house_id) || undefined,
+  );
 
   return { success: true };
 }

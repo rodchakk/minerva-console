@@ -10,7 +10,6 @@ import {
   Filter,
   Home,
   MinusCircle,
-  MoreVertical,
   Search,
   ShieldCheck,
   UserRound,
@@ -177,8 +176,8 @@ export default async function CommunityUnitsPage(
         />
         <Metric
           label="Residents"
-          value={unitsData.summary.activeResidents}
-          hint="Across active accounts"
+          value={unitsData.summary.residentCount}
+          hint="Linked to units"
           icon={<UserRound className="h-5 w-5" aria-hidden />}
         />
         <Metric
@@ -301,7 +300,7 @@ export default async function CommunityUnitsPage(
                         </div>
                       </td>
                       <td className="px-4 py-3">{unit.primaryResidentName || "No residents"}</td>
-                      <td className="px-4 py-3">{unit.activeResidents}</td>
+                      <td className="px-4 py-3">{unit.residentCount}</td>
                       <td className="px-4 py-3">{unit.pendingActivations}</td>
                       <td className="px-4 py-3">{unit.activePasses}</td>
                       <td className="px-4 py-3">
@@ -317,13 +316,6 @@ export default async function CommunityUnitsPage(
                           <Link href={`/products/entry/communities/${community.id}/units/${unit.id}`}>
                             <Button type="button" variant="secondary">View details</Button>
                           </Link>
-                          <button
-                            type="button"
-                            className="grid h-9 w-9 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)]"
-                            aria-label={`More actions for ${unit.label}`}
-                          >
-                            <MoreVertical className="h-4 w-4" aria-hidden />
-                          </button>
                         </div>
                       </td>
                     </tr>

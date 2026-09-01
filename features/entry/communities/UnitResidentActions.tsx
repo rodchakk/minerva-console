@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { KeyRound, MoreVertical, Power, RotateCcw, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import type { CommunityUnitResident } from "@/features/entry/communities/detailQueries";
@@ -20,6 +21,7 @@ export function UnitResidentActions({
   communityId,
   resident,
 }: UnitResidentActionsProps) {
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
   const [password, setPassword] = useState("");
@@ -85,6 +87,7 @@ export function UnitResidentActions({
 
       setMessage(resident.isActive ? "Account deactivated." : "Account reactivated.");
       setModal(null);
+      router.refresh();
     });
   }
 

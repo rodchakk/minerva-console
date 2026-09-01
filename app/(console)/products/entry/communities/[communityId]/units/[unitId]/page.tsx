@@ -317,7 +317,7 @@ export default async function CommunityUnitDetailPage(
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         <Metric
           label="Residents"
-          value={unit.residents.length}
+          value={unit.residentCount}
           hint="Linked to this unit"
           icon={<UsersRound className="h-5 w-5" aria-hidden />}
         />
@@ -522,30 +522,38 @@ export default async function CommunityUnitDetailPage(
                   {unit.activePasses} active pass{unit.activePasses === 1 ? "" : "es"} reported. Pass details are unavailable.
                 </p>
               ) : (
-                <div className="mt-5 overflow-x-auto rounded-lg border border-white/8">
-                  <table className="min-w-[520px] w-full text-left text-sm">
-                    <thead className="bg-white/[0.03] text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                      <tr>
-                        <th className="px-3 py-3">Pass</th>
-                        <th className="px-3 py-3">Resident</th>
-                        <th className="px-3 py-3">Expires</th>
-                        <th className="px-3 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/8">
-                      {unit.activePassItems.map((pass) => (
-                        <tr key={pass.id} className="bg-[var(--surface-strong)]">
-                          <td className="px-3 py-3 text-white">{pass.passName}</td>
-                          <td className="px-3 py-3 text-slate-200">{pass.holderName}</td>
-                          <td className="px-3 py-3 text-slate-200">{pass.expiresAt}</td>
-                          <td className="px-3 py-3">
-                            <Badge tone="success">{pass.status}</Badge>
-                          </td>
+                <>
+                  {unit.activePasses > unit.activePassItems.length ? (
+                    <p className="mt-5 rounded-lg border border-white/8 bg-white/[0.03] px-4 py-3 text-sm text-[var(--text-muted)]">
+                      {unit.activePasses - unit.activePassItems.length} additional active pass
+                      {unit.activePasses - unit.activePassItems.length === 1 ? "" : "es"} reported.
+                    </p>
+                  ) : null}
+                  <div className="mt-5 overflow-x-auto rounded-lg border border-white/8">
+                    <table className="min-w-[520px] w-full text-left text-sm">
+                      <thead className="bg-white/[0.03] text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        <tr>
+                          <th className="px-3 py-3">Pass</th>
+                          <th className="px-3 py-3">Resident</th>
+                          <th className="px-3 py-3">Expires</th>
+                          <th className="px-3 py-3">Status</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="divide-y divide-white/8">
+                        {unit.activePassItems.map((pass) => (
+                          <tr key={pass.id} className="bg-[var(--surface-strong)]">
+                            <td className="px-3 py-3 text-white">{pass.passName}</td>
+                            <td className="px-3 py-3 text-slate-200">{pass.holderName}</td>
+                            <td className="px-3 py-3 text-slate-200">{pass.expiresAt}</td>
+                            <td className="px-3 py-3">
+                              <Badge tone="success">{pass.status}</Badge>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </section>
           </section>

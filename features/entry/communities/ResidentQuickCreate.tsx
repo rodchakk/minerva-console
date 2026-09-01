@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Copy, Plus, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -24,6 +25,7 @@ export function ResidentQuickCreate({
   triggerClassName,
   triggerLabel = "Create resident",
 }: ResidentQuickCreateProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [fullName, setFullName] = useState("");
   const [password, setPassword] = useState("");
@@ -35,6 +37,11 @@ export function ResidentQuickCreate({
     () => houses.find((house) => house.id === (fixedUnitId ?? unitId)) ?? null,
     [fixedUnitId, houses, unitId],
   );
+  const activeHouses = useMemo(
+    () => houses.filter((house) => house.isActive),
+    [houses],
+  );
+  const fixedUnitInactive = Boolean(fixedUnitId && selectedUnit && !selectedUnit.isActive);
 
   function resetForm() {
     setFullName("");
@@ -54,6 +61,14 @@ export function ResidentQuickCreate({
     setResult(null);
     setCopied(false);
 
+    if (selectedUnit && !selectedUnit.isActive) {
+      setResult({
+        error: "Activate this unit before creating a resident account.",
+        success: false,
+      });
+      return;
+    }
+
     startTransition(async () => {
       const nextResult = await createQuickResidentAction({
         communityId,
@@ -67,6 +82,7 @@ export function ResidentQuickCreate({
       if (nextResult.success) {
         setFullName("");
         setPassword("");
+        router.refresh();
       }
     });
   }
@@ -90,10 +106,12 @@ export function ResidentQuickCreate({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className={
+        disabled={fixedUnitInactive}
+        title={fixedUnitInactive ? "Activate this unit before adding residents." : undefined}
+        className={`${
           triggerClassName ??
           "inline-flex items-center justify-center gap-2 rounded-lg border border-transparent bg-[var(--primary)] px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-[var(--primary-strong)]"
-        }
+        } disabled:cursor-not-allowed disabled:opacity-55`}
       >
         <Plus className="h-4 w-4" aria-hidden />
         {triggerLabel}
@@ -185,7 +203,9 @@ export function ResidentQuickCreate({
                   </span>
                   {fixedUnitId ? (
                     <div className="h-11 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm font-semibold text-white">
-                      {selectedUnit?.label ?? "Selected unit"}
+                      {fixedUnitInactive
+                        ? `${selectedUnit?.label ?? "Selected unit"} - activate unit first`
+                        : selectedUnit?.label ?? "Selected unit"}
                     </div>
                   ) : (
                     <select
@@ -195,13 +215,18 @@ export function ResidentQuickCreate({
                     >
                       <option value="">Select unit</option>
                       {houses.map((house) => (
-                        <option key={house.id} value={house.id}>
+                        <option key={house.id} value={house.id} disabled={!house.isActive}>
                           {house.label}
                           {house.isActive ? "" : " (inactive)"}
                         </option>
                       ))}
                     </select>
                   )}
+                  {!fixedUnitId && activeHouses.length === 0 ? (
+                    <p className="mt-2 text-sm text-amber-200">
+                      Activate a unit before creating residents.
+                    </p>
+                  ) : null}
                 </label>
 
                 <label className="block">
