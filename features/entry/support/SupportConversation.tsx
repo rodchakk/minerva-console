@@ -49,7 +49,7 @@ function SendReplyButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-transparent bg-[var(--console-accent)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-transparent bg-[var(--console-accent)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-50"
     >
       <Send className="h-4 w-4 stroke-[1.75]" />
       {pending ? "Sending..." : "Send"}
@@ -72,7 +72,7 @@ function MessageBubble({
     <div className={cn("flex", staff ? "justify-end" : "justify-start")}>
       <article
         className={cn(
-          "max-w-[92%] rounded-lg border px-3.5 py-3 sm:max-w-[76%]",
+          "max-w-[92%] rounded-md border px-3.5 py-3 sm:max-w-[76%]",
           staff
             ? "border-violet-400/25 bg-violet-500/[0.10]"
             : "border-[var(--console-border)] bg-[var(--console-surface-raised)]",
@@ -169,13 +169,13 @@ export function SupportConversation({
             Ticket activity
           </h2>
         </div>
-        <p className="shrink-0 rounded-lg border border-[var(--console-border)] bg-white/[0.025] px-2.5 py-1 text-[11px] font-semibold text-[var(--console-text-muted)]">
+        <p className="shrink-0 rounded-md border border-[var(--console-border)] bg-white/[0.025] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--console-text-muted)]">
           {messageCount} {messageCount === 1 ? "message" : "messages"}
         </p>
       </div>
 
       {loadError ? (
-        <div className="mx-4 mt-4 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 sm:mx-5">
+        <div className="mx-4 mt-4 rounded-md border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200 sm:mx-5">
           Some messages could not be loaded.
         </div>
       ) : null}
@@ -244,7 +244,7 @@ export function SupportConversation({
           maxLength={4000}
           rows={3}
           placeholder="Write a reply to the requester..."
-          className="max-h-32 min-h-24 w-full resize-y rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--console-text-muted)] hover:border-white/20 focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+          className="max-h-32 min-h-24 w-full resize-y rounded-md border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--console-text-muted)] hover:border-white/20 focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
         />
         <div className="mt-3 flex items-center justify-end">
           <SendReplyButton />

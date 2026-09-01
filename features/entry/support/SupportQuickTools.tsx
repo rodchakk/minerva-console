@@ -46,7 +46,7 @@ function formatExpiration(expiresAt?: string | null) {
 
 function toolClass(disabled?: boolean) {
   return cn(
-    "flex min-h-9 w-full items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
+    "flex min-h-9 w-full items-center gap-2.5 rounded-md border px-3 py-2 text-left text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
     disabled
       ? "cursor-not-allowed border-[var(--console-border)] bg-white/[0.01] text-[var(--console-text-soft)]"
       : "border-[var(--console-border-strong)] bg-white/[0.025] text-slate-100 hover:border-white/20 hover:bg-white/[0.05] hover:text-white",
@@ -60,7 +60,7 @@ function ResetSubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-transparent bg-[var(--console-accent)] px-3.5 text-xs font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-50"
+      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-transparent bg-[var(--console-accent)] px-3.5 text-xs font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-50"
     >
       {pending ? <Loader2 className="h-3.5 w-3.5 animate-spin stroke-[1.75]" /> : null}
       {pending ? "Resetting..." : "Reset password"}
@@ -85,7 +85,7 @@ function CopyCodeButton({ code }: { code: string }) {
     <button
       type="button"
       onClick={handleCopy}
-      className="inline-flex h-8 items-center gap-2 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-2.5 text-xs font-semibold text-slate-100 transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+      className="inline-flex h-8 items-center gap-2 rounded-md border border-[var(--console-border-strong)] bg-white/[0.025] px-2.5 text-xs font-semibold text-slate-100 transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
     >
       {copied ? (
         <ClipboardCheck className="h-3.5 w-3.5 stroke-[1.75] text-emerald-300" />
@@ -102,7 +102,7 @@ function ResetResult({ state }: { state: SupportResetRequesterAccessState }) {
 
   if (state.success && state.mode === "email") {
     return (
-      <p className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-medium text-emerald-200">
+      <p className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-3.5 py-2.5 text-xs font-medium text-emerald-200">
         Password reset email sent.
       </p>
     );
@@ -110,7 +110,7 @@ function ResetResult({ state }: { state: SupportResetRequesterAccessState }) {
 
   if (state.success && state.mode === "recovery_code" && state.code) {
     return (
-      <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 p-3.5">
+      <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 p-3.5">
         <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-emerald-300/80">
           Temporary recovery code
         </p>
@@ -131,7 +131,7 @@ function ResetResult({ state }: { state: SupportResetRequesterAccessState }) {
 
   if (state.error) {
     return (
-      <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-3.5 py-2.5 text-xs font-medium text-rose-200">
+      <p className="rounded-md border border-rose-400/20 bg-rose-500/10 px-3.5 py-2.5 text-xs font-medium text-rose-200">
         {state.error}
       </p>
     );
@@ -246,7 +246,7 @@ export function SupportQuickTools({
               <button
                 type="button"
                 aria-label="Close"
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] text-[var(--console-text-muted)] transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-md border border-[var(--console-border-strong)] bg-white/[0.025] text-[var(--console-text-muted)] transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
                 onClick={() => setConfirmOpen(false)}
               >
                 <X className="h-4 w-4 stroke-[1.75]" />
@@ -261,7 +261,7 @@ export function SupportQuickTools({
               <input type="hidden" name="ticketId" value={ticketId} />
               <button
                 type="button"
-                className="inline-flex h-9 items-center justify-center rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3.5 text-xs font-semibold text-slate-100 transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+                className="inline-flex h-9 items-center justify-center rounded-md border border-[var(--console-border-strong)] bg-white/[0.025] px-3.5 text-xs font-semibold text-slate-100 transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
                 onClick={() => setConfirmOpen(false)}
               >
                 Cancel

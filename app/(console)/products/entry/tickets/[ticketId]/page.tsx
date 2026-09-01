@@ -242,7 +242,7 @@ export default async function EntrySupportTicketPage({
               </p>
               <span
                 className={cn(
-                  "rounded-md border px-2.5 py-1 text-[11px] font-semibold",
+                  "rounded-md border px-2.5 py-0.5 text-[11px] font-semibold",
                   status.className,
                 )}
               >
@@ -274,7 +274,7 @@ export default async function EntrySupportTicketPage({
               id="ticket-status"
               name="status"
               defaultValue={ticket.status}
-              className="h-9 min-w-36 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3 text-sm font-semibold text-white outline-none transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+              className="h-9 min-w-36 rounded-md border border-[var(--console-border-strong)] bg-white/[0.025] px-3 text-sm font-semibold text-white outline-none transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             >
               <option value="open">Received</option>
               <option value="in_progress">In progress</option>
@@ -282,7 +282,7 @@ export default async function EntrySupportTicketPage({
             </select>
             <button
               type="submit"
-              className="h-9 rounded-lg border border-transparent bg-[var(--console-accent)] px-3.5 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+              className="h-9 rounded-md border border-transparent bg-[var(--console-accent)] px-3.5 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             >
               Save status
             </button>
@@ -291,17 +291,17 @@ export default async function EntrySupportTicketPage({
       </section>
 
       {query.sent === "1" ? (
-        <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Reply sent.
         </div>
       ) : null}
       {query.updated === "1" ? (
-        <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="rounded-md border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
           Status updated.
         </div>
       ) : null}
       {query.error ? (
-        <div className="rounded-lg border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-md border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
           We could not complete the action. Try again.
         </div>
       ) : null}
