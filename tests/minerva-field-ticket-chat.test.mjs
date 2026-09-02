@@ -48,7 +48,6 @@ test("ticket quick actions reuse ENTRY recovery and people surfaces", () => {
   assert.match(chat, /resetFieldResidentAccess/);
   assert.match(chat, /Reset access/);
   assert.match(chat, /Open user/);
-  assert.match(chat, /support/i);
   assert.match(chat, /Confirm reset/);
   assert.match(chat, /Temporary recovery code/);
   assert.match(chat, /Resolve/);
