@@ -12,6 +12,12 @@ The authenticated root experience should become **Minerva Control Center**: one 
 
 The foundation must stay intentionally simple, visual, low-cost, and modular. It should create the correct architecture and UX now without forcing universal APIs, observability infrastructure, AI processing, replicated product data, or paid background services.
 
+ENTRY is the **first real product integration pilot** for this architecture. The initial `Add Product` experience is deliberately manual and guided: Console provides the integration instructions, a human or AI agent implements the required contract, the user enters the connection/configuration values manually, and `Test connection` verifies the supported read-only connection on demand.
+
+Detailed pilot specification:
+
+`content/brain/projects/minerva-console-entry-first-integration-pilot.md`
+
 ## Core product definition
 
 > Minerva Console is the web home for Minerva Technologies products. The administrative and operational “guts” of Minerva systems live here.
@@ -207,6 +213,8 @@ Longer term, Brain data/workspaces may be isolated from shared Brain shell/compo
 
 Control Center should expose a clear `Add Product` path.
 
+V1 behavior is **manual and guided**, not automatic. The product is created/configured intentionally by the user; Console provides instructions but does not auto-discover applications or modify their repositories.
+
 Conceptual fields:
 
 ```text
@@ -220,12 +228,30 @@ Environment
 Admin URL
 Overview endpoint (optional)
 Owner
-Connection mode: Link only | Overview API | Future full integration
+Connection mode: Link only | Overview API | Native module | Future full integration
 ```
+
+The flow should conceptually be:
+
+```text
+Add Product
+→ enter metadata
+→ choose type / connection mode
+→ generate/view/copy integration instructions
+→ implement required contract manually (human or AI agent)
+→ return to Console
+→ enter/edit actual connection values manually
+→ Test connection
+→ activate product
+```
+
+Manual configuration fields may include Admin/module URL, Overview endpoint, optional connector credential, environment, and connection label according to the selected connection mode.
 
 V1 should not invent a universal plugin platform. A small registry/configuration model is enough.
 
 A new product should be able to appear in Control Center without hand-coding a new dashboard card every time.
+
+ENTRY is the first product used to validate this full setup pattern. Because ENTRY is already native, do not fabricate an external dependency only to simulate an external connector; validate the shared registry, setup instructions, manual values, test flow, card rendering, and navigation using the smallest real seam that fits ENTRY.
 
 ## Integration Kit
 
@@ -247,11 +273,12 @@ It contains no private ENTRY code and no private Brain knowledge.
 
 Console should expose actions conceptually like:
 
+- `View setup instructions`
 - `Download Integration Kit`
 - `Copy AI Instructions`
 - `Test connection`
 
-The generated/downloaded AI-friendly instructions should be Markdown-first and may prefill product-specific information such as product name, slug, mode, allowed endpoint, and Console expectations.
+The generated/downloaded AI-friendly instructions should be Markdown-first and may prefill product-specific information such as product name, slug, mode, allowed endpoint, expected route, protected modules, and Console expectations.
 
 The integration instructions should document:
 
@@ -262,9 +289,20 @@ The integration instructions should document:
 - zero-added-cost rule;
 - protected modules not to touch;
 - endpoint examples;
+- manual values the user must return to Console and enter;
 - verification checklist.
 
 Creating and publishing the separate integration-kit repository may be split into a follow-up implementation if doing it here would enlarge the foundation unnecessarily.
+
+## Test connection rule
+
+`Test connection` is an explicit user action, not a background monitor.
+
+For Overview API connections it should safely validate the configured endpoint and expected response shape, explain failures in human-readable terms, and never write to the connected product or forward its response to Brain.
+
+A successful manual test may be required before an Overview API product enters the `connected` state. Link-only and native modules may use an appropriate simpler validation path.
+
+Do not add autonomous retries, cron jobs, high-frequency polling, or paid observability to support this feature.
 
 ## Zero-added-cost rule
 
@@ -278,9 +316,10 @@ Do not add, unless separately approved:
 - a new always-on service;
 - high-frequency polling infrastructure;
 - event-stream infrastructure;
-- replicated analytics databases.
+- replicated analytics databases;
+- automatic connector provisioning services.
 
-For connected products, live overview data may be fetched when the dashboard is opened or refreshed. A tiny read-only HTTP request is preferable to a new monitoring system.
+For connected products, live overview data may be fetched when the dashboard is opened, refreshed, or when a user deliberately runs `Test connection`. A tiny read-only HTTP request is preferable to a new monitoring system.
 
 If a feature starts requiring cron jobs, AI inference, a new paid service, or broad data replication, it is probably outside V1.
 
@@ -311,7 +350,7 @@ These may begin from simple/static/current-source data. Do not create new infras
 
 Cards for:
 
-- ENTRY — native module
+- ENTRY — native module and first integration pilot
 - Seshat — native module / in development
 - connected product example
 - Add Product
@@ -334,7 +373,7 @@ A simple cross-Console visual feed where data already exists or can be safely de
 
 ### New Product Setup
 
-Compact setup/help panel pointing builders toward the Minerva Connector / Integration Kit contract.
+Compact setup/help panel pointing builders toward the Minerva Connector / Integration Kit contract and the manual setup/test flow.
 
 ## Navigation direction
 
@@ -421,12 +460,15 @@ Expected foundation work:
 2. Preserve existing ENTRY routes and behavior.
 3. Update shared navigation to express Control Center / Products / Brain / System hierarchy.
 4. Introduce a small typed product/module registry or equivalent configuration seam.
-5. Represent native, connected, development, operational, and locked/restricted module states.
+5. Represent native, connected, development, operational, draft/setup, error, and locked/restricted module states.
 6. Add Control Center product cards and compact summary areas.
 7. Add the Brain overview region without modifying Brain data boundaries.
-8. Add New Product Setup / Integration Kit affordances as safe foundation UI.
-9. Keep Seshat as a reserved native-module direction, not a full product implementation.
-10. Keep connected product data read-only and minimal; mock/config data is acceptable until a real connector is separately approved.
+8. Add New Product Setup / Integration Kit affordances and a manual guided Add Product flow.
+9. Make ENTRY the first real integration/setup pilot and validate the reusable pattern with it.
+10. Allow supported connection/configuration values to be entered/edited manually.
+11. Provide an explicit read-only `Test connection` behavior where applicable.
+12. Keep Seshat as a reserved native-module direction, not a full product implementation.
+13. Keep connected product data read-only and minimal; mock/config data is acceptable until a real external connector is separately approved.
 
 ## Recommended files / areas to inspect
 
@@ -457,6 +499,8 @@ Do not include in the foundation unless separately approved:
 - microservice/event-bus architecture;
 - paid monitoring stack;
 - AI analysis of connected product data;
+- automatic repository modification from Add Product;
+- automatic product discovery/provisioning;
 - cron-based continuous health checks;
 - replicated external-product database;
 - full SSO across independent products;
@@ -476,6 +520,7 @@ Do not include in the foundation unless separately approved:
 - Connected product credentials, if later added, must be server-only and narrowly scoped.
 - External integrations should default to read-only.
 - Brain access remains independent from product connector access.
+- Manual configuration must not display stored secrets back in plaintext.
 
 ## Acceptance criteria — foundation
 
@@ -483,16 +528,21 @@ The foundation is successful when:
 
 1. Signing into Minerva Console lands on a Minerva-level Control Center instead of ENTRY Operations.
 2. ENTRY is clearly presented as one product module and all existing ENTRY operations remain reachable.
-3. The screen establishes product cards for ENTRY, Seshat, connected products, and Add Product without pretending unfinished integrations are complete.
-4. Navigation communicates one shared Console with modular Products, Brain, and System areas.
-5. Restricted modules can be represented as locked without relying on the lock icon for real authorization.
-6. Brain remains isolated from connected-product operational data.
-7. Seshat has an explicit future native-module home in Console.
-8. New Product Setup exposes the integration-kit / AI-instructions concept without creating paid infrastructure.
-9. The design uses a Neon-inspired black/charcoal/gray system with only extremely subtle Minerva-red identity details.
-10. No new recurring infrastructure or AI cost is introduced by the foundation.
-11. TypeScript, lint, build, existing tests, and relevant Brain guardrails remain green.
-12. The implementation ships through the normal branch → PR → review → explicit `MERGE APPROVED` workflow.
+3. ENTRY is the first product used to prove the guided/manual product integration pattern.
+4. `Add Product` gives the operator understandable setup instructions instead of pretending integration is automatic.
+5. The setup experience can produce product-specific AI-friendly implementation guidance.
+6. Supported connection/configuration values can be entered and edited manually.
+7. An explicit `Test connection` path safely validates supported read-only integrations without background monitoring infrastructure.
+8. The screen establishes product cards for ENTRY, Seshat, connected products, and Add Product without pretending unfinished integrations are complete.
+9. Navigation communicates one shared Console with modular Products, Brain, and System areas.
+10. Restricted modules can be represented as locked without relying on the lock icon for real authorization.
+11. Brain remains isolated from connected-product operational data, including connection-test payloads.
+12. Seshat has an explicit future native-module home in Console.
+13. New Product Setup exposes the integration-kit / AI-instructions concept without creating paid infrastructure.
+14. The design uses a Neon-inspired black/charcoal/gray system with only extremely subtle Minerva-red identity details.
+15. No new recurring infrastructure or AI cost is introduced by the foundation.
+16. TypeScript, lint, build, existing tests, and relevant Brain guardrails remain green.
+17. The implementation ships through the normal branch → PR → review → explicit `MERGE APPROVED` workflow.
 
 ## Suggested implementation sequence
 
@@ -504,33 +554,53 @@ The foundation is successful when:
 - Approved visual language.
 - Preserve ENTRY.
 
-### Phase 2 — Permissions and module states
+### Phase 2 — ENTRY-first manual integration pilot
 
-- Formalize role/module access if current auth model supports it cleanly.
-- Locked now; hidden later as configurable behavior.
-- Avoid user-specific hard-coded dashboards.
+- Add Product guided workflow.
+- Product-specific setup instructions.
+- Manual connection/configuration values.
+- On-demand Test connection where applicable.
+- ENTRY as the first reference implementation.
+- Validate product-card state/navigation and no ENTRY regressions.
 
-### Phase 3 — Connector contract / integration kit
+### Phase 3 — Permissions and module states
 
-- Finalize Link-only + Overview API contract.
-- Create/share `minerva-console-integration-kit` repository.
-- Add generated `MINERVA_CONNECTOR.md` / Copy AI Instructions flow.
-- Connect a real external product only when its backend is ready.
+- Formalize module-access checks beyond the current superadmin-only model.
+- Locked/restricted representation.
+- Prepare eventual `locked → hidden` behavior without a second Console implementation.
 
-### Phase 4 — Native product expansion
+### Phase 4 — Integration Kit extraction
 
-- Future Seshat web module.
-- Additional Minerva product modules.
-- More sophisticated dashboard composition only after real need appears.
+- Create the clean shareable `minerva-console-integration-kit` repository if still justified.
+- Move/duplicate the generic connector contract, schemas, examples, and AI handoff template there without private product/Brain content.
 
-## Codex / implementation-agent handoff
+### Future — only when justified
 
-When implementation begins, give the agent this record plus the approved Control Center visual reference from the planning conversation.
+- Additional connected product overview endpoints.
+- richer System Activity;
+- Seshat native web module;
+- per-role Seshat experiences;
+- customizable widgets;
+- stronger repository/code ownership boundaries;
+- richer Brain reminders/Needs Attention/Continue Working.
 
-Core instruction:
+## Implementation-agent handoff
 
-> Implement the Minerva Console Control Center foundation described in `content/brain/projects/minerva-console-control-center-foundation.md`. Treat Minerva Console as the shared web home for Minerva products. Preserve ENTRY behavior. Do not change Brain's data boundary or ingest external product data into Brain. Do not implement Seshat itself. Keep V1 read-only/minimal for connected products and introduce no recurring infrastructure or AI cost. Use a Neon-inspired black/charcoal/gray operational design with extremely subtle Minerva-red accents. Inspect the current repo before editing, keep the change single-branch and reviewable, run all required quality checks, open a PR, and do not merge without explicit `MERGE APPROVED`.
+Before changing code, read this specification, `DEC-0008`, and `MINERVA-CONSOLE-ENTRY-PILOT-001` in full and inspect the current Console implementation.
 
-## Current decision
+Primary objective:
 
-Proceed with Minerva Console as the central web operational home for Minerva Technologies products. Build the Control Center foundation first, preserve product boundaries, keep Brain private from connected-product data, reserve Seshat as a future native module, and keep external product connectivity intentionally read-only, visual, and zero-added-cost in V1.
+> Create the Minerva-level Control Center foundation and prove the manual/guided product integration pattern with ENTRY as the first real product, without rebuilding ENTRY, connecting Brain to product operational data, or introducing recurring infrastructure/AI cost.
+
+Important boundaries:
+
+- Preserve ENTRY runtime and routes.
+- Do not implement Seshat's future product surface yet.
+- Do not route connector/connection-test payloads into Brain.
+- Do not add automatic product discovery, autonomous repository modification, background polling, paid monitoring, or AI API use.
+- Prefer typed configuration and existing shared components over a premature plugin framework.
+- Make the setup flow usable by a human who will hand the generated instructions to Codex/Claude/another implementation agent and then return to enter the resulting values manually.
+- Use the approved Neon-inspired neutral dark visual direction with extremely restrained Minerva red.
+- Stop and report if real authorization changes, persistent connector secrets, or schema changes are required beyond the approved scope rather than inventing them silently.
+
+The implementation should remain reviewable as a normal Minerva Console mission and must not merge without explicit owner approval.
