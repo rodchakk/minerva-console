@@ -4,28 +4,22 @@ import { useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bot,
   Building2,
+  Bell,
   ChevronRight,
   ChevronsLeft,
   ChevronsUpDown,
-  Folder,
-  Gauge,
-  GitBranch,
+  CircleGauge,
   Hexagon,
-  Inbox,
   LayoutDashboard,
   LifeBuoy,
   MessageSquare,
-  Network,
-  Search,
+  ScrollText,
   SlidersHorizontal,
-  Tag,
-  Target,
-  Terminal,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/supabase/utils";
+import { isEntryContext, isItemActive } from "./sidebarRouteState";
 
 type AppSidebarProps = {
   email?: string | null;
@@ -34,8 +28,9 @@ type AppSidebarProps = {
 };
 
 type NavItem = {
+  disabled?: boolean;
   label: string;
-  href: string;
+  href: string | null;
   icon: ComponentType<{ className?: string }>;
 };
 
@@ -45,59 +40,77 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const navGroups: NavGroup[] = [
-  {
-    id: "entry",
-    label: "ENTRY",
-    items: [
-      { label: "Operations", href: "/dashboard", icon: LayoutDashboard },
-      { label: "Communities", href: "/products/entry/communities", icon: Building2 },
-      { label: "Users", href: "/products/entry/users", icon: Users },
-      { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
-      { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
-      { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
-    ],
-  },
-  {
-    id: "brain",
-    label: "BRAIN",
-    items: [
-      { label: "Overview", href: "/brain", icon: Gauge },
-      { label: "Projects", href: "/brain/projects", icon: Folder },
-      { label: "Decisions", href: "/brain/decisions", icon: GitBranch },
-      { label: "Prompts", href: "/brain/prompts", icon: Terminal },
-      { label: "Agents", href: "/brain/agents", icon: Bot },
-      { label: "Inbox", href: "/brain/inbox", icon: Inbox },
-      { label: "Missions", href: "/brain/missions", icon: Target },
-      { label: "Relations", href: "/brain/relations", icon: Network },
-      { label: "Search", href: "/brain/search", icon: Search },
-      { label: "Tags", href: "/brain/tags", icon: Tag },
-    ],
-  },
+const controlNavItems: NavItem[] = [
+  { label: "Control Center", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Reminders", href: "/reminders", icon: Bell },
+  { label: "Logs", href: "/logs", icon: ScrollText },
 ];
 
-function isItemActive(pathname: string, href: string): boolean {
-  if (href === "/dashboard") {
-    return pathname === "/dashboard";
-  }
-  if (href === "/brain") {
-    return pathname === "/brain";
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
+const financeNavItems: NavItem[] = [
+  { label: "Seshat", href: "/seshat", icon: CircleGauge },
+];
+
+const entryNavItems: NavItem[] = [
+  { label: "Operations", href: "/products/entry", icon: LayoutDashboard },
+  { label: "Communities", href: "/products/entry/communities", icon: Building2 },
+  { label: "Users", href: "/products/entry/users", icon: Users },
+  { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
+  { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
+  { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
+];
+
+const systemNavGroup: NavGroup = {
+  id: "system",
+  label: "SYSTEM",
+  items: [{ label: "Settings", href: "/settings", icon: SlidersHorizontal }],
+};
+
+const minervaNavGroups: NavGroup[] = [
+  {
+    id: "control",
+    label: "CONTROL",
+    items: controlNavItems,
+  },
+  {
+    id: "finance",
+    label: "FINANCE",
+    items: financeNavItems,
+  },
+  systemNavGroup,
+];
+
+const entryNavGroups: NavGroup[] = [{ id: "entry", label: "ENTRY", items: entryNavItems }];
 
 function isGroupActive(group: NavGroup, pathname: string): boolean {
   if (group.id === "entry") {
-    return (
-      pathname === "/dashboard" ||
-      pathname.startsWith("/products/entry") ||
-      pathname.startsWith("/activate")
-    );
+    return isEntryContext(pathname);
   }
-  if (group.id === "brain") {
-    return pathname.startsWith("/brain");
+
+  return group.items.some((item) => item.href && isItemActive(pathname, item.href));
+}
+
+function getItemAccent(groupId: string, href: string | null) {
+  if (groupId === "entry" || href?.startsWith("/products/entry")) {
+    return {
+      icon: "text-[var(--console-accent)]",
+      rail: "bg-[var(--console-accent)]",
+      ring: "focus-visible:ring-[var(--console-accent)]/40",
+    };
   }
-  return group.items.some((item) => isItemActive(pathname, item.href));
+
+  if (groupId === "brain" || href?.startsWith("/brain")) {
+    return {
+      icon: "text-sky-300",
+      rail: "bg-sky-300",
+      ring: "focus-visible:ring-sky-300/40",
+    };
+  }
+
+  return {
+    icon: "text-[#ff6b6b]",
+    rail: "bg-[#ff4d4d]",
+    ring: "focus-visible:ring-[#ff4d4d]/40",
+  };
 }
 
 function SidebarNav({
@@ -108,6 +121,7 @@ function SidebarNav({
   onClose: () => void;
 }) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const navGroups = isEntryContext(pathname) ? entryNavGroups : minervaNavGroups;
 
   const toggleGroup = (groupId: string, currentIsOpen: boolean) => {
     setOpenGroups((prev) => ({
@@ -117,10 +131,14 @@ function SidebarNav({
   };
 
   return (
-    <nav className="mt-6 flex-1 space-y-4 overflow-y-auto pr-0.5">
+    <nav className="mt-5 flex-1 space-y-4 overflow-y-auto pr-0.5">
       {navGroups.map((group, groupIndex) => {
         const activeGroup = isGroupActive(group, pathname);
-        const isGroupExpanded = openGroups[group.id] ?? activeGroup;
+        const isPrimaryContextGroup =
+          group.id === "control" || group.id === "finance" || group.id === "entry";
+        const isGroupExpanded = isPrimaryContextGroup
+          ? true
+          : openGroups[group.id] ?? activeGroup;
 
         return (
           <div key={group.id} className="space-y-1">
@@ -128,49 +146,75 @@ function SidebarNav({
               <div className="my-3 border-t border-white/[0.12]" />
             ) : null}
 
-            <button
-              type="button"
-              onClick={() => toggleGroup(group.id, isGroupExpanded)}
-              aria-expanded={isGroupExpanded}
-              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-[var(--console-text-muted)] transition-colors hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/40"
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <ChevronRight
-                  className={cn(
-                    "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
-                    isGroupExpanded ? "rotate-90 text-slate-300" : "text-[var(--console-text-soft)]",
-                  )}
-                />
-                <span className="truncate">{group.label}</span>
-              </span>
-            </button>
+            {group.id === "control" || group.id === "finance" || group.id === "entry" ? (
+              <p className="px-2 py-1.5 text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400">
+                {group.label}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.id, isGroupExpanded)}
+                aria-expanded={isGroupExpanded}
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400 transition-colors hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <ChevronRight
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                      isGroupExpanded ? "rotate-90 text-slate-300" : "text-slate-500",
+                    )}
+                  />
+                  <span className="truncate">{group.label}</span>
+                </span>
+              </button>
+            )}
 
             {isGroupExpanded ? (
-              <div className="mt-1 space-y-0.5 pl-1.5">
+              <div className={cn("mt-1 space-y-0.5", group.id === "system" ? "pl-1.5" : "")}>
                 {group.items.map((item) => {
-                  const active = isItemActive(pathname, item.href);
+                  const active = item.href ? isItemActive(pathname, item.href) : false;
                   const Icon = item.icon;
+                  const accent = getItemAccent(group.id, item.href);
+
+                  if (item.disabled || !item.href) {
+                    return (
+                      <div
+                        key={item.label}
+                        className="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 text-slate-500"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                        <span className="truncate">{item.label}</span>
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={onClose}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1",
+                        accent.ring,
                         active
-                          ? "bg-white/[0.055] text-white"
-                          : "text-[var(--console-text-muted)] hover:bg-white/[0.03] hover:text-slate-200",
+                          ? "bg-white/[0.07] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+                          : "text-slate-300 hover:bg-white/[0.04] hover:text-white",
                       )}
                     >
                       {active ? (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[var(--console-accent)]" />
+                        <span
+                          className={cn(
+                            "absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full",
+                            accent.rail,
+                          )}
+                        />
                       ) : null}
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
                           active
-                            ? "text-white"
-                            : "text-[var(--console-text-soft)] group-hover:text-slate-300",
+                            ? accent.icon
+                            : "text-slate-400 group-hover:text-slate-200",
                         )}
                       />
                       <span className="truncate">{item.label}</span>
@@ -205,21 +249,25 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
       ) : null}
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.12] bg-[#2a2a2a] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] transition-transform lg:translate-x-0",
+          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.14] bg-[#20242b] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.04),18px_0_46px_rgba(0,0,0,0.18)] transition-transform lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex items-center justify-between gap-2 px-0.5 py-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] text-[var(--console-accent)]">
+          <Link
+            href="/dashboard"
+            onClick={onClose}
+            className="group flex min-w-0 items-center gap-2 rounded-md pr-2 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ff4d4d]/40"
+          >
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#ff4d4d]/25 bg-[#ff4d4d]/10 text-[#ff6b6b]">
               <Hexagon className="h-3.5 w-3.5 stroke-[1.75]" />
             </div>
             <div>
-              <span className="block whitespace-nowrap text-[12px] font-bold uppercase leading-4 tracking-[0.12em] text-slate-100">
+              <span className="block whitespace-nowrap text-[12px] font-bold uppercase leading-4 tracking-[0.12em] text-slate-100 transition-colors group-hover:text-white">
                 Minerva Console
               </span>
             </div>
-          </div>
+          </Link>
           <button
             type="button"
             onClick={onClose}
@@ -234,9 +282,9 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
 
         <div className="mt-auto pt-2">
           <div className="my-2 border-t border-white/[0.12]" />
-          <div className="flex items-center justify-between rounded-lg border border-white/[0.12] bg-white/[0.025] px-2.5 py-2 text-xs">
+          <div className="flex items-center justify-between rounded-lg border border-white/[0.12] bg-white/[0.04] px-2.5 py-2 text-xs">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 font-semibold text-slate-200">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#ff4d4d]/25 bg-[#ff4d4d]/10 font-semibold text-slate-100">
                 {(displayEmail ? displayEmail[0] : "M")?.toUpperCase() ?? "M"}
               </div>
               <div className="min-w-0 flex-1">
