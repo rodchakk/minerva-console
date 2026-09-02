@@ -53,8 +53,8 @@ test("Add Product is a manual guided setup, not automatic provisioning", () => {
   assert.match(addProduct, /Manual V1 setup/);
   assert.match(addProduct, /Copy AI Instructions/);
   assert.match(addProduct, /Download Connector Instructions/);
-  assert.match(actions, /method: "GET"/);
-  assert.match(actions, /validateOutboundHttpUrl/);
+  assert.match(actions, /validateConfiguredHttpUrl/);
+  assert.doesNotMatch(actions, /fetch\s*\(/);
   assert.doesNotMatch(actions, /method: "POST"|\.insert\(|\.upsert\(|\.update\(/);
   assert.doesNotMatch(actions, /features\/brain/);
 });

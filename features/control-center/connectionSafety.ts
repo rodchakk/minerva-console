@@ -1,11 +1,4 @@
-import dns from "node:dns/promises";
 import net from "node:net";
-
-export type ResolvedAddress = {
-  address: string;
-};
-
-export type ResolveHost = (hostname: string) => Promise<ResolvedAddress[]>;
 
 export type ConnectionSafetyResult =
   | {
@@ -131,22 +124,48 @@ function isLocalHostname(hostname: string) {
   return host === "localhost" || host.endsWith(".localhost");
 }
 
-async function defaultResolveHost(hostname: string) {
-  return dns.lookup(hostname, { all: true, verbatim: true });
+export function validateNativeModulePath(value: string): ConnectionSafetyResult {
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return {
+      detail: "Native modules must use an internal Console route.",
+      ok: false,
+      title: "Native module route needs attention",
+    };
+  }
+
+  let url: URL;
+
+  try {
+    url = new URL(value, "https://minerva.local");
+  } catch {
+    return {
+      detail: "Native module route could not be parsed.",
+      ok: false,
+      title: "Native module route needs attention",
+    };
+  }
+
+  if (!url.pathname.startsWith("/products/")) {
+    return {
+      detail: "Native module routes must live under /products/.",
+      ok: false,
+      title: "Native module route needs attention",
+    };
+  }
+
+  return { ok: true, url };
 }
 
-export async function validateOutboundHttpUrl(
+export function validateConfiguredHttpUrl(
   value: string,
   {
     fieldLabel,
     productionRequiresHttps = false,
-    resolveHost = defaultResolveHost,
   }: {
     fieldLabel: string;
     productionRequiresHttps?: boolean;
-    resolveHost?: ResolveHost;
   },
-): Promise<ConnectionSafetyResult> {
+): ConnectionSafetyResult {
   let url: URL;
 
   try {
@@ -169,7 +188,7 @@ export async function validateOutboundHttpUrl(
 
   if (productionRequiresHttps && url.protocol !== "https:") {
     return {
-      detail: `Production Overview API endpoints must use https.`,
+      detail: "Production Overview API endpoints must use https.",
       ok: false,
       title: `${fieldLabel} must use https`,
     };
@@ -193,38 +212,9 @@ export async function validateOutboundHttpUrl(
     };
   }
 
-  const literalFamily = net.isIP(hostname);
-
-  if (literalFamily) {
-    if (!isPublicIpAddress(hostname)) {
-      return {
-        detail: `${fieldLabel} resolves to a non-public network address.`,
-        ok: false,
-        title: `${fieldLabel} host is not allowed`,
-      };
-    }
-
-    return { ok: true, url };
-  }
-
-  let addresses: ResolvedAddress[];
-
-  try {
-    addresses = await resolveHost(hostname);
-  } catch {
+  if (net.isIP(hostname) && !isPublicIpAddress(hostname)) {
     return {
-      detail: `${fieldLabel} hostname could not be resolved safely.`,
-      ok: false,
-      title: `${fieldLabel} DNS resolution failed`,
-    };
-  }
-
-  if (
-    addresses.length === 0 ||
-    addresses.some((address) => !isPublicIpAddress(address.address))
-  ) {
-    return {
-      detail: `${fieldLabel} resolves to a non-public network address.`,
+      detail: `${fieldLabel} uses a non-public network address.`,
       ok: false,
       title: `${fieldLabel} host is not allowed`,
     };
