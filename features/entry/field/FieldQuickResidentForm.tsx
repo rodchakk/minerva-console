@@ -2,7 +2,18 @@
 
 import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import Link from "next/link";
-import { Check, Copy, Eye, EyeOff, KeyRound, RefreshCw, Share2, UserPlus } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Eye,
+  EyeOff,
+  KeyRound,
+  RefreshCw,
+  Share2,
+  UserPlus,
+} from "lucide-react";
 import {
   createFieldQuickResident,
   type FieldQuickResidentCreateResult,
@@ -33,7 +44,9 @@ function getServerSnapshot() {
 function generateSecurePassword() {
   const bytes = new Uint8Array(6);
   crypto.getRandomValues(bytes);
-  const suffix = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const suffix = Array.from(bytes, (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
   return `Entry!${suffix}`;
 }
 
@@ -69,11 +82,18 @@ export function FieldQuickResidentForm({
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [result, setResult] = useState<FieldQuickResidentCreateResult | null>(null);
+  const [result, setResult] = useState<FieldQuickResidentCreateResult | null>(
+    null,
+  );
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const canShare = useSyncExternalStore(subscribe, getShareSnapshot, getServerSnapshot);
+  const canShare = useSyncExternalStore(
+    subscribe,
+    getShareSnapshot,
+    getServerSnapshot,
+  );
 
   const canContinue = Boolean(
     fullName.trim() &&
@@ -207,7 +227,9 @@ export function FieldQuickResidentForm({
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-200">
                 Password
               </p>
-              <p className="mt-1 break-all font-mono text-xl text-white">{password}</p>
+              <p className="mt-1 break-all font-mono text-xl text-white">
+                {password}
+              </p>
             </div>
           </div>
           <button
@@ -252,8 +274,12 @@ export function FieldQuickResidentForm({
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
           Resident will be linked to
         </p>
-        <p className="mt-2 text-base font-semibold text-[var(--console-text)]">{unitLabel}</p>
-        <p className="mt-1 text-sm text-[var(--console-text-muted)]">{communityName}</p>
+        <p className="mt-2 text-base font-semibold text-[var(--console-text)]">
+          {unitLabel}
+        </p>
+        <p className="mt-1 text-sm text-[var(--console-text-muted)]">
+          {communityName}
+        </p>
       </section>
 
       {isReadOnlyPreview ? (
@@ -271,7 +297,10 @@ export function FieldQuickResidentForm({
       {phase === "form" ? (
         <section className="space-y-4 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
           <div>
-            <label htmlFor="resident-name" className="text-sm font-semibold text-[var(--console-text)]">
+            <label
+              htmlFor="resident-name"
+              className="text-sm font-semibold text-[var(--console-text)]"
+            >
               Full name
             </label>
             <input
@@ -285,7 +314,10 @@ export function FieldQuickResidentForm({
           </div>
 
           <div>
-            <label htmlFor="resident-username" className="text-sm font-semibold text-[var(--console-text)]">
+            <label
+              htmlFor="resident-username"
+              className="text-sm font-semibold text-[var(--console-text)]"
+            >
               Username
             </label>
             <input
@@ -295,47 +327,19 @@ export function FieldQuickResidentForm({
               autoCapitalize="none"
               autoCorrect="off"
               disabled={isPending || isReadOnlyPreview}
-              placeholder="Preferred when no email"
+              placeholder="e.g. rchacon"
               className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
             />
             <p className="mt-1 text-xs leading-5 text-[var(--console-text-soft)]">
-              Required when no email is provided. Spaces and symbols are normalized automatically.
+              Fastest setup. If the resident will sign in with email instead, open More details.
             </p>
           </div>
 
           <div>
-            <label htmlFor="resident-email" className="text-sm font-semibold text-[var(--console-text)]">
-              Email <span className="font-normal text-[var(--console-text-soft)]">(optional)</span>
-            </label>
-            <input
-              id="resident-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoCapitalize="none"
-              autoComplete="email"
-              disabled={isPending || isReadOnlyPreview}
-              className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="resident-phone" className="text-sm font-semibold text-[var(--console-text)]">
-              Phone <span className="font-normal text-[var(--console-text-soft)]">(optional)</span>
-            </label>
-            <input
-              id="resident-phone"
-              type="tel"
-              value={phone}
-              onChange={(event) => setPhone(event.target.value)}
-              autoComplete="tel"
-              disabled={isPending || isReadOnlyPreview}
-              className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="resident-password" className="text-sm font-semibold text-[var(--console-text)]">
+            <label
+              htmlFor="resident-password"
+              className="text-sm font-semibold text-[var(--console-text)]"
+            >
               Password
             </label>
             <div className="mt-2 flex gap-2">
@@ -356,7 +360,11 @@ export function FieldQuickResidentForm({
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-md text-[var(--console-text-muted)] disabled:opacity-30"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
                 </button>
               </div>
               <button
@@ -370,9 +378,75 @@ export function FieldQuickResidentForm({
               </button>
             </div>
             <p className="mt-1 text-xs leading-5 text-[var(--console-text-soft)]">
-              Minimum 8 characters. You can enter it yourself or generate one.
+              Minimum 8 characters. Enter one or generate it.
             </p>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setDetailsExpanded((value) => !value)}
+            aria-expanded={detailsExpanded}
+            className="flex min-h-11 w-full items-center justify-between gap-3 rounded-lg border border-[var(--console-border)] bg-white/[0.025] px-3 text-left text-sm font-semibold text-[var(--console-text-muted)]"
+          >
+            <span>
+              More details
+              <span className="ml-2 font-normal text-[var(--console-text-soft)]">
+                Email and phone optional
+              </span>
+            </span>
+            {detailsExpanded ? (
+              <ChevronUp aria-hidden="true" className="h-4 w-4 shrink-0" />
+            ) : (
+              <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0" />
+            )}
+          </button>
+
+          {detailsExpanded ? (
+            <div className="space-y-4 rounded-lg border border-[var(--console-border)] bg-black/10 p-3">
+              <div>
+                <label
+                  htmlFor="resident-email"
+                  className="text-sm font-semibold text-[var(--console-text)]"
+                >
+                  Email{" "}
+                  <span className="font-normal text-[var(--console-text-soft)]">
+                    (optional)
+                  </span>
+                </label>
+                <input
+                  id="resident-email"
+                  type="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  disabled={isPending || isReadOnlyPreview}
+                  className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="resident-phone"
+                  className="text-sm font-semibold text-[var(--console-text)]"
+                >
+                  Phone{" "}
+                  <span className="font-normal text-[var(--console-text-soft)]">
+                    (optional)
+                  </span>
+                </label>
+                <input
+                  id="resident-phone"
+                  type="tel"
+                  value={phone}
+                  onChange={(event) => setPhone(event.target.value)}
+                  autoComplete="tel"
+                  disabled={isPending || isReadOnlyPreview}
+                  className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
+                />
+              </div>
+            </div>
+          ) : null}
 
           <button
             type="button"
@@ -391,11 +465,24 @@ export function FieldQuickResidentForm({
             <h2 className="text-lg font-semibold">Confirm resident</h2>
           </div>
           <div className="space-y-2 text-sm leading-6 text-amber-50">
-            <p><strong>Name:</strong> {fullName.trim()}</p>
-            <p><strong>Unit:</strong> {unitLabel}</p>
-            <p><strong>Login:</strong> {email.trim() || username.trim()}</p>
-            {phone.trim() ? <p><strong>Phone:</strong> {phone.trim()}</p> : null}
-            <p><strong>Password:</strong> {"•".repeat(Math.min(password.length, 12))}</p>
+            <p>
+              <strong>Name:</strong> {fullName.trim()}
+            </p>
+            <p>
+              <strong>Unit:</strong> {unitLabel}
+            </p>
+            <p>
+              <strong>Login:</strong> {email.trim() || username.trim()}
+            </p>
+            {phone.trim() ? (
+              <p>
+                <strong>Phone:</strong> {phone.trim()}
+              </p>
+            ) : null}
+            <p>
+              <strong>Password:</strong>{" "}
+              {"•".repeat(Math.min(password.length, 12))}
+            </p>
           </div>
           <p className="text-sm leading-6 text-amber-100">
             This creates an active RESIDENT account and links it directly to this unit.
