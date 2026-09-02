@@ -118,5 +118,17 @@
     "tags": ["entry", "minerva-console", "operations", "units", "users", "auth", "ui", "closeout"],
     "related": ["PRJ-0001", "ENTRY-OPS-001"],
     "path": "content/brain/projects/entry-console-operations-closeout-2026-09-01.md"
+  },
+  {
+    "id": "MINERVA-CONSOLE-001",
+    "type": "project",
+    "status": "planned",
+    "title": "Minerva Console Control Center Foundation",
+    "summary": "Planned foundation that reframes Minerva Console as the shared web home for Minerva products: a Minerva-level Control Center above ENTRY, native future Seshat, lightweight read-only connected-product modules, role-aware locked states, isolated Brain, AI-friendly Integration Kit, and a Neon-inspired neutral dark visual system with extremely subtle Minerva-red accents and no new recurring infrastructure or AI cost.",
+    "created": "2026-09-01",
+    "updated": "2026-09-01",
+    "tags": ["minerva-console", "control-center", "architecture", "products", "modules", "rbac", "integrations", "brain", "seshat", "ui"],
+    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004", "DEC-0008"],
+    "path": "content/brain/projects/minerva-console-control-center-foundation.md"
   }
 ]
