@@ -7,6 +7,7 @@ import {
   BrainCircuit,
   CheckCircle2,
   Download,
+  Lock,
   PackagePlus,
   Plus,
   Radio,
@@ -167,6 +168,9 @@ function ProductCard({ product }: { product: ProductModule }) {
             disabled
             className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md border border-white/[0.08] bg-white/[0.02] text-sm font-semibold text-[var(--console-text-soft)]"
           >
+            {product.availability === "restricted" ? (
+              <Lock className="h-4 w-4 stroke-[1.75]" />
+            ) : null}
             {product.availability === "restricted" ? "Restricted" : "Coming later"}
           </button>
         )}
@@ -422,7 +426,7 @@ export async function ControlCenterDashboard() {
           </ActionLink>
           <ActionLink href="/products/add">
             <Download className="h-4 w-4 stroke-[1.75]" />
-            Download Integration Kit
+            Download Connector Instructions
           </ActionLink>
           <ActionLink href="/brain">
             <BrainCircuit className="h-4 w-4 stroke-[1.75]" />
@@ -480,11 +484,9 @@ export async function ControlCenterDashboard() {
               title="Products"
             />
             <div className="grid gap-3 p-4 lg:grid-cols-2">
-              {productModules
-                .filter((product) => product.id !== "restricted-product-example")
-                .map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+              {productModules.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
               <AddProductCard />
             </div>
           </Panel>

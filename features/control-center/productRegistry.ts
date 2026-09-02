@@ -1,11 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import {
-  BrainCircuit,
-  CircleGauge,
-  Database,
-  Grid2X2,
-  Lock,
-} from "lucide-react";
+import { BrainCircuit, CircleGauge, Database, Grid2X2, Lock } from "lucide-react";
 
 export type ProductKind = "native" | "external";
 export type ProductStatus =
@@ -85,28 +79,29 @@ export const productModules: ProductModule[] = [
     status: "development",
     statusLabel: "In development",
   },
-  {
-    availability: "restricted",
-    connectionMode: "link_only",
-    description:
-      "Presentation state for modules that may be visible but unavailable to the current operator.",
-    environment: "external",
-    href: null,
-    icon: Lock,
-    id: "restricted-product-example",
-    kind: "external",
-    metrics: [
-      { label: "Access", value: "Restricted" },
-      { label: "Mode", value: "Link only" },
-      { label: "State", value: "Locked" },
-    ],
-    name: "Restricted Module",
-    owner: "Future product owner",
-    slug: "restricted-module",
-    status: "locked",
-    statusLabel: "Locked",
-  },
 ];
+
+export const restrictedProductStateExample: ProductModule = {
+  availability: "restricted",
+  connectionMode: "link_only",
+  description:
+    "Presentation state for a real registered module that is unavailable to the current operator.",
+  environment: "external",
+  href: null,
+  icon: Lock,
+  id: "restricted-product-state-example",
+  kind: "external",
+  metrics: [
+    { label: "Access", value: "Restricted" },
+    { label: "Mode", value: "Link only" },
+    { label: "State", value: "Locked" },
+  ],
+  name: "Restricted product state example",
+  owner: "Future product owner",
+  slug: "restricted-product-state",
+  status: "locked",
+  statusLabel: "Locked",
+};
 
 export const integrationKitActions = [
   {

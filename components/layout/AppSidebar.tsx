@@ -20,7 +20,6 @@ import {
   Inbox,
   LayoutDashboard,
   LifeBuoy,
-  Lock,
   MessageSquare,
   Network,
   PackagePlus,
@@ -97,7 +96,6 @@ const navGroups: NavGroup[] = [
       { disabled: true, label: "Activity", href: null, icon: Activity },
       { disabled: true, label: "Integrations", href: null, icon: Database },
       { label: "Settings", href: "/settings", icon: SlidersHorizontal },
-      { disabled: true, label: "Restricted Module", href: null, icon: Lock },
     ],
   },
 ];
@@ -216,7 +214,6 @@ function SidebarNav({
                       >
                         <Icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
                         <span className="truncate">{item.label}</span>
-                        <Lock className="ml-auto h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                       </div>
                     );
                   }

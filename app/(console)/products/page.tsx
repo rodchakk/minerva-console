@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, Plus } from "lucide-react";
+import { ArrowUpRight, Lock, Plus } from "lucide-react";
 import { productModules } from "@/features/control-center/productRegistry";
 import { cn } from "@/lib/supabase/utils";
 
@@ -95,6 +95,11 @@ export default function ProductsPage() {
                 <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-slate-100">
                   Open module
                   <ArrowUpRight className="h-4 w-4 stroke-[1.75]" />
+                </span>
+              ) : product.availability === "restricted" ? (
+                <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[var(--console-text-soft)]">
+                  <Lock className="h-4 w-4 stroke-[1.75]" />
+                  Restricted
                 </span>
               ) : null}
             </article>

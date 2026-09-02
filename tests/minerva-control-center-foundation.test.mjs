@@ -30,6 +30,8 @@ test("ENTRY operations remain available inside the ENTRY product module", () => 
 
 test("product registry represents current, future, and locked module states", () => {
   const registry = read("features/control-center/productRegistry.ts");
+  const productsPage = read("app/(console)/products/page.tsx");
+  const sidebar = read("components/layout/AppSidebar.tsx");
 
   assert.match(registry, /id: "entry"/);
   assert.match(registry, /status: "operational"/);
@@ -37,8 +39,11 @@ test("product registry represents current, future, and locked module states", ()
   assert.match(registry, /id: "seshat"/);
   assert.match(registry, /status: "development"/);
   assert.match(registry, /availability: "coming_later"/);
+  assert.match(registry, /restrictedProductStateExample/);
   assert.match(registry, /status: "locked"/);
   assert.match(registry, /availability: "restricted"/);
+  assert.doesNotMatch(productsPage, /Restricted Module|restrictedProductStateExample/);
+  assert.doesNotMatch(sidebar, /Restricted Module/);
 });
 
 test("Add Product is a manual guided setup, not automatic provisioning", () => {
@@ -47,9 +52,9 @@ test("Add Product is a manual guided setup, not automatic provisioning", () => {
 
   assert.match(addProduct, /Manual V1 setup/);
   assert.match(addProduct, /Copy AI Instructions/);
-  assert.match(addProduct, /Download Integration Kit/);
+  assert.match(addProduct, /Download Connector Instructions/);
   assert.match(actions, /method: "GET"/);
-  assert.match(actions, /isBlockedHost/);
+  assert.match(actions, /validateOutboundHttpUrl/);
   assert.doesNotMatch(actions, /method: "POST"|\.insert\(|\.upsert\(|\.update\(/);
   assert.doesNotMatch(actions, /features\/brain/);
 });

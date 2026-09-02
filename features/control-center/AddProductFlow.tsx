@@ -418,7 +418,7 @@ export function AddProductFlow() {
                 onClick={downloadInstructions}
               >
                 <Download className="h-4 w-4 stroke-[1.75]" />
-                Download Integration Kit
+                Download Connector Instructions
               </button>
               <button
                 className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-[#ff4d4d]/35 bg-white/[0.025] px-3.5 text-sm font-semibold text-white transition-colors hover:bg-[#ff4d4d]/10 disabled:cursor-wait disabled:text-slate-400"

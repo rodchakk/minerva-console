@@ -1,5 +1,8 @@
 "use server";
 
+import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { validateOutboundHttpUrl } from "@/features/control-center/connectionSafety";
+
 export type TestConnectionState = {
   detail: string;
   status: "idle" | "success" | "error";
@@ -18,33 +21,14 @@ function getString(formData: FormData, key: string) {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function parseHttpUrl(value: string) {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
-  } catch {
-    return null;
-  }
-}
-
-function isBlockedHost(hostname: string) {
-  const host = hostname.toLowerCase();
-  const ipv4PrivatePattern =
-    /^(127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(1[6-9]|2\d|3[0-1])\.)/;
-
-  return (
-    host === "localhost" ||
-    host === "::1" ||
-    host.endsWith(".localhost") ||
-    ipv4PrivatePattern.test(host)
-  );
-}
-
 export async function testProductConnectionAction(
   _previousState: TestConnectionState,
   formData: FormData,
 ): Promise<TestConnectionState> {
+  await requireSuperadmin();
+
   const connectionMode = getString(formData, "connectionMode");
+  const environment = getString(formData, "environment");
   const adminUrl = getString(formData, "adminUrl");
   const overviewEndpoint = getString(formData, "overviewEndpoint");
 
@@ -57,22 +41,15 @@ export async function testProductConnectionAction(
     };
   }
 
-  const parsedAdminUrl = parseHttpUrl(adminUrl);
+  const adminUrlSafety = await validateOutboundHttpUrl(adminUrl, {
+    fieldLabel: "Admin/module URL",
+  });
 
-  if (!adminUrl || !parsedAdminUrl) {
+  if (!adminUrlSafety.ok) {
     return {
-      detail: "Enter a valid http or https Admin/module URL before testing.",
+      detail: adminUrlSafety.detail,
       status: "error",
-      title: "Admin URL needs attention",
-    };
-  }
-
-  if (isBlockedHost(parsedAdminUrl.hostname)) {
-    return {
-      detail:
-        "Local, link-local, and private network hosts are not allowed for external product connection tests.",
-      status: "error",
-      title: "Admin URL host is not allowed",
+      title: adminUrlSafety.title,
     };
   }
 
@@ -93,31 +70,35 @@ export async function testProductConnectionAction(
     };
   }
 
-  const parsedOverviewEndpoint = parseHttpUrl(overviewEndpoint);
+  const overviewEndpointSafety = await validateOutboundHttpUrl(overviewEndpoint, {
+    fieldLabel: "Overview endpoint",
+    productionRequiresHttps: environment === "production",
+  });
 
-  if (!overviewEndpoint || !parsedOverviewEndpoint) {
+  if (!overviewEndpointSafety.ok) {
     return {
-      detail: "Enter a valid http or https overview endpoint for Overview API mode.",
+      detail: overviewEndpointSafety.detail,
       status: "error",
-      title: "Overview endpoint needs attention",
-    };
-  }
-
-  if (isBlockedHost(parsedOverviewEndpoint.hostname)) {
-    return {
-      detail:
-        "Local, link-local, and private network hosts are not allowed for Overview API tests.",
-      status: "error",
-      title: "Overview endpoint host is not allowed",
+      title: overviewEndpointSafety.title,
     };
   }
 
   try {
-    const response = await fetch(overviewEndpoint, {
+    const response = await fetch(overviewEndpointSafety.url.href, {
       cache: "no-store",
       method: "GET",
+      redirect: "manual",
       signal: AbortSignal.timeout(8000),
     });
+
+    if (response.status >= 300 && response.status < 400) {
+      return {
+        detail:
+          "The endpoint returned a redirect. Redirects are rejected in Phase 1 so they cannot bypass destination validation.",
+        status: "error",
+        title: "Overview endpoint redirected",
+      };
+    }
 
     if (!response.ok) {
       return {
