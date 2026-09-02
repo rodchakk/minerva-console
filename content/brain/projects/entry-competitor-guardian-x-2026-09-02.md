@@ -76,6 +76,12 @@ Potential buyer types to investigate:
 
 This does **not** prove that developers are Guardian X's primary customers. It does prove that at least one local competitor considers multi-community administration valuable enough to market publicly.
 
+As of 2026-09-02, a second direct competitor, **Tu Pase**, also provides a separate public signal for multi-organization/admin/security-company use. See:
+
+- [entry-competitor-tu-pase-2026-09-02.md](entry-competitor-tu-pase-2026-09-02.md)
+
+Guardian X + Tu Pase together strengthen the case for executing the Multi-Residential / Admin Channel research, but still do not authorize product scope.
+
 ## Competitive posture for ENTRY
 
 Do not respond by copying Guardian X feature-for-feature.
@@ -113,6 +119,8 @@ Research questions:
 10. Which competitors besides Guardian X offer multi-community administration locally?
 11. What would ENTRY need technically for a true portfolio/admin layer, and what already exists in Minerva Console/ENTRY architecture?
 12. Would one administrator relationship materially reduce customer-acquisition cost compared with one-patronato-at-a-time selling?
+13. Do security companies bundle residential software into their service offering?
+14. Does an administrator actually control vendor selection, or does each patronato still approve software independently?
 
 Suggested output when research is executed:
 
@@ -125,7 +133,7 @@ Suggested output when research is executed:
 
 ## Decision rule
 
-Do **not** build a multi-residential module merely because Guardian X has one.
+Do **not** build a multi-residential module merely because Guardian X or Tu Pase supports one.
 
 Promote this from research to product/commercial scope only if we find repeated evidence that:
 
