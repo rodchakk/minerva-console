@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
+import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldResidentActions } from "@/features/entry/field/FieldResidentActions";
 import { FieldResidentProfileEditor } from "@/features/entry/field/FieldResidentProfileEditor";
-import { FieldResidentStatusAction } from "@/features/entry/field/FieldResidentStatusAction";
+import { FieldUserStatusAction } from "@/features/entry/field/FieldUserStatusAction";
 import { getFieldResidentDetailData } from "@/features/entry/field/peopleData";
 
 type FieldResidentDetailPageProps = {
@@ -28,7 +29,10 @@ export default async function FieldResidentDetailPage({
   params,
 }: FieldResidentDetailPageProps) {
   const { communityId, userId } = await params;
-  const data = await getFieldResidentDetailData(communityId, userId);
+  const [operator, data] = await Promise.all([
+    requireSuperadmin(),
+    getFieldResidentDetailData(communityId, userId),
+  ]);
 
   if (!data.community) {
     notFound();
@@ -56,6 +60,7 @@ export default async function FieldResidentDetailPage({
   }
 
   const isResident = data.resident.role === "RESIDENT";
+  const isCurrentUser = operator.user.id === data.resident.userId;
   const isReadOnlyPreview = isEntryPreviewReadOnly();
   const householdResidents = isResident
     ? data.residents.items.filter(
@@ -96,7 +101,8 @@ export default async function FieldResidentDetailPage({
                 {data.resident.houseLabel}
               </h1>
               <p className="mt-1 text-sm text-[var(--console-text-muted)]">
-                {householdResidents.length} resident{householdResidents.length === 1 ? "" : "s"}
+                {householdResidents.length} resident
+                {householdResidents.length === 1 ? "" : "s"}
               </p>
             </div>
             {currentUnit?.isActive ? (
@@ -190,19 +196,21 @@ export default async function FieldResidentDetailPage({
             unitState={data.units.state}
             units={data.units.state === "ready" ? data.units.items : []}
           />
-
-          <FieldResidentStatusAction
-            communityId={data.community.id}
-            isReadOnlyPreview={isReadOnlyPreview}
-            resident={data.resident}
-          />
         </>
       ) : (
         <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
           This {data.resident.role.toLowerCase()} account is visible in Field People.
-          Resident-only actions are not available for this role.
+          Resident-only profile, unit, and recovery actions are not available for
+          this role. Account status can still be managed below.
         </section>
       )}
+
+      <FieldUserStatusAction
+        communityId={data.community.id}
+        isCurrentUser={isCurrentUser}
+        isReadOnlyPreview={isReadOnlyPreview}
+        user={data.resident}
+      />
     </div>
   );
 }
