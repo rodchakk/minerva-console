@@ -29,13 +29,14 @@ export default async function FieldPeoplePage({ params }: FieldPeoplePageProps) 
 
       <section className="space-y-2">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
-          Residents and units
+          People and units
         </p>
         <h1 className="break-words text-3xl font-semibold leading-9 text-[var(--console-text)]">
           {data.community.name}
         </h1>
         <p className="text-sm leading-6 text-[var(--console-text-muted)]">
-          Find residents, units, and activation rows for onsite ENTRY support.
+          Find residents, admins, guards, units, and activation rows for onsite
+          ENTRY support.
         </p>
         {isEntryPreviewReadOnly() ? (
           <p className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-xs leading-5 text-amber-100">

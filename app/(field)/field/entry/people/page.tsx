@@ -2,29 +2,28 @@ import Link from "next/link";
 import { ArrowRight, Search, UserRoundSearch } from "lucide-react";
 import {
   FIELD_PEOPLE_MIN_QUERY_LENGTH,
-  type FieldPeopleSearchResult,
-  searchFieldPeople,
-} from "@/features/entry/field/globalPeopleSearch";
+  type FieldAllPeopleSearchResult,
+  searchAllFieldPeople,
+} from "@/features/entry/field/allPeopleSearch";
 
 function getSearchParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
-function getResultHref(result: FieldPeopleSearchResult) {
-  if (result.kind === "resident") {
+function getResultHref(result: FieldAllPeopleSearchResult) {
+  if (result.kind === "user") {
     return `/field/entry/communities/${encodeURIComponent(result.communityId)}/people/residents/${encodeURIComponent(result.userId)}`;
   }
 
   return `/field/entry/communities/${encodeURIComponent(result.communityId)}/people/activation/${encodeURIComponent(result.queueId)}`;
 }
 
-function ResultCard({ result }: { result: FieldPeopleSearchResult }) {
+function ResultCard({ result }: { result: FieldAllPeopleSearchResult }) {
   const status =
-    result.kind === "resident"
-      ? `Resident - ${result.accountState}`
+    result.kind === "user"
+      ? `${result.role} - ${result.accountState}`
       : "Pending activation";
-  const identity =
-    result.kind === "resident" ? result.identity : result.identityHint;
+  const identity = result.kind === "user" ? result.identity : result.identityHint;
 
   return (
     <Link
@@ -66,7 +65,7 @@ export default async function FieldEntryPeoplePage({
   searchParams,
 }: PageProps<"/field/entry/people">) {
   const params = await searchParams;
-  const data = await searchFieldPeople(getSearchParam(params.q));
+  const data = await searchAllFieldPeople(getSearchParam(params.q));
 
   return (
     <div className="space-y-5">
@@ -107,7 +106,7 @@ export default async function FieldEntryPeoplePage({
 
       {data.state === "idle" ? (
         <p className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
-          Find someone across ENTRY.
+          Find any ENTRY user across communities.
         </p>
       ) : null}
 
@@ -138,8 +137,8 @@ export default async function FieldEntryPeoplePage({
               {data.results.map((result) => (
                 <ResultCard
                   key={
-                    result.kind === "resident"
-                      ? `resident:${result.communityId}:${result.userId}`
+                    result.kind === "user"
+                      ? `user:${result.communityId}:${result.userId}`
                       : `pending_activation:${result.communityId}:${result.queueId}`
                   }
                   result={result}
