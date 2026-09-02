@@ -62,7 +62,7 @@ export async function searchAllFieldPeople(
 
   if (base.state !== "ready") {
     return {
-      error: base.error,
+      ...(base.error ? { error: base.error } : {}),
       query: base.query,
       results: [],
       state: base.state,
@@ -127,7 +127,7 @@ export async function searchAllFieldPeople(
     identity: user.identity,
     kind: "user",
     name: user.name,
-    role: roles.get(keyFor(user.communityId, user.userId)) ?? "RESIDENT",
+    role: roles.get(keyFor(user.communityId, user.userId)) ?? "UNASSIGNED",
     unitLabel: user.unitLabel,
     userId: user.userId,
   }));
