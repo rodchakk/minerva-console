@@ -4,20 +4,26 @@ import { useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Activity,
   Bot,
   Building2,
   ChevronRight,
   ChevronsLeft,
   ChevronsUpDown,
+  CircleGauge,
+  Database,
   Folder,
   Gauge,
   GitBranch,
+  Grid2X2,
   Hexagon,
   Inbox,
   LayoutDashboard,
   LifeBuoy,
+  Lock,
   MessageSquare,
   Network,
+  PackagePlus,
   Search,
   SlidersHorizontal,
   Tag,
@@ -34,8 +40,9 @@ type AppSidebarProps = {
 };
 
 type NavItem = {
+  disabled?: boolean;
   label: string;
-  href: string;
+  href: string | null;
   icon: ComponentType<{ className?: string }>;
 };
 
@@ -47,10 +54,19 @@ type NavGroup = {
 
 const navGroups: NavGroup[] = [
   {
+    id: "products",
+    label: "PRODUCTS",
+    items: [
+      { label: "ENTRY", href: "/products/entry", icon: Grid2X2 },
+      { disabled: true, label: "Seshat", href: null, icon: CircleGauge },
+      { label: "Add Product", href: "/products/add", icon: PackagePlus },
+    ],
+  },
+  {
     id: "entry",
     label: "ENTRY",
     items: [
-      { label: "Operations", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Operations", href: "/products/entry", icon: LayoutDashboard },
       { label: "Communities", href: "/products/entry/communities", icon: Building2 },
       { label: "Users", href: "/products/entry/users", icon: Users },
       { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
@@ -74,9 +90,23 @@ const navGroups: NavGroup[] = [
       { label: "Tags", href: "/brain/tags", icon: Tag },
     ],
   },
+  {
+    id: "system",
+    label: "SYSTEM",
+    items: [
+      { disabled: true, label: "Activity", href: null, icon: Activity },
+      { disabled: true, label: "Integrations", href: null, icon: Database },
+      { label: "Settings", href: "/settings", icon: SlidersHorizontal },
+      { disabled: true, label: "Restricted Module", href: null, icon: Lock },
+    ],
+  },
 ];
 
 function isItemActive(pathname: string, href: string): boolean {
+  if (!href) {
+    return false;
+  }
+
   if (href === "/dashboard") {
     return pathname === "/dashboard";
   }
@@ -87,9 +117,13 @@ function isItemActive(pathname: string, href: string): boolean {
 }
 
 function isGroupActive(group: NavGroup, pathname: string): boolean {
+  if (group.id === "products") {
+    return pathname === "/products" || pathname.startsWith("/products/");
+  }
+
   if (group.id === "entry") {
     return (
-      pathname === "/dashboard" ||
+      pathname === "/products/entry" ||
       pathname.startsWith("/products/entry") ||
       pathname.startsWith("/activate")
     );
@@ -97,7 +131,7 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
   if (group.id === "brain") {
     return pathname.startsWith("/brain");
   }
-  return group.items.some((item) => isItemActive(pathname, item.href));
+  return group.items.some((item) => item.href && isItemActive(pathname, item.href));
 }
 
 function SidebarNav({
@@ -117,7 +151,31 @@ function SidebarNav({
   };
 
   return (
-    <nav className="mt-6 flex-1 space-y-4 overflow-y-auto pr-0.5">
+    <nav className="mt-5 flex-1 space-y-4 overflow-y-auto pr-0.5">
+      <Link
+        href="/dashboard"
+        onClick={onClose}
+        className={cn(
+          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium leading-4 transition-colors",
+          pathname === "/dashboard"
+            ? "bg-white/[0.055] text-white"
+            : "text-[var(--console-text-muted)] hover:bg-white/[0.03] hover:text-slate-200",
+        )}
+      >
+        {pathname === "/dashboard" ? (
+          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[#ff4d4d]" />
+        ) : null}
+        <LayoutDashboard
+          className={cn(
+            "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
+            pathname === "/dashboard"
+              ? "text-white"
+              : "text-[var(--console-text-soft)] group-hover:text-slate-300",
+          )}
+        />
+        <span className="truncate">Control Center</span>
+      </Link>
+
       {navGroups.map((group, groupIndex) => {
         const activeGroup = isGroupActive(group, pathname);
         const isGroupExpanded = openGroups[group.id] ?? activeGroup;
@@ -148,8 +206,21 @@ function SidebarNav({
             {isGroupExpanded ? (
               <div className="mt-1 space-y-0.5 pl-1.5">
                 {group.items.map((item) => {
-                  const active = isItemActive(pathname, item.href);
+                  const active = item.href ? isItemActive(pathname, item.href) : false;
                   const Icon = item.icon;
+                  if (item.disabled || !item.href) {
+                    return (
+                      <div
+                        key={item.label}
+                        className="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 text-[var(--console-text-soft)]"
+                      >
+                        <Icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
+                        <span className="truncate">{item.label}</span>
+                        <Lock className="ml-auto h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       key={item.href}
@@ -163,7 +234,7 @@ function SidebarNav({
                       )}
                     >
                       {active ? (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[var(--console-accent)]" />
+                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[#ff4d4d]" />
                       ) : null}
                       <Icon
                         className={cn(
@@ -205,13 +276,13 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
       ) : null}
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.12] bg-[#2a2a2a] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] transition-transform lg:translate-x-0",
+          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.12] bg-[#111214] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] transition-transform lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex items-center justify-between gap-2 px-0.5 py-1">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] text-[var(--console-accent)]">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] text-[#ff4d4d]">
               <Hexagon className="h-3.5 w-3.5 stroke-[1.75]" />
             </div>
             <div>
