@@ -30,7 +30,13 @@ export type MembershipCandidate = {
 
 export function isResidentRole(role: string) {
   const normalized = role.trim().toUpperCase();
-  return normalized === "RESIDENT" || normalized === "UNASSIGNED";
+
+  return (
+    normalized === "ADMIN" ||
+    normalized === "GUARD" ||
+    normalized === "RESIDENT" ||
+    normalized === "UNASSIGNED"
+  );
 }
 
 export function keyFor(communityId: string, userId: string) {
