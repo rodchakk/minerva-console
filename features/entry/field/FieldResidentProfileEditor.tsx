@@ -80,7 +80,7 @@ export function FieldResidentProfileEditor({
 
       {isReadOnlyPreview ? (
         <p className="text-xs leading-5 text-amber-200">
-          Preview is read-only. Profile changes are disabled.
+          Preview is read-only. You can review the editor, but Save changes is disabled.
         </p>
       ) : null}
 
@@ -94,7 +94,7 @@ export function FieldResidentProfileEditor({
         <button
           type="button"
           onClick={openEditor}
-          disabled={isPending || isReadOnlyPreview}
+          disabled={isPending}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/5 px-4 text-sm font-semibold text-[var(--console-text)] transition-colors hover:bg-white/10 disabled:opacity-50"
         >
           <Pencil aria-hidden="true" className="h-4 w-4" />
