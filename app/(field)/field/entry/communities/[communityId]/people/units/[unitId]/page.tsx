@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldUnitActions } from "@/features/entry/field/FieldUnitActions";
 import { getFieldUnitDetailData } from "@/features/entry/field/peopleData";
@@ -45,6 +45,10 @@ export default async function FieldUnitDetailPage({
     data.residents.state === "ready"
       ? data.residents.items.filter((resident) => resident.houseId !== data.unit?.id)
       : [];
+  const linkedResidents =
+    data.residentsForUnit.state === "ready"
+      ? data.residentsForUnit.items.filter((resident) => resident.role === "RESIDENT")
+      : [];
 
   return (
     <div className="space-y-5">
@@ -69,26 +73,49 @@ export default async function FieldUnitDetailPage({
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-[var(--console-text)]">
-          Linked residents
-        </h2>
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-lg font-semibold text-[var(--console-text)]">
+            Residents
+          </h2>
+          {data.unit.isActive ? (
+            <Link
+              href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/units/${encodeURIComponent(unitId)}/residents/new`}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-3 text-sm font-semibold text-white"
+            >
+              <Plus aria-hidden="true" className="h-4 w-4" />
+              Add resident
+            </Link>
+          ) : null}
+        </div>
+
         {data.residentsForUnit.state === "unavailable" ? (
           <p className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
             Linked residents unavailable.
           </p>
-        ) : data.residentsForUnit.items.length > 0 ? (
+        ) : linkedResidents.length > 0 ? (
           <div className="space-y-2">
-            {data.residentsForUnit.items.map((resident) => (
+            {linkedResidents.map((resident) => (
               <Link
                 key={resident.userId}
                 href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/residents/${encodeURIComponent(resident.userId)}`}
                 className="block rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4"
               >
-                <span className="block break-words text-base font-semibold text-[var(--console-text)]">
-                  {resident.fullName}
+                <span className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 break-words text-base font-semibold text-[var(--console-text)]">
+                    {resident.fullName}
+                  </span>
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] ${
+                      resident.isActive
+                        ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+                        : "border-white/15 bg-white/5 text-[var(--console-text-soft)]"
+                    }`}
+                  >
+                    {resident.accountState}
+                  </span>
                 </span>
                 <span className="mt-1 block break-words text-sm text-[var(--console-text-muted)]">
-                  {resident.identity} - {resident.accountState}
+                  {resident.identity}
                 </span>
               </Link>
             ))}
@@ -98,6 +125,12 @@ export default async function FieldUnitDetailPage({
             No residents are linked to this unit.
           </p>
         )}
+
+        {!data.unit.isActive ? (
+          <p className="text-xs leading-5 text-[var(--console-text-soft)]">
+            New residents cannot be created in an inactive unit from Field.
+          </p>
+        ) : null}
       </section>
 
       <FieldUnitActions
