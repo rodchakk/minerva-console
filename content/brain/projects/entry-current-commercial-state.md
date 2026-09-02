@@ -2,7 +2,7 @@
 
 Canonical quick-resume page for the active ENTRY commercial pipeline. Detailed evidence remains in the dated field/commercial reports.
 
-> **Current through:** 2026-08-27
+> **Current through:** 2026-09-02
 >
 > Evidence discipline: direct buyer statements are distinguished from guard/security reports and operator observations. Home counts, organizational structure, competitor identity, prior-price comments and buyer authority remain unverified unless explicitly stated otherwise.
 
@@ -235,7 +235,58 @@ Next move:
 
 These are learning/competitive-intelligence targets before they are first-wave replacement targets.
 
-## Parallel hypothesis — Developer Channel / new residential projects
+## Competitor intelligence — 2026-09-02
+
+### Guardian X
+
+Detailed note:
+
+- [entry-competitor-guardian-x-2026-09-02.md](entry-competitor-guardian-x-2026-09-02.md)
+
+High-value signals:
+
+- direct overlap with ENTRY in residential access/community operations;
+- public pricing benchmark:
+  - up to 100 homes: **US$150 / L 3,975 monthly**;
+  - up to 250 homes: **US$275 / L 7,287 monthly**;
+  - up to 500 homes: **US$400 / L 10,600 monthly**;
+- public **Multi-Residencial** positioning for administrative companies managing several communities from one centralized account;
+- broader security-operations / incident-reporting capabilities.
+
+Pricing implication remains a research input only; no ENTRY pricing change is authorized from competitor pricing alone.
+
+### Tu Pase
+
+Detailed note:
+
+- [entry-competitor-tu-pase-2026-09-02.md](entry-competitor-tu-pase-2026-09-02.md)
+
+Current classification:
+
+> **Local direct competitor / HIGH relevance.**
+
+Public/product signals reviewed:
+
+- temporary QR/code visitor passes;
+- frequent visitors;
+- check-in/check-out and access history;
+- resident mobile app + security mobile app + web administration;
+- common-area reservations;
+- community communications / regulation functionality;
+- financial/fee/delinquency functionality;
+- resident SOS, guard rounds and evidence/report features;
+- multi-organization SaaS model allowing multiple communities inside one platform with separated users/permissions;
+- public materials indicating administrator/security-company contexts in addition to individual communities.
+
+The supplied Google Play screenshot showed **Tu Pase - Residentes** as unavailable in the operator's current store/country context. Do not infer abandonment or Honduras exit from that alone.
+
+Strategic implication:
+
+> Guardian X + Tu Pase are now **two separate competitor signals** supporting a potential Multi-Residential / Admin buyer/channel above the individual patronato level.
+
+Do not respond with feature copying. Preserve ENTRY's wedge and validate the channel commercially before adding centralized/admin product scope.
+
+## Parallel hypothesis — Developer / Multi-Residential Admin Channel
 
 **Status:** `Approved for exploration / evidence collection only`.
 
@@ -247,19 +298,14 @@ Working hypothesis:
 
 > **Existing communities:** ENTRY as digitalization of a manual visitor/access operation.
 >
-> **New developments:** ENTRY as an access-management amenity and operating layer included from launch.
+> **New developments / portfolio operators:** ENTRY as an access-management amenity and operating layer deployable from launch or across several communities.
 
-Current signals include Marsella, Provenza and operator-surfaced marketing from Jardines del Este and Residencial Paraíso. Social-media content remains prospecting evidence until independently qualified.
+Current signals now include:
 
-Potential decision actors to investigate:
-
-- developer/project owner;
-- project administrator/operator;
-- organization defining amenities/security;
-- commercial/sales organization when it controls operations;
-- construction company only when it actually owns the systems/amenity decision.
-
-Do not assume a generic real-estate agency is the buyer.
+- Marsella / Provenza developer/sales-stage access technology;
+- operator-surfaced marketing from Jardines del Este and Residencial Paraíso;
+- Guardian X public Multi-Residencial positioning;
+- Tu Pase public multi-organization SaaS/admin/security-company signal.
 
 ### Brand/app discipline
 
@@ -267,35 +313,46 @@ Do not assume a generic real-estate agency is the buyer.
 
 Do not promise a separate branded application for every residential community. White-label is only a possible enterprise exception if contract value and economics justify release/support/maintenance complexity.
 
-### Research target
+### Near-term research pending — Multi-Residential / Admin Channel
 
-Collect roughly **10–15 useful new-project observations** before deciding whether to formalize a developer sales motion. Capture developer/operator, project stage, security/access claims, QR/app evidence, provider if identifiable, who chooses/pays, developer-to-patronato handoff, repeated developer names and decision-maker route.
+Research should identify named SPS/Honduras organizations that manage multiple communities and answer:
 
-Critical question:
+- who controls software/vendor purchasing;
+- whether centralized multi-community visibility is actually used;
+- whether administrators/security companies can bring several communities under one relationship;
+- which workflows must be centralized vs isolated;
+- branding expectations;
+- developer-to-patronato and administrator-change handoff;
+- competitor penetration;
+- technical gaps for ENTRY;
+- customer-acquisition economics vs one-patronato-at-a-time selling.
 
-> What happens to the access platform when the developer finishes sales/operations and the resident patronato takes over?
+Target output:
 
-Commercial discipline:
+- 5–10 named organizations;
+- buyer/decision map;
+- competitor matrix;
+- discovery script;
+- technical gap assessment;
+- recommendation: `ignore / monitor / pilot / formalize channel`.
 
-- FIRST DOOR does **not** change;
-- active patronato opportunities remain priority;
-- no developer-specific features or pricing yet;
-- no white-label promise;
-- collect evidence before formalizing outreach.
+Decision rule:
 
-## Immediate priority order — 2026-08-27
+> Do **not** build a multi-residential/admin module merely because Guardian X or Tu Pase supports it. Promote the idea only if repeated buyer evidence, procurement authority and economics justify the complexity.
+
+## Immediate priority order — 2026-09-02
 
 1. **Andalucía:** decision pending at patronato; give space and be ready for questions/demo; Unit Economics before final economic documentation.
 2. **Bermejo:** package delivered; next milestone is patronato receipt confirmation and/or direct route to Raúl Orellana.
 3. **Los Robles passage/sector:** confirm patronato receipt and obtain buyer route / decision-structure clarity.
 4. **El Carmen / El Limonar:** continue disciplined follow-up; avoid indefinite guard-only selling.
 5. **Boran:** revisit on another shift to improve patronato route.
-6. **Marsella / Provenza / Alondra:** retain as market intelligence.
-7. **Developer Channel:** keep collecting/qualifying evidence in parallel; no change to FIRST DOOR.
+6. **Developer/Admin Channel:** continue collecting/qualifying evidence; execute focused multi-residential research soon.
+7. **Competitor intelligence:** use Guardian X / Tu Pase as benchmarks, not product-roadmap commands.
 
 ## Product / engineering priority unchanged
 
-Commercial discovery does **not** reorder the approved engineering sequence:
+Commercial discovery and competitor intelligence do **not** reorder the approved engineering sequence:
 
 1. Diagnose real ENTRY state.
 2. Fix bugs.
@@ -306,4 +363,4 @@ Commercial discovery does **not** reorder the approved engineering sequence:
 7. Security/backups.
 8. Separate environments last.
 
-No new product feature should be built from these field/marketing observations alone.
+No new product feature should be built from competitor/market observations alone.
