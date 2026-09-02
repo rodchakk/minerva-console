@@ -42,10 +42,10 @@ export default async function FieldResidentDetailPage({
           className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]"
         >
           <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-          Residents and units
+          People and units
         </Link>
         <section className="rounded-lg border border-amber-300/30 bg-amber-300/10 p-4 text-sm leading-6 text-amber-100">
-          Resident detail unavailable.
+          User detail unavailable.
         </section>
       </div>
     );
@@ -55,33 +55,37 @@ export default async function FieldResidentDetailPage({
     notFound();
   }
 
+  const isResident = data.resident.role === "RESIDENT";
   const isReadOnlyPreview = isEntryPreviewReadOnly();
-  const householdResidents = data.residents.items.filter(
-    (resident) =>
-      resident.role === "RESIDENT" &&
-      resident.houseId &&
-      resident.houseId === data.resident?.houseId,
-  );
+  const householdResidents = isResident
+    ? data.residents.items.filter(
+        (resident) =>
+          resident.role === "RESIDENT" &&
+          resident.houseId &&
+          resident.houseId === data.resident?.houseId,
+      )
+    : [];
   const currentUnit =
-    data.units.state === "ready"
+    isResident && data.units.state === "ready"
       ? data.units.items.find((unit) => unit.id === data.resident?.houseId) ?? null
       : null;
+  const backToUnit = isResident && Boolean(data.resident.houseId);
 
   return (
     <div className="space-y-5">
       <Link
         href={
-          data.resident.houseId
+          backToUnit
             ? `/field/entry/communities/${encodeURIComponent(communityId)}/people/units/${encodeURIComponent(data.resident.houseId)}`
             : `/field/entry/communities/${encodeURIComponent(communityId)}/people`
         }
         className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]"
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-        {data.resident.houseId ? data.resident.houseLabel : "Residents and units"}
+        {backToUnit ? data.resident.houseLabel : "People and units"}
       </Link>
 
-      {data.resident.houseId ? (
+      {isResident && data.resident.houseId ? (
         <section className="space-y-3 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -151,43 +155,54 @@ export default async function FieldResidentDetailPage({
 
       <section className="space-y-3">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
-          Selected resident
+          Selected user
         </p>
-        <h2 className="break-words text-3xl font-semibold leading-9 text-[var(--console-text)]">
-          {data.resident.fullName}
-        </h2>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="break-words text-3xl font-semibold leading-9 text-[var(--console-text)]">
+            {data.resident.fullName}
+          </h2>
+          <span className="rounded-full border border-[var(--console-border)] bg-white/[0.04] px-2.5 py-1 text-xs font-bold uppercase tracking-[0.08em] text-[var(--console-text-muted)]">
+            {data.resident.role}
+          </span>
+        </div>
       </section>
 
       <section className="grid gap-3">
+        <DetailRow label="Role" value={data.resident.role} />
         <DetailRow label="Current unit" value={data.resident.houseLabel} />
         <DetailRow label="Login identity" value={data.resident.identity} />
         <DetailRow label="Phone" value={data.resident.phone} />
         <DetailRow label="Account state" value={data.resident.accountState} />
       </section>
 
-      {data.resident.role === "RESIDENT" ? (
-        <FieldResidentProfileEditor
-          communityId={data.community.id}
-          isReadOnlyPreview={isReadOnlyPreview}
-          resident={data.resident}
-        />
-      ) : null}
+      {isResident ? (
+        <>
+          <FieldResidentProfileEditor
+            communityId={data.community.id}
+            isReadOnlyPreview={isReadOnlyPreview}
+            resident={data.resident}
+          />
 
-      <FieldResidentActions
-        communityId={data.community.id}
-        isReadOnlyPreview={isReadOnlyPreview}
-        resident={data.resident}
-        unitState={data.units.state}
-        units={data.units.state === "ready" ? data.units.items : []}
-      />
+          <FieldResidentActions
+            communityId={data.community.id}
+            isReadOnlyPreview={isReadOnlyPreview}
+            resident={data.resident}
+            unitState={data.units.state}
+            units={data.units.state === "ready" ? data.units.items : []}
+          />
 
-      {data.resident.role === "RESIDENT" ? (
-        <FieldResidentStatusAction
-          communityId={data.community.id}
-          isReadOnlyPreview={isReadOnlyPreview}
-          resident={data.resident}
-        />
-      ) : null}
+          <FieldResidentStatusAction
+            communityId={data.community.id}
+            isReadOnlyPreview={isReadOnlyPreview}
+            resident={data.resident}
+          />
+        </>
+      ) : (
+        <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
+          This {data.resident.role.toLowerCase()} account is visible in Field People.
+          Resident-only actions are not available for this role.
+        </section>
+      )}
     </div>
   );
 }
