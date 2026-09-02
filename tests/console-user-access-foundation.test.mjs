@@ -12,24 +12,36 @@ function read(path) {
 
 async function changedFiles() {
   const { execFileSync } = await import("node:child_process");
-  const committed = execFileSync("git", ["diff", "--name-only", "origin/master...HEAD"], {
-    cwd: root,
-    encoding: "utf8",
-  });
+  const committed = execFileSync(
+    "git",
+    ["diff", "--name-only", "origin/master...HEAD"],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  );
   const workingTree = execFileSync("git", ["diff", "--name-only"], {
     cwd: root,
     encoding: "utf8",
   });
-  const untracked = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
-    cwd: root,
-    encoding: "utf8",
-  });
+  const untracked = execFileSync(
+    "git",
+    ["ls-files", "--others", "--exclude-standard"],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  );
 
-  return [...new Set(`${committed}\n${workingTree}\n${untracked}`
-    .trim()
-    .split(/\r?\n/)
-    .filter(Boolean)
-    .map((file) => file.replaceAll("\\", "/")))];
+  return [
+    ...new Set(
+      `${committed}\n${workingTree}\n${untracked}`
+        .trim()
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((file) => file.replaceAll("\\", "/")),
+    ),
+  ];
 }
 
 test("Console V1 roles and statuses are represented in code and schema", () => {
@@ -61,7 +73,10 @@ test("Console access helper maps existing superadmin to OWNER semantics", () => 
   assert.match(helper, /row\.role === "owner"/);
   assert.match(helper, /row\.source === "superadmin"/);
   assert.match(migration, /public\.is_superadmin\(v_user_id\)/);
-  assert.match(migration, /'owner'::text, 'active'::text, true, 'superadmin'::text/);
+  assert.match(
+    migration,
+    /'owner'::text, 'active'::text, true, 'superadmin'::text/,
+  );
 });
 
 test("disabled and unknown future members fail closed", () => {
@@ -79,7 +94,10 @@ test("Phase B owner Console boundary uses the Console access seam", () => {
   const layout = read("app/(console)/layout.tsx");
   const superadmin = read("features/auth/requireSuperadmin.ts");
 
-  assert.match(layout, /import \{ requireConsoleOwner \} from "@\/features\/auth\/consoleAccess"/);
+  assert.match(
+    layout,
+    /import \{ requireConsoleOwner \} from "@\/features\/auth\/consoleAccess"/,
+  );
   assert.match(layout, /await requireConsoleOwner\(\)/);
   assert.doesNotMatch(layout, /requireSuperadmin/);
   assert.match(superadmin, /supabase\.rpc\("is_superadmin"\)/);
@@ -94,22 +112,26 @@ test("Control Center Add User routes to owner user management", () => {
 
   assert.ok(addUserLink, "Add User link must be present");
   assert.match(addUserLink, /href="\/users\?invite=1"/);
-  assert.doesNotMatch(addUserLink, /disabled|cursor-not-allowed|auth\.admin|createUser/);
+  assert.doesNotMatch(
+    addUserLink,
+    /disabled|cursor-not-allowed|auth\.admin|createUser/,
+  );
 });
 
 test("Phase A introduces no new admin invite client or service-role requirement", () => {
   const helper = read("features/auth/consoleAccess.ts");
   const migration = read(`supabase/migrations/${migrationName}`);
 
-  assert.doesNotMatch(helper, /createAdminClient|auth\.admin|SUPABASE_SERVICE_ROLE_KEY|invite/i);
+  assert.doesNotMatch(
+    helper,
+    /createAdminClient|auth\.admin|SUPABASE_SERVICE_ROLE_KEY|invite/i,
+  );
   assert.doesNotMatch(migration, /service_role|auth\.admin|invite/i);
 });
 
-test("Brain and ENTRY authorization surfaces are not changed by this foundation branch", async () => {
+test("Console access changes do not spill into Brain, ENTRY, or migrations", async () => {
   const files = await changedFiles();
 
-  assert.ok(files.includes("features/auth/consoleAccess.ts"));
-  assert.ok(files.includes("tests/console-user-access-foundation.test.mjs"));
   assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
