@@ -12,7 +12,7 @@ test("ENTRY Field home keeps Access as one compact task card", () => {
   assert.match(page, /href="\/field\/entry\/access"/);
   assert.match(page, />\s*Access\s*</);
   assert.match(page, /Roles and guard accounts/);
-  assert.match(page, /min-h-28/);
+  assert.match(page, /min-h-20/);
 });
 
 test("Access keeps guard creation above the recycled global user search", () => {
