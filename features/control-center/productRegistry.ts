@@ -19,8 +19,14 @@ export type ProductMetric = {
   value: string;
 };
 
+export type ProductConnection = {
+  adminUrl: string | null;
+  overviewEndpoint: string | null;
+};
+
 export type ProductModule = {
   availability: "available" | "coming_later" | "restricted";
+  connection: ProductConnection;
   connectionMode: ProductConnectionMode;
   description: string;
   environment: "production" | "development" | "external";
@@ -39,6 +45,10 @@ export type ProductModule = {
 export const productModules: ProductModule[] = [
   {
     availability: "available",
+    connection: {
+      adminUrl: "/products/entry",
+      overviewEndpoint: null,
+    },
     connectionMode: "native_module",
     description:
       "Native module for community onboarding, operations, users, messages, tickets and settings.",
@@ -60,6 +70,10 @@ export const productModules: ProductModule[] = [
   },
   {
     availability: "coming_later",
+    connection: {
+      adminUrl: null,
+      overviewEndpoint: null,
+    },
     connectionMode: "native_module",
     description:
       "Future native Minerva module. Reserved in Console without a fake product surface.",
@@ -83,6 +97,10 @@ export const productModules: ProductModule[] = [
 
 export const restrictedProductStateExample: ProductModule = {
   availability: "restricted",
+  connection: {
+    adminUrl: "https://product.example.com/admin",
+    overviewEndpoint: null,
+  },
   connectionMode: "link_only",
   description:
     "Presentation state for a real registered module that is unavailable to the current operator.",

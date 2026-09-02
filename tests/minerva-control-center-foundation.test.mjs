@@ -75,6 +75,19 @@ test("product registry represents current, future, and locked module states", ()
   assert.doesNotMatch(sidebar, /Restricted Module/);
 });
 
+test("ENTRY pilot uses the native module contract without an Overview API endpoint", () => {
+  const registry = read("features/control-center/productRegistry.ts");
+  const entryModule = between(registry, 'availability: "available"', 'id: "seshat"');
+
+  assert.match(entryModule, /adminUrl: "\/products\/entry"/);
+  assert.match(entryModule, /overviewEndpoint: null/);
+  assert.match(entryModule, /connectionMode: "native_module"/);
+  assert.doesNotMatch(entryModule, /\bmode: "native_module"/);
+  assert.match(entryModule, /environment: "production"/);
+  assert.match(entryModule, /owner: "Minerva Console"/);
+  assert.match(entryModule, /status: "operational"/);
+});
+
 test("Add Product is a manual guided setup, not automatic provisioning", () => {
   const addProduct = read("features/control-center/AddProductFlow.tsx");
   const actions = read("features/control-center/actions.ts");
