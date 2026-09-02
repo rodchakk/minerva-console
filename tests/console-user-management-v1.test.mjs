@@ -113,14 +113,26 @@ test("role and status management changes console_members only and protects syste
   assert.match(actions, /\.from\("console_members"\)[\s\S]*\.update\(\{ role \}\)/);
   assert.doesNotMatch(actions, /ban_duration|updateUserById\([^)]*ban|deleteUser\(userId/);
   assert.match(actions, /isCompatibilitySuperadmin\(userId\)/);
-  assert.match(actions, /rpc\("is_superadmin"/);
+  assert.match(actions, /rpc\("is_superadmin", \{ p_user_id: userId \}\)/);
+  assert.doesNotMatch(actions, /rpc\("is_superadmin", \{ user_id: userId \}\)/);
   assert.match(actions, /System owner compatibility users cannot be edited here/);
   assert.match(actions, /You cannot remove the final effective Console owner/);
 });
 
-test("Console users page maps target superadmins to non-editable System owners", () => {
+test("hasOtherActiveConsoleOwner considers active superadmin_users as effective owners", () => {
+  const actions = read("features/console-users/actions.ts");
+  
+  assert.match(actions, /\.from\("superadmin_users"\)/);
+  assert.match(actions, /\.eq\("is_active", true\)/);
+});
+
+test("Console users page maps target superadmins to non-editable System owners and fails closed on error", () => {
   const dataFile = read("features/console-users/data.ts");
   
+  assert.match(dataFile, /rpc\("is_superadmin", \{ p_user_id: userId \}\)/);
+  assert.doesNotMatch(dataFile, /rpc\("is_superadmin", \{ user_id: userId \}\)/);
+  assert.match(dataFile, /if \(error\)/);
+  assert.match(dataFile, /throw new Error\("Target user compatibility could not be verified safely."\)/);
   assert.match(dataFile, /superadminMap\.get\(member\.user_id\)/);
   assert.match(dataFile, /isEditable: false/);
   assert.match(dataFile, /source: "System owner"/);

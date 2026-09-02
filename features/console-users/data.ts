@@ -53,7 +53,13 @@ export async function getConsoleUsersPageData(): Promise<ConsoleUserListItem[]> 
   const authUsers = await listAuthUsersById(userIds);
   const superadminChecks = await Promise.all(
     userIds.map(async (userId) => {
-      const { data } = await adminSupabase.rpc("is_superadmin", { user_id: userId });
+      const { data, error } = await adminSupabase.rpc("is_superadmin", { p_user_id: userId });
+      
+      if (error) {
+        console.error("[console-users] batch superadmin check failed", { code: error.code });
+        throw new Error("Target user compatibility could not be verified safely.");
+      }
+      
       return [userId, data === true] as const;
     })
   );

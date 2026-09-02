@@ -61,23 +61,39 @@ async function getConsoleMember(userId: string) {
 
 async function hasOtherActiveConsoleOwner(userId: string) {
   const adminSupabase = createAdminClient();
-  const { count, error } = await adminSupabase
+  const { count: consoleOwnerCount, error: consoleError } = await adminSupabase
     .from("console_members")
     .select("user_id", { count: "exact", head: true })
     .eq("role", "owner")
     .eq("status", "active")
     .neq("user_id", userId);
 
-  if (error) {
+  if (consoleError) {
     throw new Error("Console owner safety could not be verified.");
   }
 
-  return (count ?? 0) > 0;
+  if ((consoleOwnerCount ?? 0) > 0) {
+    return true;
+  }
+
+  const { data: saUsers, error: saError } = await adminSupabase
+    .from("superadmin_users")
+    .select("*")
+    .eq("is_active", true);
+
+  if (saError) {
+    throw new Error("Superadmin safety could not be verified.");
+  }
+
+  // Filter in JS to avoid guessing the exact user ID column name ('id' vs 'user_id') if we don't know it.
+  const otherSuperadmins = (saUsers ?? []).filter((sa) => sa.id !== userId && sa.user_id !== userId);
+
+  return otherSuperadmins.length > 0;
 }
 
 async function isCompatibilitySuperadmin(userId: string): Promise<boolean> {
   const adminSupabase = createAdminClient();
-  const { data, error } = await adminSupabase.rpc("is_superadmin", { user_id: userId });
+  const { data, error } = await adminSupabase.rpc("is_superadmin", { p_user_id: userId });
   if (error) {
     console.error("[console-users] target superadmin check failed", { code: error.code });
     throw new Error("Target user compatibility could not be verified.");
