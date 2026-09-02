@@ -19,6 +19,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/supabase/utils";
+import { isEntryContext, isItemActive } from "./sidebarRouteState";
 
 type AppSidebarProps = {
   email?: string | null;
@@ -79,24 +80,6 @@ const minervaNavGroups: NavGroup[] = [
 ];
 
 const entryNavGroups: NavGroup[] = [{ id: "entry", label: "ENTRY", items: entryNavItems }];
-
-function isItemActive(pathname: string, href: string): boolean {
-  if (!href) {
-    return false;
-  }
-
-  if (href === "/dashboard") {
-    return pathname === "/dashboard";
-  }
-  if (href === "/brain") {
-    return pathname === "/brain";
-  }
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function isEntryContext(pathname: string) {
-  return pathname === "/products/entry" || pathname.startsWith("/products/entry/") || pathname.startsWith("/activate");
-}
 
 function isGroupActive(group: NavGroup, pathname: string): boolean {
   if (group.id === "entry") {

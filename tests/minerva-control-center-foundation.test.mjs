@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { isItemActive } from "../components/layout/sidebarRouteState.ts";
 
 const root = process.cwd();
 
@@ -22,6 +23,7 @@ function between(source, start, end) {
 test("dashboard is the Minerva Control Center landing surface", () => {
   const dashboard = read("app/(console)/dashboard/page.tsx");
   const controlCenter = read("features/control-center/ControlCenterDashboard.tsx");
+  const dashboardMetrics = between(controlCenter, "const dashboardProducts", "const eventCount");
   const productsSection = between(controlCenter, 'title="Products"', "<RecentActivityPanel");
 
   assert.match(dashboard, /ControlCenterDashboard/);
@@ -33,7 +35,14 @@ test("dashboard is the Minerva Control Center landing surface", () => {
   assert.doesNotMatch(controlCenter, /getBrainCounts/);
   assert.doesNotMatch(controlCenter, /Brain Overview/);
   assert.doesNotMatch(dashboard, /ENTRY Operations/);
-  assert.match(productsSection, /product\.id === "entry"/);
+  assert.match(dashboardMetrics, /product\.id === "entry"/);
+  assert.match(dashboardMetrics, /activeProducts = dashboardProducts\.filter/);
+  assert.match(dashboardMetrics, /operationalProducts = dashboardProducts\.filter/);
+  assert.match(dashboardMetrics, /needsAttention = dashboardProducts\.filter/);
+  assert.doesNotMatch(dashboardMetrics, /status === "development"/);
+  assert.match(dashboardMetrics, /status === "disconnected"/);
+  assert.match(dashboardMetrics, /status === "error"/);
+  assert.match(productsSection, /dashboardProducts\.map/);
   assert.match(productsSection, /<AddProductCard \/>/);
   assert.doesNotMatch(productsSection, /Seshat|seshat/);
   assert.match(controlCenter, /border-t-violet-400\/80/);
@@ -109,6 +118,27 @@ test("global sidebar keeps ENTRY navigation on the ENTRY accent boundary", () =>
   assert.match(sidebar, /href\?\.startsWith\("\/products\/entry"\)/);
   assert.match(sidebar, /rail: "bg-\[var\(--console-accent\)\]"/);
   assert.match(sidebar, /rail: "bg-\[#ff4d4d\]"/);
+});
+
+test("ENTRY sidebar active state selects only the most specific section", () => {
+  const entryHref = "/products/entry";
+  const communitiesHref = "/products/entry/communities";
+  const usersHref = "/products/entry/users";
+  const messagesHref = "/products/entry/messages";
+  const ticketsHref = "/products/entry/tickets";
+  const settingsHref = "/products/entry/settings";
+
+  assert.equal(isItemActive("/products/entry", entryHref), true);
+  assert.equal(isItemActive("/products/entry", communitiesHref), false);
+  assert.equal(isItemActive("/products/entry/tickets", entryHref), false);
+  assert.equal(isItemActive("/products/entry/tickets", ticketsHref), true);
+  assert.equal(isItemActive("/products/entry/users", entryHref), false);
+  assert.equal(isItemActive("/products/entry/users", usersHref), true);
+  assert.equal(isItemActive("/products/entry/users", messagesHref), false);
+  assert.equal(isItemActive("/products/entry/users", ticketsHref), false);
+  assert.equal(isItemActive("/products/entry/users", settingsHref), false);
+  assert.equal(isItemActive("/products/entry/communities/abc", entryHref), false);
+  assert.equal(isItemActive("/products/entry/communities/abc", communitiesHref), true);
 });
 
 test("Seshat, Logs, and Reminders routes are honest Minerva placeholders", () => {

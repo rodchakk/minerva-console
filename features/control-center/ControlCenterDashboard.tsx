@@ -507,14 +507,15 @@ export async function ControlCenterDashboard() {
     getEntryPublishedMessagesLast24Hours(),
   ]);
 
-  const activeProducts = productModules.filter(
+  const dashboardProducts = productModules.filter((product) => product.id === "entry");
+  const activeProducts = dashboardProducts.filter(
     (product) => product.availability === "available",
   );
-  const operationalProducts = productModules.filter(
+  const operationalProducts = dashboardProducts.filter(
     (product) => product.status === "operational",
   );
-  const needsAttention = productModules.filter(
-    (product) => product.status === "development" || product.status === "error",
+  const needsAttention = dashboardProducts.filter(
+    (product) => product.status === "disconnected" || product.status === "error",
   );
   const eventCount = activity.state === "live" ? activity.items.length : 0;
 
@@ -606,11 +607,9 @@ export async function ControlCenterDashboard() {
               title="Products"
             />
             <div className="grid gap-3 p-4 lg:grid-cols-2">
-              {productModules
-                .filter((product) => product.id === "entry")
-                .map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+              {dashboardProducts.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
               <AddProductCard />
             </div>
           </Panel>
