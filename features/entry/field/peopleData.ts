@@ -39,7 +39,12 @@ type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
 function normalizeRole(value: string): FieldResident["role"] | null {
   const normalized = value.trim().toUpperCase();
 
-  if (normalized === "RESIDENT" || normalized === "UNASSIGNED") {
+  if (
+    normalized === "ADMIN" ||
+    normalized === "GUARD" ||
+    normalized === "RESIDENT" ||
+    normalized === "UNASSIGNED"
+  ) {
     return normalized;
   }
 
@@ -66,7 +71,7 @@ function mapResident(item: unknown): FieldResident | null {
 
   const email = formatFallback(coerceString(record.email), "");
   const username = coerceString(record.username);
-  const fullName = formatFallback(coerceString(record.full_name), "Unnamed resident");
+  const fullName = formatFallback(coerceString(record.full_name), "Unnamed user");
   const houseLabel = formatFallback(
     coerceString(record.house_label) || coerceString(record.unit_label),
     "No unit linked",
@@ -87,6 +92,20 @@ function mapResident(item: unknown): FieldResident | null {
     userId,
     username,
   };
+}
+
+function dedupeUsers(users: FieldResident[]) {
+  const byUserId = new Map<string, FieldResident>();
+
+  for (const user of users) {
+    const existing = byUserId.get(user.userId);
+
+    if (!existing || (!existing.houseId && user.houseId)) {
+      byUserId.set(user.userId, user);
+    }
+  }
+
+  return Array.from(byUserId.values());
 }
 
 function mapActivationRow(item: unknown): FieldActivationRow | null {
@@ -173,14 +192,14 @@ async function loadResidents(
     };
   }
 
-  const items = Array.isArray(data)
+  const mapped = Array.isArray(data)
     ? data
         .map(mapResident)
         .filter((resident): resident is FieldResident => resident !== null)
     : [];
 
   return {
-    items,
+    items: dedupeUsers(mapped),
     state: "ready",
   };
 }
@@ -207,7 +226,7 @@ async function loadUnits(
   const residentCountsByUnit =
     residents.state === "ready"
       ? residents.items.reduce((counts, resident) => {
-          if (!resident.houseId) {
+          if (resident.role !== "RESIDENT" || !resident.houseId) {
             return counts;
           }
 
@@ -321,7 +340,10 @@ export async function getFieldUnitDetailData(
   const residentsForUnit =
     data.residents.state === "ready"
       ? {
-          items: data.residents.items.filter((resident) => resident.houseId === unitId),
+          items: data.residents.items.filter(
+            (resident) =>
+              resident.role === "RESIDENT" && resident.houseId === unitId,
+          ),
           state: "ready" as const,
         }
       : {
