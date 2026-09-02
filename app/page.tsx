@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
-import { getAuthContext } from "@/features/auth/requireSuperadmin";
+import { getConsoleAccessContext } from "@/features/auth/consoleAccess";
 
 export default async function HomePage() {
-  const context = await getAuthContext();
+  const context = await getConsoleAccessContext();
 
   if (context.status === "unauthenticated") {
     redirect("/login");
   }
 
   if (context.status === "authorized") {
-    redirect("/dashboard");
+    redirect(context.role === "owner" ? "/dashboard" : "/workspace");
   }
 
   if (context.status === "authorization_error") {

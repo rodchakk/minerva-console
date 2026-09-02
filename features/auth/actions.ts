@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import {
-  getSafePostLoginDestination,
+  getConsolePostLoginDestination,
 } from "@/features/auth/postLoginDestination";
+import { getConsoleAccessContext, requireConsoleMember } from "@/features/auth/consoleAccess";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -16,7 +17,6 @@ export async function loginAction(
 ): Promise<AuthActionState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
-  const postLoginDestination = getSafePostLoginDestination(formData.get("next"));
 
   if (!email || !password) {
     return { message: "Enter both email and password to continue." };
@@ -29,16 +29,17 @@ export async function loginAction(
     return { message: error.message };
   }
 
-  const { data, error: roleError } = await supabase.rpc("is_superadmin");
+  const context = await getConsoleAccessContext();
 
-  if (roleError) {
-    console.error("[auth] superadmin authorization check failed after login", {
-      code: roleError.code,
-    });
+  if (context.status === "authorization_error") {
     redirect("/unauthorized?reason=authorization_error");
   }
 
-  redirect(data === true ? postLoginDestination : "/unauthorized");
+  if (context.status !== "authorized") {
+    redirect("/unauthorized");
+  }
+
+  redirect(getConsolePostLoginDestination(context.role, formData.get("next")));
 }
 
 export async function signOutAction() {
@@ -55,4 +56,36 @@ export async function signOutAction() {
   }
 
   redirect("/login");
+}
+
+export async function updateConsolePasswordAction(
+  _previousState: AuthActionState,
+  formData: FormData,
+): Promise<AuthActionState> {
+  const password = String(formData.get("password") ?? "");
+
+  if (password.length < 8) {
+    return { message: "Use at least 8 characters for your password." };
+  }
+
+  await requireConsoleMember();
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    return { message: error.message };
+  }
+
+  const context = await getConsoleAccessContext();
+
+  if (context.status === "authorization_error") {
+    redirect("/unauthorized?reason=authorization_error");
+  }
+
+  if (context.status !== "authorized") {
+    redirect("/unauthorized");
+  }
+
+  redirect(getConsolePostLoginDestination(context.role, null));
 }

@@ -42,6 +42,7 @@ type NavGroup = {
 
 const controlNavItems: NavItem[] = [
   { label: "Control Center", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Users", href: "/users", icon: Users },
   { label: "Reminders", href: "/reminders", icon: Bell },
   { label: "Logs", href: "/logs", icon: ScrollText },
 ];

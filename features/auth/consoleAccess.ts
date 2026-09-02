@@ -171,6 +171,7 @@ export async function requireConsoleMember() {
   }
 
   return {
+    memberStatus: context.memberStatus,
     role: context.role,
     source: context.source,
     user: context.user,
@@ -193,6 +194,7 @@ export async function requireConsoleOwner() {
   }
 
   return {
+    memberStatus: context.memberStatus,
     role: "owner" as const,
     source: context.source,
     user: context.user,

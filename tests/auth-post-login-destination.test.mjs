@@ -4,6 +4,9 @@ import { join } from "node:path";
 import { test } from "node:test";
 import {
   DEFAULT_POST_LOGIN_DESTINATION,
+  MEMBER_POST_LOGIN_DESTINATION,
+  getConsolePostLoginDestination,
+  getSafeOwnerPostLoginDestination,
   getSafePostLoginDestination,
 } from "../features/auth/postLoginDestination.ts";
 
@@ -30,7 +33,6 @@ test("missing or unsafe post-login destinations fall back to dashboard", () => {
     "https://evil.example/field",
     "//evil.example/field",
     "javascript:alert(1)",
-    "/dashboard",
     "/products/entry/communities",
     "/fieldish",
     "/field/../dashboard",
@@ -43,12 +45,31 @@ test("missing or unsafe post-login destinations fall back to dashboard", () => {
   }
 });
 
-test("login flow preserves existing unauthorized behavior", () => {
+test("owner post-login destinations include owner Console routes only", () => {
+  assert.equal(getSafeOwnerPostLoginDestination("/dashboard"), "/dashboard");
+  assert.equal(getSafeOwnerPostLoginDestination("/brain"), "/brain");
+  assert.equal(getSafeOwnerPostLoginDestination("/products/entry"), "/products/entry");
+  assert.equal(getSafeOwnerPostLoginDestination("/users?invite=1"), "/users?invite=1");
+  assert.equal(getSafeOwnerPostLoginDestination("/workspace"), DEFAULT_POST_LOGIN_DESTINATION);
+  assert.equal(getSafeOwnerPostLoginDestination("https://evil.example/brain"), DEFAULT_POST_LOGIN_DESTINATION);
+});
+
+test("role-aware post-login destinations keep Builder and Viewer in workspace", () => {
+  assert.equal(getConsolePostLoginDestination("owner", "/brain"), "/brain");
+  assert.equal(getConsolePostLoginDestination("builder", "/brain"), MEMBER_POST_LOGIN_DESTINATION);
+  assert.equal(getConsolePostLoginDestination("viewer", "/products/entry"), MEMBER_POST_LOGIN_DESTINATION);
+});
+
+test("login flow uses Console access context and preserves unauthorized behavior", () => {
   const action = read("features/auth/actions.ts");
   const loginPage = read("app/login/page.tsx");
 
-  assert.match(action, /redirect\(data === true \? postLoginDestination : "\/unauthorized"\)/);
+  assert.match(action, /getConsoleAccessContext/);
+  assert.match(action, /getConsolePostLoginDestination\(context\.role, formData\.get\("next"\)\)/);
+  assert.doesNotMatch(action, /supabase\.rpc\("is_superadmin"\)/);
+  assert.match(action, /redirect\("\/unauthorized"\)/);
   assert.match(action, /redirect\("\/unauthorized\?reason=authorization_error"\)/);
+  assert.match(loginPage, /getConsoleAccessContext/);
   assert.match(loginPage, /redirect\("\/unauthorized"\)/);
   assert.match(loginPage, /redirect\("\/unauthorized\?reason=authorization_error"\)/);
 });
@@ -59,7 +80,7 @@ test("normal Console login remains dashboard without a safe Field next", () => {
   const loginForm = read("features/auth/LoginForm.tsx");
 
   assert.equal(getSafePostLoginDestination(undefined), "/dashboard");
-  assert.match(action, /getSafePostLoginDestination\(formData\.get\("next"\)\)/);
-  assert.match(loginPage, /redirect\(postLoginDestination\)/);
+  assert.match(action, /getConsolePostLoginDestination/);
+  assert.match(loginPage, /getConsolePostLoginDestination\(context\.role, requestedDestination\)/);
   assert.match(loginForm, /name="next" value=\{postLoginDestination\}/);
 });

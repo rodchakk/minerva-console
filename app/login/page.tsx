@@ -2,9 +2,10 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LoginForm } from "@/features/auth/LoginForm";
 import {
-  getSafePostLoginDestination,
+  getSafeOwnerPostLoginDestination,
+  getConsolePostLoginDestination,
 } from "@/features/auth/postLoginDestination";
-import { getAuthContext } from "@/features/auth/requireSuperadmin";
+import { getConsoleAccessContext } from "@/features/auth/consoleAccess";
 
 type LoginPageProps = {
   searchParams?: Promise<{ next?: string | string[] }>;
@@ -15,11 +16,12 @@ function getSingleParam(value: string | string[] | undefined) {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const [context, params] = await Promise.all([getAuthContext(), searchParams]);
-  const postLoginDestination = getSafePostLoginDestination(getSingleParam(params?.next));
+  const [context, params] = await Promise.all([getConsoleAccessContext(), searchParams]);
+  const requestedDestination = getSingleParam(params?.next);
+  const postLoginDestination = getSafeOwnerPostLoginDestination(requestedDestination);
 
   if (context.status === "authorized") {
-    redirect(postLoginDestination);
+    redirect(getConsolePostLoginDestination(context.role, requestedDestination));
   }
 
   if (context.status === "forbidden") {
