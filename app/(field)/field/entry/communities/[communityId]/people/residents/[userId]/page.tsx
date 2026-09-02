@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
+import { FieldAdminProfileEditor } from "@/features/entry/field/FieldAdminProfileEditor";
+import { FieldAdminUnitAssignment } from "@/features/entry/field/FieldAdminUnitAssignment";
 import { FieldResidentActions } from "@/features/entry/field/FieldResidentActions";
 import { FieldResidentProfileEditor } from "@/features/entry/field/FieldResidentProfileEditor";
 import { FieldUserStatusAction } from "@/features/entry/field/FieldUserStatusAction";
@@ -60,6 +62,7 @@ export default async function FieldResidentDetailPage({
   }
 
   const isResident = data.resident.role === "RESIDENT";
+  const isAdmin = data.resident.role === "ADMIN";
   const isCurrentUser = operator.user.id === data.resident.userId;
   const isReadOnlyPreview = isEntryPreviewReadOnly();
   const householdResidents = isResident
@@ -196,6 +199,26 @@ export default async function FieldResidentDetailPage({
             unitState={data.units.state}
             units={data.units.state === "ready" ? data.units.items : []}
           />
+        </>
+      ) : isAdmin ? (
+        <>
+          <FieldAdminProfileEditor
+            communityId={data.community.id}
+            isReadOnlyPreview={isReadOnlyPreview}
+            user={data.resident}
+          />
+
+          <FieldAdminUnitAssignment
+            communityId={data.community.id}
+            isReadOnlyPreview={isReadOnlyPreview}
+            unitState={data.units.state}
+            units={data.units.state === "ready" ? data.units.items : []}
+            user={data.resident}
+          />
+
+          <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
+            Admin accounts can edit profile details and keep a unit link. Resident-only recovery actions remain unavailable for this role.
+          </section>
         </>
       ) : (
         <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
