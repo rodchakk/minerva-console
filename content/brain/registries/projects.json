@@ -8,7 +8,7 @@
     "created": "2026-06-16",
     "updated": "2026-09-01",
     "tags": ["product", "access-control", "supabase"],
-    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001", "ENTRY-CONSOLE-OPS-001"],
+    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001", "ENTRY-CONSOLE-OPS-001", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
     "path": "content/brain/projects/entry.md"
   },
   {
@@ -118,5 +118,29 @@
     "tags": ["entry", "minerva-console", "operations", "units", "users", "auth", "ui", "closeout"],
     "related": ["PRJ-0001", "ENTRY-OPS-001"],
     "path": "content/brain/projects/entry-console-operations-closeout-2026-09-01.md"
+  },
+  {
+    "id": "MINERVA-CONSOLE-001",
+    "type": "project",
+    "status": "planned",
+    "title": "Minerva Console Control Center Foundation",
+    "summary": "Planned foundation that reframes Minerva Console as the shared web home for Minerva products: a Minerva-level Control Center above ENTRY, native future Seshat, guided manual Add Product integration, lightweight read-only connected-product modules, role-aware locked states, isolated Brain, AI-friendly Integration Kit, and a Neon-inspired neutral dark visual system with extremely subtle Minerva-red accents and no new recurring infrastructure or AI cost.",
+    "created": "2026-09-01",
+    "updated": "2026-09-01",
+    "tags": ["minerva-console", "control-center", "architecture", "products", "modules", "rbac", "integrations", "brain", "seshat", "ui"],
+    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004", "DEC-0008", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
+    "path": "content/brain/projects/minerva-console-control-center-foundation.md"
+  },
+  {
+    "id": "MINERVA-CONSOLE-ENTRY-PILOT-001",
+    "type": "project",
+    "status": "planned",
+    "title": "ENTRY-first Manual Integration Pilot",
+    "summary": "ENTRY is the first real product used to prove the new Control Center integration workflow: Add Product is manual and guided, Console generates product-specific AI-friendly instructions, connection/config values can be entered manually, Test connection is deliberate and read-only, and the resulting pattern must be reusable for the next Minerva product without adding background infrastructure, AI cost, or Brain data ingestion.",
+    "created": "2026-09-01",
+    "updated": "2026-09-01",
+    "tags": ["minerva-console", "entry", "integration", "pilot", "add-product", "connector", "manual-setup", "ai-handoff", "zero-cost"],
+    "related": ["PRJ-0001", "MINERVA-CONSOLE-001", "DEC-0008"],
+    "path": "content/brain/projects/minerva-console-entry-first-integration-pilot.md"
   }
 ]
