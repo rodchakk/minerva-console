@@ -2,52 +2,84 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Power, PowerOff } from "lucide-react";
-import { setFieldResidentActiveStatus } from "@/features/entry/field/quickResidentActions";
+import { Power, PowerOff, ShieldCheck } from "lucide-react";
+import { setCommunityUserActiveStatusAction } from "@/features/entry/users/actions";
 import type { FieldResident } from "@/features/entry/field/peopleModel";
 
-type FieldResidentStatusActionProps = {
+type FieldUserStatusActionProps = {
   communityId: string;
+  isCurrentUser: boolean;
   isReadOnlyPreview: boolean;
-  resident: FieldResident;
+  user: FieldResident;
 };
 
-export function FieldResidentStatusAction({
+export function FieldUserStatusAction({
   communityId,
+  isCurrentUser,
   isReadOnlyPreview,
-  resident,
-}: FieldResidentStatusActionProps) {
+  user,
+}: FieldUserStatusActionProps) {
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const nextActiveState = !resident.isActive;
+  const nextActiveState = !user.isActive;
 
   function handleStatusChange() {
+    if (isCurrentUser && !nextActiveState) {
+      setMessage("Your own account is protected and cannot be deactivated from Field.");
+      return;
+    }
+
     setMessage(null);
 
     startTransition(async () => {
-      const result = await setFieldResidentActiveStatus({
+      const result = await setCommunityUserActiveStatusAction({
         communityId,
         isActive: nextActiveState,
-        userId: resident.userId,
+        userId: user.userId,
       });
 
       if (!result.success) {
-        setMessage(result.error || "Could not update resident status.");
+        const normalizedError = (result.error || "").toLowerCase();
+        const errorMessage =
+          normalizedError.includes("cannot_disable_self") ||
+          normalizedError.includes("cannot deactivate your own")
+            ? "Your own account is protected and cannot be deactivated from Field."
+            : normalizedError.includes("another active superadmin")
+              ? "Protected Minerva system owner accounts cannot be changed from Field."
+              : result.error || "Could not update account status.";
+
+        setMessage(errorMessage);
         return;
       }
 
       setConfirming(false);
-      setMessage(nextActiveState ? "Resident reactivated." : "Resident deactivated.");
+      setMessage(nextActiveState ? "Account reactivated." : "Account deactivated.");
       router.refresh();
     });
+  }
+
+  if (isCurrentUser) {
+    return (
+      <section className="space-y-3 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+        <div className="flex items-center gap-2">
+          <ShieldCheck aria-hidden="true" className="h-4 w-4 text-emerald-300" />
+          <h2 className="text-lg font-semibold text-[var(--console-text)]">
+            Account status
+          </h2>
+        </div>
+        <p className="text-sm leading-6 text-[var(--console-text-muted)]">
+          Your own Field account is protected and cannot be deactivated here.
+        </p>
+      </section>
+    );
   }
 
   return (
     <section className="space-y-3 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
       <div className="flex items-center gap-2">
-        {resident.isActive ? (
+        {user.isActive ? (
           <PowerOff aria-hidden="true" className="h-4 w-4 text-amber-300" />
         ) : (
           <Power aria-hidden="true" className="h-4 w-4 text-emerald-300" />
@@ -58,14 +90,14 @@ export function FieldResidentStatusAction({
       </div>
 
       <p className="text-sm leading-6 text-[var(--console-text-muted)]">
-        {resident.isActive
-          ? "Deactivate this resident's community access without deleting the account or history."
-          : "Reactivate this resident's existing community access."}
+        {user.isActive
+          ? `Deactivate this ${user.role.toLowerCase()} account's community access without deleting the account or history.`
+          : `Reactivate this ${user.role.toLowerCase()} account's existing community access.`}
       </p>
 
       {isReadOnlyPreview ? (
         <p className="text-xs leading-5 text-amber-200">
-          Preview is read-only. Resident status changes are disabled.
+          Preview is read-only. Account status changes are disabled.
         </p>
       ) : null}
 
@@ -82,19 +114,19 @@ export function FieldResidentStatusAction({
           disabled={isPending || isReadOnlyPreview}
           className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/5 px-4 text-sm font-semibold text-[var(--console-text)] transition-colors hover:bg-white/10 disabled:opacity-50"
         >
-          {resident.isActive ? (
+          {user.isActive ? (
             <PowerOff aria-hidden="true" className="h-4 w-4" />
           ) : (
             <Power aria-hidden="true" className="h-4 w-4" />
           )}
-          {resident.isActive ? "Deactivate resident" : "Reactivate resident"}
+          {user.isActive ? "Deactivate account" : "Reactivate account"}
         </button>
       ) : (
         <div className="space-y-3 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
           <p className="text-sm leading-6 text-amber-100">
-            {resident.isActive
-              ? `Deactivate ${resident.fullName}? They will lose community access until reactivated.`
-              : `Reactivate ${resident.fullName}? Their existing community account will become active again.`}
+            {user.isActive
+              ? `Deactivate ${user.fullName} (${user.role})? They will lose access to this community until reactivated.`
+              : `Reactivate ${user.fullName} (${user.role})? Their existing community access will become active again.`}
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
@@ -113,7 +145,7 @@ export function FieldResidentStatusAction({
             >
               {isPending
                 ? "Saving..."
-                : resident.isActive
+                : user.isActive
                   ? "Confirm deactivate"
                   : "Confirm reactivate"}
             </button>
