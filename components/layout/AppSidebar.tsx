@@ -14,6 +14,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   MessageSquare,
+  ScrollText,
   SlidersHorizontal,
   Users,
 } from "lucide-react";
@@ -38,10 +39,14 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const minervaNavItems: NavItem[] = [
+const controlNavItems: NavItem[] = [
   { label: "Control Center", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Seshat", href: "/seshat", icon: CircleGauge },
   { label: "Reminders", href: "/reminders", icon: Bell },
+  { label: "Logs", href: "/logs", icon: ScrollText },
+];
+
+const financeNavItems: NavItem[] = [
+  { label: "Seshat", href: "/seshat", icon: CircleGauge },
 ];
 
 const entryNavItems: NavItem[] = [
@@ -61,9 +66,14 @@ const systemNavGroup: NavGroup = {
 
 const minervaNavGroups: NavGroup[] = [
   {
-    id: "minerva",
-    label: "MINERVA",
-    items: minervaNavItems,
+    id: "control",
+    label: "CONTROL",
+    items: controlNavItems,
+  },
+  {
+    id: "finance",
+    label: "FINANCE",
+    items: financeNavItems,
   },
   systemNavGroup,
 ];
@@ -141,7 +151,8 @@ function SidebarNav({
     <nav className="mt-5 flex-1 space-y-4 overflow-y-auto pr-0.5">
       {navGroups.map((group, groupIndex) => {
         const activeGroup = isGroupActive(group, pathname);
-        const isPrimaryContextGroup = group.id === "minerva" || group.id === "entry";
+        const isPrimaryContextGroup =
+          group.id === "control" || group.id === "finance" || group.id === "entry";
         const isGroupExpanded = isPrimaryContextGroup
           ? true
           : openGroups[group.id] ?? activeGroup;
@@ -152,7 +163,7 @@ function SidebarNav({
               <div className="my-3 border-t border-white/[0.12]" />
             ) : null}
 
-            {group.id === "minerva" || group.id === "entry" ? (
+            {group.id === "control" || group.id === "finance" || group.id === "entry" ? (
               <p className="px-2 py-1.5 text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400">
                 {group.label}
               </p>

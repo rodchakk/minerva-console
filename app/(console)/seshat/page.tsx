@@ -15,7 +15,7 @@ export default function SeshatPage() {
                   Seshat
                 </h1>
                 <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
-                  Seshat web workspace will live here.
+                  Seshat will become the finance workspace inside Minerva Console.
                 </p>
               </div>
             </div>
@@ -27,13 +27,13 @@ export default function SeshatPage() {
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-white/[0.08] bg-white/[0.025] p-4">
-            <p className="text-sm font-semibold text-white">Native Minerva module</p>
+            <p className="text-sm font-semibold text-white">Cost tracking</p>
             <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
-              Reserved in Console without a live product surface.
+              Reserved for future finance visibility without active functionality.
             </p>
           </div>
           <div className="rounded-lg border border-white/[0.08] bg-white/[0.025] p-4">
-            <p className="text-sm font-semibold text-white">In development</p>
+            <p className="text-sm font-semibold text-white">Revenue operations and invoices</p>
             <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
               No Seshat functionality or runtime is active in Phase 1.
             </p>

@@ -73,6 +73,10 @@ function getBreadcrumbs(pathname: string) {
     return ["Minerva Console", "Reminders"];
   }
 
+  if (pathname === "/logs") {
+    return ["Minerva Console", "Logs"];
+  }
+
   if (pathname === "/products") {
     return ["Minerva Console", "Products"];
   }

@@ -65,8 +65,8 @@ function ActionLink({
       className={cn(
         "inline-flex h-10 items-center justify-center gap-2 rounded-md border px-3.5 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ff4d4d]/40",
         emphasis
-          ? "border-white/[0.12] bg-white/[0.045] text-white hover:border-[#ff4d4d]/40 hover:bg-white/[0.07]"
-          : "border-white/[0.10] bg-white/[0.025] text-slate-200 hover:border-white/[0.18] hover:bg-white/[0.045]",
+          ? "border-[#ff4d4d]/35 bg-white/[0.045] text-white hover:border-[#ff4d4d]/50 hover:bg-white/[0.07]"
+          : "border-white/[0.10] bg-white/[0.025] text-slate-200 hover:border-[#ff4d4d]/30 hover:bg-white/[0.045]",
       )}
     >
       {children}
@@ -164,8 +164,8 @@ function ProductCard({ product }: { product: ProductModule }) {
   const accent =
     product.status === "operational"
       ? {
-          border: "border-t-teal-400/80",
-          icon: "border-violet-300/20 bg-violet-400/10 text-violet-300",
+          border: "border-t-violet-400/80",
+          icon: "border-violet-300/25 bg-violet-400/10 text-violet-300",
           status: "border-teal-300/20 bg-teal-400/10 text-teal-200",
         }
       : {
@@ -605,10 +605,12 @@ export async function ControlCenterDashboard() {
               description="Connected Minerva products and reserved module spaces."
               title="Products"
             />
-            <div className="grid gap-3 p-4 lg:grid-cols-3">
-              {productModules.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
+            <div className="grid gap-3 p-4 lg:grid-cols-2">
+              {productModules
+                .filter((product) => product.id === "entry")
+                .map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
               <AddProductCard />
             </div>
           </Panel>

@@ -22,6 +22,7 @@ function between(source, start, end) {
 test("dashboard is the Minerva Control Center landing surface", () => {
   const dashboard = read("app/(console)/dashboard/page.tsx");
   const controlCenter = read("features/control-center/ControlCenterDashboard.tsx");
+  const productsSection = between(controlCenter, 'title="Products"', "<RecentActivityPanel");
 
   assert.match(dashboard, /ControlCenterDashboard/);
   assert.match(controlCenter, /Minerva Control Center/);
@@ -32,6 +33,10 @@ test("dashboard is the Minerva Control Center landing surface", () => {
   assert.doesNotMatch(controlCenter, /getBrainCounts/);
   assert.doesNotMatch(controlCenter, /Brain Overview/);
   assert.doesNotMatch(dashboard, /ENTRY Operations/);
+  assert.match(productsSection, /product\.id === "entry"/);
+  assert.match(productsSection, /<AddProductCard \/>/);
+  assert.doesNotMatch(productsSection, /Seshat|seshat/);
+  assert.match(controlCenter, /border-t-violet-400\/80/);
 });
 
 test("ENTRY operations remain available inside the ENTRY product module", () => {
@@ -76,18 +81,24 @@ test("Add Product is a manual guided setup, not automatic provisioning", () => {
 
 test("global sidebar keeps ENTRY navigation on the ENTRY accent boundary", () => {
   const sidebar = read("components/layout/AppSidebar.tsx");
-  const minervaItems = between(sidebar, "const minervaNavItems", "const entryNavItems");
+  const controlItems = between(sidebar, "const controlNavItems", "const financeNavItems");
+  const financeItems = between(sidebar, "const financeNavItems", "const entryNavItems");
   const entryItems = between(sidebar, "const entryNavItems", "const systemNavGroup");
   const systemGroup = between(sidebar, "const systemNavGroup", "const minervaNavGroups");
 
   assert.match(sidebar, /isEntryContext\(pathname\) \? entryNavGroups : minervaNavGroups/);
   assert.match(sidebar, /<Link\s+href="\/dashboard"\s+onClick=\{onClose\}/);
   assert.match(sidebar, /Minerva Console/);
-  assert.match(minervaItems, /Control Center/);
-  assert.match(minervaItems, /Seshat/);
-  assert.match(minervaItems, /Reminders/);
+  assert.match(sidebar, /label: "CONTROL"/);
+  assert.match(sidebar, /label: "FINANCE"/);
+  assert.match(sidebar, /label: "SYSTEM"/);
+  assert.match(controlItems, /Control Center/);
+  assert.match(controlItems, /Reminders/);
+  assert.match(controlItems, /Logs/);
+  assert.match(financeItems, /Seshat/);
   assert.match(systemGroup, /SYSTEM/);
-  assert.doesNotMatch(minervaItems, /Products|ENTRY|Brain/);
+  assert.match(systemGroup, /Settings/);
+  assert.doesNotMatch(controlItems, /Products|ENTRY|Brain|Seshat/);
   assert.match(entryItems, /Operations/);
   assert.match(entryItems, /Communities/);
   assert.match(entryItems, /Users/);
@@ -100,20 +111,27 @@ test("global sidebar keeps ENTRY navigation on the ENTRY accent boundary", () =>
   assert.match(sidebar, /rail: "bg-\[#ff4d4d\]"/);
 });
 
-test("Seshat and Reminders routes are honest Minerva placeholders", () => {
+test("Seshat, Logs, and Reminders routes are honest Minerva placeholders", () => {
   const seshatPage = read("app/(console)/seshat/page.tsx");
+  const logsPage = read("app/(console)/logs/page.tsx");
   const remindersPage = read("app/(console)/reminders/page.tsx");
   const topbar = read("components/layout/Topbar.tsx");
 
   assert.match(seshatPage, /Seshat/);
   assert.match(seshatPage, /Coming soon/);
-  assert.match(seshatPage, /Seshat web workspace will live here/);
+  assert.match(seshatPage, /finance workspace inside Minerva Console/);
+  assert.match(seshatPage, /Cost tracking/);
   assert.doesNotMatch(seshatPage, /createClient|insert\(|upsert\(|cron|scheduleAction/i);
+  assert.match(logsPage, /Logs/);
+  assert.match(logsPage, /Operational logs and system history will live here/);
+  assert.match(logsPage, /No logs available yet/);
+  assert.doesNotMatch(logsPage, /createClient|insert\(|upsert\(|monitor|cron|scheduleAction/i);
   assert.match(remindersPage, /Reminders/);
   assert.match(remindersPage, /Console reminders and operational follow-ups will live here/);
   assert.match(remindersPage, /No reminders yet/);
   assert.doesNotMatch(remindersPage, /createClient|insert\(|upsert\(|cron|scheduleAction/i);
   assert.match(topbar, /pathname === "\/seshat"/);
   assert.match(topbar, /pathname === "\/reminders"/);
+  assert.match(topbar, /pathname === "\/logs"/);
   assert.match(topbar, /\["Minerva Console", "ENTRY", "Operations"\]/);
 });
