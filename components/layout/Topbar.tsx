@@ -65,32 +65,40 @@ function getBreadcrumbs(pathname: string) {
     return ["Minerva Console", "Products", "Add Product"];
   }
 
+  if (pathname === "/seshat") {
+    return ["Minerva Console", "Seshat"];
+  }
+
+  if (pathname === "/reminders") {
+    return ["Minerva Console", "Reminders"];
+  }
+
   if (pathname === "/products") {
     return ["Minerva Console", "Products"];
   }
 
   if (pathname.startsWith("/products/entry/tickets")) {
-    return ["Minerva Console", "Products", "ENTRY", "Tickets"];
+    return ["Minerva Console", "ENTRY", "Tickets"];
   }
 
   if (pathname.startsWith("/products/entry/communities")) {
-    return ["Minerva Console", "Products", "ENTRY", "Communities"];
+    return ["Minerva Console", "ENTRY", "Communities"];
   }
 
   if (pathname.startsWith("/products/entry/users")) {
-    return ["Minerva Console", "Products", "ENTRY", "Users"];
+    return ["Minerva Console", "ENTRY", "Users"];
   }
 
   if (pathname.startsWith("/products/entry/messages")) {
-    return ["Minerva Console", "Products", "ENTRY", "Messages"];
+    return ["Minerva Console", "ENTRY", "Messages"];
   }
 
   if (pathname.startsWith("/products/entry/settings")) {
-    return ["Minerva Console", "Products", "ENTRY", "Settings"];
+    return ["Minerva Console", "ENTRY", "Settings"];
   }
 
   if (pathname === "/products/entry") {
-    return ["Minerva Console", "Products", "ENTRY", "Operations"];
+    return ["Minerva Console", "ENTRY", "Operations"];
   }
 
   if (pathname.startsWith("/brain")) {

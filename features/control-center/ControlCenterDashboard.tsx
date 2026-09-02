@@ -17,6 +17,7 @@ import {
   Settings2,
   TicketCheck,
   UserCheck,
+  UserPlus,
 } from "lucide-react";
 import {
   getEntryOperationalActivity,
@@ -529,6 +530,15 @@ export async function ControlCenterDashboard() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            disabled
+            className="inline-flex h-10 cursor-not-allowed items-center justify-center gap-2 rounded-md border border-white/[0.10] bg-white/[0.018] px-3.5 text-sm font-semibold text-slate-500"
+            title="User creation is not available in Phase 1."
+          >
+            <UserPlus className="h-4 w-4 stroke-[1.75]" />
+            Add User
+          </button>
           <ActionLink href="/products/add" emphasis>
             <Plus className="h-4 w-4 text-[#ff4d4d] stroke-[1.75]" />
             Add Product

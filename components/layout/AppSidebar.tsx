@@ -4,30 +4,17 @@ import { useState, type ComponentType } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Activity,
-  Bot,
   Building2,
+  Bell,
   ChevronRight,
   ChevronsLeft,
   ChevronsUpDown,
   CircleGauge,
-  Database,
-  Folder,
-  Gauge,
-  GitBranch,
-  Grid2X2,
   Hexagon,
-  Inbox,
   LayoutDashboard,
   LifeBuoy,
   MessageSquare,
-  Network,
-  PackagePlus,
-  Search,
   SlidersHorizontal,
-  Tag,
-  Target,
-  Terminal,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/supabase/utils";
@@ -51,54 +38,37 @@ type NavGroup = {
   items: NavItem[];
 };
 
-const navGroups: NavGroup[] = [
-  {
-    id: "products",
-    label: "PRODUCTS",
-    items: [
-      { label: "ENTRY", href: "/products/entry", icon: Grid2X2 },
-      { disabled: true, label: "Seshat", href: null, icon: CircleGauge },
-      { label: "Add Product", href: "/products/add", icon: PackagePlus },
-    ],
-  },
-  {
-    id: "entry",
-    label: "ENTRY",
-    items: [
-      { label: "Operations", href: "/products/entry", icon: LayoutDashboard },
-      { label: "Communities", href: "/products/entry/communities", icon: Building2 },
-      { label: "Users", href: "/products/entry/users", icon: Users },
-      { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
-      { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
-      { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
-    ],
-  },
-  {
-    id: "brain",
-    label: "BRAIN",
-    items: [
-      { label: "Overview", href: "/brain", icon: Gauge },
-      { label: "Projects", href: "/brain/projects", icon: Folder },
-      { label: "Decisions", href: "/brain/decisions", icon: GitBranch },
-      { label: "Prompts", href: "/brain/prompts", icon: Terminal },
-      { label: "Agents", href: "/brain/agents", icon: Bot },
-      { label: "Inbox", href: "/brain/inbox", icon: Inbox },
-      { label: "Missions", href: "/brain/missions", icon: Target },
-      { label: "Relations", href: "/brain/relations", icon: Network },
-      { label: "Search", href: "/brain/search", icon: Search },
-      { label: "Tags", href: "/brain/tags", icon: Tag },
-    ],
-  },
-  {
-    id: "system",
-    label: "SYSTEM",
-    items: [
-      { disabled: true, label: "Activity", href: null, icon: Activity },
-      { disabled: true, label: "Integrations", href: null, icon: Database },
-      { label: "Settings", href: "/settings", icon: SlidersHorizontal },
-    ],
-  },
+const minervaNavItems: NavItem[] = [
+  { label: "Control Center", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Seshat", href: "/seshat", icon: CircleGauge },
+  { label: "Reminders", href: "/reminders", icon: Bell },
 ];
+
+const entryNavItems: NavItem[] = [
+  { label: "Operations", href: "/products/entry", icon: LayoutDashboard },
+  { label: "Communities", href: "/products/entry/communities", icon: Building2 },
+  { label: "Users", href: "/products/entry/users", icon: Users },
+  { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
+  { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
+  { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
+];
+
+const systemNavGroup: NavGroup = {
+  id: "system",
+  label: "SYSTEM",
+  items: [{ label: "Settings", href: "/settings", icon: SlidersHorizontal }],
+};
+
+const minervaNavGroups: NavGroup[] = [
+  {
+    id: "minerva",
+    label: "MINERVA",
+    items: minervaNavItems,
+  },
+  systemNavGroup,
+];
+
+const entryNavGroups: NavGroup[] = [{ id: "entry", label: "ENTRY", items: entryNavItems }];
 
 function isItemActive(pathname: string, href: string): boolean {
   if (!href) {
@@ -114,21 +84,15 @@ function isItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function isEntryContext(pathname: string) {
+  return pathname === "/products/entry" || pathname.startsWith("/products/entry/") || pathname.startsWith("/activate");
+}
+
 function isGroupActive(group: NavGroup, pathname: string): boolean {
-  if (group.id === "products") {
-    return pathname === "/products" || pathname.startsWith("/products/");
+  if (group.id === "entry") {
+    return isEntryContext(pathname);
   }
 
-  if (group.id === "entry") {
-    return (
-      pathname === "/products/entry" ||
-      pathname.startsWith("/products/entry") ||
-      pathname.startsWith("/activate")
-    );
-  }
-  if (group.id === "brain") {
-    return pathname.startsWith("/brain");
-  }
   return group.items.some((item) => item.href && isItemActive(pathname, item.href));
 }
 
@@ -164,6 +128,7 @@ function SidebarNav({
   onClose: () => void;
 }) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const navGroups = isEntryContext(pathname) ? entryNavGroups : minervaNavGroups;
 
   const toggleGroup = (groupId: string, currentIsOpen: boolean) => {
     setOpenGroups((prev) => ({
@@ -174,33 +139,12 @@ function SidebarNav({
 
   return (
     <nav className="mt-5 flex-1 space-y-4 overflow-y-auto pr-0.5">
-      <Link
-        href="/dashboard"
-        onClick={onClose}
-        className={cn(
-          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ff4d4d]/40",
-          pathname === "/dashboard"
-            ? "bg-white/[0.075] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
-            : "text-slate-300 hover:bg-white/[0.04] hover:text-white",
-        )}
-      >
-        {pathname === "/dashboard" ? (
-          <span className="absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full bg-[#ff4d4d]" />
-        ) : null}
-        <LayoutDashboard
-          className={cn(
-            "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
-            pathname === "/dashboard"
-              ? "text-[#ff6b6b]"
-              : "text-slate-400 group-hover:text-slate-200",
-          )}
-        />
-        <span className="truncate">Control Center</span>
-      </Link>
-
       {navGroups.map((group, groupIndex) => {
         const activeGroup = isGroupActive(group, pathname);
-        const isGroupExpanded = openGroups[group.id] ?? activeGroup;
+        const isPrimaryContextGroup = group.id === "minerva" || group.id === "entry";
+        const isGroupExpanded = isPrimaryContextGroup
+          ? true
+          : openGroups[group.id] ?? activeGroup;
 
         return (
           <div key={group.id} className="space-y-1">
@@ -208,25 +152,31 @@ function SidebarNav({
               <div className="my-3 border-t border-white/[0.12]" />
             ) : null}
 
-            <button
-              type="button"
-              onClick={() => toggleGroup(group.id, isGroupExpanded)}
-              aria-expanded={isGroupExpanded}
-              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400 transition-colors hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
-            >
-              <span className="flex items-center gap-2 min-w-0">
-                <ChevronRight
-                  className={cn(
-                    "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
-                    isGroupExpanded ? "rotate-90 text-slate-300" : "text-slate-500",
-                  )}
-                />
-                <span className="truncate">{group.label}</span>
-              </span>
-            </button>
+            {group.id === "minerva" || group.id === "entry" ? (
+              <p className="px-2 py-1.5 text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400">
+                {group.label}
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => toggleGroup(group.id, isGroupExpanded)}
+                aria-expanded={isGroupExpanded}
+                className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400 transition-colors hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <ChevronRight
+                    className={cn(
+                      "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                      isGroupExpanded ? "rotate-90 text-slate-300" : "text-slate-500",
+                    )}
+                  />
+                  <span className="truncate">{group.label}</span>
+                </span>
+              </button>
+            )}
 
             {isGroupExpanded ? (
-              <div className="mt-1 space-y-0.5 pl-1.5">
+              <div className={cn("mt-1 space-y-0.5", group.id === "system" ? "pl-1.5" : "")}>
                 {group.items.map((item) => {
                   const active = item.href ? isItemActive(pathname, item.href) : false;
                   const Icon = item.icon;
