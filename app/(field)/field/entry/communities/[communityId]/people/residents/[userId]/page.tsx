@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Plus } from "lucide-react";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldResidentActions } from "@/features/entry/field/FieldResidentActions";
+import { FieldResidentProfileEditor } from "@/features/entry/field/FieldResidentProfileEditor";
 import { FieldResidentStatusAction } from "@/features/entry/field/FieldResidentStatusAction";
 import { getFieldResidentDetailData } from "@/features/entry/field/peopleData";
 
@@ -163,6 +164,14 @@ export default async function FieldResidentDetailPage({
         <DetailRow label="Phone" value={data.resident.phone} />
         <DetailRow label="Account state" value={data.resident.accountState} />
       </section>
+
+      {data.resident.role === "RESIDENT" ? (
+        <FieldResidentProfileEditor
+          communityId={data.community.id}
+          isReadOnlyPreview={isReadOnlyPreview}
+          resident={data.resident}
+        />
+      ) : null}
 
       <FieldResidentActions
         communityId={data.community.id}
