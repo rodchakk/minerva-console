@@ -260,16 +260,20 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
         )}
       >
         <div className="flex items-center justify-between gap-2 px-0.5 py-1">
-          <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href="/dashboard"
+            onClick={onClose}
+            className="group flex min-w-0 items-center gap-2 rounded-md pr-2 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ff4d4d]/40"
+          >
             <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#ff4d4d]/25 bg-[#ff4d4d]/10 text-[#ff6b6b]">
               <Hexagon className="h-3.5 w-3.5 stroke-[1.75]" />
             </div>
             <div>
-              <span className="block whitespace-nowrap text-[12px] font-bold uppercase leading-4 tracking-[0.12em] text-slate-100">
+              <span className="block whitespace-nowrap text-[12px] font-bold uppercase leading-4 tracking-[0.12em] text-slate-100 transition-colors group-hover:text-white">
                 Minerva Console
               </span>
             </div>
-          </div>
+          </Link>
           <button
             type="button"
             onClick={onClose}

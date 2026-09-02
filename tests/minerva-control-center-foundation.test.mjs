@@ -81,6 +81,8 @@ test("global sidebar keeps ENTRY navigation on the ENTRY accent boundary", () =>
   const systemGroup = between(sidebar, "const systemNavGroup", "const minervaNavGroups");
 
   assert.match(sidebar, /isEntryContext\(pathname\) \? entryNavGroups : minervaNavGroups/);
+  assert.match(sidebar, /<Link\s+href="\/dashboard"\s+onClick=\{onClose\}/);
+  assert.match(sidebar, /Minerva Console/);
   assert.match(minervaItems, /Control Center/);
   assert.match(minervaItems, /Seshat/);
   assert.match(minervaItems, /Reminders/);
