@@ -8,7 +8,7 @@
 - **Date:** 2026-09-01
 - **Supersedes:** none
 - **Tags:** minerva-console, architecture, products, modules, permissions, brain, integrations
-- **Related:** `PRJ-0001`, `PRJ-0002`, `PRJ-0004`, `MINERVA-CONSOLE-001`
+- **Related:** `PRJ-0001`, `PRJ-0002`, `PRJ-0004`, `MINERVA-CONSOLE-001`, `MINERVA-CONSOLE-ENTRY-PILOT-001`
 
 ## Context
 
@@ -35,7 +35,32 @@ Key architectural rules:
 7. **Neutral Console monitoring** — basic connected-product status/metrics belong to a neutral Console summary layer, not to Brain.
 8. **Brain isolation** — Brain may store Minerva knowledge about projects, missions, decisions, QA, bugs, and implementation continuity, but connected-product operational/customer data does not automatically flow into Brain.
 9. **Zero-added-cost V1** — Control Center must not introduce a new recurring AI, observability, event-stream, or always-on infrastructure bill simply to provide the visual overview.
-10. **Self-documenting integration** — Add Product should eventually expose a clean AI-friendly Integration Kit / `MINERVA_CONNECTOR.md`, preferably backed by a separate shareable `minerva-console-integration-kit` repository with no private ENTRY or Brain content.
+10. **Self-documenting integration** — Add Product should expose a clean AI-friendly Integration Kit / `MINERVA_CONNECTOR.md`, preferably backed by a separate shareable `minerva-console-integration-kit` repository with no private ENTRY or Brain content.
+11. **ENTRY-first manual integration pilot** — ENTRY is the first real system used to prove the new product-registration and setup flow. `Add Product` is intentionally manual and guided in V1: the user enters product metadata, Console shows product-specific implementation instructions, a human/AI implements the required contract, the user returns to enter connection values manually, and `Test connection` verifies the supported read-only contract on demand. No automatic product discovery, repository modification, background polling, or autonomous connector provisioning is required.
+
+## Manual integration rule
+
+The V1 `Add Product` experience is a setup workflow, not a one-click automation system.
+
+Expected pattern:
+
+```text
+Add Product
+  → enter product metadata
+  → choose Native / External and connection mode
+  → view/copy/download product-specific instructions
+  → implement the contract manually (human or AI agent)
+  → return to Console
+  → enter/edit connection values manually
+  → Test connection
+  → activate the product in Control Center
+```
+
+The Console may store the approved configuration and invoke a safe read-only connection test, but it should not automatically modify another repository or provision new infrastructure.
+
+ENTRY is the first reference implementation for this flow. Because ENTRY is already native to Minerva Console, implementation should validate the registry/setup/instructions/testing UX without inventing fake external dependencies solely to make ENTRY look external.
+
+See `MINERVA-CONSOLE-ENTRY-PILOT-001` for the detailed pilot contract.
 
 ## Visual direction
 
@@ -54,15 +79,18 @@ The login may remain more visibly red/black; the operational Console should be v
 
 - `/dashboard` should evolve from ENTRY Operations into Minerva Control Center.
 - Existing ENTRY routes and functionality remain preserved.
+- ENTRY becomes the first product used to validate the new guided Add Product / integration setup pattern.
 - New products should register through a shared product/module seam rather than hand-coded one-off dashboard architecture.
+- Adding a product in V1 remains a deliberate manual workflow with editable configuration and on-demand connection testing.
 - Seshat's future web surface should target Minerva Console.
 - Brain must remain independent from connected-product operational data.
 - External integrations default to read-only and minimal.
 - A builder can participate in the shared Console while protected module boundaries are enforced through scope instructions, review, and eventually repository ownership rules where useful.
-- Rich observability, universal API gateways, background AI analysis, drag/drop dashboards, and broad data replication remain future work requiring separate justification.
+- Rich observability, universal API gateways, background AI analysis, automatic connector provisioning, drag/drop dashboards, and broad data replication remain future work requiring separate justification.
 
 ## Implementation reference
 
-See `MINERVA-CONSOLE-001`:
+See:
 
-`content/brain/projects/minerva-console-control-center-foundation.md`
+- `MINERVA-CONSOLE-001` — `content/brain/projects/minerva-console-control-center-foundation.md`
+- `MINERVA-CONSOLE-ENTRY-PILOT-001` — `content/brain/projects/minerva-console-entry-first-integration-pilot.md`
