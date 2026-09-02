@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import {
   getConsolePostLoginDestination,
 } from "@/features/auth/postLoginDestination";
-import { getConsoleAccessContext } from "@/features/auth/consoleAccess";
+import { getConsoleAccessContext, requireConsoleMember } from "@/features/auth/consoleAccess";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -67,6 +67,8 @@ export async function updateConsolePasswordAction(
   if (password.length < 8) {
     return { message: "Use at least 8 characters for your password." };
   }
+
+  await requireConsoleMember();
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });

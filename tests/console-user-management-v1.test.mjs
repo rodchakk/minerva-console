@@ -110,10 +110,21 @@ test("role and status management changes console_members only and protects syste
 
   assert.match(actions, /updateConsoleMemberRoleAction/);
   assert.match(actions, /updateConsoleMemberStatusAction/);
-  assert.match(actions, /\.from\("console_members"\)[\s\S]*\.update\(\{ status \}\)/);
+  assert.match(actions, /\.from\("console_members"\)[\s\S]*\.update\(\{ role \}\)/);
   assert.doesNotMatch(actions, /ban_duration|updateUserById\([^)]*ban|deleteUser\(userId/);
+  assert.match(actions, /isCompatibilitySuperadmin\(userId\)/);
+  assert.match(actions, /rpc\("is_superadmin"/);
   assert.match(actions, /System owner compatibility users cannot be edited here/);
   assert.match(actions, /You cannot remove the final effective Console owner/);
+});
+
+test("Console users page maps target superadmins to non-editable System owners", () => {
+  const dataFile = read("features/console-users/data.ts");
+  
+  assert.match(dataFile, /superadminMap\.get\(member\.user_id\)/);
+  assert.match(dataFile, /isEditable: false/);
+  assert.match(dataFile, /source: "System owner"/);
+  assert.match(dataFile, /role: "owner"/);
 });
 
 test("service-role and auth users stay server-only", () => {
@@ -132,17 +143,21 @@ test("service-role and auth users stay server-only", () => {
   assert.match(serverData, /createAdminClient/);
 });
 
-test("Console invitation acceptance has its own callback and does not touch ENTRY reset bridge", () => {
+test("Console invitation acceptance has its own callback strictly for invite token_hash", () => {
   const callback = read("app/auth/callback/route.ts");
   const setup = read("app/console-invite/setup/page.tsx");
   const form = read("features/auth/ConsolePasswordSetupForm.tsx");
+  const actions = read("features/auth/actions.ts");
   const bridge = read("app/reset-password/page.tsx");
 
-  assert.match(callback, /exchangeCodeForSession/);
+  assert.match(callback, /type === "invite"/);
+  assert.doesNotMatch(callback, /exchangeCodeForSession/);
+  assert.doesNotMatch(callback, /recovery|email/);
   assert.match(callback, /verifyOtp/);
   assert.match(callback, /\/console-invite\/setup/);
   assert.match(setup, /requireConsoleMember/);
-  assert.match(form, /updateConsolePasswordAction/);
+  assert.match(actions, /updateConsolePasswordAction/);
+  assert.match(actions, /await requireConsoleMember\(\)/);
   assert.match(bridge, /Opening ENTRY password reset/);
   assert.doesNotMatch(callback, /reset-password|ENTRY/);
 });

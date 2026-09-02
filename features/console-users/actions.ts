@@ -75,10 +75,14 @@ async function hasOtherActiveConsoleOwner(userId: string) {
   return (count ?? 0) > 0;
 }
 
-function requireEditableConsoleMember(currentOwner: Awaited<ReturnType<typeof requireConsoleOwner>>, userId: string) {
-  if (currentOwner.source === "superadmin" && currentOwner.user.id === userId) {
-    throw new Error("System owner compatibility users cannot be edited here.");
+async function isCompatibilitySuperadmin(userId: string): Promise<boolean> {
+  const adminSupabase = createAdminClient();
+  const { data, error } = await adminSupabase.rpc("is_superadmin", { user_id: userId });
+  if (error) {
+    console.error("[console-users] target superadmin check failed", { code: error.code });
+    throw new Error("Target user compatibility could not be verified.");
   }
+  return data === true;
 }
 
 async function ensureOwnerSafety({
@@ -229,7 +233,9 @@ export async function updateConsoleMemberRoleAction(formData: FormData) {
     throw new Error("Invalid Console member role update.");
   }
 
-  requireEditableConsoleMember(currentOwner, userId);
+  if (await isCompatibilitySuperadmin(userId)) {
+    throw new Error("System owner compatibility users cannot be edited here.");
+  }
 
   const member = await getConsoleMember(userId);
   if (!member) {
@@ -265,7 +271,9 @@ export async function updateConsoleMemberStatusAction(formData: FormData) {
     throw new Error("Invalid Console member status update.");
   }
 
-  requireEditableConsoleMember(currentOwner, userId);
+  if (await isCompatibilitySuperadmin(userId)) {
+    throw new Error("System owner compatibility users cannot be edited here.");
+  }
 
   const member = await getConsoleMember(userId);
   if (!member) {

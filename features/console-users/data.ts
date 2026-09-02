@@ -43,23 +43,54 @@ export async function getConsoleUsersPageData(): Promise<ConsoleUserListItem[]> 
   }
 
   const memberRows = (members ?? []) as ConsoleMemberRow[];
-  const authUsers = await listAuthUsersById(memberRows.map((member) => member.user_id));
+  const userIds = memberRows.map((member) => member.user_id);
+  
+  // Add currentOwner if not present
+  if (currentOwner.source === "superadmin" && !userIds.includes(currentOwner.user.id)) {
+    userIds.push(currentOwner.user.id);
+  }
 
-  const items: ConsoleUserListItem[] = memberRows.map((member) => {
+  const authUsers = await listAuthUsersById(userIds);
+  const superadminChecks = await Promise.all(
+    userIds.map(async (userId) => {
+      const { data } = await adminSupabase.rpc("is_superadmin", { user_id: userId });
+      return [userId, data === true] as const;
+    })
+  );
+  const superadminMap = new Map(superadminChecks);
+
+  const items: ConsoleUserListItem[] = [];
+
+  for (const member of memberRows) {
     const authUser = authUsers.get(member.user_id) ?? null;
+    const isSuperadmin = superadminMap.get(member.user_id) ?? false;
 
-    return {
-      accountState: getAccountState(authUser),
-      createdAt: member.created_at,
-      displayName: member.display_name,
-      email: authUser?.email ?? null,
-      isEditable: true,
-      role: member.role,
-      source: "Console member",
-      status: member.status,
-      userId: member.user_id,
-    };
-  });
+    if (isSuperadmin) {
+      items.push({
+        accountState: getAccountState(authUser),
+        createdAt: member.created_at,
+        displayName: member.display_name,
+        email: authUser?.email ?? null,
+        isEditable: false,
+        role: "owner",
+        source: "System owner",
+        status: "active",
+        userId: member.user_id,
+      });
+    } else {
+      items.push({
+        accountState: getAccountState(authUser),
+        createdAt: member.created_at,
+        displayName: member.display_name,
+        email: authUser?.email ?? null,
+        isEditable: true,
+        role: member.role,
+        source: "Console member",
+        status: member.status,
+        userId: member.user_id,
+      });
+    }
+  }
 
   if (
     currentOwner.source === "superadmin" &&
