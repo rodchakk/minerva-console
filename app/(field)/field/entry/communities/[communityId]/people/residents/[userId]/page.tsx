@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldResidentActions } from "@/features/entry/field/FieldResidentActions";
+import { FieldResidentStatusAction } from "@/features/entry/field/FieldResidentStatusAction";
 import { getFieldResidentDetailData } from "@/features/entry/field/peopleData";
 
 type FieldResidentDetailPageProps = {
@@ -53,6 +54,8 @@ export default async function FieldResidentDetailPage({
     notFound();
   }
 
+  const isReadOnlyPreview = isEntryPreviewReadOnly();
+
   return (
     <div className="space-y-5">
       <Link
@@ -81,11 +84,19 @@ export default async function FieldResidentDetailPage({
 
       <FieldResidentActions
         communityId={data.community.id}
-        isReadOnlyPreview={isEntryPreviewReadOnly()}
+        isReadOnlyPreview={isReadOnlyPreview}
         resident={data.resident}
         unitState={data.units.state}
         units={data.units.state === "ready" ? data.units.items : []}
       />
+
+      {data.resident.role === "RESIDENT" ? (
+        <FieldResidentStatusAction
+          communityId={data.community.id}
+          isReadOnlyPreview={isReadOnlyPreview}
+          resident={data.resident}
+        />
+      ) : null}
     </div>
   );
 }
