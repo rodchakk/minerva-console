@@ -29,7 +29,20 @@ test("unit detail exposes linked resident state and quick-create route", () => {
   assert.doesNotMatch(source, /createGuardAction|ADMIN|GUARD/);
 });
 
-test("resident detail exposes status controls only through the Field resident action", () => {
+test("resident detail keeps the whole household visible and selectable", () => {
+  const page = read(residentPath);
+
+  assert.match(page, /Household/);
+  assert.match(page, /householdResidents/);
+  assert.match(page, /resident\.houseId === data\.resident\?\.houseId/);
+  assert.match(page, /Select any resident above to manage that account/);
+  assert.match(page, /resident\.accountState/);
+  assert.match(page, /Add resident/);
+  assert.match(page, /\/people\/units\/\$\{encodeURIComponent\(data\.resident\.houseId\)\}\/residents\/new/);
+  assert.match(page, /\/people\/residents\/\$\{encodeURIComponent\(resident\.userId\)\}/);
+});
+
+test("resident detail exposes status controls through the Field resident action", () => {
   const page = read(residentPath);
   const status = read(statusPath);
 
