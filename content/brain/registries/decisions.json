@@ -88,11 +88,11 @@
     "type": "decision",
     "status": "approved",
     "title": "Minerva Console is the modular web home for Minerva products",
-    "summary": "Minerva Console becomes the shared modular web home for Minerva Technologies products and internal operational tooling: one Control Center above ENTRY, native future Seshat, role/module authorization, lightweight read-only connected products, neutral Console monitoring, Brain isolation from connected-product operational data, an AI-friendly Integration Kit, and zero-added-cost V1 infrastructure.",
+    "summary": "Minerva Console becomes one shared modular web home above individual products. ENTRY remains native and is the first system used to prove the guided manual Add Product integration workflow; Seshat targets a future native module; connected products remain read-only/minimal; Brain stays isolated; and V1 adds no recurring AI or monitoring cost.",
     "created": "2026-09-01",
     "updated": "2026-09-01",
-    "tags": ["minerva-console", "architecture", "products", "modules", "permissions", "brain", "integrations"],
-    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004", "MINERVA-CONSOLE-001"],
+    "tags": ["minerva-console", "architecture", "products", "modules", "permissions", "integrations", "brain", "manual-setup"],
+    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004", "MINERVA-CONSOLE-001", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
     "path": "content/brain/decisions/dec-0008-minerva-console-modular-web-home.md"
   }
 ]
