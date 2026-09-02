@@ -7,13 +7,17 @@ import {
   BrainCircuit,
   CheckCircle2,
   Download,
+  FileText,
   Lock,
+  LucideIcon,
+  MessageSquare,
   PackagePlus,
   Plus,
   Radio,
   Settings2,
+  TicketCheck,
+  UserCheck,
 } from "lucide-react";
-import { getBrainCounts } from "@/features/brain/lib/content";
 import {
   getEntryOperationalActivity,
   getEntryPublishedMessagesLast24Hours,
@@ -36,7 +40,7 @@ function Panel({
   return (
     <section
       className={cn(
-        "rounded-lg border border-white/[0.10] bg-[#181a1d] shadow-[0_18px_50px_rgba(0,0,0,0.18)]",
+        "rounded-lg border border-white/[0.10] bg-[#10151b] shadow-[0_20px_55px_rgba(0,0,0,0.22)]",
         className,
       )}
     >
@@ -83,29 +87,68 @@ function StatusDot({ status }: { status: ProductStatus }) {
 }
 
 function SummaryCard({
+  accent,
   icon: Icon,
   label,
   note,
   value,
-  warning = false,
 }: {
-  icon: typeof PackagePlus;
+  accent: "amber" | "blue" | "teal" | "violet";
+  icon: LucideIcon;
   label: string;
   note: string;
   value: string | number;
-  warning?: boolean;
 }) {
+  const accentClassNames = {
+    amber: {
+      glow: "bg-amber-400/10 text-amber-300 shadow-[0_0_34px_rgba(245,158,11,0.22)]",
+      ring: "border-amber-300/30",
+      dot: "bg-amber-300",
+      wash: "from-amber-400/[0.10]",
+    },
+    blue: {
+      glow: "bg-sky-400/10 text-sky-300 shadow-[0_0_34px_rgba(56,189,248,0.20)]",
+      ring: "border-sky-300/30",
+      dot: "bg-sky-300",
+      wash: "from-sky-400/[0.09]",
+    },
+    teal: {
+      glow: "bg-teal-400/10 text-teal-300 shadow-[0_0_34px_rgba(45,212,191,0.20)]",
+      ring: "border-teal-300/30",
+      dot: "bg-teal-300",
+      wash: "from-teal-400/[0.10]",
+    },
+    violet: {
+      glow: "bg-violet-400/10 text-violet-300 shadow-[0_0_34px_rgba(167,139,250,0.20)]",
+      ring: "border-violet-300/30",
+      dot: "bg-violet-300",
+      wash: "from-violet-400/[0.10]",
+    },
+  }[accent];
+
   return (
-    <Panel className="min-h-[112px] p-4">
-      <div className="flex items-center gap-4">
-        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-white/[0.10] bg-white/[0.04] text-slate-200">
-          <Icon className={cn("h-5 w-5 stroke-[1.75]", warning ? "text-amber-300" : "")} />
+    <Panel
+      className={cn(
+        "relative min-h-[126px] overflow-hidden p-5",
+        "bg-linear-to-br to-transparent",
+        accentClassNames.wash,
+      )}
+    >
+      <div className="flex h-full items-center gap-4">
+        <span
+          className={cn(
+            "inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full border",
+            accentClassNames.ring,
+            accentClassNames.glow,
+          )}
+        >
+          <Icon className="h-7 w-7 stroke-[1.75]" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-medium text-[var(--console-text-muted)]">{label}</p>
-          <p className="mt-1 text-2xl font-semibold leading-7 text-white">{value}</p>
-          <p className="mt-1 flex items-center gap-2 text-xs text-[var(--console-text-muted)]">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#ff4d4d]" />
+          <p className="text-sm font-medium text-slate-300">{label}</p>
+          <p className="mt-1 text-[2rem] font-semibold leading-9 text-white">{value}</p>
+          <p className="mt-1.5 flex items-center gap-2 text-xs text-[var(--console-text-muted)]">
+            <span className={cn("h-1.5 w-1.5 rounded-full", accentClassNames.dot)} />
             <span className="truncate">{note}</span>
           </p>
         </div>
@@ -117,12 +160,34 @@ function SummaryCard({
 function ProductCard({ product }: { product: ProductModule }) {
   const Icon = product.icon;
   const openHref = product.availability === "available" ? product.href : null;
+  const accent =
+    product.status === "operational"
+      ? {
+          border: "border-t-teal-400/80",
+          icon: "border-violet-300/20 bg-violet-400/10 text-violet-300",
+          status: "border-teal-300/20 bg-teal-400/10 text-teal-200",
+        }
+      : {
+          border: "border-t-sky-300/80",
+          icon: "border-sky-300/20 bg-sky-400/10 text-sky-300",
+          status: "border-amber-300/20 bg-amber-400/10 text-amber-100",
+        };
 
   return (
-    <article className="flex min-h-[184px] flex-col rounded-lg border border-white/[0.10] bg-white/[0.025] p-4">
+    <article
+      className={cn(
+        "flex min-h-[256px] flex-col rounded-lg border border-t-4 border-white/[0.10] bg-white/[0.025] p-5",
+        accent.border,
+      )}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/[0.10] bg-white/[0.04] text-slate-200">
+          <span
+            className={cn(
+              "inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md border",
+              accent.icon,
+            )}
+          >
             <Icon className="h-5 w-5 stroke-[1.75]" />
           </span>
           <div className="min-w-0">
@@ -132,7 +197,12 @@ function ProductCard({ product }: { product: ProductModule }) {
             </p>
           </div>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/[0.10] bg-white/[0.035] px-2 py-1 text-xs font-medium text-slate-200">
+        <span
+          className={cn(
+            "inline-flex shrink-0 items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium",
+            accent.status,
+          )}
+        >
           <StatusDot status={product.status} />
           {product.statusLabel}
         </span>
@@ -142,7 +212,7 @@ function ProductCard({ product }: { product: ProductModule }) {
         {product.description}
       </p>
 
-      <div className="mt-4 grid grid-cols-3 divide-x divide-white/[0.10] border-y border-white/[0.08] py-2">
+      <div className="mt-4 grid grid-cols-3 divide-x divide-white/[0.10] border-y border-white/[0.08] py-3">
         {product.metrics.map((metric) => (
           <div key={metric.label} className="px-3 first:pl-0 last:pr-0">
             <p className="truncate text-sm font-semibold text-white">{metric.value}</p>
@@ -183,9 +253,9 @@ function AddProductCard() {
   return (
     <Link
       href="/products/add"
-      className="flex min-h-[184px] flex-col items-center justify-center rounded-lg border border-dashed border-white/[0.14] bg-white/[0.015] p-5 text-center transition-colors hover:border-[#ff4d4d]/35 hover:bg-white/[0.03]"
+      className="flex min-h-[256px] flex-col items-center justify-center rounded-lg border border-dashed border-white/[0.18] bg-white/[0.012] p-5 text-center transition-colors hover:border-[#ff4d4d]/35 hover:bg-white/[0.03]"
     >
-      <span className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.03] text-slate-100">
+      <span className="inline-flex h-14 w-14 items-center justify-center rounded-full border border-white/[0.12] bg-white/[0.03] text-slate-100">
         <Plus className="h-5 w-5 stroke-[1.75]" />
       </span>
       <h3 className="mt-4 text-base font-semibold text-white">Add Product</h3>
@@ -223,63 +293,60 @@ function SectionHeader({
   );
 }
 
-function BrainOverviewPanel() {
-  const counts = getBrainCounts();
-  const items = [
-    {
-      count: counts.inbox,
-      label: "Needs Attention",
-      note: "Brain inbox items awaiting triage",
-    },
-    {
-      count: counts.missions,
-      label: "Missions",
-      note: "Git-backed work ledger",
-    },
-    {
-      count: counts.projects,
-      label: "Continue Working",
-      note: "Project records available in Brain",
-    },
-  ];
+const activityAccentBySeverity = {
+  error: {
+    badge: "border-rose-300/20 bg-rose-400/10 text-rose-200",
+    icon: "bg-rose-400/10 text-rose-300",
+  },
+  info: {
+    badge: "border-violet-300/20 bg-violet-400/10 text-violet-200",
+    icon: "bg-sky-400/10 text-sky-300",
+  },
+  warning: {
+    badge: "border-amber-300/20 bg-amber-400/10 text-amber-100",
+    icon: "bg-amber-400/10 text-amber-300",
+  },
+};
 
-  return (
-    <Panel className="overflow-hidden">
-      <SectionHeader
-        action={
-          <Link
-            href="/brain"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-200 hover:text-white"
-          >
-            Open Brain
-            <ArrowRight className="h-4 w-4 stroke-[1.75]" />
-          </Link>
-        }
-        description="Private Minerva workspace, rendered only from Brain's own content seam."
-        icon={BrainCircuit}
-        title="Brain Overview"
-      />
-      <div className="space-y-2 p-3">
-        {items.map((item) => (
-          <Link
-            key={item.label}
-            href={item.label === "Needs Attention" ? "/brain/inbox" : "/brain/projects"}
-            className="flex items-center justify-between gap-4 rounded-md border border-white/[0.08] bg-white/[0.02] px-3 py-3 transition-colors hover:border-white/[0.14] hover:bg-white/[0.035]"
-          >
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">{item.label}</p>
-              <p className="mt-1 truncate text-xs text-[var(--console-text-muted)]">
-                {item.note}
-              </p>
-            </div>
-            <span className="inline-flex h-7 min-w-7 shrink-0 items-center justify-center rounded-md bg-white/[0.06] px-2 text-sm font-semibold text-slate-200">
-              {item.count}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </Panel>
-  );
+function getActivityIcon(item: Awaited<ReturnType<typeof getEntryOperationalActivity>>["items"][number]) {
+  if (item.eventKey.includes("message")) {
+    return MessageSquare;
+  }
+
+  if (item.eventKey.includes("ticket")) {
+    return TicketCheck;
+  }
+
+  if (item.eventKey.includes("user") || item.eventKey.includes("resident")) {
+    return UserCheck;
+  }
+
+  if (item.eventKey.includes("settings")) {
+    return Settings2;
+  }
+
+  return FileText;
+}
+
+function formatRelativeActivityTime(value: string) {
+  const occurredAt = new Date(value).getTime();
+
+  if (!Number.isFinite(occurredAt)) {
+    return "Recently";
+  }
+
+  const minutesAgo = Math.max(0, Math.round((Date.now() - occurredAt) / 60000));
+
+  if (minutesAgo < 1) {
+    return "Now";
+  }
+
+  if (minutesAgo < 60) {
+    return `${minutesAgo}m ago`;
+  }
+
+  const hoursAgo = Math.round(minutesAgo / 60);
+  return `${hoursAgo}h ago`;
 }
 
 function RecentActivityPanel({
@@ -305,7 +372,7 @@ function RecentActivityPanel({
         icon={Activity}
         title="Recent Activity"
       />
-      <div className="divide-y divide-white/[0.08] px-5">
+      <div className="overflow-x-auto px-4 pb-4">
         {activity.state === "unavailable" ? (
           <div className="py-8 text-center">
             <p className="font-medium text-white">Activity temporarily unavailable</p>
@@ -321,21 +388,53 @@ function RecentActivityPanel({
             </p>
           </div>
         ) : (
-          items.map((item) => (
-            <div key={item.eventId} className="grid gap-2 py-3 text-sm sm:grid-cols-[1fr_auto]">
-              <div className="min-w-0">
-                <p className="truncate font-medium text-slate-100">
-                  {item.eventLabel}: {item.communityName}
-                </p>
-                <p className="mt-1 truncate text-xs text-[var(--console-text-muted)]">
-                  {item.detail}
-                </p>
-              </div>
-              <span className="inline-flex w-fit items-center rounded-md border border-white/[0.08] bg-white/[0.025] px-2 py-1 text-[11px] font-medium text-[var(--console-text-muted)]">
-                ENTRY
-              </span>
+          <div className="min-w-[760px]">
+            <div className="grid grid-cols-[minmax(280px,1fr)_minmax(220px,0.85fr)_110px_86px] border-b border-white/[0.10] px-2 py-2 text-xs font-medium text-[var(--console-text-muted)]">
+              <span>Event</span>
+              <span>Details</span>
+              <span>Source</span>
+              <span>Time</span>
             </div>
-          ))
+            <div className="divide-y divide-white/[0.08]">
+              {items.map((item) => {
+                const Icon = getActivityIcon(item);
+                const accent = activityAccentBySeverity[item.severity];
+
+                return (
+                  <div
+                    key={item.eventId}
+                    className="grid grid-cols-[minmax(280px,1fr)_minmax(220px,0.85fr)_110px_86px] items-center gap-4 px-2 py-2.5 text-sm"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span
+                        className={cn(
+                          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
+                          accent.icon,
+                        )}
+                      >
+                        <Icon className="h-4 w-4 stroke-[1.75]" />
+                      </span>
+                      <p className="min-w-0 truncate font-medium text-slate-100">
+                        {item.eventLabel}: {item.communityName}
+                      </p>
+                    </div>
+                    <p className="truncate text-[var(--console-text-muted)]">{item.detail}</p>
+                    <span
+                      className={cn(
+                        "inline-flex w-fit items-center rounded-md border px-2 py-1 text-[11px] font-semibold",
+                        accent.badge,
+                      )}
+                    >
+                      ENTRY
+                    </span>
+                    <span className="text-xs text-[var(--console-text-muted)]">
+                      {formatRelativeActivityTime(item.occurredAt)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
       </div>
     </Panel>
@@ -353,15 +452,25 @@ function NewProductSetupPanel() {
       <div className="space-y-3 p-4">
         {integrationKitActions.map((action) => {
           const Icon = action.icon;
+          const isConnector = action.label === "MINERVA_CONNECTOR.md";
 
           return (
             <Link
               key={action.label}
               href={action.href}
-              className="flex items-center justify-between gap-4 rounded-md border border-white/[0.10] bg-white/[0.025] px-3 py-3 transition-colors hover:border-[#ff4d4d]/30 hover:bg-white/[0.04]"
+              className="flex min-h-20 items-center justify-between gap-4 rounded-md border border-white/[0.10] bg-white/[0.025] px-3 py-3 transition-colors hover:border-[#ff4d4d]/30 hover:bg-white/[0.04]"
             >
               <div className="flex min-w-0 items-center gap-3">
-                <Icon className="h-5 w-5 shrink-0 text-[#ff4d4d] stroke-[1.75]" />
+                <span
+                  className={cn(
+                    "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border",
+                    isConnector
+                      ? "border-[#ff4d4d]/25 bg-[#ff4d4d]/10 text-[#ff6b6b]"
+                      : "border-violet-300/25 bg-violet-400/10 text-violet-300",
+                  )}
+                >
+                  <Icon className="h-5 w-5 stroke-[1.75]" />
+                </span>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-white">{action.label}</p>
                   <p className="mt-0.5 truncate text-xs text-[var(--console-text-muted)]">
@@ -381,7 +490,7 @@ function NewProductSetupPanel() {
             "No background monitoring or AI cost",
           ].map((item) => (
             <p key={item} className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-[#ff4d4d] stroke-[1.75]" />
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-300 stroke-[1.75]" />
               {item}
             </p>
           ))}
@@ -437,25 +546,28 @@ export async function ControlCenterDashboard() {
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
+          accent="violet"
           icon={PackagePlus}
           label="Products connected"
           note={`${activeProducts.length} active native module`}
           value={activeProducts.length}
         />
         <SummaryCard
+          accent="teal"
           icon={CheckCircle2}
           label="Operational"
           note="Running through existing Console routes"
           value={operationalProducts.length}
         />
         <SummaryCard
+          accent="amber"
           icon={AlertTriangle}
           label="Needs attention"
           note="Future module or setup action"
           value={needsAttention.length}
-          warning
         />
         <SummaryCard
+          accent="blue"
           icon={Radio}
           label="Events available"
           note={
@@ -467,7 +579,7 @@ export async function ControlCenterDashboard() {
         />
       </section>
 
-      <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_520px]">
+      <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-3">
           <Panel className="overflow-hidden">
             <SectionHeader
@@ -483,7 +595,7 @@ export async function ControlCenterDashboard() {
               description="Connected Minerva products and reserved module spaces."
               title="Products"
             />
-            <div className="grid gap-3 p-4 lg:grid-cols-2">
+            <div className="grid gap-3 p-4 lg:grid-cols-3">
               {productModules.map((product) => (
                 <ProductCard key={product.id} product={product} />
               ))}
@@ -494,8 +606,7 @@ export async function ControlCenterDashboard() {
           <RecentActivityPanel activity={activity} />
         </div>
 
-        <div className="space-y-3">
-          <BrainOverviewPanel />
+        <div>
           <NewProductSetupPanel />
         </div>
       </section>

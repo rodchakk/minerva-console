@@ -132,6 +132,30 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
   return group.items.some((item) => item.href && isItemActive(pathname, item.href));
 }
 
+function getItemAccent(groupId: string, href: string | null) {
+  if (groupId === "entry" || href?.startsWith("/products/entry")) {
+    return {
+      icon: "text-[var(--console-accent)]",
+      rail: "bg-[var(--console-accent)]",
+      ring: "focus-visible:ring-[var(--console-accent)]/40",
+    };
+  }
+
+  if (groupId === "brain" || href?.startsWith("/brain")) {
+    return {
+      icon: "text-sky-300",
+      rail: "bg-sky-300",
+      ring: "focus-visible:ring-sky-300/40",
+    };
+  }
+
+  return {
+    icon: "text-[#ff6b6b]",
+    rail: "bg-[#ff4d4d]",
+    ring: "focus-visible:ring-[#ff4d4d]/40",
+  };
+}
+
 function SidebarNav({
   pathname,
   onClose,
@@ -154,21 +178,21 @@ function SidebarNav({
         href="/dashboard"
         onClick={onClose}
         className={cn(
-          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium leading-4 transition-colors",
+          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#ff4d4d]/40",
           pathname === "/dashboard"
-            ? "bg-white/[0.055] text-white"
-            : "text-[var(--console-text-muted)] hover:bg-white/[0.03] hover:text-slate-200",
+            ? "bg-white/[0.075] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+            : "text-slate-300 hover:bg-white/[0.04] hover:text-white",
         )}
       >
         {pathname === "/dashboard" ? (
-          <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[#ff4d4d]" />
+          <span className="absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full bg-[#ff4d4d]" />
         ) : null}
         <LayoutDashboard
           className={cn(
             "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
             pathname === "/dashboard"
-              ? "text-white"
-              : "text-[var(--console-text-soft)] group-hover:text-slate-300",
+              ? "text-[#ff6b6b]"
+              : "text-slate-400 group-hover:text-slate-200",
           )}
         />
         <span className="truncate">Control Center</span>
@@ -188,13 +212,13 @@ function SidebarNav({
               type="button"
               onClick={() => toggleGroup(group.id, isGroupExpanded)}
               aria-expanded={isGroupExpanded}
-              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-[var(--console-text-muted)] transition-colors hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/40"
+              className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] font-semibold uppercase leading-4 tracking-[0.14em] text-slate-400 transition-colors hover:text-slate-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-white/20"
             >
               <span className="flex items-center gap-2 min-w-0">
                 <ChevronRight
                   className={cn(
                     "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
-                    isGroupExpanded ? "rotate-90 text-slate-300" : "text-[var(--console-text-soft)]",
+                    isGroupExpanded ? "rotate-90 text-slate-300" : "text-slate-500",
                   )}
                 />
                 <span className="truncate">{group.label}</span>
@@ -206,11 +230,13 @@ function SidebarNav({
                 {group.items.map((item) => {
                   const active = item.href ? isItemActive(pathname, item.href) : false;
                   const Icon = item.icon;
+                  const accent = getItemAccent(group.id, item.href);
+
                   if (item.disabled || !item.href) {
                     return (
                       <div
                         key={item.label}
-                        className="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 text-[var(--console-text-soft)]"
+                        className="group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 text-slate-500"
                       >
                         <Icon className="h-4 w-4 shrink-0 stroke-[1.75]" />
                         <span className="truncate">{item.label}</span>
@@ -224,21 +250,27 @@ function SidebarNav({
                       href={item.href}
                       onClick={onClose}
                       className={cn(
-                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors",
+                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1",
+                        accent.ring,
                         active
-                          ? "bg-white/[0.055] text-white"
-                          : "text-[var(--console-text-muted)] hover:bg-white/[0.03] hover:text-slate-200",
+                          ? "bg-white/[0.07] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+                          : "text-slate-300 hover:bg-white/[0.04] hover:text-white",
                       )}
                     >
                       {active ? (
-                        <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-[#ff4d4d]" />
+                        <span
+                          className={cn(
+                            "absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full",
+                            accent.rail,
+                          )}
+                        />
                       ) : null}
                       <Icon
                         className={cn(
                           "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
                           active
-                            ? "text-white"
-                            : "text-[var(--console-text-soft)] group-hover:text-slate-300",
+                            ? accent.icon
+                            : "text-slate-400 group-hover:text-slate-200",
                         )}
                       />
                       <span className="truncate">{item.label}</span>
@@ -273,13 +305,13 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
       ) : null}
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.12] bg-[#111214] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.02)] transition-transform lg:translate-x-0",
+          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.14] bg-[#20242b] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.04),18px_0_46px_rgba(0,0,0,0.18)] transition-transform lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         <div className="flex items-center justify-between gap-2 px-0.5 py-1">
           <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] text-[#ff4d4d]">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-[#ff4d4d]/25 bg-[#ff4d4d]/10 text-[#ff6b6b]">
               <Hexagon className="h-3.5 w-3.5 stroke-[1.75]" />
             </div>
             <div>
@@ -302,9 +334,9 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
 
         <div className="mt-auto pt-2">
           <div className="my-2 border-t border-white/[0.12]" />
-          <div className="flex items-center justify-between rounded-lg border border-white/[0.12] bg-white/[0.025] px-2.5 py-2 text-xs">
+          <div className="flex items-center justify-between rounded-lg border border-white/[0.12] bg-white/[0.04] px-2.5 py-2 text-xs">
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/5 font-semibold text-slate-200">
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[#ff4d4d]/25 bg-[#ff4d4d]/10 font-semibold text-slate-100">
                 {(displayEmail ? displayEmail[0] : "M")?.toUpperCase() ?? "M"}
               </div>
               <div className="min-w-0 flex-1">

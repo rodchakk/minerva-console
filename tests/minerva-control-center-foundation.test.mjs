@@ -16,6 +16,8 @@ test("dashboard is the Minerva Control Center landing surface", () => {
   assert.match(dashboard, /ControlCenterDashboard/);
   assert.match(controlCenter, /Minerva Control Center/);
   assert.match(controlCenter, /productModules/);
+  assert.doesNotMatch(controlCenter, /getBrainCounts/);
+  assert.doesNotMatch(controlCenter, /Brain Overview/);
   assert.doesNotMatch(dashboard, /ENTRY Operations/);
 });
 
@@ -57,4 +59,13 @@ test("Add Product is a manual guided setup, not automatic provisioning", () => {
   assert.doesNotMatch(actions, /fetch\s*\(/);
   assert.doesNotMatch(actions, /method: "POST"|\.insert\(|\.upsert\(|\.update\(/);
   assert.doesNotMatch(actions, /features\/brain/);
+});
+
+test("global sidebar keeps ENTRY navigation on the ENTRY accent boundary", () => {
+  const sidebar = read("components/layout/AppSidebar.tsx");
+
+  assert.match(sidebar, /groupId === "entry"/);
+  assert.match(sidebar, /href\?\.startsWith\("\/products\/entry"\)/);
+  assert.match(sidebar, /rail: "bg-\[var\(--console-accent\)\]"/);
+  assert.match(sidebar, /rail: "bg-\[#ff4d4d\]"/);
 });
