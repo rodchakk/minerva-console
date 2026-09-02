@@ -74,12 +74,12 @@
   {
     "id": "MINERVA-FIELD-001",
     "type": "project",
-    "status": "planned",
+    "status": "approved",
     "title": "Minerva Field Foundation",
-    "summary": "Planned mobile-first installable PWA surface inside Minerva Console for field operations. ENTRY is the first and only current product module; products without an approved field workflow, including Seshat, are excluded from the Field surface.",
+    "summary": "Live mobile-first installable Field surface inside Minerva Console. ENTRY is the only current Field product. Missions 001B–001J are production-merged, including task-first Communities/People navigation, registration operations, resident/unit support, activation/account creation, and production-safe password reset. Next step is a fresh-community end-to-end acceptance walkthrough before adding more scope.",
     "created": "2026-08-26",
-    "updated": "2026-08-26",
-    "tags": ["minerva-console", "field", "pwa", "mobile", "entry"],
+    "updated": "2026-08-30",
+    "tags": ["minerva-console", "field", "pwa", "mobile", "entry", "production", "qa-pending"],
     "related": ["PRJ-0001", "PRJ-0004"],
     "path": "content/brain/projects/minerva-field-foundation.md"
   },
