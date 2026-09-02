@@ -112,6 +112,21 @@ test("quick create keeps password transient and requires confirmation", () => {
   assert.match(page, /isEntryPreviewReadOnly/);
 });
 
+test("quick create defaults to the compact field path and keeps optional details collapsible", () => {
+  const form = read(formPath);
+
+  assert.match(form, /detailsExpanded/);
+  assert.match(form, /More details/);
+  assert.match(form, /Email and phone optional/);
+  assert.match(form, /detailsExpanded \? \(/);
+  assert.match(form, /Full name/);
+  assert.match(form, /Username/);
+  assert.match(form, /Password/);
+  assert.match(form, /Fastest setup/);
+  assert.match(form, /e\.g\. rchacon/);
+  assert.match(form, /aria-expanded=\{detailsExpanded\}/);
+});
+
 test("quick create does not broaden into admin, guard, or destructive account management", () => {
   for (const path of [actionPath, formPath, statusPath, createPagePath]) {
     const source = read(path);
