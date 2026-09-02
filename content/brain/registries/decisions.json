@@ -82,5 +82,17 @@
     "tags": ["entry", "onboarding", "community-registration", "supabase", "migrations"],
     "related": ["ENTRY-ONB-000"],
     "path": "content/brain/decisions/dec-0007-entry-community-registration-foundation.md"
+  },
+  {
+    "id": "DEC-0008",
+    "type": "decision",
+    "status": "approved",
+    "title": "Minerva Console is the modular web home for Minerva products",
+    "summary": "Minerva Console becomes the shared modular web home for Minerva Technologies products and internal operational tooling: one Control Center above ENTRY, native future Seshat, role/module authorization, lightweight read-only connected products, neutral Console monitoring, Brain isolation from connected-product operational data, an AI-friendly Integration Kit, and zero-added-cost V1 infrastructure.",
+    "created": "2026-09-01",
+    "updated": "2026-09-01",
+    "tags": ["minerva-console", "architecture", "products", "modules", "permissions", "brain", "integrations"],
+    "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004", "MINERVA-CONSOLE-001"],
+    "path": "content/brain/decisions/dec-0008-minerva-console-modular-web-home.md"
   }
 ]
