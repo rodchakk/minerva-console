@@ -1,5 +1,5 @@
 import { Shell } from "@/components/layout/Shell";
-import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { requireConsoleOwner } from "@/features/auth/consoleAccess";
 import { getEntryDeploymentBoundary } from "@/features/entry/deploymentBoundary";
 
 export default async function ConsoleLayout({
@@ -7,7 +7,7 @@ export default async function ConsoleLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user } = await requireSuperadmin();
+  const { user } = await requireConsoleOwner();
   const boundary = getEntryDeploymentBoundary();
 
   return (

@@ -16,12 +16,16 @@ async function changedFiles() {
     cwd: root,
     encoding: "utf8",
   });
+  const workingTree = execFileSync("git", ["diff", "--name-only"], {
+    cwd: root,
+    encoding: "utf8",
+  });
   const untracked = execFileSync("git", ["ls-files", "--others", "--exclude-standard"], {
     cwd: root,
     encoding: "utf8",
   });
 
-  return [...new Set(`${committed}\n${untracked}`
+  return [...new Set(`${committed}\n${workingTree}\n${untracked}`
     .trim()
     .split(/\r?\n/)
     .filter(Boolean)
@@ -71,27 +75,26 @@ test("disabled and unknown future members fail closed", () => {
   assert.match(migration, /else null/);
 });
 
-test("Phase A keeps the existing superadmin route gate intact", () => {
+test("Phase B owner Console boundary uses the Console access seam", () => {
   const layout = read("app/(console)/layout.tsx");
   const superadmin = read("features/auth/requireSuperadmin.ts");
 
-  assert.match(layout, /import \{ requireSuperadmin \} from "@\/features\/auth\/requireSuperadmin"/);
-  assert.match(layout, /await requireSuperadmin\(\)/);
-  assert.doesNotMatch(layout, /requireConsoleMember|requireConsoleOwner|getConsoleAccessContext/);
+  assert.match(layout, /import \{ requireConsoleOwner \} from "@\/features\/auth\/consoleAccess"/);
+  assert.match(layout, /await requireConsoleOwner\(\)/);
+  assert.doesNotMatch(layout, /requireSuperadmin/);
   assert.match(superadmin, /supabase\.rpc\("is_superadmin"\)/);
 });
 
-test("Control Center Add User remains inert", () => {
+test("Control Center Add User routes to owner user management", () => {
   const controlCenter = read("features/control-center/ControlCenterDashboard.tsx");
   const addUserIndex = controlCenter.indexOf("Add User");
-  const addUserButtonStart = controlCenter.lastIndexOf("<button", addUserIndex);
-  const addUserButtonEnd = controlCenter.indexOf("</button>", addUserIndex);
-  const addUserButton = controlCenter.slice(addUserButtonStart, addUserButtonEnd);
+  const addUserLinkStart = controlCenter.lastIndexOf("<Link", addUserIndex);
+  const addUserLinkEnd = controlCenter.indexOf("</Link>", addUserIndex);
+  const addUserLink = controlCenter.slice(addUserLinkStart, addUserLinkEnd);
 
-  assert.ok(addUserButton, "Add User button must remain present");
-  assert.match(addUserButton, /<button/);
-  assert.match(addUserButton, /disabled/);
-  assert.doesNotMatch(addUserButton, /onClick|formAction|href|invite|auth\.admin|createUser/);
+  assert.ok(addUserLink, "Add User link must be present");
+  assert.match(addUserLink, /href="\/users\?invite=1"/);
+  assert.doesNotMatch(addUserLink, /disabled|cursor-not-allowed|auth\.admin|createUser/);
 });
 
 test("Phase A introduces no new admin invite client or service-role requirement", () => {
@@ -106,12 +109,12 @@ test("Brain and ENTRY authorization surfaces are not changed by this foundation 
   const files = await changedFiles();
 
   assert.ok(files.includes("features/auth/consoleAccess.ts"));
-  assert.ok(files.includes(`supabase/migrations/${migrationName}`));
   assert.ok(files.includes("tests/console-user-access-foundation.test.mjs"));
   assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
   assert.equal(files.some((file) => file.startsWith("app/(public)/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("supabase/migrations/")), false);
 });
 
 test("Console membership migration is the only added Supabase migration", () => {

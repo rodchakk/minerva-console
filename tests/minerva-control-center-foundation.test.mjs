@@ -30,8 +30,8 @@ test("dashboard is the Minerva Control Center landing surface", () => {
   assert.match(controlCenter, /Minerva Control Center/);
   assert.match(controlCenter, /productModules/);
   assert.match(controlCenter, /Add User/);
-  assert.match(controlCenter, /disabled/);
-  assert.doesNotMatch(controlCenter, /addUserAction|createUser|insert\(|upsert\(/);
+  assert.match(controlCenter, /href="\/users\?invite=1"/);
+  assert.doesNotMatch(controlCenter, /addUserAction|createUser|insert\(|upsert\(|auth\.admin/);
   assert.doesNotMatch(controlCenter, /getBrainCounts/);
   assert.doesNotMatch(controlCenter, /Brain Overview/);
   assert.doesNotMatch(dashboard, /ENTRY Operations/);
@@ -115,6 +115,7 @@ test("global sidebar keeps ENTRY navigation on the ENTRY accent boundary", () =>
   assert.match(sidebar, /label: "FINANCE"/);
   assert.match(sidebar, /label: "SYSTEM"/);
   assert.match(controlItems, /Control Center/);
+  assert.match(controlItems, /Users/);
   assert.match(controlItems, /Reminders/);
   assert.match(controlItems, /Logs/);
   assert.match(financeItems, /Seshat/);

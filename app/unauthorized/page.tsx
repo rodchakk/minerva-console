@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/Button";
 import { signOutAction } from "@/features/auth/actions";
-import { getAuthContext } from "@/features/auth/requireSuperadmin";
+import { getConsoleAccessContext } from "@/features/auth/consoleAccess";
 
 type UnauthorizedPageProps = {
   searchParams?: Promise<{ reason?: string }>;
@@ -11,7 +11,7 @@ type UnauthorizedPageProps = {
 export default async function UnauthorizedPage({
   searchParams,
 }: UnauthorizedPageProps) {
-  const [context, params] = await Promise.all([getAuthContext(), searchParams]);
+  const [context, params] = await Promise.all([getConsoleAccessContext(), searchParams]);
   const isSignOutError = params?.reason === "sign_out_error";
 
   if (context.status === "unauthenticated") {
@@ -33,8 +33,8 @@ export default async function UnauthorizedPage({
   const message = isSignOutError
     ? "Please try signing out again. If the issue persists, close this browser session and contact your Minerva administrator."
     : isAuthorizationError
-      ? "Sign out and try again. If the issue persists, contact your Minerva administrator."
-      : "This workspace is limited to approved superadmin accounts. If you believe you should have access, contact your Minerva administrator to review your account permissions.";
+    ? "Sign out and try again. If the issue persists, contact your Minerva administrator."
+    : "This workspace is limited to active Minerva Console members. If you believe you should have access, contact your Minerva administrator to review your account permissions.";
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-12">
