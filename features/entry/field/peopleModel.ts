@@ -10,7 +10,7 @@ export type FieldResident = {
   identity: string;
   isActive: boolean;
   phone: string;
-  role: "RESIDENT" | "UNASSIGNED";
+  role: "ADMIN" | "GUARD" | "RESIDENT" | "UNASSIGNED";
   userId: string;
   username: string;
 };
