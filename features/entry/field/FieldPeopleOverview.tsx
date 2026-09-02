@@ -87,26 +87,26 @@ export function FieldPeopleOverview({
 
   return (
     <div className="space-y-6">
-      <section aria-labelledby="field-residents" className="space-y-3">
+      <section aria-labelledby="field-people" className="space-y-3">
         <div className="flex items-center gap-2">
           <UserRound
             aria-hidden="true"
             className="h-5 w-5 text-[var(--console-accent)]"
           />
           <h2
-            id="field-residents"
+            id="field-people"
             className="text-xl font-semibold text-[var(--console-text)]"
           >
-            Residents
+            People
           </h2>
         </div>
 
         {residentState === "unavailable" ? (
-          <UnavailableState label="Resident list" />
+          <UnavailableState label="People list" />
         ) : (
           <>
             <SearchBox
-              label="Search residents"
+              label="Search people"
               onChange={setResidentQuery}
               value={residentQuery}
             />
@@ -119,8 +119,13 @@ export function FieldPeopleOverview({
                     className="flex min-h-16 items-center justify-between gap-3 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 transition-colors hover:bg-white/[0.04]"
                   >
                     <span className="min-w-0">
-                      <span className="block break-words text-base font-semibold text-[var(--console-text)]">
-                        {resident.fullName}
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="block break-words text-base font-semibold text-[var(--console-text)]">
+                          {resident.fullName}
+                        </span>
+                        <span className="rounded-full border border-[var(--console-border)] bg-white/[0.04] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--console-text-muted)]">
+                          {resident.role}
+                        </span>
                       </span>
                       <span className="mt-1 block break-words text-sm text-[var(--console-text-muted)]">
                         {resident.houseLabel} - {resident.identity} - {resident.accountState}
@@ -134,7 +139,7 @@ export function FieldPeopleOverview({
                 ))}
               </div>
             ) : (
-              <EmptyState label="No residents match this search." />
+              <EmptyState label="No people match this search." />
             )}
           </>
         )}
