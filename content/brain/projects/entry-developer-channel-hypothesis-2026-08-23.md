@@ -97,6 +97,29 @@ Compared with patronatos, developers and real-estate project organizations often
 
 This can materially reduce prospect-research cost and allow a more informed first conversation.
 
+## New 2026-09-02 evidence — competitor signals for multi-community/admin buyers
+
+Competitor research now provides two separate public signals that a buyer above the individual patronato level may exist:
+
+- **Guardian X** publicly markets a **Multi-Residencial** capability for administrative companies managing multiple residential communities from one centralized account.
+- **Tu Pase** publicly presents a multi-organization SaaS model and materials/terms indicating use by residential communities plus administrator/security-company contexts.
+
+This does **not** prove market size or purchasing authority, but it materially strengthens the hypothesis that a real second channel may include:
+
+- property/residential administration companies;
+- developers/operators retaining management across several projects;
+- security companies bundling digital access/visitor tools;
+- portfolio operators that need one control plane across multiple communities.
+
+Near-term action created from this evidence:
+
+> Execute a focused **Multi-Residential / Admin Channel** research study before any product commitment.
+
+Related competitor notes:
+
+- [entry-competitor-guardian-x-2026-09-02.md](entry-competitor-guardian-x-2026-09-02.md)
+- [entry-competitor-tu-pase-2026-09-02.md](entry-competitor-tu-pase-2026-09-02.md)
+
 ## Critical qualification: identify the real decision-maker
 
 Do not equate "inmobiliaria" with buyer.
@@ -220,6 +243,7 @@ Until evidence says otherwise:
 - Do not create a developer pricing table yet.
 - Do not assume every QR-controlled new development is an ENTRY prospect; many may already be locked into another provider.
 - Use repeated observations to identify where ENTRY could enter earlier in the project lifecycle.
+- Do **not** build a multi-residential/admin dashboard merely because Guardian X or Tu Pase supports multi-community use. First validate real buyers, procurement authority, economics and required workflows.
 
 ## Working strategic framing
 
@@ -227,7 +251,7 @@ Current commercial map can now be thought of as two distinct hypotheses:
 
 > **Existing communities:** ENTRY as digitalization of a manual access operation.
 >
-> **New developments:** ENTRY as an access-management amenity and operating layer included from launch.
+> **New developments / multi-community operators:** ENTRY as an access-management amenity and operating layer that could be deployed across a portfolio from launch or centralized administration.
 
 The first is already being executed through FIRST DOOR.
 
