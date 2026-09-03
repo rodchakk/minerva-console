@@ -6,9 +6,9 @@
     "title": "ENTRY",
     "summary": "Residential and community access control system. Has its own Supabase project. Brain may reference ENTRY decisions and architecture but must not read ENTRY operational data.",
     "created": "2026-06-16",
-    "updated": "2026-09-01",
+    "updated": "2026-09-02",
     "tags": ["product", "access-control", "supabase"],
-    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001", "ENTRY-CONSOLE-OPS-001", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
+    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001", "ENTRY-CONSOLE-OPS-001", "ENTRY-REL-001", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
     "path": "content/brain/projects/entry.md"
   },
   {
@@ -100,11 +100,11 @@
     "type": "project",
     "status": "approved",
     "title": "ENTRY Native Support Tickets",
-    "summary": "Completed first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, and Minerva Console, with owner/superadmin authorization, three-state workflow, conversations, Android keyboard hardening, and validated Realtime between ENTRY Mobile and Console. Push notifications and mobile store release remain separate follow-up work.",
+    "summary": "Completed first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, and Minerva Console, with owner/superadmin authorization, three-state workflow, conversations, Android keyboard hardening, validated Realtime between ENTRY Mobile and Console, and public mobile distribution completed in ENTRY 1.0.2. Push notifications remain separate follow-up work.",
     "created": "2026-08-31",
-    "updated": "2026-08-31",
+    "updated": "2026-09-02",
     "tags": ["entry", "support", "tickets", "supabase", "realtime", "mobile", "console", "web"],
-    "related": ["PRJ-0001"],
+    "related": ["PRJ-0001", "ENTRY-REL-001"],
     "path": "content/brain/projects/entry-support-tickets.md"
   },
   {
@@ -118,6 +118,18 @@
     "tags": ["entry", "minerva-console", "operations", "units", "users", "auth", "ui", "closeout"],
     "related": ["PRJ-0001", "ENTRY-OPS-001"],
     "path": "content/brain/projects/entry-console-operations-closeout-2026-09-01.md"
+  },
+  {
+    "id": "ENTRY-REL-001",
+    "type": "project",
+    "status": "approved",
+    "title": "ENTRY Mobile Release 1.0.2 Closeout",
+    "summary": "Completed production mobile distribution closeout for ENTRY 1.0.2: Android public in Google Play, Android package/signing-key registration already compliant, iOS released from Pending Developer Release to Ready for Distribution, and EAS production builds recorded as Android versionCode 12 and iOS buildNumber 11. Apple age-rating social-media questions remain an administrative follow-up.",
+    "created": "2026-09-02",
+    "updated": "2026-09-02",
+    "tags": ["entry", "mobile", "release", "google-play", "app-store", "eas", "android", "ios", "closeout"],
+    "related": ["PRJ-0001", "ENTRY-SUP-001"],
+    "path": "content/brain/projects/entry-mobile-release-1-0-2-closeout-2026-09-02.md"
   },
   {
     "id": "MINERVA-CONSOLE-001",
