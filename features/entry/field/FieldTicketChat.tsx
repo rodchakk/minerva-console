@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  ArrowDown,
   CheckCircle2,
   Clipboard,
   ExternalLink,
@@ -12,6 +13,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { createClient as createBrowserSupabaseClient } from "@/lib/supabase/client";
 import {
   resetFieldResidentAccess,
   type FieldResetAccessResult,
@@ -50,6 +52,13 @@ type FieldTicketChatProps = {
   ticketId: string;
 };
 
+type ViewportFrame = {
+  height: number;
+  top: number;
+};
+
+const FIELD_COMPOSER_MODE_EVENT = "minerva-field-composer-mode";
+
 function formatMessageTime(value: string) {
   if (!value) return "";
   const date = new Date(value);
@@ -60,6 +69,18 @@ function formatMessageTime(value: string) {
     minute: "2-digit",
     month: "short",
   }).format(date);
+}
+
+function getViewportFrame(): ViewportFrame {
+  if (typeof window === "undefined") {
+    return { height: 0, top: 0 };
+  }
+
+  const viewport = window.visualViewport;
+  return {
+    height: Math.max(280, Math.round(viewport?.height ?? window.innerHeight)),
+    top: Math.max(0, Math.round(viewport?.offsetTop ?? 0)),
+  };
 }
 
 export function FieldTicketChat({
@@ -75,19 +96,140 @@ export function FieldTicketChat({
 }: FieldTicketChatProps) {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const endRef = useRef<HTMLDivElement | null>(null);
+  const conversationRef = useRef<HTMLElement | null>(null);
+  const refreshTimerRef = useRef<number | null>(null);
+  const previousMessageCountRef = useRef(messages.length);
+  const hasMountedMessagesRef = useRef(false);
+  const isNearBottomRef = useRef(true);
   const [body, setBody] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<FieldResetAccessResult | null>(null);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [composerMode, setComposerMode] = useState(false);
+  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [viewportFrame, setViewportFrame] = useState<ViewportFrame>({
+    height: 0,
+    top: 0,
+  });
   const [isPending, startTransition] = useTransition();
 
+  function scrollConversationToBottom(behavior: ScrollBehavior = "smooth") {
+    const conversation = conversationRef.current;
+    if (!conversation) return;
+    conversation.scrollTo({ top: conversation.scrollHeight, behavior });
+    isNearBottomRef.current = true;
+    setHasNewMessage(false);
+  }
+
   useEffect(() => {
-    window.requestAnimationFrame(() => {
-      endRef.current?.scrollIntoView({ block: "end" });
-    });
+    if (!hasMountedMessagesRef.current) {
+      hasMountedMessagesRef.current = true;
+      previousMessageCountRef.current = messages.length;
+      window.requestAnimationFrame(() => scrollConversationToBottom("auto"));
+      return;
+    }
+
+    const previousCount = previousMessageCountRef.current;
+    previousMessageCountRef.current = messages.length;
+
+    if (messages.length <= previousCount) return;
+
+    if (isNearBottomRef.current) {
+      window.requestAnimationFrame(() => scrollConversationToBottom("smooth"));
+    } else {
+      setHasNewMessage(true);
+    }
   }, [messages.length]);
+
+  useEffect(() => {
+    const supabase = createBrowserSupabaseClient();
+
+    const queueRefresh = () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+      refreshTimerRef.current = window.setTimeout(() => {
+        refreshTimerRef.current = null;
+        router.refresh();
+      }, 120);
+    };
+
+    const channel = supabase
+      .channel(`field-ticket-${ticketId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "support_ticket_messages",
+          filter: `ticket_id=eq.${ticketId}`,
+        },
+        queueRefresh,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "support_tickets",
+          filter: `id=eq.${ticketId}`,
+        },
+        queueRefresh,
+      )
+      .subscribe();
+
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+      void supabase.removeChannel(channel);
+    };
+  }, [router, ticketId]);
+
+  useEffect(() => {
+    if (!composerMode) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    const viewport = window.visualViewport;
+
+    const syncViewport = () => setViewportFrame(getViewportFrame());
+    syncViewport();
+    document.body.style.overflow = "hidden";
+    window.dispatchEvent(
+      new CustomEvent(FIELD_COMPOSER_MODE_EVENT, { detail: { open: true } }),
+    );
+
+    viewport?.addEventListener("resize", syncViewport);
+    viewport?.addEventListener("scroll", syncViewport);
+    window.addEventListener("resize", syncViewport);
+
+    window.requestAnimationFrame(() => scrollConversationToBottom("auto"));
+
+    return () => {
+      viewport?.removeEventListener("resize", syncViewport);
+      viewport?.removeEventListener("scroll", syncViewport);
+      window.removeEventListener("resize", syncViewport);
+      document.body.style.overflow = previousBodyOverflow;
+      window.dispatchEvent(
+        new CustomEvent(FIELD_COMPOSER_MODE_EVENT, { detail: { open: false } }),
+      );
+    };
+  }, [composerMode]);
+
+  function enterComposerMode() {
+    setViewportFrame(getViewportFrame());
+    setComposerMode(true);
+  }
+
+  function leaveComposerModeAfterBlur() {
+    window.setTimeout(() => {
+      if (document.activeElement !== textareaRef.current) {
+        setComposerMode(false);
+      }
+    }, 80);
+  }
 
   function resizeComposer() {
     const textarea = textareaRef.current;
@@ -110,6 +252,7 @@ export function FieldTicketChat({
 
       setBody("");
       if (textareaRef.current) textareaRef.current.style.height = "auto";
+      isNearBottomRef.current = true;
       router.refresh();
     });
   }
@@ -164,9 +307,36 @@ export function FieldTicketChat({
     }
   }
 
+  const composerStyle = composerMode
+    ? {
+        height: viewportFrame.height || undefined,
+        top: viewportFrame.top,
+      }
+    : undefined;
+
   return (
-    <div className="flex min-h-[calc(100dvh-15rem)] flex-col">
-      <section className="flex-1 space-y-3 pb-4" aria-label="Ticket conversation">
+    <div
+      style={composerStyle}
+      className={[
+        "flex flex-col",
+        composerMode
+          ? "fixed inset-x-0 z-50 bg-[var(--console-bg)] px-3 pb-2 pt-2"
+          : "h-[calc(100dvh-15rem)] min-h-[22rem] max-h-[46rem]",
+      ].join(" ")}
+    >
+      <section
+        ref={conversationRef}
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          const distanceFromBottom =
+            element.scrollHeight - element.scrollTop - element.clientHeight;
+          const nearBottom = distanceFromBottom < 96;
+          isNearBottomRef.current = nearBottom;
+          if (nearBottom) setHasNewMessage(false);
+        }}
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-1 pb-3"
+        aria-label="Ticket conversation"
+      >
         <div className="flex justify-start">
           <article className="max-w-[88%] rounded-2xl rounded-bl-md border border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-3">
             <p className="text-xs font-bold text-[var(--console-text-soft)]">
@@ -194,8 +364,16 @@ export function FieldTicketChat({
                 }`}
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold text-[var(--console-text-soft)]">
-                  <span>{isStaff ? (isCurrentStaff ? "You" : "Minerva staff") : requesterName}</span>
-                  <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
+                  <span>
+                    {isStaff
+                      ? isCurrentStaff
+                        ? "You"
+                        : "Minerva staff"
+                      : requesterName}
+                  </span>
+                  <time dateTime={message.createdAt}>
+                    {formatMessageTime(message.createdAt)}
+                  </time>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-6 text-[var(--console-text)]">
                   {message.body}
@@ -204,75 +382,93 @@ export function FieldTicketChat({
             </div>
           );
         })}
-        <div ref={endRef} className="h-1" />
       </section>
 
-      <section className="sticky bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-30 -mx-1 rounded-xl border border-[var(--console-border)] bg-[rgba(20,20,20,0.97)] p-2.5 shadow-2xl backdrop-blur md:bottom-3">
-        <div className="mb-2 flex gap-2 overflow-x-auto pb-1" aria-label="Ticket quick actions">
-          {communityId && requester ? (
-            <>
+      {hasNewMessage ? (
+        <div className="flex justify-center pb-2" aria-live="polite">
+          <button
+            type="button"
+            onClick={() => scrollConversationToBottom("smooth")}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] px-3 text-xs font-bold text-[var(--console-text)]"
+          >
+            <ArrowDown aria-hidden="true" className="h-4 w-4" />
+            New message
+          </button>
+        </div>
+      ) : null}
+
+      <section className="flex-none rounded-xl border border-[var(--console-border)] bg-[rgba(20,20,20,0.97)] p-2.5 shadow-2xl backdrop-blur">
+        {!composerMode ? (
+          <div
+            className="mb-2 flex gap-2 overflow-x-auto pb-1"
+            aria-label="Ticket quick actions"
+          >
+            {communityId && requester ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmingReset(true);
+                    setResetResult(null);
+                    setNotice(null);
+                  }}
+                  disabled={isPending || isReadOnlyPreview}
+                  className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)] disabled:opacity-50"
+                >
+                  <KeyRound aria-hidden="true" className="h-4 w-4" />
+                  Reset access
+                </button>
+                <Link
+                  href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/residents/${encodeURIComponent(requester.userId)}`}
+                  className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)]"
+                >
+                  <ExternalLink aria-hidden="true" className="h-4 w-4" />
+                  Open user
+                </Link>
+              </>
+            ) : null}
+
+            {status === "open" ? (
               <button
                 type="button"
-                onClick={() => {
-                  setConfirmingReset(true);
-                  setResetResult(null);
-                  setNotice(null);
-                }}
+                onClick={() => handleStatus("in_progress")}
                 disabled={isPending || isReadOnlyPreview}
                 className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)] disabled:opacity-50"
               >
-                <KeyRound aria-hidden="true" className="h-4 w-4" />
-                Reset access
+                <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+                Start ticket
               </button>
-              <Link
-                href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/residents/${encodeURIComponent(requester.userId)}`}
-                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)]"
+            ) : null}
+
+            {status !== "resolved" ? (
+              <button
+                type="button"
+                onClick={() => handleStatus("resolved")}
+                disabled={isPending || isReadOnlyPreview}
+                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 text-xs font-bold text-emerald-100 disabled:opacity-50"
               >
-                <ExternalLink aria-hidden="true" className="h-4 w-4" />
-                Open user
-              </Link>
-            </>
-          ) : null}
+                <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
+                Resolve
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleStatus("open")}
+                disabled={isPending || isReadOnlyPreview}
+                className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)] disabled:opacity-50"
+              >
+                <RotateCcw aria-hidden="true" className="h-4 w-4" />
+                Reopen
+              </button>
+            )}
+          </div>
+        ) : null}
 
-          {status === "open" ? (
-            <button
-              type="button"
-              onClick={() => handleStatus("in_progress")}
-              disabled={isPending || isReadOnlyPreview}
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)] disabled:opacity-50"
-            >
-              <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-              Start ticket
-            </button>
-          ) : null}
-
-          {status !== "resolved" ? (
-            <button
-              type="button"
-              onClick={() => handleStatus("resolved")}
-              disabled={isPending || isReadOnlyPreview}
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 text-xs font-bold text-emerald-100 disabled:opacity-50"
-            >
-              <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
-              Resolve
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => handleStatus("open")}
-              disabled={isPending || isReadOnlyPreview}
-              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[var(--console-border)] bg-white/5 px-3 text-xs font-bold text-[var(--console-text)] disabled:opacity-50"
-            >
-              <RotateCcw aria-hidden="true" className="h-4 w-4" />
-              Reopen
-            </button>
-          )}
-        </div>
-
-        {confirmingReset ? (
+        {!composerMode && confirmingReset ? (
           <div className="mb-2 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
             <p className="text-sm leading-5 text-amber-100">
-              Reset access for {requester?.fullName ?? requesterName}? This will use the existing ENTRY recovery flow.
+              Reset access for {requester?.fullName ?? requesterName}? This will
+              use the existing ENTRY recovery flow.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
@@ -295,13 +491,15 @@ export function FieldTicketChat({
           </div>
         ) : null}
 
-        {resetResult?.code ? (
+        {!composerMode && resetResult?.code ? (
           <div className="mb-2 rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3">
             <p className="text-[11px] font-black uppercase tracking-[0.14em] text-emerald-100">
               Temporary recovery code
             </p>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <code className="break-all text-xl font-bold text-white">{resetResult.code}</code>
+              <code className="break-all text-xl font-bold text-white">
+                {resetResult.code}
+              </code>
               <button
                 type="button"
                 onClick={copyRecoveryCode}
@@ -332,11 +530,17 @@ export function FieldTicketChat({
             rows={1}
             value={body}
             maxLength={4000}
+            onFocus={enterComposerMode}
+            onBlur={leaveComposerModeAfterBlur}
             onChange={(event) => {
               setBody(event.target.value);
               window.requestAnimationFrame(resizeComposer);
             }}
             onKeyDown={(event) => {
+              if (event.key === "Escape") {
+                event.currentTarget.blur();
+                return;
+              }
               if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
                 event.preventDefault();
                 handleSend();
@@ -349,6 +553,7 @@ export function FieldTicketChat({
           <button
             type="button"
             aria-label="Send message"
+            onPointerDown={(event) => event.preventDefault()}
             onClick={handleSend}
             disabled={!body.trim() || isPending || isReadOnlyPreview}
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[var(--console-accent)] text-white transition-opacity disabled:opacity-40"
