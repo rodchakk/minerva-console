@@ -6,9 +6,9 @@
     "title": "ENTRY",
     "summary": "Residential and community access control system. Has its own Supabase project. Brain may reference ENTRY decisions and architecture but must not read ENTRY operational data.",
     "created": "2026-06-16",
-    "updated": "2026-09-02",
+    "updated": "2026-09-03",
     "tags": ["product", "access-control", "supabase"],
-    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001", "ENTRY-CONSOLE-OPS-001", "ENTRY-REL-001", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
+    "related": ["PRJ-0004", "ENTRY-OPS-001", "ENTRY-SUP-001", "ENTRY-CONSOLE-OPS-001", "ENTRY-REL-001", "MINERVA-CONSOLE-ENTRY-PILOT-001", "MINERVA-FIELD-001"],
     "path": "content/brain/projects/entry.md"
   },
   {
@@ -74,13 +74,13 @@
   {
     "id": "MINERVA-FIELD-001",
     "type": "project",
-    "status": "planned",
+    "status": "approved",
     "title": "Minerva Field Foundation",
-    "summary": "Planned mobile-first installable PWA surface inside Minerva Console for field operations. ENTRY is the first and only current product module; products without an approved field workflow, including Seshat, are excluded from the Field surface.",
+    "summary": "Live mobile-first installable PWA surface inside Minerva Console for field operations. ENTRY is the only current product module; the September 2026 pass closed People/account status, role and guard Access, admin profile/unit management, and mobile support-ticket chat with authenticated Realtime, PWA keyboard hardening, and existing ENTRY quick actions. Future ticket Quick Responses are captured as backlog.",
     "created": "2026-08-26",
-    "updated": "2026-08-26",
-    "tags": ["minerva-console", "field", "pwa", "mobile", "entry"],
-    "related": ["PRJ-0001", "PRJ-0004"],
+    "updated": "2026-09-03",
+    "tags": ["minerva-console", "field", "pwa", "mobile", "entry", "support", "tickets", "realtime", "access"],
+    "related": ["PRJ-0001", "PRJ-0004", "ENTRY-SUP-001"],
     "path": "content/brain/projects/minerva-field-foundation.md"
   },
   {
@@ -100,11 +100,11 @@
     "type": "project",
     "status": "approved",
     "title": "ENTRY Native Support Tickets",
-    "summary": "Completed first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, and Minerva Console, with owner/superadmin authorization, three-state workflow, conversations, Android keyboard hardening, validated Realtime between ENTRY Mobile and Console, and public mobile distribution completed in ENTRY 1.0.2. Push notifications remain separate follow-up work.",
+    "summary": "Completed first-party support ticket system across ENTRY Mobile, ENTRY Web, Supabase, Minerva Console, and Minerva Field. Field now provides mobile chat, existing support quick actions, authenticated Realtime plus visible-only reconciliation, and PWA keyboard/composer hardening. Future Quick Responses and push notifications remain separate backlog.",
     "created": "2026-08-31",
-    "updated": "2026-09-02",
-    "tags": ["entry", "support", "tickets", "supabase", "realtime", "mobile", "console", "web"],
-    "related": ["PRJ-0001", "ENTRY-REL-001"],
+    "updated": "2026-09-03",
+    "tags": ["entry", "support", "tickets", "supabase", "realtime", "mobile", "console", "web", "field", "pwa"],
+    "related": ["PRJ-0001", "ENTRY-REL-001", "MINERVA-FIELD-001"],
     "path": "content/brain/projects/entry-support-tickets.md"
   },
   {
