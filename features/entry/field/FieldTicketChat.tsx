@@ -58,6 +58,7 @@ type ViewportFrame = {
 };
 
 const FIELD_COMPOSER_MODE_EVENT = "minerva-field-composer-mode";
+const LIVE_BACKUP_REFRESH_MS = 2000;
 
 function formatMessageTime(value: string) {
   if (!value) return "";
@@ -83,6 +84,46 @@ function getViewportFrame(): ViewportFrame {
   };
 }
 
+function normalizeStatus(value: unknown): TicketStatus | null {
+  if (value === "open" || value === "in_progress" || value === "resolved") {
+    return value;
+  }
+  return null;
+}
+
+function mapLiveMessage(value: unknown): ChatMessage | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const id = typeof record.id === "string" ? record.id : "";
+  const authorId = typeof record.author_id === "string" ? record.author_id : "";
+  const body = typeof record.body === "string" ? record.body : "";
+  const createdAt = typeof record.created_at === "string" ? record.created_at : "";
+  const authorType = record.author_type;
+
+  if (!id || !body || !createdAt || (authorType !== "staff" && authorType !== "user")) {
+    return null;
+  }
+
+  return {
+    id,
+    authorId,
+    authorType,
+    body,
+    createdAt,
+  };
+}
+
+function mergeMessages(current: ChatMessage[], incoming: ChatMessage[]) {
+  const byId = new Map<string, ChatMessage>();
+  for (const message of current) byId.set(message.id, message);
+  for (const message of incoming) byId.set(message.id, message);
+  return Array.from(byId.values()).sort((a, b) => {
+    const aTime = new Date(a.createdAt).getTime();
+    const bTime = new Date(b.createdAt).getTime();
+    return aTime - bTime;
+  });
+}
+
 export function FieldTicketChat({
   communityId,
   currentStaffUserId,
@@ -95,12 +136,15 @@ export function FieldTicketChat({
   ticketId,
 }: FieldTicketChatProps) {
   const router = useRouter();
+  const shellRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const conversationRef = useRef<HTMLElement | null>(null);
-  const refreshTimerRef = useRef<number | null>(null);
   const previousMessageCountRef = useRef(messages.length);
   const hasMountedMessagesRef = useRef(false);
   const isNearBottomRef = useRef(true);
+  const composerEntryScrollTopRef = useRef(0);
+  const [liveMessages, setLiveMessages] = useState(messages);
+  const [liveStatus, setLiveStatus] = useState<TicketStatus>(status);
   const [body, setBody] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<FieldResetAccessResult | null>(null);
@@ -108,6 +152,7 @@ export function FieldTicketChat({
   const [copied, setCopied] = useState(false);
   const [composerMode, setComposerMode] = useState(false);
   const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [normalHeight, setNormalHeight] = useState<number | null>(null);
   const [viewportFrame, setViewportFrame] = useState<ViewportFrame>({
     height: 0,
     top: 0,
@@ -123,78 +168,179 @@ export function FieldTicketChat({
   }
 
   useEffect(() => {
+    setLiveMessages((current) => mergeMessages(current, messages));
+  }, [messages]);
+
+  useEffect(() => {
+    setLiveStatus(status);
+  }, [status]);
+
+  useEffect(() => {
     if (!hasMountedMessagesRef.current) {
       hasMountedMessagesRef.current = true;
-      previousMessageCountRef.current = messages.length;
+      previousMessageCountRef.current = liveMessages.length;
       window.requestAnimationFrame(() => scrollConversationToBottom("auto"));
       return;
     }
 
     const previousCount = previousMessageCountRef.current;
-    previousMessageCountRef.current = messages.length;
+    previousMessageCountRef.current = liveMessages.length;
 
-    if (messages.length <= previousCount) return;
+    if (liveMessages.length <= previousCount) return;
 
     if (isNearBottomRef.current) {
       window.requestAnimationFrame(() => scrollConversationToBottom("smooth"));
     } else {
       setHasNewMessage(true);
     }
-  }, [messages.length]);
+  }, [liveMessages.length]);
 
   useEffect(() => {
+    let cancelled = false;
+    let channel: ReturnType<ReturnType<typeof createBrowserSupabaseClient>["channel"]> | null = null;
+    let backupTimer: number | null = null;
     const supabase = createBrowserSupabaseClient();
 
-    const queueRefresh = () => {
-      if (refreshTimerRef.current !== null) {
-        window.clearTimeout(refreshTimerRef.current);
+    const refreshFromDatabase = async () => {
+      if (cancelled || document.visibilityState === "hidden") return;
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
+      const [messageResult, ticketResult] = await Promise.all([
+        supabase
+          .from("support_ticket_messages")
+          .select("id,ticket_id,author_id,author_type,body,created_at")
+          .eq("ticket_id", ticketId)
+          .order("created_at", { ascending: true }),
+        supabase.from("support_tickets").select("status").eq("id", ticketId).maybeSingle(),
+      ]);
+
+      if (cancelled) return;
+
+      if (!messageResult.error && Array.isArray(messageResult.data)) {
+        const freshMessages = messageResult.data
+          .map(mapLiveMessage)
+          .filter((message): message is ChatMessage => message !== null);
+        setLiveMessages(freshMessages);
       }
-      refreshTimerRef.current = window.setTimeout(() => {
-        refreshTimerRef.current = null;
-        router.refresh();
-      }, 120);
+
+      const nextStatus = normalizeStatus(ticketResult.data?.status);
+      if (!ticketResult.error && nextStatus) {
+        setLiveStatus(nextStatus);
+      }
     };
 
-    const channel = supabase
-      .channel(`field-ticket-${ticketId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "support_ticket_messages",
-          filter: `ticket_id=eq.${ticketId}`,
-        },
-        queueRefresh,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "support_tickets",
-          filter: `id=eq.${ticketId}`,
-        },
-        queueRefresh,
-      )
-      .subscribe();
+    const startLiveUpdates = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.access_token) {
+        await supabase.realtime.setAuth(data.session.access_token);
+      }
+      if (cancelled) return;
+
+      channel = supabase
+        .channel(`field-ticket-v2-${ticketId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "support_ticket_messages",
+            filter: `ticket_id=eq.${ticketId}`,
+          },
+          (payload) => {
+            const message = mapLiveMessage(payload.new);
+            if (message) {
+              setLiveMessages((current) => mergeMessages(current, [message]));
+            }
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "support_tickets",
+            filter: `id=eq.${ticketId}`,
+          },
+          (payload) => {
+            const nextStatus = normalizeStatus(
+              payload.new && typeof payload.new === "object"
+                ? (payload.new as Record<string, unknown>).status
+                : null,
+            );
+            if (nextStatus) setLiveStatus(nextStatus);
+            router.refresh();
+          },
+        )
+        .subscribe((subscriptionStatus) => {
+          if (subscriptionStatus === "CHANNEL_ERROR" || subscriptionStatus === "TIMED_OUT") {
+            void refreshFromDatabase();
+          }
+        });
+
+      await refreshFromDatabase();
+      backupTimer = window.setInterval(() => {
+        void refreshFromDatabase();
+      }, LIVE_BACKUP_REFRESH_MS);
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        void refreshFromDatabase();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    void startLiveUpdates();
 
     return () => {
-      if (refreshTimerRef.current !== null) {
-        window.clearTimeout(refreshTimerRef.current);
-        refreshTimerRef.current = null;
-      }
-      void supabase.removeChannel(channel);
+      cancelled = true;
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (backupTimer !== null) window.clearInterval(backupTimer);
+      if (channel) void supabase.removeChannel(channel);
     };
   }, [router, ticketId]);
+
+  useEffect(() => {
+    if (composerMode) return;
+
+    const syncNormalHeight = () => {
+      const shell = shellRef.current;
+      if (!shell) return;
+
+      const viewport = window.visualViewport;
+      const viewportTop = viewport?.offsetTop ?? 0;
+      const viewportHeight = viewport?.height ?? window.innerHeight;
+      const viewportBottom = viewportTop + viewportHeight;
+      const shellTop = Math.max(shell.getBoundingClientRect().top, viewportTop + 8);
+      const nav = document.querySelector<HTMLElement>("[data-field-nav]");
+      const navHeight = nav?.getBoundingClientRect().height ?? 86;
+      const available = viewportBottom - shellTop - navHeight - 10;
+      const nextHeight = Math.max(320, Math.min(736, Math.round(available)));
+      setNormalHeight(nextHeight);
+    };
+
+    const viewport = window.visualViewport;
+    syncNormalHeight();
+    viewport?.addEventListener("resize", syncNormalHeight);
+    viewport?.addEventListener("scroll", syncNormalHeight);
+    window.addEventListener("resize", syncNormalHeight);
+    window.addEventListener("scroll", syncNormalHeight, { passive: true });
+
+    return () => {
+      viewport?.removeEventListener("resize", syncNormalHeight);
+      viewport?.removeEventListener("scroll", syncNormalHeight);
+      window.removeEventListener("resize", syncNormalHeight);
+      window.removeEventListener("scroll", syncNormalHeight);
+    };
+  }, [composerMode]);
 
   useEffect(() => {
     if (!composerMode) return;
 
     const previousBodyOverflow = document.body.style.overflow;
     const viewport = window.visualViewport;
-
     const syncViewport = () => setViewportFrame(getViewportFrame());
+
     syncViewport();
     document.body.style.overflow = "hidden";
     window.dispatchEvent(
@@ -205,7 +351,10 @@ export function FieldTicketChat({
     viewport?.addEventListener("scroll", syncViewport);
     window.addEventListener("resize", syncViewport);
 
-    window.requestAnimationFrame(() => scrollConversationToBottom("auto"));
+    window.requestAnimationFrame(() => {
+      const conversation = conversationRef.current;
+      if (conversation) conversation.scrollTop = composerEntryScrollTopRef.current;
+    });
 
     return () => {
       viewport?.removeEventListener("resize", syncViewport);
@@ -219,6 +368,7 @@ export function FieldTicketChat({
   }, [composerMode]);
 
   function enterComposerMode() {
+    composerEntryScrollTopRef.current = conversationRef.current?.scrollTop ?? 0;
     setViewportFrame(getViewportFrame());
     setComposerMode(true);
   }
@@ -266,6 +416,7 @@ export function FieldTicketChat({
         setNotice(result.error || "Could not update ticket status.");
         return;
       }
+      setLiveStatus(nextStatus);
       router.refresh();
     });
   }
@@ -307,21 +458,24 @@ export function FieldTicketChat({
     }
   }
 
-  const composerStyle = composerMode
+  const shellStyle = composerMode
     ? {
         height: viewportFrame.height || undefined,
         top: viewportFrame.top,
       }
-    : undefined;
+    : normalHeight
+      ? { height: normalHeight }
+      : undefined;
 
   return (
     <div
-      style={composerStyle}
+      ref={shellRef}
+      style={shellStyle}
       className={[
         "flex flex-col",
         composerMode
           ? "fixed inset-x-0 z-50 bg-[var(--console-bg)] px-3 pb-2 pt-2"
-          : "h-[calc(100dvh-15rem)] min-h-[22rem] max-h-[46rem]",
+          : "h-[28rem] min-h-[20rem] max-h-[46rem]",
       ].join(" ")}
     >
       <section
@@ -348,7 +502,7 @@ export function FieldTicketChat({
           </article>
         </div>
 
-        {messages.map((message) => {
+        {liveMessages.map((message) => {
           const isStaff = message.authorType === "staff";
           const isCurrentStaff = isStaff && message.authorId === currentStaffUserId;
           return (
@@ -371,9 +525,7 @@ export function FieldTicketChat({
                         : "Minerva staff"
                       : requesterName}
                   </span>
-                  <time dateTime={message.createdAt}>
-                    {formatMessageTime(message.createdAt)}
-                  </time>
+                  <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
                 </div>
                 <p className="mt-1 whitespace-pre-wrap break-words text-[15px] leading-6 text-[var(--console-text)]">
                   {message.body}
@@ -399,10 +551,7 @@ export function FieldTicketChat({
 
       <section className="flex-none rounded-xl border border-[var(--console-border)] bg-[rgba(20,20,20,0.97)] p-2.5 shadow-2xl backdrop-blur">
         {!composerMode ? (
-          <div
-            className="mb-2 flex gap-2 overflow-x-auto pb-1"
-            aria-label="Ticket quick actions"
-          >
+          <div className="mb-2 flex gap-2 overflow-x-auto pb-1" aria-label="Ticket quick actions">
             {communityId && requester ? (
               <>
                 <button
@@ -428,7 +577,7 @@ export function FieldTicketChat({
               </>
             ) : null}
 
-            {status === "open" ? (
+            {liveStatus === "open" ? (
               <button
                 type="button"
                 onClick={() => handleStatus("in_progress")}
@@ -440,7 +589,7 @@ export function FieldTicketChat({
               </button>
             ) : null}
 
-            {status !== "resolved" ? (
+            {liveStatus !== "resolved" ? (
               <button
                 type="button"
                 onClick={() => handleStatus("resolved")}
@@ -467,8 +616,7 @@ export function FieldTicketChat({
         {!composerMode && confirmingReset ? (
           <div className="mb-2 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
             <p className="text-sm leading-5 text-amber-100">
-              Reset access for {requester?.fullName ?? requesterName}? This will
-              use the existing ENTRY recovery flow.
+              Reset access for {requester?.fullName ?? requesterName}? This will use the existing ENTRY recovery flow.
             </p>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <button
@@ -497,9 +645,7 @@ export function FieldTicketChat({
               Temporary recovery code
             </p>
             <div className="mt-2 flex items-center justify-between gap-3">
-              <code className="break-all text-xl font-bold text-white">
-                {resetResult.code}
-              </code>
+              <code className="break-all text-xl font-bold text-white">{resetResult.code}</code>
               <button
                 type="button"
                 onClick={copyRecoveryCode}
