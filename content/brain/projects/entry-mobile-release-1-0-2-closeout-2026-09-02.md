@@ -101,11 +101,11 @@ This did **not** block ENTRY 1.0.2 from reaching Ready for Distribution. It is a
 
 ## Relationship to ENTRY-SUP-001
 
-`ENTRY-SUP-001 — Native Support Tickets` previously closed as code-complete and merged while explicitly leaving public mobile-store distribution as a separate release operation.
+`ENTRY-SUP-001 — Native Support Tickets` closed on August 31 as code-complete and merged while explicitly leaving public mobile-store distribution as a separate release operation.
 
-This release closeout closes that distribution boundary for ENTRY 1.0.2: the public mobile release has now been performed. The support-ticket record should no longer describe mobile-store publication as still pending for this release cycle.
+That August 31 document remains accurate historical evidence of the state at its original closeout. `ENTRY-REL-001` now supersedes its release-boundary status for the current product state: ENTRY 1.0.2 has completed the public mobile distribution operation.
 
-This closeout does not add push notifications for support tickets; that enhancement remains separate.
+This release closeout does not add push notifications for support tickets; that enhancement remains separate.
 
 ## Final release state
 
