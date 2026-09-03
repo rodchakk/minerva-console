@@ -2,83 +2,156 @@
 
 ## Status
 
-Planned.
-
-## Target working session
-
-- 2026-08-27 afternoon
-- Timezone: America/Tegucigalpa
+**Active / approved. Foundation live in production. Current ENTRY Field operational pass closed 2026-09-03.**
 
 ## Summary
 
-Create a mobile-first, installable PWA experience inside Minerva Console for field operations. ENTRY is the first active product module and the initial implementation target.
+Minerva Field is the mobile-first, installable PWA surface inside Minerva Console for field operations. ENTRY is the first and only current product module.
 
-Minerva Field is a Minerva-level operational surface rather than a copy of the ENTRY desktop console, but only products with a real field workflow should appear in it. Seshat is explicitly excluded from Minerva Field because it is local software and has no approved field workflow.
+The original foundation direction is now implemented and in production: Field is intentionally smaller than the desktop Console, reuses existing ENTRY authorization and backend contracts, and concentrates the operations that are useful from a phone while working with a community or handling support.
 
-The field experience should stay intentionally small and action-oriented. It exists to help an operator work while physically with a customer or at a deployment site, without duplicating the full desktop Minerva Console.
+Minerva Field remains a Minerva-level operational surface rather than a copy of the ENTRY desktop console. Products should appear in Field only when they have a real approved field workflow. Seshat remains explicitly excluded.
 
 ## Product framing
 
 Two complementary surfaces:
 
 - **Minerva Console** — full administrative experience, primarily desktop-first.
-- **Minerva Field** — installable mobile PWA, mobile-first, focused on field work.
+- **Minerva Field** — installable mobile PWA, mobile-first, focused on field work and support.
 
-Minerva Field should feel like a Minerva operational tool, while exposing only active field-capable products.
-
-Initial product shell:
+Current shell:
 
 ```text
 Minerva Field
 ├── Home
 ├── ENTRY
+│   ├── Tickets
+│   ├── Communities
+│   ├── People
+│   └── Access
 └── Account
 ```
 
-Future Minerva products may add a Field module only when a concrete field workflow is approved. Minerva Field must not display speculative, local-only, disconnected, or non-field products merely to advertise the broader Minerva portfolio.
+Future Minerva products may add a Field module only when a concrete field workflow is approved. Field must not display speculative, local-only, disconnected, or non-field products merely to advertise the Minerva portfolio.
 
 ## Core design rule
 
 Every capability must answer:
 
-> What does the operator need to do with this product while physically with a customer or in the field?
+> What does the operator need to do with this product while physically with a customer, during onboarding, or while resolving a support issue from the phone?
 
 Do not add functionality merely because it already exists in Minerva Console.
 
-The preferred interaction model is:
+The preferred interaction model remains:
 
 **Read → Act → Confirm**
 
-Each mobile screen should help the operator understand the current state, take a relevant action, and immediately know whether that action succeeded.
+Each mobile screen should help the operator understand current state, take a relevant action, and immediately know whether that action succeeded.
 
-## Initial ENTRY field capability candidates
+## Current ENTRY Field capabilities
 
-The final MVP scope will be confirmed before implementation. Current candidates are:
+The September 2026 operational pass established the following live capabilities.
 
-- Community overview and current onboarding/operational state.
-- Fast search for communities, units, residents, and guards.
-- Community Registration controls useful in the field.
-- Share registration links and QR codes directly from the phone.
-- Small creation/edit actions such as adding a unit when explicitly approved as safe.
-- Operational Activity for validating that ENTRY is actively working on site.
-- Field notes and client/contact context if a persistence model is later approved.
-- Fast support actions that are safe and appropriate for mobile use.
+### Communities
 
-## Explicit non-goals for the initial field experience
+- Mobile community/setup access using existing ENTRY contracts.
+- Unit-oriented field workflows remain separated from account/access operations.
 
-Do not duplicate the full Minerva Console. Initial exclusions include:
+### People
 
-- Minerva Brain.
-- Seshat.
-- Internal Minerva administration.
-- Advanced configuration.
-- Large desktop-style data tables.
-- Deep analytics and complex reports.
-- Advanced permission management.
-- Backend or infrastructure administration.
-- High-risk destructive operations better performed from desktop.
-- A separate React Native application for Minerva administrators.
-- Speculative placeholders for products without an approved field workflow.
+- Global search across ENTRY community users, including residents, guards, admins, and unassigned users.
+- Resident profile editing and resident unit actions.
+- Admin profile editing for name and phone.
+- Admin unit assignment/change while preserving the ADMIN role.
+- Account activation/deactivation for supported ENTRY roles.
+- The current Field operator account is protected from destructive status changes.
+- Existing Minerva system-owner protections remain enforced by the backend.
+
+### Access
+
+A compact dedicated access surface avoids overloading People while avoiding a proliferation of home cards.
+
+- Reuses the existing People search model.
+- Changes roles between RESIDENT, ADMIN, and GUARD using the existing ENTRY role RPCs.
+- RESIDENT ↔ ADMIN preserves the existing unit where applicable.
+- RESIDENT/ADMIN → GUARD removes the unit relationship because guards are not tied to houses.
+- GUARD → RESIDENT requires a unit selection before completion.
+- GUARD → ADMIN does not require a unit.
+- Creates guard accounts with the existing guard creation flow and no house assignment.
+- Guard creation is positioned above search in the Access screen so it remains immediately reachable even when search results expand.
+
+### Tickets
+
+Tickets are treated as conversations rather than desktop forms.
+
+- Reuses the existing `support_tickets` and `support_ticket_messages` backend, RLS, and RPCs.
+- Mobile ticket inbox with status filtering.
+- Chat-style ticket detail with requester messages on the left and Minerva staff replies on the right.
+- Quick actions currently include existing ENTRY operations such as reset access, open user, and ticket status transitions.
+- Device/technical context uses metadata already captured by ENTRY rather than creating a separate support-data model.
+- PWA composer is designed around the mobile software keyboard and the Field bottom navigation.
+- Supabase Realtime is the primary live-update path.
+- Field explicitly authenticates the Realtime connection with the current session and applies incoming message inserts directly to client chat state.
+- A 2-second visible-tab-only database reconciliation fallback self-heals the conversation if a mobile browser/PWA drops a Realtime event. It stops while the page is hidden and requires no cron, worker, new table, or separate service.
+- Opening the keyboard hides Field navigation and ticket Quick Actions, keeps the composer above the keyboard, and preserves the conversation position instead of forcing the user away from the message being read.
+- When reading older content, incoming messages expose a `New message` jump action rather than forcibly changing reading position.
+
+## September 2026 implementation closeout
+
+This Brain capture records the current operational pass without storing any resident/customer conversation content or PII.
+
+| PR | Scope | Production result |
+| --- | --- | --- |
+| `#119` — `MINERVA-FIELD-001N` | Account status for all ENTRY roles | Merged as `407863c5022a8731ca1654d48f6e2391346ead74` |
+| `#120` | Access: role changes + create guard | Merged as `cd5f53d16859db33fb2fe1b58b6d439685053c32` |
+| `#121` | Admin profile + unit management | Merged as `a3ce05bf02d9d1e6bb942fda0e9ad3933d7493bf` |
+| `#122` — `MINERVA-FIELD-001Q` | Mobile support ticket chat + quick actions | Merged as `89d39f017f56eb3816c75cac980a82c88c731994` |
+| `#124` — `MINERVA-FIELD-001R` | First Realtime/keyboard repair | Merged as `b3fe8c0c7d04a6ac5d1acf490eff568b495ad3c7`; later found incomplete in physical PWA QA and superseded by `#125` |
+| `#125` — `MINERVA-FIELD-001S` | Hardened live ticket chat + composer | Merged as `65384c04fb722fbaf693618a0b0a156805556337`; production deployment reached `READY` on `console.minervatechs.com` |
+
+### Canonical ticket-chat state
+
+`#125` supersedes the incomplete behavior from `#124` and is the canonical implementation for Field ticket live updates and keyboard/composer behavior.
+
+The current pass is accepted as good enough to close for now. Further Field work should start from actual operational needs discovered during use rather than adding speculative controls.
+
+## Future backlog — Ticket Quick Responses
+
+**Status: idea captured; not approved for implementation yet.**
+
+A future Field support enhancement should add a growing library of **Quick Responses** inside ticket chat for recurring support situations. The intent is to reduce repeated typing while still keeping the human operator in control of what is sent.
+
+First useful candidates identified:
+
+- instructions for enabling ENTRY notifications;
+- instructions for enabling geolocation/location permissions;
+- ability to attach/send instructional images or screenshots that visually show the user how to complete those steps.
+
+Direction for the future implementation:
+
+- reuse the existing ENTRY support ticket/message system rather than creating another chat or support backend;
+- keep Quick Responses operator-triggered, editable where practical, and clearly visible before sending;
+- grow the response library gradually as real recurring support cases are observed;
+- instructional images should be managed as support assets, not copied into Brain as customer conversation data;
+- do not store resident/customer messages, identities, screenshots containing customer data, or other operational PII in Brain;
+- avoid adding AI, automation, or a new knowledge service merely to ship the first version of canned responses.
+
+Possible future response examples are product guidance, not final approved wording. Exact notification/geolocation instructions and screenshots must be validated against the then-current ENTRY iOS/Android flows before implementation.
+
+## Explicit boundaries
+
+Minerva Field should continue to avoid:
+
+- Minerva Brain as an operational customer-data surface;
+- Seshat without a real approved field workflow;
+- internal Minerva administration unrelated to field work;
+- large desktop-style tables and deep analytics;
+- backend/infrastructure administration;
+- speculative product placeholders;
+- weakening existing authorization for mobile convenience;
+- duplicating ENTRY backend contracts when an existing safe RPC or query already solves the workflow.
+
+Field support tickets and conversations remain ENTRY operational data. Brain records architecture, decisions, implementation history, and future product ideas only.
 
 ## Product inclusion rule
 
@@ -89,64 +162,27 @@ A Minerva product belongs in Field only when all of the following are true:
 3. The product has a live or approved runtime that Field can safely use.
 4. Its mobile capabilities can be bounded without exposing unnecessary desktop administration.
 
-Seshat does not meet this rule and is out of scope. No Seshat card, placeholder, route, registry entry, or future-module UI should be created as part of Minerva Field.
+Seshat does not currently meet this rule and remains out of scope.
 
-## Technical direction to validate during implementation
+## Technical direction
 
 - Remain inside the existing `rodchakk/minerva-console` application.
 - Reuse existing Minerva authentication, authorization, backend connections, and shared code where appropriate.
-- Build the field surface mobile-first and responsive.
-- Make the field surface installable as a PWA with a dedicated launch experience.
-- Prefer a dedicated field route namespace, conceptually `/field/*`, rather than making the complete console mobile-first.
-- PWA installation should launch into Minerva Field rather than the general desktop dashboard.
-- Preserve existing security boundaries; mobile convenience must not weaken authorization.
-- Full offline-first operation is not an initial requirement unless field testing demonstrates a real need.
-
-Exact PWA manifest, scope, service-worker strategy, route structure, and caching behavior must be verified against the current Next.js implementation before coding.
-
-## First-screen direction
-
-The installed experience should open as Minerva Field, not as the desktop dashboard.
-
-Conceptual hierarchy:
-
-- Minerva / Field identity.
-- ENTRY as the active field product.
-- Recent or quick-access ENTRY destinations where useful.
-- Very small mobile navigation focused on field work.
-- Account/session access.
-
-The visual mockup produced during planning is directional reference only; it is not an approved pixel-perfect implementation contract. The prior Seshat placeholder shown in planning is no longer part of the product direction.
+- Keep `/field/*` as the dedicated mobile operational namespace.
+- Preserve the installed PWA launch experience.
+- Prefer existing ENTRY RPCs/data contracts over new persistence.
+- Full offline-first operation is not required unless field use demonstrates a concrete need.
+- Mobile/PWA QA must include the actual software keyboard and physical-device viewport behavior for conversation interfaces.
 
 ## Ownership and working model
 
 - Human owner defines what field situations must and must not be solvable from the phone.
-- GPT leads detailed UX, information architecture, implementation decomposition, and product-system design.
-- Scope should be decided through concrete field scenarios before implementation.
-- Implementation should follow normal Minerva Console branch/PR/review rules.
-
-## Initial acceptance criteria
-
-The foundation is successful when:
-
-1. Minerva Field exists as a distinct mobile-first surface inside Minerva Console.
-2. It is installable and launches into the field experience.
-3. ENTRY is the first functional field module.
-4. Only products with approved field workflows are exposed; Seshat is not shown.
-5. Only field-relevant workflows are exposed.
-6. Existing authentication and authorization remain intact.
-7. The experience is practical to operate one-handed from a phone during an on-site visit.
-
-## Open scope questions for the working session
-
-Before coding, define the exact ENTRY MVP by answering concrete field scenarios, including:
-
-- What must be possible during a sales visit?
-- What must be possible during community setup/onboarding?
-- What must be possible during go-live validation?
-- What support problems should be solvable without opening a laptop?
-- Which actions are too risky or too complex for Minerva Field?
+- GPT leads UX, information architecture, implementation decomposition, and product-system design.
+- Scope should continue to be decided through concrete operational scenarios.
+- Implementation follows normal Minerva Console branch/PR/review rules.
 
 ## Current decision
 
-Proceed with Minerva Field as a Minerva-level field operations surface with ENTRY as the first and only current product module. Seshat is explicitly excluded. Future products are added only after a concrete field workflow is approved. Keep the MVP deliberately narrow and field-oriented.
+Minerva Field is now a live, approved Minerva-level field operations surface with ENTRY as the only active product module. The current People/Access/admin-management and ticket-chat pass is closed in production. Future expansion should stay deliberately narrow and be driven by actual field/support needs.
+
+The next captured support idea is **Ticket Quick Responses**, beginning with notification setup, geolocation setup, and instructional images. It is backlog only and should not be implemented until explicitly prioritized.
