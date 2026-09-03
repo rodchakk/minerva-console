@@ -57,6 +57,16 @@ type ViewportFrame = {
   top: number;
 };
 
+type MessageSnapshot = {
+  messages: ChatMessage[];
+  ticketId: string;
+};
+
+type StatusSnapshot = {
+  status: TicketStatus;
+  ticketId: string;
+};
+
 const FIELD_COMPOSER_MODE_EVENT = "minerva-field-composer-mode";
 const LIVE_BACKUP_REFRESH_MS = 2000;
 
@@ -143,8 +153,11 @@ export function FieldTicketChat({
   const hasMountedMessagesRef = useRef(false);
   const isNearBottomRef = useRef(true);
   const composerEntryScrollTopRef = useRef(0);
-  const [liveMessages, setLiveMessages] = useState(messages);
-  const [liveStatus, setLiveStatus] = useState<TicketStatus>(status);
+  const [messageSnapshot, setMessageSnapshot] = useState<MessageSnapshot>({
+    messages: [],
+    ticketId,
+  });
+  const [statusSnapshot, setStatusSnapshot] = useState<StatusSnapshot | null>(null);
   const [body, setBody] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [resetResult, setResetResult] = useState<FieldResetAccessResult | null>(null);
@@ -159,6 +172,13 @@ export function FieldTicketChat({
   });
   const [isPending, startTransition] = useTransition();
 
+  const liveMessages = mergeMessages(
+    messages,
+    messageSnapshot.ticketId === ticketId ? messageSnapshot.messages : [],
+  );
+  const liveStatus =
+    statusSnapshot?.ticketId === ticketId ? statusSnapshot.status : status;
+
   function scrollConversationToBottom(behavior: ScrollBehavior = "smooth") {
     const conversation = conversationRef.current;
     if (!conversation) return;
@@ -166,14 +186,6 @@ export function FieldTicketChat({
     isNearBottomRef.current = true;
     setHasNewMessage(false);
   }
-
-  useEffect(() => {
-    setLiveMessages((current) => mergeMessages(current, messages));
-  }, [messages]);
-
-  useEffect(() => {
-    setLiveStatus(status);
-  }, [status]);
 
   useEffect(() => {
     if (!hasMountedMessagesRef.current) {
@@ -220,12 +232,12 @@ export function FieldTicketChat({
         const freshMessages = messageResult.data
           .map(mapLiveMessage)
           .filter((message): message is ChatMessage => message !== null);
-        setLiveMessages(freshMessages);
+        setMessageSnapshot({ messages: freshMessages, ticketId });
       }
 
       const nextStatus = normalizeStatus(ticketResult.data?.status);
       if (!ticketResult.error && nextStatus) {
-        setLiveStatus(nextStatus);
+        setStatusSnapshot({ status: nextStatus, ticketId });
       }
     };
 
@@ -249,7 +261,13 @@ export function FieldTicketChat({
           (payload) => {
             const message = mapLiveMessage(payload.new);
             if (message) {
-              setLiveMessages((current) => mergeMessages(current, [message]));
+              setMessageSnapshot((current) => ({
+                messages: mergeMessages(
+                  current.ticketId === ticketId ? current.messages : [],
+                  [message],
+                ),
+                ticketId,
+              }));
             }
           },
         )
@@ -267,7 +285,7 @@ export function FieldTicketChat({
                 ? (payload.new as Record<string, unknown>).status
                 : null,
             );
-            if (nextStatus) setLiveStatus(nextStatus);
+            if (nextStatus) setStatusSnapshot({ status: nextStatus, ticketId });
             router.refresh();
           },
         )
@@ -416,7 +434,7 @@ export function FieldTicketChat({
         setNotice(result.error || "Could not update ticket status.");
         return;
       }
-      setLiveStatus(nextStatus);
+      setStatusSnapshot({ status: nextStatus, ticketId });
       router.refresh();
     });
   }
@@ -506,10 +524,7 @@ export function FieldTicketChat({
           const isStaff = message.authorType === "staff";
           const isCurrentStaff = isStaff && message.authorId === currentStaffUserId;
           return (
-            <div
-              key={message.id}
-              className={`flex ${isStaff ? "justify-end" : "justify-start"}`}
-            >
+            <div key={message.id} className={`flex ${isStaff ? "justify-end" : "justify-start"}`}>
               <article
                 className={`max-w-[88%] rounded-2xl px-4 py-3 ${
                   isStaff
@@ -519,11 +534,7 @@ export function FieldTicketChat({
               >
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-bold text-[var(--console-text-soft)]">
                   <span>
-                    {isStaff
-                      ? isCurrentStaff
-                        ? "You"
-                        : "Minerva staff"
-                      : requesterName}
+                    {isStaff ? (isCurrentStaff ? "You" : "Minerva staff") : requesterName}
                   </span>
                   <time dateTime={message.createdAt}>{formatMessageTime(message.createdAt)}</time>
                 </div>
