@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import { Home, ShieldCheck, UserCircle } from "lucide-react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+
+const FIELD_COMPOSER_MODE_EVENT = "minerva-field-composer-mode";
 
 const items = [
   { href: "/field", label: "Home", icon: Home },
@@ -17,6 +20,21 @@ function isActive(pathname: string, href: string) {
 
 export function FieldNav() {
   const pathname = usePathname();
+  const [composerOpen, setComposerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleComposerMode = (event: Event) => {
+      const customEvent = event as CustomEvent<{ open?: boolean }>;
+      setComposerOpen(Boolean(customEvent.detail?.open));
+    };
+
+    window.addEventListener(FIELD_COMPOSER_MODE_EVENT, handleComposerMode);
+    return () => {
+      window.removeEventListener(FIELD_COMPOSER_MODE_EVENT, handleComposerMode);
+    };
+  }, []);
+
+  if (composerOpen) return null;
 
   return (
     <nav
