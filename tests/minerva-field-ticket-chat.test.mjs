@@ -40,7 +40,8 @@ test("ticket chat uses authenticated Supabase realtime plus a visible-only recov
   assert.match(chat, /filter: `ticket_id=eq\.\$\{ticketId\}`/);
   assert.match(chat, /table: "support_tickets"/);
   assert.match(chat, /filter: `id=eq\.\$\{ticketId\}`/);
-  assert.match(chat, /setLiveMessages\(\(current\) => mergeMessages/);
+  assert.match(chat, /setMessageSnapshot\(\(current\) =>/);
+  assert.match(chat, /setMessageSnapshot\(\{ messages: freshMessages, ticketId \}\)/);
   assert.match(chat, /LIVE_BACKUP_REFRESH_MS = 2000/);
   assert.match(chat, /document\.visibilityState === "hidden"/);
   assert.match(chat, /window\.setInterval/);
