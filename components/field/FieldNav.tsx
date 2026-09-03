@@ -38,6 +38,7 @@ export function FieldNav() {
 
   return (
     <nav
+      data-field-nav
       aria-label="Field navigation"
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--console-border)] bg-[rgba(20,20,20,0.94)] px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur md:hidden"
     >
