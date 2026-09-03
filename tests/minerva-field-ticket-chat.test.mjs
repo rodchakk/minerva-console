@@ -26,41 +26,50 @@ test("Field tickets reuse the existing support backend contracts", () => {
   assert.match(actions, /support_update_status/);
   assert.match(actions, /requireSuperadmin\(\)/);
   assert.doesNotMatch(actions, /auth\.admin\.deleteUser/);
-  assert.doesNotMatch(actions, /setInterval|setTimeout\([^)]*fetch|cron/i);
 });
 
-test("ticket chat subscribes to existing Supabase realtime tables instead of polling", () => {
+test("ticket chat uses authenticated Supabase realtime plus a visible-only recovery refresh", () => {
   const chat = read("features/entry/field/FieldTicketChat.tsx");
 
   assert.match(chat, /createBrowserSupabaseClient/);
-  assert.match(chat, /\.channel\(`field-ticket-/);
+  assert.match(chat, /supabase\.auth\.getSession\(\)/);
+  assert.match(chat, /supabase\.realtime\.setAuth/);
+  assert.match(chat, /\.channel\(`field-ticket-v2-/);
   assert.match(chat, /"postgres_changes"/);
   assert.match(chat, /table: "support_ticket_messages"/);
   assert.match(chat, /filter: `ticket_id=eq\.\$\{ticketId\}`/);
   assert.match(chat, /table: "support_tickets"/);
   assert.match(chat, /filter: `id=eq\.\$\{ticketId\}`/);
+  assert.match(chat, /setMessageSnapshot\(\(current\) =>/);
+  assert.match(chat, /setMessageSnapshot\(\{ messages: freshMessages, ticketId \}\)/);
+  assert.match(chat, /LIVE_BACKUP_REFRESH_MS = 2000/);
+  assert.match(chat, /document\.visibilityState === "hidden"/);
+  assert.match(chat, /window\.setInterval/);
   assert.match(chat, /removeChannel/);
-  assert.doesNotMatch(chat, /setInterval/);
 });
 
-test("ticket detail becomes a focused PWA composer when the keyboard opens", () => {
+test("ticket composer always fits above Field navigation and keyboard", () => {
   const chat = read("features/entry/field/FieldTicketChat.tsx");
   const nav = read("components/field/FieldNav.tsx");
 
+  assert.match(chat, /shellRef/);
+  assert.match(chat, /\[data-field-nav\]/);
+  assert.match(chat, /setNormalHeight/);
   assert.match(chat, /window\.visualViewport/);
   assert.match(chat, /composerMode/);
   assert.match(chat, /fixed inset-x-0 z-50/);
+  assert.match(chat, /composerEntryScrollTopRef/);
+  assert.match(chat, /conversation\.scrollTop = composerEntryScrollTopRef\.current/);
+  assert.doesNotMatch(chat, /if \(composerMode\)[\s\S]{0,900}scrollConversationToBottom\("auto"\)/);
   assert.match(chat, /overflow-y-auto overscroll-contain/);
   assert.match(chat, /minerva-field-composer-mode/);
-  assert.match(chat, /!composerMode \? \(/);
   assert.match(chat, /Reply to this ticket/);
-  assert.match(chat, /max-h-32/);
   assert.match(chat, /Send message/);
-  assert.match(nav, /minerva-field-composer-mode/);
+  assert.match(nav, /data-field-nav/);
   assert.match(nav, /if \(composerOpen\) return null/);
 });
 
-test("new realtime messages preserve reading position and expose a jump action", () => {
+test("new messages preserve reading position and expose a jump action", () => {
   const chat = read("features/entry/field/FieldTicketChat.tsx");
 
   assert.match(chat, /isNearBottomRef/);
@@ -82,7 +91,7 @@ test("ticket quick actions reuse ENTRY recovery and people surfaces", () => {
   assert.match(chat, /Reopen/);
 });
 
-test("ticket fixes do not add schema, Brain, or Console membership coupling", () => {
+test("ticket hardening does not add schema, Brain, or Console membership coupling", () => {
   const actions = read("features/entry/field/ticketActions.ts");
   const data = read("features/entry/field/ticketData.ts");
   const chat = read("features/entry/field/FieldTicketChat.tsx");
@@ -91,5 +100,4 @@ test("ticket fixes do not add schema, Brain, or Console membership coupling", ()
   assert.doesNotMatch(combined, /console_members/);
   assert.doesNotMatch(combined, /features\/brain|content\/brain/);
   assert.doesNotMatch(combined, /create table|alter table/i);
-  assert.doesNotMatch(combined, /setInterval/);
 });
