@@ -1,19 +1,19 @@
 # ENTRY — Native Support Tickets
 
-Official Brain capture for `ENTRY-SUP-001`, the native support-ticket system spanning ENTRY Mobile, ENTRY Web, the ENTRY Supabase backend, and Minerva Console.
+Official Brain capture for `ENTRY-SUP-001`, the native support-ticket system spanning ENTRY Mobile, ENTRY Web, the ENTRY Supabase backend, Minerva Console, and the Minerva Field operational surface.
 
 This document records product and architecture knowledge only. Brain does not connect to ENTRY operational data or become a runtime dependency of the ticket system.
 
 ## Status
 
 - **Feature:** `ENTRY-SUP-001 — Native Support Tickets`
-- **Status:** Completed, QA-validated, and merged.
-- **Date closed:** 2026-08-31.
+- **Status:** Completed, QA-validated, merged, and extended into Minerva Field.
+- **Original closeout:** 2026-08-31.
+- **Minerva Field support extension closeout:** 2026-09-03.
 - **ENTRY Mobile:** `rodchakk/node-bridge-foundation` PR `#14`, merged to `main` as `283366a3ae9e782923e52445564c8ff4e60ec860`.
 - **ENTRY Web:** `rodchakk/Entry-Web` PR `#1`, merged to `master` as `f6c3229bdea2e519d48bd13246bc2f9696857aca`.
-- **Minerva Console:** `rodchakk/minerva-console` PR `#95`, merged to `master` as `97aedabe717fd025d00286242fd334f6310e28d7`.
-- **Console production:** Vercel deployment for `97aedabe717fd025d00286242fd334f6310e28d7` reached `READY` and is aliased to `console.minervatechs.com`.
-- **Mobile store release:** not performed by this closeout; merge to `main` does not publish a new App Store / Play Store version.
+- **Minerva Console original ticket workspace:** `rodchakk/minerva-console` PR `#95`, merged to `master` as `97aedabe717fd025d00286242fd334f6310e28d7`.
+- **Minerva Field canonical ticket-chat hardening:** PR `#125`, merged to `master` as `65384c04fb722fbaf693618a0b0a156805556337` and deployed `READY` to `console.minervatechs.com`.
 
 ## Product purpose
 
@@ -29,14 +29,12 @@ Resident flow:
 6. See ticket state as `Recibido`, `En revisión`, or `Resuelto`.
 7. Reply to a resolved ticket to reopen it automatically.
 
-Minerva flow:
+Minerva flow now has two complementary admin surfaces:
 
-1. Open ENTRY → Tickets in Minerva Console.
-2. Filter and inspect tickets.
-3. View resident/community/device context.
-4. Reply from the ticket workspace.
-5. Update ticket status.
-6. Receive new ticket/message changes without manual browser refresh through Supabase Realtime.
+1. **Minerva Console** for the fuller desktop ticket workspace.
+2. **Minerva Field** for mobile/PWA support while away from a laptop, including chat-style replies and quick operational actions.
+
+Both surfaces reuse the same ticket/message backend and authorization model.
 
 ## Backend implementation
 
@@ -84,6 +82,8 @@ Behavioral rules:
 - Admin RPCs independently require superadmin authorization.
 - Support-specific RLS performance findings discovered during implementation were hardened before merge.
 - The ticket system does not expose service-role credentials to clients.
+- Minerva Field does not create a parallel support database or bypass the support RPC/RLS contract.
+- Brain must never ingest support conversations, customer identities, or ticket operational data.
 
 ## ENTRY Mobile implementation
 
@@ -99,11 +99,11 @@ The resident support surface now:
 
 ### Keyboard QA fix
 
-Physical Android QA identified that the on-screen keyboard covered the conversation/composer. Before merge, the detail screen was corrected so Android resizes the conversation area, keeps the composer usable, and scrolls toward the latest conversation content when the keyboard opens.
+Physical Android QA identified that the on-screen keyboard covered the conversation/composer. Before the original support closeout, the resident detail screen was corrected so Android resizes the conversation area, keeps the composer usable, and scrolls toward the latest conversation content when the keyboard opens.
 
 ## Minerva Console implementation
 
-Minerva Console now includes `Tickets` under ENTRY with:
+Minerva Console includes `Tickets` under ENTRY with:
 
 - responsive ticket inbox;
 - status filters;
@@ -112,9 +112,45 @@ Minerva Console now includes `Tickets` under ENTRY with:
 - status controls;
 - technical context;
 - staff replies;
-- Supabase Realtime-triggered server refreshes.
+- Supabase Realtime-triggered updates.
 
-During physical QA, the first Console realtime implementation did not update when the resident sent a new message. The final fix subscribed Console directly to inserts on `support_ticket_messages` in addition to ticket inserts/updates. The corrected behavior was validated before merge.
+During physical QA, the first Console realtime implementation did not update when the resident sent a new message. The corrected desktop behavior subscribed directly to inserts on `support_ticket_messages` in addition to ticket inserts/updates.
+
+## Minerva Field extension — 2026-09-03
+
+The existing support system was extended into the installed Minerva Field PWA without creating a second chat implementation or new support persistence.
+
+### Field ticket workspace
+
+- `Tickets` is a first-class ENTRY Field destination.
+- Inbox filters existing ticket states.
+- Ticket detail presents the support thread as a mobile conversation.
+- Resident/requester messages are left-aligned; Minerva replies are right-aligned.
+- Existing ticket metadata can be inspected without creating a separate Field support profile.
+- Current Quick Actions reuse existing ENTRY operations:
+  - reset access;
+  - open the requester in Field People;
+  - start, resolve, or reopen the ticket.
+
+### PWA realtime and keyboard closeout
+
+PR `#122` introduced the Field ticket chat. Physical PWA QA then exposed two defects: Field did not reliably receive new messages without refresh, and the software keyboard could push the composer outside the visible viewport or move the operator away from the message being answered.
+
+PR `#124` attempted the first repair but remained incomplete in production QA. It is superseded by PR `#125`.
+
+PR `#125` is the canonical Field implementation:
+
+- Supabase Realtime remains the primary delivery mechanism.
+- Field explicitly authenticates Realtime with the current session.
+- Incoming message inserts are applied directly to client chat state rather than relying only on a Next.js server refresh.
+- A 2-second database reconciliation runs only while the ticket tab is visible to recover if the Android/PWA runtime drops a Realtime event; it pauses when hidden and adds no worker, cron, table, or new backend service.
+- The chat measures the real remaining viewport above Field navigation.
+- When the reply input opens the software keyboard, Field navigation and Quick Actions are temporarily hidden.
+- The composer remains above the keyboard.
+- The conversation preserves the operator's current reading position when the keyboard opens.
+- If the operator is reading older messages, new arrivals expose a `New message` jump control instead of forcibly moving the conversation.
+
+The `#125` production deployment reached `READY` on `console.minervatechs.com`.
 
 ## ENTRY Web implementation
 
@@ -126,72 +162,77 @@ ENTRY Web replaces its previous Support placeholder with:
 - follow-up replies;
 - the same support backend/RLS contract used by mobile.
 
-This closeout does not claim realtime behavior for the ENTRY Web resident surface; the realtime QA performed here specifically validated ENTRY Mobile ↔ Minerva Console.
+The original support closeout did not claim realtime behavior for the ENTRY Web resident surface; realtime QA specifically validated the resident/mobile and Minerva admin workflows described above.
 
 ## QA evidence
 
-Owner physical-device QA was performed on Android using an Expo development build.
+Original owner physical-device QA was performed on Android using an Expo development build. Later Field QA was performed from the installed mobile PWA and directly informed the `#124` → `#125` hardening cycle.
 
-Validated end-to-end behavior:
+Validated support behavior across the completed work includes:
 
 - resident creates ticket;
-- ticket appears in Minerva Console;
-- resident sends follow-up message;
-- Minerva sees the conversation;
-- Minerva replies;
-- mobile receives the reply automatically without refresh;
-- Console receives resident messages automatically without refresh after the final realtime fix;
+- Minerva can inspect the ticket;
+- resident and Minerva can exchange follow-up messages;
 - staff reply transitions open → in review;
 - Minerva can mark ticket resolved;
-- resident sees resolved state;
 - resident reply to resolved ticket reopens it;
-- keyboard no longer obscures the mobile composer/conversation.
+- mobile resident flow uses Realtime for replies/status;
+- Minerva Field uses authenticated Realtime plus visible-only reconciliation for mobile/PWA reliability;
+- Field ticket composer remains usable with the software keyboard open;
+- Field preserves the message-reading context when entering composer mode.
 
-Minerva Console CI passed TypeScript, lint, build, and Brain guardrails before merge. Vercel preview validation also passed and the final production deployment reached `READY`.
-
-### QA not claimed
-
-- No physical iOS support-ticket QA was completed in this closeout.
-- No new production mobile store build/release was performed.
-- ENTRY Web resident realtime behavior was not part of the validated realtime loop.
+Minerva Console CI for the final Field hardening passed Build, TypeScript, full lint, Brain/layout lint, and Brain guardrails before merge.
 
 ## Deliberate MVP exclusions
 
-The completed MVP intentionally does **not** include:
+The support foundation intentionally does **not** require:
 
-- attachments or screenshot uploads;
 - push/email support alerts;
 - SLA timers;
 - priorities;
 - assignment queues/departments;
-- macros/tags;
 - analytics;
 - AI support agent behavior;
 - live-chat presence/typing indicators.
 
-These exclusions kept the first implementation small and operationally useful.
+Attachments and canned-response tooling were also excluded from the original MVP and are not implied as complete by the Field extension.
+
+## Future backlog — Field Quick Responses
+
+**Captured 2026-09-03; not approved for implementation yet.**
+
+A future Minerva Field support enhancement should provide operator-triggered **Quick Responses** for recurring support cases. Initial candidates:
+
+- instructions for enabling ENTRY notifications;
+- instructions for enabling geolocation/location permissions;
+- instructional images/screenshots that show the resident how to complete those setup steps.
+
+The library should grow gradually as recurring real-world support needs become clear.
+
+Implementation constraints when this is eventually prioritized:
+
+- reuse `support_tickets` / `support_ticket_messages` and the existing message flow;
+- do not create a separate chat backend;
+- keep the operator in control of what is sent;
+- validate notification/geolocation instructions against the then-current iOS and Android ENTRY UX;
+- manage generic instructional images as product support assets, never as Brain copies of customer conversations or PII;
+- do not introduce an AI service merely to provide canned responses.
 
 ## Follow-up: push notifications
 
-Push notifications are the clearest next support enhancement, but they are **not part of ENTRY-SUP-001**.
+Push notifications remain a separate support enhancement.
 
 Current behavior:
 
-- when ENTRY is open on the ticket conversation, Supabase Realtime can deliver new replies;
-- when ENTRY is closed or backgrounded, the resident does not receive a dedicated support notification from this feature.
+- while the relevant support surface is open, Realtime can deliver conversation updates;
+- when ENTRY is closed or backgrounded, the resident does not receive a dedicated support push from this feature.
 
 A future reviewed mission may connect staff replies to ENTRY's existing push infrastructure so a resident can receive a notification such as `Minerva respondió a tu solicitud ENT-000001` and deep-link into the ticket.
 
-This should be treated as a separate mission because background push delivery, notification payloads, deep links, token ownership, duplicate-delivery protection, and platform QA have a different risk surface from Realtime.
-
-## Release boundary
-
-`ENTRY-SUP-001` is code-complete and merged, but mobile distribution remains a separate release operation.
-
-Before claiming the feature is available in public store builds, verify the target ENTRY release includes merge commit `283366a3ae9e782923e52445564c8ff4e60ec860` (or a descendant), complete the intended release QA, and publish through the normal Play Store / App Store process.
+This remains separate because background push delivery, notification payloads, deep links, token ownership, duplicate-delivery protection, and platform QA have a different risk surface from Realtime.
 
 ## Final verdict
 
-`ENTRY-SUP-001` is **COMPLETED AND MERGED**.
+`ENTRY-SUP-001` is **COMPLETED AND MERGED**, and its existing backend now powers both the desktop Minerva Console support workspace and the mobile Minerva Field support workspace.
 
-The support workflow is now first-party, ticket-based, conversational, status-aware, and realtime between the validated Android resident flow and Minerva Console. Remaining push notification work is explicitly deferred rather than silently included in this closure.
+The September 3 Field pass is closed for now. PR `#125` is canonical for Field live-chat/composer behavior. Quick Responses—starting with notifications, geolocation, and instructional images—are captured as future backlog rather than silently included in the completed scope.
