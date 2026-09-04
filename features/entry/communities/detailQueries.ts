@@ -138,6 +138,14 @@ export type CommunityFacilityPreview = {
   slotMinutes: number;
 };
 
+export type CommunityDestinationPreview = {
+  category: string;
+  id: string;
+  isActive: boolean;
+  name: string;
+  sortOrder: number;
+};
+
 export type CommunityMessagePreview = {
   expiresAt: string;
   id: string;
@@ -154,6 +162,9 @@ export type CommunityPreviewResult<T> = {
 };
 
 export type CommunityDetailPreviews = {
+  destinations: CommunityPreviewResult<CommunityDestinationPreview> & {
+    activeCount: number;
+  };
   facilities: CommunityPreviewResult<CommunityFacilityPreview> & {
     activeCount: number;
   };
@@ -1217,6 +1228,60 @@ async function loadFacilitiesPreview(
   }
 }
 
+async function loadDestinationsPreview(
+  supabase: SupabaseServerClient,
+  communityId: string,
+): Promise<CommunityDetailPreviews["destinations"]> {
+  try {
+    const { data, error } = await supabase
+      .from("community_destinations")
+      .select("id, name, category, is_active, sort_order")
+      .eq("community_id", communityId)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    if (error) {
+      return {
+        ...buildUnavailableResult<CommunityDestinationPreview>(error.message),
+        activeCount: 0,
+      };
+    }
+
+    const items = (Array.isArray(data) ? data : [])
+      .map((item) => {
+        const record = item as Record<string, unknown>;
+        const id = coerceString(record.id);
+        const name = coerceString(record.name);
+
+        return {
+          category: coerceString(record.category),
+          id,
+          isActive:
+            record.is_active === undefined
+              ? true
+              : coerceBoolean(record.is_active),
+          name,
+          sortOrder: coerceNumber(record.sort_order),
+        };
+      })
+      .filter((item) => item.id && item.name);
+
+    return {
+      activeCount: items.filter((item) => item.isActive).length,
+      items,
+      state: items.length > 0 ? "live" : "empty",
+      total: items.length,
+    };
+  } catch (error) {
+    return {
+      ...buildUnavailableResult<CommunityDestinationPreview>(
+        error instanceof Error ? error.message : "Preview unavailable",
+      ),
+      activeCount: 0,
+    };
+  }
+}
+
 async function loadMessagesPreview(
   supabase: SupabaseServerClient,
   communityId: string,
@@ -1303,14 +1368,16 @@ export async function getCommunityDetailPreviews(
   await requireSuperadmin();
 
   const supabase = await createClient();
-  const [users, units, facilities, messages] = await Promise.all([
+  const [users, units, facilities, messages, destinations] = await Promise.all([
     loadUsersPreview(supabase, communityId),
     loadUnitsPreview(supabase, communityId),
     loadFacilitiesPreview(supabase, communityId),
     loadMessagesPreview(supabase, communityId, options.allowMessages),
+    loadDestinationsPreview(supabase, communityId),
   ]);
 
   return {
+    destinations,
     facilities,
     messages,
     units,

@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { CommunityAdminActivityDrawer } from "@/features/entry/communities/CommunityAdminActivityDrawer";
+import { CommunityDestinationsManager } from "@/features/entry/communities/CommunityDestinationsManager";
 import { CommunityFacilitiesDrawer } from "@/features/entry/communities/CommunityFacilitiesDrawer";
 import { CommunityOnboardingReadinessPanel } from "@/features/entry/communities/CommunityOnboardingReadinessPanel";
 import { CommunityUsersDrawer } from "@/features/entry/communities/CommunityUsersDrawer";
@@ -609,6 +610,14 @@ export default async function CommunitySetupPage(
           />
 
           <div className="grid gap-4 lg:grid-cols-3">
+            <div id="manual-destinations" className="lg:col-span-3">
+              <CommunityDestinationsManager
+                communityId={community.id}
+                destinations={previews.destinations.items}
+                state={previews.destinations.state}
+              />
+            </div>
+
             <SummaryCard
               title="Users summary"
               action={
