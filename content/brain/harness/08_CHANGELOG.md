@@ -2,6 +2,17 @@
 
 Append-only. Most recent first.
 
+## 2026-09-03 - SESHAT-BRAIN-001 - Supabase billing separation captured
+
+- Added `DEC-0009` approving `SESHAT — Infrastructure / Supabase Billing Separation` as the current infrastructure decision for Seshat.
+- Recorded that the existing Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) was transferred from the `Minerva Technologies` organization to the separate `Minerva Internal` organization on the Free plan.
+- ENTRY remains independently hosted in `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) under the original `Minerva Technologies` organization so it can move to paid commercial infrastructure without forcing Seshat into the same billing model.
+- Superseded the prior direction that treated a future Seshat migration away from Supabase as already approved. Current direction is to keep the existing project on Free while scale and criticality permit and reevaluate infrastructure only when a concrete need exists.
+- Explicitly rejected local/SQLite + PC synchronization, self-hosted Supabase, and creation of a replacement Supabase project for the current stage.
+- This capture records an organization/billing infrastructure operation only. No Seshat application code, `.env`, Project URL, key, Auth, Storage, schema, or data migration change is recorded.
+- When Seshat work resumes, unpause the Free project and QA login, existing financial data, safe write behavior, and Storage usage before making configuration changes.
+- Updated Seshat current-state, architecture, project knowledge, and machine-readable registries. No Brain mission-ledger entry was created because this is a non-MCB product knowledge capture under `DEC-0005`.
+
 ## 2026-08-16 - ENTRY-ONB-007 - Runtime walkthrough passed
 
 - Runtime walkthrough passed on the PR #39 Vercel Preview deployment for commit

@@ -16,11 +16,11 @@
     "type": "project",
     "status": "approved",
     "title": "Seshat",
-    "summary": "Minerva financial operating system and management-accounting product. Approved direction: evolve incrementally around real company/product/client economics, add business-unit and multi-currency controls before real Minerva financial use, and eventually migrate away from the current Supabase backend through a separate reviewed mission.",
+    "summary": "Minerva financial operating system and management-accounting product. Current approved infrastructure keeps the existing Seshat Supabase project (vfvbvywvmoevyucqgtos) in the independent Minerva Internal organization on the Free plan while internal scale and criticality permit; ENTRY billing is separated and no backend migration is currently planned or approved.",
     "created": "2026-06-16",
-    "updated": "2026-08-20",
-    "tags": ["product", "fintech", "management-accounting", "financial-intelligence", "supabase", "migration-planned"],
-    "related": ["PRJ-0001", "PRJ-0004"],
+    "updated": "2026-09-03",
+    "tags": ["product", "fintech", "management-accounting", "financial-intelligence", "supabase", "internal-tool", "free-tier", "billing-separation"],
+    "related": ["PRJ-0001", "PRJ-0004", "DEC-0009"],
     "path": "content/brain/projects/seshat.md"
   },
   {

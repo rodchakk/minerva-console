@@ -42,6 +42,31 @@ app/(console)/brain/          ← routes, inherit superadmin gate
 
 JSON registries in `content/brain/registries/` provide the listable surface. Long-form documents live as Markdown alongside them and are referenced via the `path` field on each registry entry. Frontmatter conventions to keep stable from day one: `id`, `type`, `status`, `created`, `updated`, `tags`, `related`. The `tags` field feeds future RAG; `related` feeds the future graph view.
 
+## Product infrastructure boundary — Seshat / Supabase
+
+As of 2026-09-03, Seshat's approved runtime infrastructure remains its existing Supabase project rather than a local, self-hosted, or synchronized replacement.
+
+```text
+Supabase
+├── Minerva Technologies
+│   └── gate-project-dev / ENTRY
+│       └── project ref: ytzvislhvrcdtkbtpbmu
+│
+└── Minerva Internal (Free)
+    └── seshat
+        └── project ref: vfvbvywvmoevyucqgtos
+```
+
+Architectural rules:
+
+1. Seshat remains on Free infrastructure while its internal scale and criticality allow it.
+2. ENTRY may move to Supabase Pro/commercial infrastructure without pulling Seshat into the same billing organization.
+3. Do not introduce a local database, PC-based sync layer, self-hosted Supabase, or a replacement Supabase project merely to avoid ENTRY's commercial billing.
+4. The 2026-09-03 project transfer does not by itself require application code, `.env`, Project URL, key, Auth, Storage, or schema changes because the existing Seshat project remains the same project.
+5. Resume the Seshat Free project when needed and validate actual runtime behavior before making corrective configuration changes.
+6. If Seshat later becomes commercially operated, materially multi-user, higher scale, or service-critical, reevaluate its infrastructure in a separate reviewed decision/mission based on the conditions then present. There is no currently approved provider migration.
+7. Brain may document this architecture and billing boundary but must not ingest Seshat's operational financial records.
+
 ## v1 path (design only)
 
 1. Stand up Neon. Add deps and env vars **at that point**, not now.
