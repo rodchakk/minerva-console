@@ -3,11 +3,7 @@
 import {
   ArrowDown,
   ArrowUp,
-  Building2,
-  Check,
-  ListOrdered,
   Loader2,
-  MapPin,
   MoreHorizontal,
   Pencil,
   Power,
@@ -37,9 +33,7 @@ import type {
 import { cn } from "@/lib/supabase/utils";
 
 type CommunityDestinationsManagerProps = {
-  activeCount: number;
   communityId: string;
-  communityName: string;
   destinations: CommunityDestinationPreview[];
   state: CommunityDetailPreviews["destinations"]["state"];
 };
@@ -148,35 +142,6 @@ function MenuSubmitButton({
   );
 }
 
-function MetricTile({
-  hint,
-  icon,
-  label,
-  value,
-}: {
-  hint: string;
-  icon: ReactNode;
-  label: string;
-  value: string | number;
-}) {
-  return (
-    <article className="flex min-h-28 min-w-0 items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
-      <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-violet-400/14 bg-violet-500/10 text-violet-200">
-        {icon}
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          {label}
-        </p>
-        <p className="mt-1 truncate text-2xl font-semibold tracking-tight text-white">
-          {value}
-        </p>
-        <p className="mt-1 truncate text-xs text-[var(--text-muted)]">{hint}</p>
-      </div>
-    </article>
-  );
-}
-
 function CreateDestinationForm({ communityId }: { communityId: string }) {
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
@@ -186,7 +151,7 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
   return (
     <form
       action={createCommunityDestinationAction}
-      className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3"
+      className="pt-3"
       onSubmit={(event) => {
         if (!canSubmit) {
           event.preventDefault();
@@ -195,7 +160,7 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
       }}
     >
       <input type="hidden" name="community_id" value={communityId} />
-      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(180px,240px)_auto] lg:items-end">
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,32%)_auto] lg:items-end">
         <label className="min-w-0">
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
             Destination name
@@ -209,23 +174,23 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
               if (error) setError("");
             }}
             placeholder="e.g. Taller El Trancazo"
-            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50 focus:ring-2 focus:ring-violet-300/10"
+            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/70 focus:ring-2 focus:ring-violet-300/15"
           />
         </label>
         <label className="min-w-0">
           <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Optional category
+            Category (optional)
           </span>
           <input
             name="category"
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             placeholder="Optional category"
-            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50 focus:ring-2 focus:ring-violet-300/10"
+            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/70 focus:ring-2 focus:ring-violet-300/15"
           />
         </label>
         <SubmitButton disabled={!canSubmit} pendingLabel="Creating...">
-          Create destination
+          Create
         </SubmitButton>
       </div>
       {error ? <p className="mt-2 text-sm text-amber-200">{error}</p> : null}
@@ -431,7 +396,7 @@ function DestinationRow({
   return (
     <div
       className={cn(
-        "grid gap-3 px-4 py-4 transition sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
+        "grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 transition sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
         !destination.isActive && "bg-white/[0.015]",
       )}
     >
@@ -453,7 +418,7 @@ function DestinationRow({
               </Badge>
             </div>
             <p className="mt-1 text-sm text-[var(--text-muted)]">
-              {destination.category || "No category"} / Display order {destination.sortOrder}
+              {destination.category || "No category"} · Display order {destination.sortOrder}
             </p>
           </div>
         )}
@@ -500,9 +465,7 @@ function DestinationRow({
 }
 
 export function CommunityDestinationsManager({
-  activeCount,
   communityId,
-  communityName,
   destinations,
   state,
 }: CommunityDestinationsManagerProps) {
@@ -518,69 +481,43 @@ export function CommunityDestinationsManager({
   );
 
   return (
-    <div className="space-y-4">
-      <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
-        Manage operational destinations available to guards during manual access.
-      </p>
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <MetricTile
-          icon={<Building2 aria-hidden="true" className="h-4 w-4" />}
-          label="Community"
-          value={communityName}
-          hint="Current community"
-        />
-        <MetricTile
-          icon={<MapPin aria-hidden="true" className="h-4 w-4" />}
-          label="Destinations"
-          value={destinations.length}
-          hint="Configured"
-        />
-        <MetricTile
-          icon={<Check aria-hidden="true" className="h-4 w-4" />}
-          label="Active"
-          value={activeCount}
-          hint="Available to guards"
-        />
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+      <div>
+        <h2 className="text-2xl font-semibold tracking-normal text-white">
+          Manual Access Destinations
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
+          Manage destinations available to guards during manual access.
+        </p>
       </div>
 
       <CreateDestinationForm communityId={communityId} />
 
+      <div className="my-6 border-t border-[var(--border)]" />
+
+      <h3 className="text-base font-semibold tracking-normal text-white">Destinations</h3>
+
       {sortedDestinations.length === 0 ? (
-        <EmptyDestinations state={state} />
+        <div className="mt-4">
+          <EmptyDestinations state={state} />
+        </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-strong)]">
-          <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-4 py-3">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-                Destination directory
-              </p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
-                Active destinations are visible to guard manual access.
-              </p>
-            </div>
-            <div className="hidden items-center gap-2 text-xs font-semibold text-[var(--text-muted)] sm:flex">
-              <ListOrdered aria-hidden="true" className="h-4 w-4" />
-              Ordered
-            </div>
-          </div>
-          <div className="divide-y divide-[var(--border)]">
-            {sortedDestinations.map((destination, index) => (
-              <DestinationRow
-                key={destination.id}
-                canMoveDown={index < sortedDestinations.length - 1}
-                canMoveUp={index > 0}
-                communityId={communityId}
-                destination={destination}
-                editingId={editingId}
-                menuOpenId={menuOpenId}
-                setEditingId={setEditingId}
-                setMenuOpenId={setMenuOpenId}
-              />
-            ))}
-          </div>
+        <div className="mt-4 space-y-2">
+          {sortedDestinations.map((destination, index) => (
+            <DestinationRow
+              key={destination.id}
+              canMoveDown={index < sortedDestinations.length - 1}
+              canMoveUp={index > 0}
+              communityId={communityId}
+              destination={destination}
+              editingId={editingId}
+              menuOpenId={menuOpenId}
+              setEditingId={setEditingId}
+              setMenuOpenId={setMenuOpenId}
+            />
+          ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

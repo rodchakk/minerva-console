@@ -611,15 +611,11 @@ export default async function CommunitySetupPage(
 
           <div className="grid gap-4 lg:grid-cols-3">
             <div id="manual-destinations" className="lg:col-span-3">
-              <SummaryCard title="Manual Access Destinations">
-                <CommunityDestinationsManager
-                  activeCount={previews.destinations.activeCount}
-                  communityId={community.id}
-                  communityName={community.name}
-                  destinations={previews.destinations.items}
-                  state={previews.destinations.state}
-                />
-              </SummaryCard>
+              <CommunityDestinationsManager
+                communityId={community.id}
+                destinations={previews.destinations.items}
+                state={previews.destinations.state}
+              />
             </div>
 
             <SummaryCard
