@@ -79,3 +79,15 @@ Feature-folder pattern under `features/<product>/<domain>/{queries,actions,detai
 - No database connections.
 - No migrations.
 - No agents engine, RAG, graph, or cost monitor.
+
+## Product infrastructure snapshot — 2026-09-03
+
+### Seshat / Supabase billing separation
+
+- Seshat is currently an internal Minerva Technologies financial operating tool used at very small scale and remains in active construction.
+- Existing Seshat Supabase project: `seshat`, project ref `vfvbvywvmoevyucqgtos`.
+- On 2026-09-03 the existing project was transferred from the `Minerva Technologies` Supabase organization to the independent `Minerva Internal` organization on the Free plan.
+- The transfer was organizational only: no replacement database was created and no Seshat application code, `.env`, Project URL, keys, Auth, Storage, or schema change was approved as part of the operation.
+- Seshat is currently paused and may be resumed on Free when work continues. Before new changes, perform functional QA for login, existing financial data, write access, and Storage where used.
+- ENTRY remains in `gate-project-dev`, project ref `ytzvislhvrcdtkbtpbmu`, under the original `Minerva Technologies` organization and may move to paid commercial infrastructure independently.
+- Result: ENTRY and Seshat are financially decoupled at the Supabase organization/billing layer.
