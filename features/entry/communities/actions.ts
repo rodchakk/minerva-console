@@ -454,3 +454,143 @@ export async function createCommunityAction(
     usedAdvancedImport: Boolean(parsedAdvancedUnits),
   };
 }
+
+function normalizeDestinationName(value: FormDataEntryValue | null) {
+  return String(value ?? "").trim().replace(/\s+/g, " ");
+}
+
+function getCommunityDestinationRedirect(communityId: string) {
+  return `/products/entry/communities/${communityId}#manual-destinations`;
+}
+
+export async function createCommunityDestinationAction(formData: FormData) {
+  await requireSuperadmin();
+  requireEntryMutationAllowed();
+
+  const communityId = String(formData.get("community_id") ?? "").trim();
+  const name = normalizeDestinationName(formData.get("name"));
+  const category = normalizeDestinationName(formData.get("category"));
+
+  if (!communityId || !name) {
+    redirect("/products/entry/communities");
+  }
+
+  const supabase = await createClient();
+  const { data: existing } = await supabase
+    .from("community_destinations")
+    .select("sort_order")
+    .eq("community_id", communityId)
+    .order("sort_order", { ascending: false })
+    .limit(1);
+
+  const nextOrder =
+    Array.isArray(existing) && existing[0]?.sort_order !== undefined
+      ? coerceNumber(existing[0].sort_order) + 10
+      : 10;
+
+  await supabase.from("community_destinations").insert({
+    category: category || null,
+    community_id: communityId,
+    name,
+    sort_order: nextOrder,
+  });
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  redirect(getCommunityDestinationRedirect(communityId));
+}
+
+export async function renameCommunityDestinationAction(formData: FormData) {
+  await requireSuperadmin();
+  requireEntryMutationAllowed();
+
+  const communityId = String(formData.get("community_id") ?? "").trim();
+  const destinationId = String(formData.get("destination_id") ?? "").trim();
+  const name = normalizeDestinationName(formData.get("name"));
+  const category = normalizeDestinationName(formData.get("category"));
+
+  if (!communityId || !destinationId || !name) {
+    redirect("/products/entry/communities");
+  }
+
+  const supabase = await createClient();
+  await supabase
+    .from("community_destinations")
+    .update({
+      category: category || null,
+      name,
+    })
+    .eq("id", destinationId)
+    .eq("community_id", communityId);
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  redirect(getCommunityDestinationRedirect(communityId));
+}
+
+export async function setCommunityDestinationActiveAction(formData: FormData) {
+  await requireSuperadmin();
+  requireEntryMutationAllowed();
+
+  const communityId = String(formData.get("community_id") ?? "").trim();
+  const destinationId = String(formData.get("destination_id") ?? "").trim();
+  const isActive = String(formData.get("is_active") ?? "") === "true";
+
+  if (!communityId || !destinationId) {
+    redirect("/products/entry/communities");
+  }
+
+  const supabase = await createClient();
+  await supabase
+    .from("community_destinations")
+    .update({ is_active: isActive })
+    .eq("id", destinationId)
+    .eq("community_id", communityId);
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  redirect(getCommunityDestinationRedirect(communityId));
+}
+
+export async function updateCommunityDestinationOrderAction(formData: FormData) {
+  await requireSuperadmin();
+  requireEntryMutationAllowed();
+
+  const communityId = String(formData.get("community_id") ?? "").trim();
+  const destinationId = String(formData.get("destination_id") ?? "").trim();
+  const direction = String(formData.get("direction") ?? "").trim();
+
+  if (!communityId || !destinationId || !["up", "down"].includes(direction)) {
+    redirect("/products/entry/communities");
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("community_destinations")
+    .select("id, sort_order, name")
+    .eq("community_id", communityId)
+    .order("sort_order", { ascending: true })
+    .order("name", { ascending: true });
+
+  const rows = Array.isArray(data) ? data : [];
+  const index = rows.findIndex((row) => row.id === destinationId);
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+
+  if (index >= 0 && swapIndex >= 0 && swapIndex < rows.length) {
+    const current = rows[index];
+    const target = rows[swapIndex];
+
+    await Promise.all([
+      supabase
+        .from("community_destinations")
+        .update({ sort_order: coerceNumber(target.sort_order) })
+        .eq("id", current.id)
+        .eq("community_id", communityId),
+      supabase
+        .from("community_destinations")
+        .update({ sort_order: coerceNumber(current.sort_order) })
+        .eq("id", target.id)
+        .eq("community_id", communityId),
+    ]);
+  }
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  redirect(getCommunityDestinationRedirect(communityId));
+}
