@@ -4,35 +4,38 @@
 
 > This section supersedes the older ENTRY-BRAIN-001 snapshot below when determining current priority/status.
 
-### P0 before first real installation
+### Manual Access Evidence-First — CLOSED
 
-**ENTRY — Manual Access Evidence-First Redesign** is the current pre-deployment P0 for the Guard manual-entry flow.
+Specification: [entry-manual-access-evidence-first-p0.md](../missions/entry-manual-access-evidence-first-p0.md)  
+Closeout: [entry-manual-access-evidence-first-closeout-2026-09-04.md](../missions/entry-manual-access-evidence-first-closeout-2026-09-04.md)
 
-Full specification: [entry-manual-access-evidence-first-p0.md](../missions/entry-manual-access-evidence-first-p0.md)
+**Current status:** ✅ **COMPLETED / MERGED / PRODUCTION-VALIDATED**
 
-**Current status:** **PROMPT SENT — AWAITING IMPLEMENTATION / REVIEW.**
+The cross-repo implementation is live and validated:
 
-The implementation agent has already received the complete mission prompt. No merge has been approved. When the implementation report/PR arrives, review it against the mission specification before merge.
+- Mobile/backend PR #17 merged.
+- Admin web PR #5 merged.
+- Minerva Console PR #131 merged.
+- Manual vehicle/pedestrian flows passed real-device QA.
+- Mandatory evidence passed.
+- Existing plate OCR was reused and a real OCR result was observed in admin history.
+- Manual checkout passed.
+- Published Minerva Console destination CRUD works.
+- Configured community destinations appear correctly in the guard manual-entry selector.
 
-Approved core decisions:
+This mission is no longer a launch blocker.
 
-- Remove visitor name and company/reference as required manual-entry fields.
-- Normal guard operation should require **no keyboard**.
-- Destination is mandatory and must be a **dropdown/selector**, not a grid of destination cards.
-- Destinations are configurable per community from **Minerva Console → ENTRY**.
-- `Otro` always exists and does not open a text field.
-- Reason remains touch-first: Entrega / Servicio / Venta / Mantenimiento / Otro.
-- Guard selects Vehículo / Peatón.
-- Person evidence photo is mandatory for MANUAL; **no camera-damaged exception or bypass**.
-- Vehicle photo is mandatory for vehicle entries and omitted for pedestrian entries.
-- Reuse ENTRY's existing automatic plate OCR (`vehicle_photo_path` → OCR trigger/queue → `vehicle_plate_text`); do not create another OCR and do not ask the guard to type a plate.
-- Manual checkout should identify active entries primarily by **destination + reason + entry time + recognized plate / pedestrian state**, without showing person evidence photos to the guard.
-- Evidence remains available to admins/audit where appropriate.
-- Historical manual entries must remain compatible; no destructive migration.
-- Deactivated destinations disappear from new-entry selection but historical destination labels remain intact.
-- OCR delay/failure must not block check-in.
+### Remaining P0 before first real installation
 
-Tomorrow's intended focus after implementation arrives: **UX polish + real-device QA**, not redesigning the underlying architecture.
+Canonical board: [entry-prelaunch-p0-board.md](entry-prelaunch-p0-board.md)
+
+Recommended order:
+
+1. **Guard Invalid Pass Clarity** — make expired / already-used / not-yet-valid pass states unmistakable to guards, with context and next action.
+2. **Admin Mobile Unit Deactivation** — allow authorized mobile admins to safely deactivate/reactivate an entire unit with explicit operational semantics.
+3. **Public Registration Branding Simplification** — remove the oversized top Minerva branding block and keep only discreet bottom attribution so registration remains the focus.
+
+These three missions remain P0/pre-launch unless explicitly waived by product decision.
 
 ---
 
