@@ -33,3 +33,15 @@ A Neon project exists but is intentionally not connected in v0. No DB dependenci
 `features/brain/**` does not import from `features/entry/**`. Brain does not read from ENTRY's or Seshat's Supabase projects. Brain stores no raw sensitive operational data from any product. Brain is not the CRM.
 
 **Why.** Preserves separation between Operations, Products, Brain, Leads, and System. Keeps Brain extractable into its own repo or backend later.
+
+## DEC-0009 — Seshat Infrastructure / Supabase Billing Separation
+
+**Status:** approved · **Date:** 2026-09-03
+
+Seshat remains on its existing Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) and should stay on Free infrastructure while its internal scale and criticality permit. The existing project was transferred from the `Minerva Technologies` Supabase organization to the independent `Minerva Internal` organization on the Free plan. ENTRY remains in `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) under the original organization and may move to paid commercial infrastructure independently.
+
+No local database, PC synchronization layer, self-hosted Supabase, replacement Supabase project, or transfer-driven Seshat code/config change is approved. When Seshat work resumes, unpause and perform functional QA before changing configuration. A future infrastructure move requires a new reviewed decision based on actual scale/criticality; there is no currently approved migration away from Supabase.
+
+**Why.** The problem being solved is billing isolation, not a runtime architecture failure. Keeping the existing project preserves database/Auth/Storage simplicity while financially decoupling ENTRY's commercial infrastructure from Seshat's small internal workload.
+
+Long-form decision: `content/brain/decisions/dec-0009-seshat-infrastructure-supabase-billing-separation.md`.
