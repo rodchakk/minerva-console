@@ -46,7 +46,7 @@ type SubmitButtonProps = {
 };
 
 const actionButtonBase =
-  "inline-flex h-9 items-center justify-center rounded-lg border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-300/40 disabled:cursor-not-allowed disabled:opacity-45";
+  "inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-300/40 disabled:cursor-not-allowed disabled:opacity-45";
 
 const actionButtonVariants = {
   danger:
@@ -102,7 +102,7 @@ function IconSubmitButton({
       aria-label={label}
       title={label}
       disabled={disabled || pending}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent bg-transparent text-[var(--text-muted)] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/40 disabled:cursor-not-allowed disabled:opacity-35"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-[var(--text-muted)] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/40 disabled:cursor-not-allowed disabled:opacity-35"
     >
       {pending ? (
         <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
@@ -130,7 +130,7 @@ function MenuSubmitButton({
       disabled={pending}
       role="menuitem"
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-300/35 disabled:cursor-not-allowed disabled:opacity-60",
+        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-300/35 disabled:cursor-not-allowed disabled:opacity-60",
         tone === "danger"
           ? "text-rose-200 hover:bg-rose-500/10"
           : "text-[var(--foreground)] hover:bg-white/6",
@@ -174,7 +174,7 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
               if (error) setError("");
             }}
             placeholder="e.g. Taller El Trancazo"
-            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/70 focus:ring-2 focus:ring-violet-300/15"
+            className="mt-2 h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/70 focus:ring-2 focus:ring-violet-300/15"
           />
         </label>
         <label className="min-w-0">
@@ -186,7 +186,7 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
             value={category}
             onChange={(event) => setCategory(event.target.value)}
             placeholder="Optional category"
-            className="mt-2 h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/70 focus:ring-2 focus:ring-violet-300/15"
+            className="mt-2 h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/70 focus:ring-2 focus:ring-violet-300/15"
           />
         </label>
         <SubmitButton disabled={!canSubmit} pendingLabel="Creating...">
@@ -201,14 +201,14 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
 function EmptyDestinations({ state }: { state: CommunityDestinationsManagerProps["state"] }) {
   if (state === "unavailable") {
     return (
-      <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5 text-sm leading-6 text-[var(--text-muted)]">
+      <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5 text-sm leading-6 text-[var(--text-muted)]">
         Destination catalog is not available yet. Apply the ENTRY manual access migration first.
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5">
+    <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5">
       <p className="text-sm font-semibold text-white">No manual destinations configured yet.</p>
       <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
         Create a destination to make it available to guards.
@@ -271,7 +271,7 @@ function RenameDestinationForm({
             if (error) setError("");
           }}
           onKeyDown={handleKeyDown}
-          className="mt-2 h-10 w-full rounded-lg border border-violet-300/35 bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition focus:border-violet-200 focus:ring-2 focus:ring-violet-300/10"
+          className="mt-2 h-10 w-full rounded-md border border-violet-300/35 bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition focus:border-violet-200 focus:ring-2 focus:ring-violet-300/10"
         />
         {error ? <span className="mt-1 block text-xs text-amber-200">{error}</span> : null}
       </label>
@@ -285,7 +285,7 @@ function RenameDestinationForm({
           onChange={(event) => setCategory(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Optional category"
-          className="mt-2 h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50 focus:ring-2 focus:ring-violet-300/10"
+          className="mt-2 h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50 focus:ring-2 focus:ring-violet-300/10"
         />
       </label>
       <div className="flex flex-wrap gap-2">
@@ -326,20 +326,20 @@ function DestinationActions({
         aria-haspopup="menu"
         aria-label={`Actions for ${destination.name}`}
         onClick={onToggleMenu}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-[var(--text-muted)] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/40"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-[var(--text-muted)] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/40"
       >
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
       </button>
       {isOpen ? (
         <div
           role="menu"
-          className="absolute right-0 top-10 z-20 w-44 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-1.5 shadow-[0_18px_50px_rgba(2,6,23,0.35)]"
+          className="absolute right-0 top-10 z-20 w-44 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[0_18px_50px_rgba(2,6,23,0.35)]"
         >
           <button
             type="button"
             role="menuitem"
             onClick={onRename}
-            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/6 focus:outline-none focus:ring-2 focus:ring-violet-300/35"
+            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/6 focus:outline-none focus:ring-2 focus:ring-violet-300/35"
           >
             <Pencil aria-hidden="true" className="h-4 w-4" />
             Rename
@@ -396,7 +396,7 @@ function DestinationRow({
   return (
     <div
       className={cn(
-        "grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4 transition sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
+        "grid gap-3 px-4 py-4 transition sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center",
         !destination.isActive && "bg-white/[0.015]",
       )}
     >
@@ -481,7 +481,7 @@ export function CommunityDestinationsManager({
   );
 
   return (
-    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5 sm:p-6">
+    <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
       <div>
         <h2 className="text-2xl font-semibold tracking-normal text-white">
           Manual Access Destinations
@@ -502,7 +502,7 @@ export function CommunityDestinationsManager({
           <EmptyDestinations state={state} />
         </div>
       ) : (
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 divide-y divide-[var(--border)] overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-strong)]">
           {sortedDestinations.map((destination, index) => (
             <DestinationRow
               key={destination.id}
