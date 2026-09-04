@@ -94,5 +94,17 @@
     "tags": ["minerva-console", "architecture", "products", "modules", "permissions", "integrations", "brain", "manual-setup"],
     "related": ["PRJ-0001", "PRJ-0002", "PRJ-0004", "MINERVA-CONSOLE-001", "MINERVA-CONSOLE-ENTRY-PILOT-001"],
     "path": "content/brain/decisions/dec-0008-minerva-console-modular-web-home.md"
+  },
+  {
+    "id": "DEC-0009",
+    "type": "decision",
+    "status": "approved",
+    "title": "Seshat Infrastructure / Supabase Billing Separation",
+    "summary": "Seshat remains on its existing Supabase project seshat (vfvbvywvmoevyucqgtos), transferred to the independent Minerva Internal organization on the Free plan so ENTRY can move to paid commercial infrastructure independently. No local sync, self-hosting, replacement project, or transfer-driven code/config change is approved; future infrastructure is reevaluated only if real scale or criticality requires it.",
+    "created": "2026-09-03",
+    "updated": "2026-09-03",
+    "tags": ["seshat", "infrastructure", "supabase", "billing", "free-tier", "internal-tool", "cost-control"],
+    "related": ["PRJ-0002", "PRJ-0001", "DEC-0004", "DEC-0008"],
+    "path": "content/brain/decisions/dec-0009-seshat-infrastructure-supabase-billing-separation.md"
   }
 ]
