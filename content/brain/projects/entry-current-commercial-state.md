@@ -2,7 +2,7 @@
 
 Canonical quick-resume page for the active ENTRY commercial pipeline. Detailed evidence remains in the dated field/commercial reports.
 
-> **Current through:** 2026-09-02
+> **Current through:** 2026-09-03
 >
 > Evidence discipline: direct buyer statements are distinguished from guard/security reports and operator observations. Home counts, organizational structure, competitor identity, prior-price comments and buyer authority remain unverified unless explicitly stated otherwise.
 
@@ -19,11 +19,11 @@ Canonical quick-resume page for the active ENTRY commercial pipeline. Detailed e
 
 ## 1. Residencial Andalucía — most advanced opportunity
 
-**Current stage:** `Executive proposal shared with patronato → decision pending`.
+**Current stage:** `Verbal commercial agreement reached → broader patronato ratification pending → contract signing planned`.
 
 Current progression:
 
-> Manual process confirmed → direct Eugenio Hernández channel → phone discovery → ~98 homes stated by Eugenio → prior-price reference disclosed → opportunity-specific match commitment made → executive proposal + ENTRY webpage sent → Eugenio confirms information shared with patronato → **decision pending**.
+> Manual process confirmed → direct Eugenio Hernández channel → phone discovery → ~98 homes stated by Eugenio → prior-price reference disclosed → opportunity-specific match commitment made → executive proposal + ENTRY webpage sent → Eugenio confirms information shared with patronato → buyer says they want to continue → in-person demo/meeting completed → **verbal commercial agreement reached** → broader patronato videollamada / ratification pending → **contract signing planned for 2026-09-07**.
 
 Key buyer-side facts:
 
@@ -35,26 +35,43 @@ Key buyer-side facts:
 - rental/multi-occupant homes were discussed: multiple independent resident accounts can belong to one home;
 - current resident list exists but is incomplete / lacks house numbers;
 - ENTRY resident-registration tool was offered to reduce patronato data-entry burden;
-- working implementation estimate discussed: approximately one week, subject to coordination / information availability;
 - training + onsite activation support during rollout + ongoing technical support were discussed;
 - executive proposal and public ENTRY page were sent by WhatsApp on **2026-08-20**.
 
-### 2026-08-25 follow-up
+### 2026-09-03 meeting and commercial agreement
 
-Eugenio replied, as reported verbatim:
+Rudy reported after the in-person meeting that the attendees were convinced by the ENTRY proposal and agreed to move forward commercially, subject to broader patronato ratification.
 
-> "hola buenas tardes, ya comparti la informacion, solo falta tomar la decision esperamos."
+The attendees said they will hold a **videollamada with the rest of the patronato** so the decision and responsibility are shared by the broader group rather than resting only on the representatives present.
 
-This confirms internal circulation to the patronato and places the opportunity at **decision pending**. It does not confirm approval, timing or likelihood of closing.
+The working plan is to **sign the service contract on Monday, 2026-09-07**.
 
-Next move:
+Commercial terms clarified:
 
-> Give the patronato space. Be ready for questions/demo. Before formal economic documentation or final commercial commitment, complete `ENTRY Unit Economics v1` against the promised scope and L35,000/year reference.
+- annual service value for Andalucía remains **L 35,000**;
+- the buyer initially understood L35,000 as one upfront annual payment;
+- Rudy clarified that Minerva will bill/collect the service **monthly**;
+- agreement is therefore an **annual L35,000 service commitment billed/paid monthly**, with exact payment dates/mechanics to be documented in the contract;
+- onboarding/configuration begins after contract signature;
+- **formal service / go-live begins 2026-10-01**.
+
+Status discipline:
+
+> This is a strong verbal commercial agreement, but Andalucía is **not yet a signed customer**. Do not mark the deal closed until the contract is executed.
+
+Implementation posture now:
+
+1. Prepare the service contract; do not re-sell or reopen the agreed L35,000 annual value unless scope materially changes.
+2. Clearly distinguish annual commitment from monthly billing in the contract.
+3. Confirm payment schedule, primary patronato contact, admin users, security contact, community/unit data, resident data source and operational exceptions.
+4. Use the period between signature and October 1 for setup, data collection, guard/security preparation, training, testing and activation readiness.
+5. Do not build speculative features because of first-customer excitement; capture requests and evaluate them against real operational necessity.
 
 Detailed updates:
 
 - [entry-field-update-2026-08-20.md](entry-field-update-2026-08-20.md)
 - [entry-field-update-2026-08-25.md](entry-field-update-2026-08-25.md)
+- [entry-field-update-2026-09-03.md](entry-field-update-2026-09-03.md)
 
 ## 2. Residencial Bermejo
 
@@ -340,15 +357,16 @@ Decision rule:
 
 > Do **not** build a multi-residential/admin module merely because Guardian X or Tu Pase supports it. Promote the idea only if repeated buyer evidence, procurement authority and economics justify the complexity.
 
-## Immediate priority order — 2026-09-02
+## Immediate priority order — 2026-09-03
 
-1. **Andalucía:** decision pending at patronato; give space and be ready for questions/demo; Unit Economics before final economic documentation.
-2. **Bermejo:** package delivered; next milestone is patronato receipt confirmation and/or direct route to Raúl Orellana.
-3. **Los Robles passage/sector:** confirm patronato receipt and obtain buyer route / decision-structure clarity.
-4. **El Carmen / El Limonar:** continue disciplined follow-up; avoid indefinite guard-only selling.
-5. **Boran:** revisit on another shift to improve patronato route.
-6. **Developer/Admin Channel:** continue collecting/qualifying evidence; execute focused multi-residential research soon.
-7. **Competitor intelligence:** use Guardian X / Tu Pase as benchmarks, not product-roadmap commands.
+1. **Andalucía:** prepare contract for 2026-09-07; keep status as verbal agreement until signature; prepare onboarding ownership, payment schedule and Oct 1 implementation calendar.
+2. **Andalucía implementation readiness:** no speculative feature work; verify existing flows and prepare only what is necessary for the agreed rollout.
+3. **Bermejo:** package delivered; next milestone is patronato receipt confirmation and/or direct route to Raúl Orellana.
+4. **Los Robles passage/sector:** confirm patronato receipt and obtain buyer route / decision-structure clarity.
+5. **El Carmen / El Limonar:** continue disciplined follow-up; avoid indefinite guard-only selling.
+6. **Boran:** revisit on another shift to improve patronato route.
+7. **Developer/Admin Channel:** continue controlled evidence collection; do not let it distract from converting Andalucía cleanly.
+8. **Competitor intelligence:** use Guardian X / Tu Pase as benchmarks, not product-roadmap commands.
 
 ## Product / engineering priority unchanged
 
