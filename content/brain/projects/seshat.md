@@ -181,29 +181,38 @@ Seshat should eventually be able to represent a community such as Residencial An
 
 The goal is not to hard-code Andalucía-specific logic. Andalucía is the first concrete operating scenario that defines what the generic Minerva service-business model must be able to measure.
 
-## Infrastructure Direction
+## Infrastructure Decision — 2026-09-03
 
-### Current
+### Current approved state
 
-- Seshat currently has its own dedicated Supabase project and operational database.
+Seshat remains on its **existing Supabase project** and should stay on Free infrastructure while its internal scale and criticality permit.
+
+- Supabase project: `seshat`.
+- Project ref: `vfvbvywvmoevyucqgtos`.
+- Supabase organization: `Minerva Internal`.
+- Organization plan: Free.
+- State at the time of capture: paused.
 - Brain does not store Seshat operational financial data.
 - Brain may store Seshat product, accounting-model, and architecture decisions.
 
-### Approved future direction
+On 2026-09-03 the existing Seshat Supabase project was transferred from the `Minerva Technologies` organization to the separate `Minerva Internal` organization. This was an organizational/billing separation only: no replacement database was created and no data migration was performed.
 
-Seshat should **eventually move away from its current Supabase dependency to a backend / data platform that is more comfortable for Minerva to operate and evolve**.
+ENTRY remains independently hosted in `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) under the original `Minerva Technologies` Supabase organization. This separation allows ENTRY to move to Supabase Pro for commercial operation without automatically moving Seshat into the same paid organization/cost model.
 
-This is a direction, not an active migration.
+### Approved infrastructure rules
 
-As of 2026-08-20:
+- Keep Seshat on Supabase Free while its current internal scale and criticality permit.
+- Do not build local storage, SQLite, PC-based synchronization, or an offline replacement merely to avoid paid Supabase infrastructure.
+- Do not self-host Supabase for the current Seshat stage.
+- Do not create a replacement Supabase project for Seshat.
+- Do not modify Seshat application code, `.env`, Project URL, keys, Auth, Storage, or schema merely because the existing project changed organizations.
+- When Seshat work resumes, unpause the project and QA login, existing financial information, clients, expenses/financial records, a safe test write, and any Storage asset used by the application before making corrective configuration changes.
+- If Seshat later becomes commercially operated, materially multi-user, higher scale, or service-critical, reevaluate infrastructure through a separate reviewed decision/mission based on actual requirements at that time.
+- There is **no currently approved migration away from Supabase** and no replacement provider is preselected.
 
-- no replacement provider has been selected;
-- no production/data migration is authorized by this decision;
-- Supabase remains the current system of record for Seshat runtime data;
-- future platform selection should prioritize operational simplicity, portability, predictable cost, backups/recovery, access control, migration ergonomics, and compatibility with Seshat's financial data model;
-- migration must be handled as a separate reviewed mission with schema mapping, data export/import plan, validation, rollback/recovery considerations, and explicit cutover approval.
+This decision supersedes the 2026-08-20 directional note that treated a future migration away from Supabase as already approved. The current architecture is intentionally simpler: retain the existing Supabase project, separate billing, and revisit only when real scale or criticality creates a concrete need.
 
-Avoid deepening unnecessary provider-specific coupling while this future direction remains open.
+Long-form decision: `DEC-0009` — `content/brain/decisions/dec-0009-seshat-infrastructure-supabase-billing-separation.md`.
 
 ## Product Evolution Principle
 
@@ -224,6 +233,6 @@ The target is a specialist financial operating system for the kind of product + 
 
 - **Status:** Approved
 - **Stage:** Active product / incremental evolution
-- **Current infrastructure:** Supabase (dedicated project)
+- **Current infrastructure:** Existing Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) in `Minerva Internal` Free; paused at 2026-09-03 capture
 - **Financial operating model adaptation:** Approved direction, not yet scheduled
-- **Future backend migration:** Approved direction, provider TBD, not yet scheduled
+- **Future backend migration:** Not currently planned or approved; reevaluate only if scale/criticality creates a concrete need
