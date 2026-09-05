@@ -123,7 +123,7 @@ function validateResidents(residents: ResidentDraft[]) {
       (normalizedEmail.length > EMAIL_MAX_LENGTH ||
         !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(normalizedEmail))
     ) {
-      residentErrors.email = "Ingresa un correo valido.";
+      residentErrors.email = "Ingresa un correo válido.";
     }
 
     if (
@@ -149,7 +149,7 @@ function validateResidents(residents: ResidentDraft[]) {
       normalizedPhone,
     ].join("|");
     if (normalizedFullName && seenKeys.has(duplicateKey)) {
-      residentErrors.duplicate = "Este residente ya esta agregado.";
+      residentErrors.duplicate = "Este residente ya está agregado.";
     }
     seenKeys.add(duplicateKey);
 
@@ -667,11 +667,11 @@ export function HouseholdDraftForm({
       {confirmingUnitChange && onChangeUnit ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
           <p className="text-sm font-semibold text-amber-950">
-            Cambiar vivienda borrara este borrador.
+            Cambiar vivienda borrará este borrador.
           </p>
           <p className="mt-2 text-sm leading-6 text-amber-900">
             Para evitar asociar residentes a otra vivienda, la información local
-            se limpiara antes de buscar una nueva vivienda.
+            se limpiará antes de buscar una nueva vivienda.
           </p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <button

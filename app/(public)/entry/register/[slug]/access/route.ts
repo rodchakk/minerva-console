@@ -13,7 +13,7 @@ import { resolveCommunityRegistrationCampaign } from "@/features/entry/community
 import {
   enforceCampaignAccessRateLimit,
   isRateLimitDenied,
-  rateLimitJsonResponse,
+  rateLimitErrorCode,
 } from "@/features/entry/communityRegistration/public/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +50,27 @@ function redirectWithoutAccess(request: NextRequest, slug: string) {
   return response;
 }
 
+function redirectWithAccessError(
+  request: NextRequest,
+  slug: string,
+  decision: Parameters<typeof rateLimitErrorCode>[0],
+) {
+  const url = cleanRegistrationUrl(request, slug);
+  const headers: Record<string, string> = registrationHeaders();
+  const errorCode = rateLimitErrorCode(decision);
+
+  url.searchParams.set("access_error", errorCode);
+
+  if (errorCode === "rate_limited" && "retryAfterSeconds" in decision) {
+    headers["Retry-After"] = String(decision.retryAfterSeconds);
+  }
+
+  return NextResponse.redirect(url, {
+    headers,
+    status: 303,
+  });
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> },
@@ -68,7 +89,7 @@ export async function GET(
   });
 
   if (isRateLimitDenied(rateLimitDecision)) {
-    return rateLimitJsonResponse(rateLimitDecision);
+    return redirectWithAccessError(request, slug, rateLimitDecision);
   }
 
   const campaign = await resolveCommunityRegistrationCampaign({

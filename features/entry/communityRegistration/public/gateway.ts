@@ -360,7 +360,7 @@ export async function resolveCommunityRegistrationEdit(input: {
   const result = data as EditRpcResult;
   const publicSlug = result.campaign?.public_slug?.trim() ?? "";
   const publicTitle =
-    result.campaign?.public_title?.trim() || "Correccion de registro";
+    result.campaign?.public_title?.trim() || "Corrección de registro";
   const unitLabel = result.unit_label?.trim() ?? "";
   const effectiveResidentLimit = Number(result.effective_resident_limit ?? 0);
   const expiresAt = result.expires_at ?? "";

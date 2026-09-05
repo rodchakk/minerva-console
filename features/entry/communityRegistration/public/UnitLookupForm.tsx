@@ -40,7 +40,7 @@ const NEUTRAL_UNAVAILABLE_MESSAGE =
 const RATE_LIMITED_MESSAGE =
   "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente.";
 const SERVICE_UNAVAILABLE_MESSAGE =
-  "No pudimos procesar la solicitud en este momento. Intentalo nuevamente.";
+  "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente.";
 
 export function UnitLookupForm({
   intro,
@@ -138,9 +138,9 @@ export function UnitLookupForm({
 
   return (
     <div className="space-y-6">
-      <RegistrationStepper currentStep={1} />
-
       {intro ? <div>{intro}</div> : null}
+
+      <RegistrationStepper currentStep={1} />
 
       <section className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
         <div className="border-b border-slate-100 px-5 py-6 sm:px-8">

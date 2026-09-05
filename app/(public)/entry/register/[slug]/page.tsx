@@ -10,6 +10,8 @@ import { resolveCommunityRegistrationCampaign } from "@/features/entry/community
 import {
   enforceCampaignPageReadRateLimit,
   isRateLimitDenied,
+  RATE_LIMIT_INFRASTRUCTURE_MESSAGE,
+  RATE_LIMIT_QUOTA_MESSAGE,
   rateLimitMessage,
 } from "@/features/entry/communityRegistration/public/rateLimit";
 import {
@@ -32,6 +34,15 @@ export const metadata: Metadata = {
 
 function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function getAccessErrorMessage(value: string) {
+  if (value === "rate_limited") return RATE_LIMIT_QUOTA_MESSAGE;
+  if (value === "service_unavailable") {
+    return RATE_LIMIT_INFRASTRUCTURE_MESSAGE;
+  }
+
+  return null;
 }
 
 function UnavailableState() {
@@ -75,13 +86,22 @@ export default async function EntryRegisterPage(
   ]);
   const slug = normalizePublicSlug(rawSlug);
   const token = getSingleParam(searchParams.token).trim();
+  const accessErrorMessage = getAccessErrorMessage(
+    getSingleParam(searchParams.access_error).trim(),
+  );
 
   if (slug && token) {
-    redirect(`/entry/register/${encodeURIComponent(slug)}/access?token=${encodeURIComponent(token)}`);
+    redirect(
+      `/entry/register/${encodeURIComponent(slug)}/access?token=${encodeURIComponent(token)}`,
+    );
   }
 
   if (!slug) {
     return <UnavailableState />;
+  }
+
+  if (accessErrorMessage) {
+    return <TemporarilyUnavailableState message={accessErrorMessage} />;
   }
 
   const cookieName = getCampaignAccessCookieName(slug);

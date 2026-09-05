@@ -12,7 +12,7 @@ import { resolveCommunityRegistrationEdit } from "@/features/entry/communityRegi
 import {
   enforceCorrectionAccessRateLimit,
   isRateLimitDenied,
-  rateLimitJsonResponse,
+  rateLimitErrorCode,
 } from "@/features/entry/communityRegistration/public/rateLimit";
 import { registrationHeaders } from "@/features/entry/communityRegistration/public/requestSecurity";
 
@@ -42,6 +42,27 @@ function redirectWithoutCorrectionAccess(request: NextRequest, slug: string) {
   return response;
 }
 
+function redirectWithCorrectionAccessError(
+  request: NextRequest,
+  slug: string,
+  decision: Parameters<typeof rateLimitErrorCode>[0],
+) {
+  const url = cleanCorrectionUrl(request, slug);
+  const headers: Record<string, string> = registrationHeaders();
+  const errorCode = rateLimitErrorCode(decision);
+
+  url.searchParams.set("access_error", errorCode);
+
+  if (errorCode === "rate_limited" && "retryAfterSeconds" in decision) {
+    headers["Retry-After"] = String(decision.retryAfterSeconds);
+  }
+
+  return NextResponse.redirect(url, {
+    headers,
+    status: 303,
+  });
+}
+
 export async function GET(
   request: NextRequest,
   context: { params: Promise<{ slug: string }> },
@@ -61,7 +82,7 @@ export async function GET(
   });
 
   if (isRateLimitDenied(rateLimitDecision)) {
-    return rateLimitJsonResponse(rateLimitDecision);
+    return redirectWithCorrectionAccessError(request, slug, rateLimitDecision);
   }
 
   const correction = await resolveCommunityRegistrationEdit({ editTokenHash });
