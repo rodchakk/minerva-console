@@ -85,13 +85,27 @@ Observed result:
 
 This confirms the true-expired classification and presentation on hardware. The previously missing expired-pass runtime QA is now closed.
 
+### APPROVED SPECIAL FLOW — resident self access
+
+The resident `SELF_ACCESS_ACTION` / self-pass behavior is an intentionally different access dynamic and was approved previously as part of ENTRY's normal operations.
+
+Product decision reconfirmed during QA:
+
+- self access is not a one-time visitor pass,
+- it can register resident entry/exit through its dedicated flow,
+- it does not use the visitor evidence workflow,
+- repeated legitimate use of that special flow is expected behavior and is **not a Guard Invalid Pass bug**,
+- no additional blocker, hardening mission or extra QA is required for this behavior as part of PR #19.
+
+Do not use self-access behavior as evidence for or against the one-time visitor-pass `Pase ya utilizado` classification.
+
 ### ORIGINAL BLOCKER — completed pass misclassified after full cycle
 
 Operator previously performed a real guard-device lifecycle test:
 
-1. Valid pass was scanned and CHECK_IN completed.
+1. Valid one-time visitor pass was scanned and CHECK_IN completed.
 2. CHECK_OUT completed.
-3. The same pass was scanned again after it had already been used/closed.
+3. The same visitor pass was scanned again after it had already been used/closed.
 
 Observed result before the patch:
 
@@ -102,14 +116,14 @@ This was semantically incorrect. PR #19 was patched so completed/consumed lifecy
 
 Required final runtime confirmation:
 
-- CHECK_IN → CHECK_OUT → rescan must now render **`Pase ya utilizado`**.
+- CHECK_IN → CHECK_OUT → rescan of a one-time visitor pass must now render **`Pase ya utilizado`**.
 - It must not render impossible expiration copy such as "venció mañana".
 - Active CHECK_OUT must remain valid and not be treated as used.
 
 ## Acceptance direction
 
 1. Expired pass renders its own clear state. **Runtime PASS observed.**
-2. Used/consumed pass renders its own clear state, including after CHECK_IN → CHECK_OUT → rescan.
+2. Used/consumed one-time visitor pass renders its own clear state, including after CHECK_IN → CHECK_OUT → rescan.
 3. Future/not-yet-valid pass renders its own clear state. **Runtime PASS observed.**
 4. Correct date/time context is shown when available; impossible copy such as "venció mañana" must never occur.
 5. No raw backend/database error codes are exposed to guards.
@@ -120,15 +134,16 @@ Required final runtime confirmation:
 10. Every blocked/informational result has a clear **`Volver al escáner`** recovery button. **Runtime PASS observed.**
 11. Offline/system failure copy is clear and distinct from invalid credential. **Runtime PASS observed.**
 12. Nonexistent/invalid pass copy is clear. **Runtime PASS observed.**
+13. Resident self-access remains an approved special flow and is outside the one-time visitor-pass invalid-state semantics. **Product-approved behavior reconfirmed.**
 
 ## Remaining runtime QA before closure
 
 Verify on a real guard device:
 
-- CHECK_IN → CHECK_OUT → rescan => `Pase ya utilizado`,
+- one-time visitor pass CHECK_IN → CHECK_OUT → rescan => `Pase ya utilizado`,
 - valid CHECK_IN,
 - active CHECK_OUT.
 
-The return/back CTA and true expired-pass state are already runtime-validated and no longer blockers.
+The return/back CTA, true expired-pass state and resident self-access special flow are already runtime-validated/product-approved and are no longer blockers.
 
 This mission must be completed before ENTRY's first real operational launch.
