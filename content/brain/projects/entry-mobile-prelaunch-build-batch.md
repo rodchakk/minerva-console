@@ -40,7 +40,23 @@ Current Admin Mobile already supports resident creation/onboarding, activation P
 
 Specification: [entry-admin-mobile-unit-deactivation-p0.md](../missions/entry-admin-mobile-unit-deactivation-p0.md)
 
-### 4. Support Ticket Category `Administración`
+### 4. Admin Self-Deactivation Clarity
+
+**State:** confirmed UX polish / pending implementation.
+
+Backend already blocks an administrator from deactivating their own profile, but the mobile UI currently falls back to a generic error path. Replace that with a clear administrator-facing explanation.
+
+Preferred copy:
+
+- Title: `Acción no permitida`
+- Message: `No puedes desactivar tu propia cuenta de administrador.`
+- Optional support: `Esta acción debe realizarla otro administrador autorizado.`
+
+Keep the backend restriction unchanged; this is a UX clarity fix.
+
+Specification: [entry-admin-self-deactivation-clarity-p0.md](../missions/entry-admin-self-deactivation-clarity-p0.md)
+
+### 5. Support Ticket Category `Administración`
 
 **State:** captured / pending small UI implementation.
 
@@ -62,7 +78,7 @@ Specification: [entry-public-registration-branding-p0.md](../missions/entry-publ
 
 - Complete the current PR #19 device QA using the already-requested preview build.
 - After PR #19 is closed, avoid additional ad-hoc builds while implementing the remaining mobile items.
-- Reconcile/finish PR #18 and implement Admin Mobile Unit Deactivation + `Administración` ticket category in a coordinated pre-launch mobile cleanup window.
+- Reconcile/finish PR #18 and implement Admin Mobile Unit Deactivation + Admin Self-Deactivation Clarity + `Administración` ticket category in a coordinated pre-launch mobile cleanup window.
 - Run code/static/backend QA first.
 - Then generate one consolidated preview build for the remaining mobile pre-launch QA whenever branch/release state allows it.
 
