@@ -96,33 +96,36 @@ export function PublicRegistrationShell({
 }) {
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-950">
-      <header className="border-b border-white/10 bg-[#030305] px-4 py-6 shadow-[0_8px_24px_rgba(15,23,42,0.16)]">
-        <div className="mx-auto flex max-w-3xl justify-center">
-          <Image
-            alt="Minerva Technologies"
-            className="h-auto w-[260px] sm:w-[340px]"
-            height={260}
-            priority
-            src="/minerva-logo-transparent.png"
-            width={520}
-          />
-        </div>
-      </header>
-
-      <div className="mx-auto flex min-h-[calc(100vh-9rem)] w-full max-w-3xl flex-col px-4 pb-8 pt-5 sm:px-6 sm:pt-6">
+      <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-6 pt-6 sm:px-6 sm:pb-8 sm:pt-8">
         <div className="flex-1">{children}</div>
-        <p className="mt-8 flex items-center justify-center gap-2 text-sm text-slate-500">
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <path
-              d="M7 10V8a5 5 0 0 1 10 0v2m-9 0h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
+        <footer className="mt-8 border-t border-slate-200/80 pt-5">
+          <div className="flex flex-col items-center gap-3">
+            <Image
+              alt="Minerva Technologies"
+              className="h-auto w-28 opacity-75 sm:w-32"
+              height={714}
+              src="/brand/minerva-logo-gray.png"
+              width={2129}
             />
-          </svg>
-          Tus datos est&aacute;n protegidos
-        </p>
+            <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
+              <svg
+                aria-hidden="true"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M7 10V8a5 5 0 0 1 10 0v2m-9 0h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+              Tus datos est&aacute;n protegidos
+            </p>
+          </div>
+        </footer>
       </div>
     </main>
   );
