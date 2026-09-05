@@ -1,6 +1,6 @@
 # ENTRY — Guard Invalid Pass Clarity
 
-**Status:** IMPLEMENTED / PR #19 OPEN / RUNTIME QA IN PROGRESS — BLOCKED BY CLASSIFICATION + NAVIGATION FIXES  
+**Status:** IMPLEMENTED / PR #19 OPEN / FINAL RUNTIME QA IN PROGRESS — RETURN CTA PASS  
 **Priority:** P0 / Pre-launch  
 **Date:** 2026-09-04  
 **Product:** ENTRY  
@@ -24,6 +24,7 @@ Implementation exists in mobile PR #19:
 - QR and PIN share the same result presentation.
 - Existing valid CHECK_IN / CHECK_OUT behavior is intended to remain unchanged.
 - Automated status/lookup mapping tests were added.
+- Final patch adds completed-pass precedence and a prominent `Volver al escáner` CTA.
 
 ## Required states
 
@@ -51,7 +52,7 @@ Desired examples:
 
 Do not rely only on color. Use strong title, concise explanation, and relevant time/context.
 
-## Runtime QA findings — 2026-09-04
+## Runtime QA findings — 2026-09-04 / 2026-09-05
 
 ### PASS — not-yet-valid
 
@@ -65,42 +66,32 @@ Operator tested with no internet connection. The guard screen clearly explained 
 
 Operator validated the invalid/nonexistent-pass treatment and considered the copy clear.
 
-### BLOCKER — completed pass misclassified after full cycle
+### PASS — explicit return/back CTA
 
-Operator performed a real guard-device lifecycle test:
+After the final PR #19 patch was installed on a real guard device, the operator validated the new **`Volver al escáner`** buttons and reported that they are clear and operationally appropriate.
+
+This closes the prior navigation/return UX blocker. The Android hardware back action remains intentionally disabled; guards now have a visible in-app recovery action on blocked/informational result screens.
+
+### ORIGINAL BLOCKER — completed pass misclassified after full cycle
+
+Operator previously performed a real guard-device lifecycle test:
 
 1. Valid pass was scanned and CHECK_IN completed.
 2. CHECK_OUT completed.
 3. The same pass was scanned again after it had already been used/closed.
 
-Observed result:
+Observed result before the patch:
 
 - Guard UI displayed **`Pase vencido`**.
 - Supporting copy said the pass **"venció mañana a las 11:31 AM"** and asked the guard to request a new pass.
 
-This is semantically incorrect for this lifecycle. The pass had already been used and closed; its future `expires_at` should not override the consumed/used lifecycle state.
+This was semantically incorrect. PR #19 was patched so completed/consumed lifecycle state now precedes expiration classification and used-pass copy prefers `checked_out_at`.
 
-Required correction:
+Required final runtime confirmation:
 
-- Title must be **`Pase ya utilizado`**.
-- Copy should explain that it was already used and, when a reliable timestamp is available, show the relevant previous-use/checkout time.
-- It must **not** classify as `Pase vencido` merely because an expiration timestamp exists or is evaluated incorrectly.
-- A future `expires_at` must never produce copy like "venció mañana".
-- Classification precedence must respect lifecycle truth: completed/consumed state before expiration messaging.
-
-### BLOCKER — explicit return/back CTA required on all message/result states
-
-The Android hardware back action is intentionally disabled in Guard screens. The current reset affordance (for example `Escanear otro pase`) is too visually subtle for the operational context.
-
-All blocked/informational guard result screens must have an obvious, high-visibility recovery CTA. Product direction:
-
-- Prefer a clear button labeled **`Volver al escáner`**.
-- It must be visually unmistakable as an actionable button, not quiet footer text.
-- It should reset the current result and return the guard to the normal scan/input state.
-- Apply consistently to: used, expired, not-yet-valid, nonexistent pass, offline/system failure, rate limit, cancelled/inactive/schedule/capacity/unknown blocked states.
-- Do not depend on the disabled hardware back gesture/button.
-
-The design criterion is operational simplicity: a guard under time pressure should instantly know how to leave the result and process the next visitor.
+- CHECK_IN → CHECK_OUT → rescan must now render **`Pase ya utilizado`**.
+- It must not render impossible expiration copy such as "venció mañana".
+- Active CHECK_OUT must remain valid and not be treated as used.
 
 ## Acceptance direction
 
@@ -113,20 +104,21 @@ The design criterion is operational simplicity: a guard under time pressure shou
 7. Active CHECK_OUT must not be misclassified as already used.
 8. Mobile layout remains fast and readable at the gate.
 9. QR and PIN preserve equivalent classification semantics.
-10. Every blocked/informational result has a clear **`Volver al escáner`** recovery button.
+10. Every blocked/informational result has a clear **`Volver al escáner`** recovery button. **Runtime PASS observed.**
 11. Offline/system failure copy is clear and distinct from invalid credential. **Runtime PASS observed.**
 12. Nonexistent/invalid pass copy is clear. **Runtime PASS observed.**
 
 ## Remaining runtime QA before closure
 
-After the two blockers above are patched, verify on a real guard device:
+Verify on a real guard device:
 
 - CHECK_IN → CHECK_OUT → rescan => `Pase ya utilizado`,
-- clear `Volver al escáner` CTA across blocked/informational screens,
 - valid CHECK_IN,
 - active CHECK_OUT,
 - true expired pass when a suitable test credential is available.
 
-A truly expired pass could not yet be tested because no suitable expired credential was available. This does not block applying the known classification/navigation fixes, but the expired state should be verified before final closure if practical.
+The return/back CTA is already runtime-validated and no longer a blocker.
+
+A truly expired pass could not yet be tested because no suitable expired credential was available. This does not block applying the known classification fix, but the expired state should be verified before final closure if practical.
 
 This mission must be completed before ENTRY's first real operational launch.
