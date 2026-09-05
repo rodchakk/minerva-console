@@ -29,11 +29,31 @@ This item is no longer part of the remaining launch blockers.
 
 Specification: [entry-guard-invalid-pass-clarity-p0.md](../missions/entry-guard-invalid-pass-clarity-p0.md)
 
-**Status:** Captured / pending design and implementation.
+**Status:** IMPLEMENTED / PR #19 OPEN / REAL-DEVICE QA IN PROGRESS — MERGE BLOCKED BY CLASSIFICATION BUG.
 
-**Why next:** this affects the gate's immediate operational decision. A guard must instantly understand whether a pass is expired, already used, or not yet valid, without interpreting a generic error.
+Current implementation includes explicit guard-facing states for expired, already-used, not-yet-valid, pass-not-found, rate-limit and system validation failures without backend/schema changes.
 
-Required outcome: guards see clear, distinct explanations for expired, already-used, and not-yet-valid passes, including relevant time/context and next action.
+### Real-device QA finding — 2026-09-04
+
+Operator tested a normal one-time lifecycle:
+
+`CHECK_IN → CHECK_OUT → scan the same pass again`
+
+The rescan incorrectly displayed:
+
+- `Pase vencido`
+- copy equivalent to `Este pase venció mañana a las 11:31 AM.`
+
+Expected behavior:
+
+- `Pase ya utilizado`
+- explain that the pass was already used/closed and show the prior-use/checkout time when reliable.
+
+A completed lifecycle must take precedence over expiration classification. Impossible copy such as **"venció mañana"** must never be rendered.
+
+**PR #19 must not merge until this is patched and the used-pass scenario is re-tested on device.**
+
+Remaining runtime scenarios after patch: true expired, used after CHECK_IN/CHECK_OUT, not-yet-valid, valid CHECK_IN, active CHECK_OUT, nonexistent code, and safe system/network failure behavior where reproducible.
 
 ## 3. Admin Mobile Unit Deactivation — P0.2
 
@@ -57,10 +77,10 @@ Required outcome: remove the large black `Minerva Technologies` top branding blo
 
 ## Recommended execution order
 
-1. **Guard Invalid Pass Clarity** — highest operational/gate priority.
+1. **Finish Guard Invalid Pass Clarity runtime QA / patch PR #19** — current highest operational/gate priority.
 2. **Admin Mobile Unit Deactivation** — next operational control priority.
 3. **Public Registration Branding Simplification** — final resident-facing pre-launch polish.
 
 ## Launch gate
 
-Manual Access Evidence-First is closed. ENTRY still has **three remaining P0 pre-launch missions**. Do not treat the current pre-launch board as fully closed until those three are completed or explicitly waived by product decision.
+Manual Access Evidence-First is closed. ENTRY still has **three remaining P0 pre-launch missions**, with Guard Invalid Pass Clarity already implemented but not yet closed because of the runtime classification defect above. Do not treat the current pre-launch board as fully closed until all remaining missions are completed or explicitly waived by product decision.
