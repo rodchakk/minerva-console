@@ -1,6 +1,6 @@
 # ENTRY — Guard Invalid Pass Clarity
 
-**Status:** IMPLEMENTED / PR #19 OPEN / FINAL RUNTIME QA IN PROGRESS — RETURN CTA PASS  
+**Status:** IMPLEMENTED / PR #19 OPEN / FINAL RUNTIME QA IN PROGRESS — RETURN CTA + EXPIRED PASS PASS  
 **Priority:** P0 / Pre-launch  
 **Date:** 2026-09-04  
 **Product:** ENTRY  
@@ -72,6 +72,19 @@ After the final PR #19 patch was installed on a real guard device, the operator 
 
 This closes the prior navigation/return UX blocker. The Android hardware back action remains intentionally disabled; guards now have a visible in-app recovery action on blocked/informational result screens.
 
+### PASS — true expired pass
+
+Operator located and tested a genuinely expired credential on a real guard device.
+
+Observed result:
+
+- status rendered as **`Pase vencido`**,
+- supporting copy showed the actual historical expiration date/time,
+- instruction asked the guard to request a new pass,
+- the prominent **`Volver al escáner`** CTA was present and visually clear.
+
+This confirms the true-expired classification and presentation on hardware. The previously missing expired-pass runtime QA is now closed.
+
 ### ORIGINAL BLOCKER — completed pass misclassified after full cycle
 
 Operator previously performed a real guard-device lifecycle test:
@@ -95,7 +108,7 @@ Required final runtime confirmation:
 
 ## Acceptance direction
 
-1. Expired pass renders its own clear state.
+1. Expired pass renders its own clear state. **Runtime PASS observed.**
 2. Used/consumed pass renders its own clear state, including after CHECK_IN → CHECK_OUT → rescan.
 3. Future/not-yet-valid pass renders its own clear state. **Runtime PASS observed.**
 4. Correct date/time context is shown when available; impossible copy such as "venció mañana" must never occur.
@@ -114,11 +127,8 @@ Verify on a real guard device:
 
 - CHECK_IN → CHECK_OUT → rescan => `Pase ya utilizado`,
 - valid CHECK_IN,
-- active CHECK_OUT,
-- true expired pass when a suitable test credential is available.
+- active CHECK_OUT.
 
-The return/back CTA is already runtime-validated and no longer a blocker.
-
-A truly expired pass could not yet be tested because no suitable expired credential was available. This does not block applying the known classification fix, but the expired state should be verified before final closure if practical.
+The return/back CTA and true expired-pass state are already runtime-validated and no longer blockers.
 
 This mission must be completed before ENTRY's first real operational launch.
