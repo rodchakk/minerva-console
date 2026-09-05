@@ -1,25 +1,34 @@
-# ENTRY — Admin Support + Administración Ticket Category
+# ENTRY — `Administración` Ticket Category
 
 **Status:** Captured / pending implementation  
 **Priority:** P0 / Pre-launch mobile polish  
 **Date:** 2026-09-05  
 **Product:** ENTRY  
-**Area:** Admin Mobile / Support Tickets / Operations
+**Area:** Support Tickets / Admin Operations
 
 ## Mission objective
 
-Give community administrators an obvious native support path for operational/administrative requests that are not necessarily self-service actions inside ENTRY.
+Add a dedicated ticket category **`Administración`** to the existing native ENTRY support flow so community administrators can classify operational/administrative requests clearly.
 
 Examples:
 
 - "Necesito crear una unidad."
 - "Necesito agregar/cambiar un administrador."
 - "Necesito ayuda con una configuración de la comunidad."
-- Other administrative requests that should reach Minerva support with clear context.
 
-## Current state
+## Current code — verified 2026-09-05
 
-ENTRY already has native support tickets for residents. The current resident mobile category picker contains:
+This mission does **not** require a new Admin Mobile support screen.
+
+Current ENTRY navigation already gives ADMIN users access to the existing resident support flow:
+
+- `AuthProvider.ROLE_HOME` sends `ADMIN` users to `/resident`.
+- `ResidentDrawer` includes **Soporte Técnico** → `/resident/support` for the shared resident/admin surface.
+- The same drawer shows **Panel de Administrador** when the current role is `ADMIN`.
+
+Therefore, an ADMIN already has the support path. The actual gap is only the missing **`Administración`** category in the existing support category picker.
+
+Current categories in `app/(tabs)/resident/support.tsx`:
 
 - Cuenta
 - Accesos
@@ -28,19 +37,13 @@ ENTRY already has native support tickets for residents. The current resident mob
 - Reservas
 - Otro
 
-There is no `Administración` category.
-
-The current Admin Mobile home does not expose an equivalent Support entry point. The original native-ticket implementation explicitly scoped the mobile support UI to residents, while the backend ticket infrastructure itself is generic enough to accept authenticated community members and stores category as validated text rather than a fixed enum.
-
-Therefore, **adding the category only to the resident picker would not satisfy the product goal**. Administrators must also have a clear way to enter the native support flow.
-
 ## Product decision
 
-1. Add a visible ticket category named **`Administración`**.
-2. Expose a clear **Soporte / Solicitar soporte** entry in Admin Mobile.
-3. Reuse the existing native ENTRY ticket infrastructure, ticket history, ticket detail/conversation, status model and metadata conventions rather than creating a second support system.
-4. Administrative tickets should retain community and requester-role context so Minerva can distinguish and analyze administrative demand separately from resident support.
-5. Keep existing categories and `Otro`; do not force administrative requests into `Cuenta` or `Otro`.
+1. Add **`Administración`** to the existing support category picker.
+2. Reuse the existing native ENTRY ticket history, detail/conversation, status model and metadata.
+3. Do **not** create a duplicate Admin-only support system or route unless a future product decision explicitly requires it.
+4. Keep existing categories and `Otro`.
+5. Preserve requester role/community metadata so Minerva can distinguish administrative demand from resident support.
 
 ## Data value
 
@@ -48,34 +51,33 @@ Separating `Administración` is intentional product/operations telemetry. It sho
 
 ## UX direction
 
-This flow is for community administrators, not technical operators. It must feel obvious that requests such as "crear una unidad" or "necesito otro admin" belong here.
+Suggested category label:
 
-Suggested admin-facing language:
+**Administración**
 
-- Entry point: **Soporte**
-- Category: **Administración**
-- Short helper: "Unidades, administradores y configuración de la comunidad."
+Suggested helper if the picker supports secondary copy:
 
-Avoid technical terminology and avoid requiring the administrator to guess that these requests belong under `Otro`.
+"Unidades, administradores y configuración de la comunidad."
+
+The administrator should not have to guess that these requests belong under `Cuenta` or `Otro`.
 
 ## Backend / schema direction
 
-The existing support ticket backend accepts category as non-empty validated text and does not enforce a fixed category enum, so this product change should not require a new category enum migration unless implementation review finds another constraint elsewhere.
+The existing support ticket backend accepts category as validated text and does not enforce a fixed category enum, so adding this category should not require a category migration unless implementation review finds another constraint elsewhere.
 
-Do not weaken existing RLS/RPC authorization. Continue attaching authenticated requester, community and role context.
+Do not weaken existing RLS/RPC authorization.
 
 ## Minimum acceptance direction
 
-1. Community admin can open native ENTRY support from Admin Mobile.
-2. `Administración` is available and clearly described.
-3. Admin can create a ticket, see it in history, open detail and reply using the existing ticket flow.
-4. Ticket arrives to the existing Minerva support/admin processing surface with category `Administración`.
-5. Community and requester-role metadata remain attached.
-6. Existing resident support flow is not regressed.
-7. No WhatsApp dependency is reintroduced.
+1. An ADMIN using the existing `/resident/support` flow can select `Administración`.
+2. Ticket creation succeeds through the existing `support_create_ticket` RPC.
+3. Ticket appears in existing ticket history/detail and Minerva support processing with category `Administración`.
+4. Community/requester role metadata remains attached.
+5. Existing resident support categories and flows are unchanged.
+6. No duplicate support route and no WhatsApp dependency are introduced.
 
 ## Build batching rule
 
-This is a mobile UI change and should be grouped with the remaining Admin Mobile / pre-launch mobile fixes before requesting another Android preview/production build whenever practical.
+This is a small JS/TS mobile change and should be grouped with the remaining pre-launch mobile fixes before requesting another preview/production build whenever practical.
 
 This mission should be completed before ENTRY's first real operational launch.
