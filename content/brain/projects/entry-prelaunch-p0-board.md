@@ -18,13 +18,7 @@ Specification: [entry-guard-invalid-pass-clarity-p0.md](../missions/entry-guard-
 
 **Status:** IMPLEMENTED / PR #19 OPEN / FINAL REAL-DEVICE QA PENDING.
 
-Current implementation now includes:
-
-- explicit expired / used / not-yet-valid states,
-- safe lookup/network failure copy,
-- completed-pass classification before expiration,
-- `checked_out_at` as used-pass context,
-- high-visibility `Volver al escáner` CTA for blocked/informational states.
+Current implementation now includes explicit expired / used / not-yet-valid states, safe lookup/network failure copy, completed-pass classification before expiration, `checked_out_at` as used-pass context and high-visibility `Volver al escáner` CTA.
 
 Current PR #19 HEAD at capture: `dbacf0b040f86a172d9687a2e64dcf2340fa7e81`.
 
@@ -34,25 +28,23 @@ Previous real-device QA passed for `Pase aún no disponible`, no-internet/system
 
 Specification: [entry-admin-mobile-unit-deactivation-p0.md](../missions/entry-admin-mobile-unit-deactivation-p0.md)
 
-**Status:** Captured / pending design and implementation.
+**Status:** CONFIRMED GAP / pending design and implementation.
 
-Mobile administrators currently have user-level deactivation but still need safe reversible unit-level deactivate/reactivate behavior without destructive cascades or history loss.
+Current-code review confirms Admin Mobile already provides its main operational features: create/onboard residents, activation PINs, directory/user editing, user-level active/inactive control, communications, reservations and recovery access.
 
-The implementation must explicitly define effects on residents, pass creation/use, guard messaging, invitations/member management and reactivation.
+The specific missing control is **deactivate/reactivate an entire unit** instead of disabling each resident/user one by one.
 
-## 4. Admin Support + `Administración` Ticket Category — P0.3
+The implementation must remain reversible and explicitly define effects on residents, pass creation/use, guard messaging, invitations/member management and reactivation, while preserving history.
+
+## 4. `Administración` Support Ticket Category — P0.3
 
 Specification: [entry-admin-support-administration-category-p0.md](../missions/entry-admin-support-administration-category-p0.md)
 
-**Status:** Captured / pending implementation.
+**Status:** Captured / pending small mobile implementation.
 
-ENTRY's native ticket system currently exists in the resident mobile support surface, but Admin Mobile has no equivalent Support entry. Add a clear Admin Mobile support path and category **`Administración`** for requests such as:
+Current-code review corrects an earlier assumption: ADMIN users already land on the shared `/resident` surface, whose drawer includes **Soporte Técnico** and a separate **Panel de Administrador** entry. A new Admin-only support route is not needed.
 
-- create a unit,
-- add/change an administrator,
-- community configuration/operational changes.
-
-This category is also intentionally useful product telemetry: Minerva should be able to separate administrative demand from resident support and identify recurring requests that deserve future self-service features.
+The actual gap is only adding category **`Administración`** to the existing native support picker for requests such as unit creation, administrator changes and community configuration. This category is also intentional operations/product telemetry.
 
 ## 5. Password Recovery / No-reply Email Flow — P0.4
 
@@ -81,21 +73,20 @@ Tracker: [entry-mobile-prelaunch-build-batch.md](entry-mobile-prelaunch-build-ba
 Because preview/native builds are taking meaningful time, compatible mobile changes should be grouped whenever practical. Current mobile batch candidates are:
 
 1. finish PR #19 final device QA using the already-requested preview build,
-2. password recovery PR #18,
-3. Admin Mobile Unit Deactivation,
-4. Admin Support + `Administración` category,
-5. visually verify generic `unidad` terminology in admin create-resident/assignment UX before the final mobile release build.
+2. Admin Mobile Unit Deactivation,
+3. `Administración` support category,
+4. Password Recovery PR #18 after required external configuration is ready.
 
 Do code/static/backend QA first, then prefer one consolidated preview build for the remaining compatible mobile work rather than a new build for every small correction.
 
 ## Recommended execution order
 
 1. Finish PR #19 real-device QA and close Guard Invalid Pass Clarity.
-2. Implement Admin Mobile Unit Deactivation and Admin Support/`Administración` in the same mobile cleanup window where practical.
+2. Implement Admin Mobile Unit Deactivation and `Administración` support category in the same mobile cleanup window where practical.
 3. Reconcile and finish Password Recovery PR #18 with required external SMTP/redirect setup and real-device QA.
 4. Perform one consolidated mobile pre-launch QA build after the remaining compatible mobile changes are integrated into the intended release state.
 5. Complete Public Registration Branding separately on web.
 
 ## Launch gate
 
-Manual Access Evidence-First is closed. The remaining launch board now explicitly tracks Guard Invalid Pass Clarity, Admin Mobile Unit Deactivation, Admin Support/`Administración`, Password Recovery and Public Registration Branding. None should be considered closed merely because code exists; runtime/operational QA and explicit merge approval still apply.
+Manual Access Evidence-First is closed. Remaining launch work explicitly tracked here is Guard Invalid Pass Clarity, Admin Mobile Unit Deactivation, `Administración` support category, Password Recovery and Public Registration Branding. None should be considered closed merely because code exists; runtime/operational QA and explicit merge approval still apply.
