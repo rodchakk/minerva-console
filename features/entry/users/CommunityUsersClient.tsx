@@ -8,6 +8,8 @@ import {
   Building2,
   Check,
   Copy,
+  Eye,
+  EyeOff,
   Home,
   KeyRound,
   Mail,
@@ -32,6 +34,10 @@ import {
   setCommunityUserPasswordAction,
   type CommunityUserRole,
 } from "@/features/entry/users/communityUserActions";
+import {
+  ENTRY_ADMIN_TEMP_PASSWORD_HELPER,
+  ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH,
+} from "@/features/entry/passwordPolicy";
 import type {
   CommunityUserHouse,
   CommunityUserRecord,
@@ -250,8 +256,12 @@ export function CommunityUsersClient({
   const [createDraft, setCreateDraft] = useState<CreateDraft>(EMPTY_CREATE_DRAFT);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCreatePassword, setShowCreatePassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ login: string; password: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -300,8 +310,12 @@ export function CommunityUsersClient({
     setCreateDraft(EMPTY_CREATE_DRAFT);
     setPassword("");
     setConfirmPassword("");
+    setShowCreatePassword(false);
+    setShowPassword(false);
+    setShowConfirmPassword(false);
     setCreatedCredentials(null);
     setCopied(false);
+    setCopiedPassword(false);
     setError(null);
   }
 
@@ -309,6 +323,8 @@ export function CommunityUsersClient({
     resetFeedback();
     setCreateDraft(EMPTY_CREATE_DRAFT);
     setCreatedCredentials(null);
+    setShowCreatePassword(false);
+    setCopiedPassword(false);
     setModal("create");
   }
 
@@ -319,6 +335,9 @@ export function CommunityUsersClient({
     setManageMode(mode);
     setPassword("");
     setConfirmPassword("");
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+    setCopiedPassword(false);
     setModal("manage");
   }
 
@@ -334,8 +353,10 @@ export function CommunityUsersClient({
       return;
     }
 
-    if (createDraft.password.trim().length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (createDraft.password.trim().length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+      setError(
+        `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      );
       return;
     }
 
@@ -443,8 +464,10 @@ export function CommunityUsersClient({
     if (!selectedUser) return;
     setError(null);
 
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+      setError(
+        `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      );
       return;
     }
 
@@ -467,6 +490,9 @@ export function CommunityUsersClient({
 
       setPassword("");
       setConfirmPassword("");
+      setCopiedPassword(false);
+      setShowPassword(false);
+      setShowConfirmPassword(false);
       setMessage("Password updated successfully.");
       setManageMode("view");
     });
@@ -479,6 +505,13 @@ export function CommunityUsersClient({
     );
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function copyDraftPassword(value: string) {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    setCopiedPassword(true);
+    window.setTimeout(() => setCopiedPassword(false), 1600);
   }
 
   return (
@@ -792,6 +825,9 @@ export function CommunityUsersClient({
                   <label>
                     <FieldLabel>Full name *</FieldLabel>
                     <input
+                      id="entry-community-user-full-name"
+                      name="entry_community_user_full_name"
+                      autoComplete="off"
                       value={createDraft.fullName}
                       onChange={(event) => setCreateDraft((current) => ({ ...current, fullName: event.target.value }))}
                       className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
@@ -800,6 +836,9 @@ export function CommunityUsersClient({
                   <label>
                     <FieldLabel>Role *</FieldLabel>
                     <select
+                      id="entry-community-user-role"
+                      name="entry_community_user_role"
+                      autoComplete="off"
                       value={createDraft.role}
                       onChange={(event) =>
                         setCreateDraft((current) => ({
@@ -818,6 +857,9 @@ export function CommunityUsersClient({
                   <label>
                     <FieldLabel>{createDraft.role === "RESIDENT" ? "Email (optional)" : "Email *"}</FieldLabel>
                     <input
+                      id="entry-community-user-contact-email"
+                      name="entry_community_user_contact_email"
+                      autoComplete="off"
                       type="email"
                       value={createDraft.email}
                       onChange={(event) => setCreateDraft((current) => ({ ...current, email: event.target.value }))}
@@ -828,6 +870,9 @@ export function CommunityUsersClient({
                   <label>
                     <FieldLabel>Phone</FieldLabel>
                     <input
+                      id="entry-community-user-contact-phone"
+                      name="entry_community_user_contact_phone"
+                      autoComplete="off"
                       value={createDraft.phone}
                       onChange={(event) => setCreateDraft((current) => ({ ...current, phone: event.target.value }))}
                       className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
@@ -837,6 +882,9 @@ export function CommunityUsersClient({
                     <label>
                       <FieldLabel>Unit *</FieldLabel>
                       <select
+                        id="entry-community-user-unit"
+                        name="entry_community_user_unit"
+                        autoComplete="off"
                         value={createDraft.houseId}
                         onChange={(event) => setCreateDraft((current) => ({ ...current, houseId: event.target.value }))}
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
@@ -850,13 +898,48 @@ export function CommunityUsersClient({
                   ) : null}
                   <label>
                     <FieldLabel>Password *</FieldLabel>
-                    <input
-                      type="password"
-                      value={createDraft.password}
-                      onChange={(event) => setCreateDraft((current) => ({ ...current, password: event.target.value }))}
-                      className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-                      placeholder="Minimum 8 characters"
-                    />
+                    <div className="flex overflow-hidden rounded-md border border-white/10 bg-[var(--surface-strong)] focus-within:border-violet-400/50">
+                      <input
+                        id="entry-community-user-temp-password"
+                        name="entry_community_user_temporary_password"
+                        autoComplete="new-password"
+                        type={showCreatePassword ? "text" : "password"}
+                        value={createDraft.password}
+                        onChange={(event) => {
+                          setCreateDraft((current) => ({ ...current, password: event.target.value }));
+                          setCopiedPassword(false);
+                        }}
+                        className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none placeholder:text-[var(--text-muted)]"
+                        placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
+                      />
+                      <button
+                        type="button"
+                        title={showCreatePassword ? "Hide password" : "Show password"}
+                        aria-label={showCreatePassword ? "Hide password" : "Show password"}
+                        onClick={() => setShowCreatePassword((current) => !current)}
+                        className="grid h-10 w-10 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white"
+                      >
+                        {showCreatePassword ? (
+                          <EyeOff className="h-4 w-4" aria-hidden />
+                        ) : (
+                          <Eye className="h-4 w-4" aria-hidden />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        title="Copy password"
+                        aria-label="Copy password"
+                        disabled={!createDraft.password}
+                        onClick={() => copyDraftPassword(createDraft.password)}
+                        className="grid h-10 w-10 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {copiedPassword ? (
+                          <Check className="h-4 w-4" aria-hidden />
+                        ) : (
+                          <Copy className="h-4 w-4" aria-hidden />
+                        )}
+                      </button>
+                    </div>
                   </label>
                   <div className="sm:col-span-2 flex justify-end gap-2 border-t border-white/8 pt-4">
                     <Button variant="secondary" onClick={closeModal} disabled={isPending}>Cancel</Button>
@@ -893,7 +976,15 @@ export function CommunityUsersClient({
                       </button>
                       <button
                         type="button"
-                        onClick={() => { setPassword(""); setConfirmPassword(""); setManageMode("password"); setError(null); }}
+                        onClick={() => {
+                          setPassword("");
+                          setConfirmPassword("");
+                          setShowPassword(false);
+                          setShowConfirmPassword(false);
+                          setCopiedPassword(false);
+                          setManageMode("password");
+                          setError(null);
+                        }}
                         className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/[0.025] p-3 text-left text-sm font-semibold text-white transition hover:border-violet-400/25 hover:bg-violet-500/[0.06]"
                       >
                         <KeyRound className="h-4 w-4 text-violet-200" /> Reset password
@@ -973,11 +1064,74 @@ export function CommunityUsersClient({
                     <div className="grid gap-4 sm:grid-cols-2">
                       <label>
                         <FieldLabel>New password *</FieldLabel>
-                        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50" />
+                        <div className="flex overflow-hidden rounded-md border border-white/10 bg-[var(--surface-strong)] focus-within:border-violet-400/50">
+                          <input
+                            id="entry-community-user-reset-password"
+                            name="entry_community_user_reset_password"
+                            autoComplete="new-password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(event) => {
+                              setPassword(event.target.value);
+                              setCopiedPassword(false);
+                            }}
+                            className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            title={showPassword ? "Hide password" : "Show password"}
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                            onClick={() => setShowPassword((current) => !current)}
+                            className="grid h-10 w-10 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white"
+                          >
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <Eye className="h-4 w-4" aria-hidden />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            title="Copy password"
+                            aria-label="Copy password"
+                            disabled={!password}
+                            onClick={() => copyDraftPassword(password)}
+                            className="grid h-10 w-10 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            {copiedPassword ? (
+                              <Check className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <Copy className="h-4 w-4" aria-hidden />
+                            )}
+                          </button>
+                        </div>
                       </label>
                       <label>
                         <FieldLabel>Confirm password *</FieldLabel>
-                        <input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50" />
+                        <div className="flex overflow-hidden rounded-md border border-white/10 bg-[var(--surface-strong)] focus-within:border-violet-400/50">
+                          <input
+                            id="entry-community-user-confirm-password"
+                            name="entry_community_user_confirm_password"
+                            autoComplete="new-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(event) => setConfirmPassword(event.target.value)}
+                            className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            title={showConfirmPassword ? "Hide password" : "Show password"}
+                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                            onClick={() => setShowConfirmPassword((current) => !current)}
+                            className="grid h-10 w-10 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white"
+                          >
+                            {showConfirmPassword ? (
+                              <EyeOff className="h-4 w-4" aria-hidden />
+                            ) : (
+                              <Eye className="h-4 w-4" aria-hidden />
+                            )}
+                          </button>
+                        </div>
                       </label>
                     </div>
                     <div className="flex justify-end gap-2 border-t border-white/8 pt-4">

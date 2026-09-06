@@ -2,13 +2,14 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Copy, Plus, UserPlus, X } from "lucide-react";
+import { Check, Copy, Eye, EyeOff, Plus, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   createQuickResidentAction,
   type CreateResidentResult,
 } from "@/features/entry/communities/unitActions";
 import type { CommunityUnitHouseOption } from "@/features/entry/communities/detailQueries";
+import { ENTRY_ADMIN_TEMP_PASSWORD_HELPER } from "@/features/entry/passwordPolicy";
 
 type ResidentQuickCreateProps = {
   communityId: string;
@@ -32,7 +33,10 @@ export function ResidentQuickCreate({
   const [unitId, setUnitId] = useState(fixedUnitId ?? "");
   const [result, setResult] = useState<CreateResidentResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedPassword, setCopiedPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const formId = fixedUnitId ? `unit-${fixedUnitId}` : "community";
   const selectedUnit = useMemo(
     () => houses.find((house) => house.id === (fixedUnitId ?? unitId)) ?? null,
     [fixedUnitId, houses, unitId],
@@ -49,6 +53,8 @@ export function ResidentQuickCreate({
     setUnitId(fixedUnitId ?? "");
     setResult(null);
     setCopied(false);
+    setCopiedPassword(false);
+    setShowPassword(false);
   }
 
   function close() {
@@ -60,6 +66,7 @@ export function ResidentQuickCreate({
   function submit() {
     setResult(null);
     setCopied(false);
+    setCopiedPassword(false);
 
     if (selectedUnit && !selectedUnit.isActive) {
       setResult({
@@ -99,6 +106,13 @@ export function ResidentQuickCreate({
       ].join("\n"),
     );
     setCopied(true);
+  }
+
+  async function copyDraftPassword() {
+    if (!password) return;
+    await navigator.clipboard.writeText(password);
+    setCopiedPassword(true);
+    window.setTimeout(() => setCopiedPassword(false), 1600);
   }
 
   return (
@@ -190,6 +204,9 @@ export function ResidentQuickCreate({
                     Resident name *
                   </span>
                   <input
+                    id={`entry-quick-resident-full-name-${formId}`}
+                    name="entry_quick_resident_full_name"
+                    autoComplete="off"
                     value={fullName}
                     onChange={(event) => setFullName(event.target.value)}
                     className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
@@ -209,6 +226,9 @@ export function ResidentQuickCreate({
                     </div>
                   ) : (
                     <select
+                      id={`entry-quick-resident-unit-${formId}`}
+                      name="entry_quick_resident_unit"
+                      autoComplete="off"
                       value={unitId}
                       onChange={(event) => setUnitId(event.target.value)}
                       className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
@@ -233,13 +253,48 @@ export function ResidentQuickCreate({
                   <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
                     Password *
                   </span>
-                  <input
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="h-11 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
-                    type="password"
-                    placeholder="Minimum 8 characters"
-                  />
+                  <div className="flex overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] focus-within:border-violet-400/50">
+                    <input
+                      id={`entry-quick-resident-password-${formId}`}
+                      name="entry_quick_resident_temporary_password"
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(event) => {
+                        setPassword(event.target.value);
+                        setCopiedPassword(false);
+                      }}
+                      className="h-11 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none placeholder:text-[var(--text-muted)]"
+                      type={showPassword ? "text" : "password"}
+                      placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
+                    />
+                    <button
+                      type="button"
+                      title={showPassword ? "Hide password" : "Show password"}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      onClick={() => setShowPassword((current) => !current)}
+                      className="grid h-11 w-11 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <Eye className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      title="Copy password"
+                      aria-label="Copy password"
+                      disabled={!password}
+                      onClick={copyDraftPassword}
+                      className="grid h-11 w-11 place-items-center border-l border-white/8 text-[var(--text-muted)] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {copiedPassword ? (
+                        <Check className="h-4 w-4" aria-hidden />
+                      ) : (
+                        <Copy className="h-4 w-4" aria-hidden />
+                      )}
+                    </button>
+                  </div>
                 </label>
 
                 {result?.error ? (

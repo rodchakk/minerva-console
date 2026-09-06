@@ -17,6 +17,7 @@ type CommunityUnitQuickActionsProps = {
 type ModalState = "edit" | "status" | null;
 type UnitLabelDraft = {
   label: string;
+  primaryResidentId: string;
   unitId: string;
 };
 
@@ -28,15 +29,34 @@ export function CommunityUnitQuickActions({
   const [modalState, setModalState] = useState<ModalState>(null);
   const [unitLabelDraft, setUnitLabelDraft] = useState<UnitLabelDraft>(() => ({
     label: unit.label,
+    primaryResidentId: unit.primaryResidentId,
     unitId: unit.id,
   }));
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const unitLabel = unitLabelDraft.unitId === unit.id ? unitLabelDraft.label : unit.label;
+  const primaryResidentId =
+    unitLabelDraft.unitId === unit.id
+      ? unitLabelDraft.primaryResidentId
+      : unit.primaryResidentId;
+  const hasLinkedResidents = unit.residents.length > 0;
 
   function setUnitLabel(label: string) {
-    setUnitLabelDraft({ label, unitId: unit.id });
+    setUnitLabelDraft((current) => ({
+      label,
+      primaryResidentId:
+        current.unitId === unit.id ? current.primaryResidentId : unit.primaryResidentId,
+      unitId: unit.id,
+    }));
+  }
+
+  function setPrimaryResident(primaryResidentUserId: string) {
+    setUnitLabelDraft((current) => ({
+      label: current.unitId === unit.id ? current.label : unit.label,
+      primaryResidentId: primaryResidentUserId,
+      unitId: unit.id,
+    }));
   }
 
   function closeModal() {
@@ -55,6 +75,7 @@ export function CommunityUnitQuickActions({
     startTransition(async () => {
       const result = await updateCommunityUnitAction({
         communityId,
+        primaryResidentUserId: hasLinkedResidents ? primaryResidentId : null,
         unitId: unit.id,
         unitLabel,
       });
@@ -94,8 +115,8 @@ export function CommunityUnitQuickActions({
       setModalState(null);
       setSuccessMessage(
         unit.isActive
-          ? "Unit disabled successfully. Linked resident account states were not changed."
-          : "Unit enabled successfully. Linked resident account states were not changed.",
+          ? "Unit disabled successfully. Linked resident accounts were deactivated."
+          : "Unit enabled successfully. Unit-deactivated resident accounts were restored.",
       );
       router.refresh();
     });
@@ -130,6 +151,7 @@ export function CommunityUnitQuickActions({
             type="button"
             onClick={() => {
               setUnitLabel(unit.label);
+              setPrimaryResident(unit.primaryResidentId || unit.residents[0]?.userId || "");
               setSuccessMessage(null);
               setErrorMessage(null);
               setModalState("edit");
@@ -181,8 +203,36 @@ export function CommunityUnitQuickActions({
                   />
                 </label>
                 <p className="text-sm text-[var(--text-muted)]">
-                  This updates the unit label shown across the community workspace.
+                  This updates the unit label and primary resident shown across the
+                  community workspace.
                 </p>
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-slate-200">
+                    Primary resident
+                  </span>
+                  <select
+                    value={hasLinkedResidents ? primaryResidentId : ""}
+                    onChange={(event) => setPrimaryResident(event.target.value)}
+                    disabled={!hasLinkedResidents}
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {hasLinkedResidents ? (
+                      unit.residents.map((resident) => (
+                        <option key={resident.userId} value={resident.userId}>
+                          {resident.fullName}
+                          {resident.isActive ? "" : " (inactive)"}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No linked residents</option>
+                    )}
+                  </select>
+                  {!hasLinkedResidents ? (
+                    <span className="block text-sm text-[var(--text-muted)]">
+                      Add a resident before assigning a primary resident.
+                    </span>
+                  ) : null}
+                </label>
               </div>
             ) : (
               <div
@@ -193,8 +243,8 @@ export function CommunityUnitQuickActions({
                 }`}
               >
                 {unit.isActive
-                  ? "This will mark this unit as inactive in ENTRY. Linked resident account states are not changed."
-                  : "This will reactivate this unit in ENTRY. Linked resident account states are not changed."}
+                  ? "This will mark this unit as inactive in ENTRY and deactivate linked resident accounts."
+                  : "This will reactivate this unit in ENTRY and restore resident accounts that were deactivated by this unit."}
               </div>
             )}
 

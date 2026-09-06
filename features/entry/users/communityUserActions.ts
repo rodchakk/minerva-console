@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
+import { ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH } from "@/features/entry/passwordPolicy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { coerceString } from "@/lib/supabase/utils";
@@ -137,8 +138,11 @@ export async function createCommunityUserAction(
     return { error: "Select a supported user role.", success: false };
   }
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters.", success: false };
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+    return {
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      success: false,
+    };
   }
 
   if (role === "RESIDENT" && !houseId) {
@@ -284,8 +288,11 @@ export async function setCommunityUserPasswordAction(
     return { error: "Community and user are required.", success: false };
   }
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters.", success: false };
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+    return {
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      success: false,
+    };
   }
 
   if (!(await ensureUserInCommunity(communityId, userId))) {
