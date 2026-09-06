@@ -359,7 +359,10 @@ export default async function DashboardPage() {
                       <th className="px-4 py-3 font-medium">Status</th>
                       <th className="px-4 py-3 font-medium">Onboarding</th>
                       <th className="px-4 py-3 font-medium">Units</th>
-                      <th className="px-4 py-3 font-medium">Pending</th>
+                      <th className="px-4 py-3 font-medium leading-4">
+                        <span className="block">Pending</span>
+                        <span className="block">activations</span>
+                      </th>
                       <th className="px-5 py-3 text-right font-medium">Action</th>
                     </tr>
                   </thead>
