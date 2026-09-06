@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -49,9 +50,14 @@ export default async function ActivationQueuePage(
         description="Prepared resident records waiting for controlled activation."
         actions={
           <div className="flex flex-wrap gap-3">
-            <Link href="/products/entry/onboarding">
-              <Button variant="secondary">Launch onboarding</Button>
-            </Link>
+            {selectedCommunity ? (
+              <Link href={`/products/entry/communities/${selectedCommunity.id}`}>
+                <Button variant="secondary">
+                  <Building2 className="mr-2 h-4 w-4" aria-hidden />
+                  Back to community details
+                </Button>
+              </Link>
+            ) : null}
             {showLaunchCampaign ? (
               <LaunchCampaignButton
                 communityId={selectedCommunityId}
@@ -59,9 +65,6 @@ export default async function ActivationQueuePage(
                 preview={campaignPreview}
               />
             ) : null}
-            <Link href="/products/entry/communities/new">
-              <Button>Create community</Button>
-            </Link>
           </div>
         }
       />
@@ -188,8 +191,16 @@ export default async function ActivationQueuePage(
             <EmptyState
               title="No prepared residents found for this community yet."
               description="This community does not have resident activation queue rows for the selected filter yet."
-              actionHref="/products/entry/communities"
-              actionLabel="Back to communities"
+              actionHref={
+                selectedCommunity
+                  ? `/products/entry/communities/${selectedCommunity.id}`
+                  : "/products/entry/communities"
+              }
+              actionLabel={
+                selectedCommunity
+                  ? "Back to community details"
+                  : "Back to communities"
+              }
             />
           )}
         </>

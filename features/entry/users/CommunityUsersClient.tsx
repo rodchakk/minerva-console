@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useDeferredValue, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Building2,
   Check,
   Copy,
@@ -70,6 +69,7 @@ type CreateDraft = {
   password: string;
   phone: string;
   role: CommunityUserRole;
+  username: string;
 };
 
 const DEFAULT_VISIBLE_COUNT = 25;
@@ -81,6 +81,7 @@ const EMPTY_CREATE_DRAFT: CreateDraft = {
   password: "",
   phone: "",
   role: "RESIDENT",
+  username: "",
 };
 
 function isSyntheticEmail(email: string) {
@@ -360,13 +361,13 @@ export function CommunityUsersClient({
       return;
     }
 
-    if (createDraft.role === "RESIDENT" && !createDraft.houseId) {
-      setError("Select a unit for this resident.");
+    if ((createDraft.role === "RESIDENT" || createDraft.role === "ADMIN") && !createDraft.houseId) {
+      setError("Select a unit for this user.");
       return;
     }
 
-    if ((createDraft.role === "ADMIN" || createDraft.role === "GUARD") && !createDraft.email.trim()) {
-      setError("Email is required for admin and guard accounts.");
+    if (createDraft.role === "GUARD" && !createDraft.username.trim()) {
+      setError("Username is required for guard accounts.");
       return;
     }
 
@@ -375,10 +376,11 @@ export function CommunityUsersClient({
         communityId: community.id,
         email: createDraft.email,
         fullName: createDraft.fullName,
-        houseId: createDraft.role === "RESIDENT" ? createDraft.houseId : null,
+        houseId: createDraft.role === "GUARD" ? null : createDraft.houseId,
         password: createDraft.password,
         phone: createDraft.phone,
         role: createDraft.role,
+        username: createDraft.role === "GUARD" ? createDraft.username : null,
       });
 
       if (!result.success) {
@@ -401,7 +403,12 @@ export function CommunityUsersClient({
       return;
     }
 
-    if ((selectedUser.role === "RESIDENT" || selectedUser.role === "UNASSIGNED") && !draft.houseId) {
+    if (
+      (selectedUser.role === "RESIDENT" ||
+        selectedUser.role === "ADMIN" ||
+        selectedUser.role === "UNASSIGNED") &&
+      !draft.houseId
+    ) {
       setError("Unit is required for this user role.");
       return;
     }
@@ -535,13 +542,7 @@ export function CommunityUsersClient({
             <Link href={`/products/entry/communities/${community.id}`}>
               <Button variant="secondary">
                 <Building2 className="mr-2 h-4 w-4" aria-hidden />
-                Community detail
-              </Button>
-            </Link>
-            <Link href="/products/entry/communities">
-              <Button variant="secondary">
-                <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
-                Back to communities
+                Back to community details
               </Button>
             </Link>
             <Button onClick={openCreate}>
@@ -840,13 +841,16 @@ export function CommunityUsersClient({
                       name="entry_community_user_role"
                       autoComplete="off"
                       value={createDraft.role}
-                      onChange={(event) =>
+                      onChange={(event) => {
+                        const nextRole = event.target.value as CommunityUserRole;
                         setCreateDraft((current) => ({
                           ...current,
-                          role: event.target.value as CommunityUserRole,
-                          houseId: event.target.value === "RESIDENT" ? current.houseId : "",
-                        }))
-                      }
+                          email: nextRole === "GUARD" ? "" : current.email,
+                          houseId: nextRole === "GUARD" ? "" : current.houseId,
+                          role: nextRole,
+                          username: nextRole === "GUARD" ? current.username : "",
+                        }));
+                      }}
                       className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                     >
                       <option value="RESIDENT">Resident</option>
@@ -854,21 +858,37 @@ export function CommunityUsersClient({
                       <option value="GUARD">Guard</option>
                     </select>
                   </label>
+                  {createDraft.role === "GUARD" ? (
+                    <label>
+                      <FieldLabel>Username *</FieldLabel>
+                      <input
+                        id="entry-community-user-guard-username"
+                        name="entry_community_user_guard_username"
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        value={createDraft.username}
+                        onChange={(event) => setCreateDraft((current) => ({ ...current, username: event.target.value }))}
+                        placeholder="guard_main"
+                        className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                      />
+                    </label>
+                  ) : (
+                    <label>
+                      <FieldLabel>Email (optional)</FieldLabel>
+                      <input
+                        id="entry-community-user-contact-email"
+                        name="entry_community_user_contact_email"
+                        autoComplete="off"
+                        type="email"
+                        value={createDraft.email}
+                        onChange={(event) => setCreateDraft((current) => ({ ...current, email: event.target.value }))}
+                        placeholder="Leave blank for username login"
+                        className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                      />
+                    </label>
+                  )}
                   <label>
-                    <FieldLabel>{createDraft.role === "RESIDENT" ? "Email (optional)" : "Email *"}</FieldLabel>
-                    <input
-                      id="entry-community-user-contact-email"
-                      name="entry_community_user_contact_email"
-                      autoComplete="off"
-                      type="email"
-                      value={createDraft.email}
-                      onChange={(event) => setCreateDraft((current) => ({ ...current, email: event.target.value }))}
-                      placeholder={createDraft.role === "RESIDENT" ? "Leave blank for username login" : "name@example.com"}
-                      className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-                    />
-                  </label>
-                  <label>
-                    <FieldLabel>Phone</FieldLabel>
+                    <FieldLabel>Phone{createDraft.role === "GUARD" ? " (optional)" : ""}</FieldLabel>
                     <input
                       id="entry-community-user-contact-phone"
                       name="entry_community_user_contact_phone"
@@ -878,7 +898,7 @@ export function CommunityUsersClient({
                       className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                     />
                   </label>
-                  {createDraft.role === "RESIDENT" ? (
+                  {createDraft.role !== "GUARD" ? (
                     <label>
                       <FieldLabel>Unit *</FieldLabel>
                       <select
@@ -897,7 +917,7 @@ export function CommunityUsersClient({
                     </label>
                   ) : null}
                   <label>
-                    <FieldLabel>Password *</FieldLabel>
+                    <FieldLabel>Temporary password *</FieldLabel>
                     <div className="flex overflow-hidden rounded-md border border-white/10 bg-[var(--surface-strong)] focus-within:border-violet-400/50">
                       <input
                         id="entry-community-user-temp-password"
@@ -1023,7 +1043,7 @@ export function CommunityUsersClient({
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                       />
                     </label>
-                    {(selectedUser.role === "RESIDENT" || selectedUser.role === "UNASSIGNED") ? (
+                    {(selectedUser.role === "RESIDENT" || selectedUser.role === "ADMIN" || selectedUser.role === "UNASSIGNED") ? (
                       <label>
                         <FieldLabel>Unit *</FieldLabel>
                         <select

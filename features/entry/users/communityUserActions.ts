@@ -18,6 +18,7 @@ export type CreateCommunityUserInput = {
   password: string;
   phone: string;
   role: CommunityUserRole;
+  username?: string | null;
 };
 
 export type CommunityUserOperationResult = {
@@ -63,6 +64,22 @@ function normalizeUsername(value: string) {
   return base || "user";
 }
 
+function normalizeGuardUsername(value: string) {
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 32);
+}
+
+function buildGuardSyntheticEmail(username: string) {
+  return `guard-${username}@entry.internal`;
+}
+
 async function getUniqueUsername(fullName: string) {
   const adminSupabase = createAdminClient();
   const base = normalizeUsername(fullName);
@@ -82,6 +99,19 @@ async function getUniqueUsername(fullName: string) {
   return `${base}_${crypto.randomUUID().slice(0, 8)}`;
 }
 
+async function ensureUsernameAvailable(username: string) {
+  const adminSupabase = createAdminClient();
+  const { data, error } = await adminSupabase
+    .from("profiles")
+    .select("user_id")
+    .ilike("username", username)
+    .limit(1);
+
+  if (error) throw new Error(error.message);
+
+  return !Array.isArray(data) || data.length === 0;
+}
+
 async function validateHouse(communityId: string, houseId: string) {
   const adminSupabase = createAdminClient();
   const { data, error } = await adminSupabase
@@ -94,7 +124,7 @@ async function validateHouse(communityId: string, houseId: string) {
   if (error) throw new Error(error.message);
   if (!data) return { error: "Unit not found in this community." } as const;
   if (data.is_active === false) {
-    return { error: "Activate this unit before creating a resident account." } as const;
+    return { error: "Activate this unit before creating the account." } as const;
   }
 
   return { id: coerceString(data.id) } as const;
@@ -129,6 +159,7 @@ export async function createCommunityUserAction(
   const password = input.password.trim();
   const phone = input.phone.trim();
   const houseId = input.houseId?.trim() || null;
+  const requestedUsername = normalizeGuardUsername(input.username ?? "");
 
   if (!communityId || !fullName) {
     return { error: "Community and full name are required.", success: false };
@@ -145,15 +176,23 @@ export async function createCommunityUserAction(
     };
   }
 
-  if (role === "RESIDENT" && !houseId) {
-    return { error: "A unit is required for resident accounts.", success: false };
+  if ((role === "RESIDENT" || role === "ADMIN") && !houseId) {
+    return { error: "A unit is required for resident and admin accounts.", success: false };
   }
 
-  if ((role === "ADMIN" || role === "GUARD") && !email) {
-    return { error: "Email is required for admin and guard accounts.", success: false };
+  if (role === "GUARD" && !requestedUsername) {
+    return { error: "Username is required for guard accounts.", success: false };
   }
 
-  if (role === "RESIDENT" && houseId) {
+  if (role === "GUARD" && requestedUsername.length < 3) {
+    return {
+      error:
+        "Username must be at least 3 characters after normalization. Use letters, numbers, or underscores.",
+      success: false,
+    };
+  }
+
+  if ((role === "RESIDENT" || role === "ADMIN") && houseId) {
     try {
       const house = await validateHouse(communityId, houseId);
       if ("error" in house) return { error: house.error, success: false };
@@ -170,7 +209,28 @@ export async function createCommunityUserAction(
   let authEmail = email;
   let authType = "email";
 
-  if (!authEmail) {
+  if (role === "GUARD") {
+    username = requestedUsername;
+
+    try {
+      const usernameAvailable = await ensureUsernameAvailable(username);
+
+      if (!usernameAvailable) {
+        return {
+          error: `Username "${username}" is already in use. Choose another guard username.`,
+          success: false,
+        };
+      }
+    } catch (error) {
+      return {
+        error: error instanceof Error ? error.message : "Could not validate username uniqueness.",
+        success: false,
+      };
+    }
+
+    authEmail = buildGuardSyntheticEmail(username);
+    authType = "username";
+  } else if (!authEmail) {
     try {
       username = await getUniqueUsername(fullName);
     } catch (error) {
@@ -180,7 +240,7 @@ export async function createCommunityUserAction(
       };
     }
 
-    authEmail = `resident-${username}@entry.internal`;
+    authEmail = `${role.toLowerCase()}-${username}@entry.internal`;
     authType = "username";
   }
 
@@ -208,7 +268,7 @@ export async function createCommunityUserAction(
     p_community_id: communityId,
     p_full_name: fullName,
     p_role: role,
-    p_house_id: role === "RESIDENT" ? houseId : null,
+    p_house_id: role === "GUARD" ? null : houseId,
     p_phone: phone || null,
   });
 
