@@ -51,12 +51,15 @@ test("Community Operators guard form preserves account type and removes email wo
   assert.match(guardForm, /name="username"/);
   assert.match(guardForm, /type=\{showGuardPassword \? "text" : "password"\}/);
   assert.match(guardForm, /aria-label="Copy password"/);
+  assert.match(guardForm, /placeholder=\{ENTRY_ADMIN_TEMP_PASSWORD_HELPER\}/);
   assert.match(guardForm, /Description \/ note/);
   assert.doesNotMatch(guardForm, /name="email"/);
 
   assert.match(actions, /guard_account_type: accountType/);
   assert.match(actions, /entry_username: username/);
   assert.match(actions, /Guard name, username, and temporary password are required/);
+  assert.match(actions, /password\.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
+  assert.match(actions, /\$\{ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH\} characters/);
   assert.match(actions, /Shared guard account created successfully/);
   assert.match(actions, /Individual guard account created successfully/);
 });
