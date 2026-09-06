@@ -10,6 +10,8 @@ import { resolveCommunityRegistrationEdit } from "@/features/entry/communityRegi
 import {
   enforceCorrectionPageReadRateLimit,
   isRateLimitDenied,
+  RATE_LIMIT_INFRASTRUCTURE_MESSAGE,
+  RATE_LIMIT_QUOTA_MESSAGE,
   rateLimitMessage,
 } from "@/features/entry/communityRegistration/public/rateLimit";
 import {
@@ -23,7 +25,7 @@ export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
 export const metadata: Metadata = {
-  title: "Correccion de registro | ENTRY",
+  title: "Corrección de registro | ENTRY",
   robots: {
     follow: false,
     index: false,
@@ -32,6 +34,15 @@ export const metadata: Metadata = {
 
 function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function getAccessErrorMessage(value: string) {
+  if (value === "rate_limited") return RATE_LIMIT_QUOTA_MESSAGE;
+  if (value === "service_unavailable") {
+    return RATE_LIMIT_INFRASTRUCTURE_MESSAGE;
+  }
+
+  return null;
 }
 
 function UnavailableCorrectionState() {
@@ -57,7 +68,7 @@ function TemporarilyUnavailableCorrectionState({ message }: { message: string })
       <RegistrationStepper currentStep={2} />
       <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
         <p className="text-base font-semibold text-amber-950">
-          Correccion temporalmente no disponible
+          Corrección temporalmente no disponible
         </p>
         <p className="mt-2 text-sm leading-6 text-amber-900">{message}</p>
       </div>
@@ -80,6 +91,9 @@ export default async function EntryCorrectionPage(
   ]);
   const slug = normalizePublicSlug(rawSlug);
   const token = getSingleParam(searchParams.token).trim();
+  const accessErrorMessage = getAccessErrorMessage(
+    getSingleParam(searchParams.access_error).trim(),
+  );
 
   if (slug && token) {
     redirect(
@@ -89,6 +103,12 @@ export default async function EntryCorrectionPage(
 
   if (!slug) {
     return <UnavailableCorrectionState />;
+  }
+
+  if (accessErrorMessage) {
+    return (
+      <TemporarilyUnavailableCorrectionState message={accessErrorMessage} />
+    );
   }
 
   const correctionState = readCorrectionAccessCookieValue({
@@ -126,16 +146,16 @@ export default async function EntryCorrectionPage(
 
   return (
     <PublicRegistrationShell>
-      <div className="space-y-6">
-        <div className="space-y-4">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-2.5 sm:space-y-4">
           <EntryBadge />
-          <p className="text-xl font-semibold text-slate-500">
+          <p className="text-base font-semibold text-slate-500 sm:text-xl">
             {correction.publicTitle}
           </p>
-          <h1 className="text-4xl font-bold text-slate-950 sm:text-5xl">
-            Correccion de residentes
+          <h1 className="text-3xl font-bold text-slate-950 sm:text-5xl">
+            Corrección de residentes
           </h1>
-          <p className="text-base leading-7 text-slate-600">
+          <p className="text-base leading-6 text-slate-600 sm:leading-7">
             {correction.publicInstructions
               ? correction.publicInstructions
               : "Actualiza la información de tu vivienda. Revisa los cambios antes de enviarlos a la administración."}

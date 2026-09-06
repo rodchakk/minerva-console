@@ -27,15 +27,15 @@ export function RegistrationStepper({
               {index > 0 ? (
                 <span
                   aria-hidden="true"
-                  className={`absolute right-1/2 top-5 h-px w-full ${
+                  className={`absolute right-1/2 top-[18px] h-px w-full ${
                     completed ? "bg-[#5b21b6]" : "bg-slate-200"
                   }`}
                 />
               ) : null}
               <span
-                className={`relative z-10 flex h-10 w-10 items-center justify-center rounded-full border text-sm font-semibold ${
+                className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold ${
                   active
-                    ? "border-[#5b21b6] bg-[#4c1d95] text-white shadow-[0_8px_24px_rgba(91,33,182,0.24)]"
+                    ? "border-[#5b21b6] bg-[#4c1d95] text-white shadow-[0_6px_18px_rgba(91,33,182,0.22)]"
                     : completed
                       ? "border-[#5b21b6] bg-[#5b21b6] text-white"
                       : "border-slate-200 bg-white text-slate-500"
@@ -61,7 +61,7 @@ export function RegistrationStepper({
                 )}
               </span>
               <span
-                className={`text-center text-sm font-medium ${
+                className={`text-center text-xs font-medium sm:text-sm ${
                   active ? "text-[#35137a]" : completed ? "text-[#4c1d95]" : "text-slate-500"
                 }`}
               >
@@ -96,33 +96,36 @@ export function PublicRegistrationShell({
 }) {
   return (
     <main className="min-h-screen bg-[#f8fafc] text-slate-950">
-      <header className="border-b border-white/10 bg-[#030305] px-4 py-6 shadow-[0_8px_24px_rgba(15,23,42,0.16)]">
-        <div className="mx-auto flex max-w-3xl justify-center">
-          <Image
-            alt="Minerva Technologies"
-            className="h-auto w-[260px] sm:w-[340px]"
-            height={260}
-            priority
-            src="/minerva-logo-transparent.png"
-            width={520}
-          />
-        </div>
-      </header>
-
-      <div className="mx-auto flex min-h-[calc(100vh-9rem)] w-full max-w-3xl flex-col px-4 pb-8 pt-5 sm:px-6 sm:pt-6">
+      <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-5 pt-4 sm:px-6 sm:pb-8 sm:pt-8">
         <div className="flex-1">{children}</div>
-        <p className="mt-8 flex items-center justify-center gap-2 text-sm text-slate-500">
-          <svg aria-hidden="true" className="h-4 w-4" fill="none" viewBox="0 0 24 24">
-            <path
-              d="M7 10V8a5 5 0 0 1 10 0v2m-9 0h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"
-              stroke="currentColor"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="1.8"
+        <footer className="mt-6 border-t border-slate-200/80 pt-4 sm:mt-8">
+          <div className="flex flex-col items-center gap-2">
+            <Image
+              alt="Minerva Technologies"
+              className="h-auto w-40 opacity-75 sm:w-44"
+              height={714}
+              src="/brand/minerva-logo-gray.png"
+              width={2129}
             />
-          </svg>
-          Tus datos est&aacute;n protegidos
-        </p>
+            <p className="flex items-center justify-center gap-2 text-sm text-slate-500">
+              <svg
+                aria-hidden="true"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M7 10V8a5 5 0 0 1 10 0v2m-9 0h8a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+              Tus datos est&aacute;n protegidos
+            </p>
+          </div>
+        </footer>
       </div>
     </main>
   );
