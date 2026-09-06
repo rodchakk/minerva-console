@@ -137,15 +137,15 @@ export default async function EntryRegisterPage(
     <PublicRegistrationShell>
       <UnitLookupForm
         intro={
-          <div className="space-y-4">
+          <div className="space-y-2.5 sm:space-y-4">
             <EntryBadge />
-            <p className="text-xl font-semibold text-slate-500">
+            <p className="text-base font-semibold text-slate-500 sm:text-xl">
               {campaign.communityName}
             </p>
-            <h1 className="text-4xl font-bold text-slate-950 sm:text-5xl">
+            <h1 className="text-3xl font-bold text-slate-950 sm:text-5xl">
               Registro de residentes
             </h1>
-            <p className="text-base leading-7 text-slate-600">
+            <p className="text-base leading-6 text-slate-600 sm:leading-7">
               {campaign.publicInstructions
                 ? campaign.publicInstructions
                 : "Completa la información de las personas que viven en tu vivienda. Primero identifica tu vivienda y luego revisa el registro antes de enviarlo."}

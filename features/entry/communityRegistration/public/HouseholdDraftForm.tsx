@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type FocusEvent,
+  type FormEvent,
+} from "react";
 import { buildHouseholdSubmissionResidents } from "./submissionPayload";
 import { RegistrationStepper } from "./PublicRegistrationShell";
 
@@ -59,6 +65,29 @@ const RELATIONSHIP_LABELS: Record<Relationship | "unknown", string> = {
   tenant: "Inquilino",
   unknown: "No especificada",
 };
+
+function scrollRegistrationToTop() {
+  if (typeof window === "undefined") return;
+
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ behavior: "smooth", left: 0, top: 0 });
+  });
+}
+
+function scrollFocusedControlIntoView(
+  event: FocusEvent<HTMLInputElement | HTMLSelectElement>,
+) {
+  const target = event.currentTarget;
+  if (!window.matchMedia("(max-width: 640px)").matches) return;
+
+  window.setTimeout(() => {
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+  }, 120);
+}
 
 function createResidentDraft(id: number): ResidentDraft {
   return {
@@ -241,10 +270,15 @@ function SelectedUnitCard({
   unitLabel: string;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-      <div className="flex items-center gap-4">
-        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#5b21b6]">
-          <svg aria-hidden="true" className="h-9 w-9" fill="none" viewBox="0 0 24 24">
+    <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_14px_42px_rgba(15,23,42,0.07)] sm:p-5">
+      <div className="flex items-center gap-3 sm:gap-4">
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#5b21b6] sm:h-16 sm:w-16">
+          <svg
+            aria-hidden="true"
+            className="h-7 w-7 sm:h-9 sm:w-9"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
             <path
               d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
               stroke="currentColor"
@@ -262,8 +296,12 @@ function SelectedUnitCard({
           </svg>
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-lg font-bold text-slate-950">Vivienda seleccionada</p>
-          <p className="mt-1 text-2xl font-bold text-[#4c1d95]">{unitLabel}</p>
+          <p className="text-base font-bold text-slate-950 sm:text-lg">
+            Vivienda seleccionada
+          </p>
+          <p className="mt-0.5 text-xl font-bold text-[#4c1d95] sm:mt-1 sm:text-2xl">
+            {unitLabel}
+          </p>
           <p className="mt-1 text-sm text-slate-500">
             Puedes registrar hasta {residentLimit} residentes.
           </p>
@@ -289,7 +327,7 @@ function SelectedUnitCard({
       </div>
       {onChangeUnit ? (
         <button
-          className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#5b21b6] px-4 py-3 text-sm font-bold text-[#4c1d95] sm:hidden"
+          className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#5b21b6] px-4 py-3 text-sm font-bold text-[#4c1d95] sm:mt-4 sm:hidden"
           onClick={onRequestChange}
           type="button"
         >
@@ -424,6 +462,10 @@ export function HouseholdDraftForm({
   );
   const isCorrectionSubmit = finalAction === "correction-submit";
 
+  useEffect(() => {
+    scrollRegistrationToTop();
+  }, []);
+
   function markResidentSaved(residentId: number) {
     setSavedResidentIds((current) =>
       current.includes(residentId) ? current : [...current, residentId],
@@ -486,6 +528,7 @@ export function HouseholdDraftForm({
     setStep("edit");
     setDraftNotice(null);
     setSubmitError(null);
+    scrollRegistrationToTop();
   }
 
   function editResident(residentId: number) {
@@ -493,6 +536,7 @@ export function HouseholdDraftForm({
     setStep("edit");
     setDraftNotice(null);
     setSubmitError(null);
+    scrollRegistrationToTop();
   }
 
   function removeResident(residentId: number) {
@@ -563,6 +607,7 @@ export function HouseholdDraftForm({
       setActiveResidentId(Number.isFinite(firstErrorId) ? firstErrorId : null);
       setStep("edit");
       setDraftNotice("Revisa la información antes de continuar.");
+      scrollRegistrationToTop();
       return;
     }
 
@@ -570,6 +615,7 @@ export function HouseholdDraftForm({
     setSubmitError(null);
     setDraftNotice(null);
     setStep("review");
+    scrollRegistrationToTop();
   }
 
   async function handleFinalSubmit() {
@@ -630,6 +676,7 @@ export function HouseholdDraftForm({
         setErrors({});
         setActiveResidentId(null);
         setStep("success");
+        scrollRegistrationToTop();
         return;
       }
 
@@ -654,8 +701,11 @@ export function HouseholdDraftForm({
   const currentStep = step === "review" || step === "success" ? 3 : 2;
 
   return (
-    <div className="space-y-6">
-      <RegistrationStepper currentStep={currentStep} isComplete={step === "success"} />
+    <div className="space-y-4">
+      <RegistrationStepper
+        currentStep={currentStep}
+        isComplete={step === "success"}
+      />
 
       <SelectedUnitCard
         onChangeUnit={onChangeUnit}
@@ -693,10 +743,10 @@ export function HouseholdDraftForm({
       ) : null}
 
       {step === "success" ? (
-        <section className="space-y-5" aria-labelledby="household-success-title">
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-8 text-center shadow-[0_18px_60px_rgba(15,23,42,0.08)]">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_16px_32px_rgba(5,150,105,0.24)]">
-              <svg aria-hidden="true" className="h-10 w-10" fill="none" viewBox="0 0 24 24">
+        <section className="space-y-4" aria-labelledby="household-success-title">
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-5 py-6 text-center shadow-[0_14px_42px_rgba(15,23,42,0.07)] sm:py-8">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-600 text-white shadow-[0_12px_26px_rgba(5,150,105,0.22)] sm:h-20 sm:w-20">
+              <svg aria-hidden="true" className="h-8 w-8 sm:h-10 sm:w-10" fill="none" viewBox="0 0 24 24">
                 <path
                   d="m6 12 4 4 8-9"
                   stroke="currentColor"
@@ -707,28 +757,28 @@ export function HouseholdDraftForm({
               </svg>
             </div>
             <h2
-              className="mt-5 text-3xl font-bold text-emerald-700"
+              className="mt-4 text-2xl font-bold text-emerald-700 sm:mt-5 sm:text-3xl"
               id="household-success-title"
             >
               {isCorrectionSubmit ? "Cambios enviados" : "Registro enviado"}
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-base leading-7 text-slate-600">
+            <p className="mx-auto mt-2 max-w-md text-base leading-6 text-slate-600 sm:mt-3 sm:leading-7">
               {isCorrectionSubmit
                 ? "Tu información actualizada fue enviada correctamente a la administración de tu residencial."
                 : "Tu información fue enviada correctamente a la administración de tu residencial."}
             </p>
-            <p className="mx-auto mt-4 max-w-md text-base font-semibold text-emerald-700">
+            <p className="mx-auto mt-3 max-w-md text-base font-semibold text-emerald-700 sm:mt-4">
               Ya puedes cerrar esta página.
             </p>
           </div>
         </section>
       ) : step === "review" ? (
-        <section className="space-y-5" aria-labelledby="household-review-title">
+        <section className="space-y-4" aria-labelledby="household-review-title">
           <div>
-            <h2 className="text-3xl font-bold text-slate-950" id="household-review-title">
+            <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl" id="household-review-title">
               Revisar información
             </h2>
-            <p className="mt-2 text-base leading-7 text-slate-600">
+            <p className="mt-1 text-base leading-6 text-slate-600 sm:mt-2 sm:leading-7">
               Revisa la información antes de enviarla a la administración de tu residencial.
             </p>
           </div>
@@ -736,7 +786,7 @@ export function HouseholdDraftForm({
           <div className="space-y-3">
             {reviewResidents.map((resident) => (
               <article
-                className="rounded-2xl border border-slate-100 bg-white px-4 py-5 shadow-[0_14px_46px_rgba(15,23,42,0.06)]"
+                className="rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-[0_12px_36px_rgba(15,23,42,0.05)] sm:py-5"
                 key={resident.id}
               >
                 <div className="flex items-start gap-4">
@@ -752,6 +802,7 @@ export function HouseholdDraftForm({
                           setSubmitError(null);
                           setStep("edit");
                           setActiveResidentId(resident.id);
+                          scrollRegistrationToTop();
                         }}
                         type="button"
                       >
@@ -763,7 +814,7 @@ export function HouseholdDraftForm({
                     </p>
                   </div>
                 </div>
-                <dl className="mt-4 grid gap-3 border-t border-slate-100 pt-4 text-sm sm:grid-cols-3">
+                <dl className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm sm:mt-4 sm:grid-cols-3 sm:pt-4">
                   <div>
                     <dt className="text-slate-500">Relación</dt>
                     <dd className="mt-1 font-semibold text-slate-900">
@@ -832,6 +883,7 @@ export function HouseholdDraftForm({
               onClick={() => {
                 setSubmitError(null);
                 setStep("edit");
+                scrollRegistrationToTop();
               }}
               type="button"
             >
@@ -858,11 +910,11 @@ export function HouseholdDraftForm({
           </div>
         </section>
       ) : (
-        <section className="space-y-5" aria-labelledby="household-edit-title">
+        <section className="space-y-4" aria-labelledby="household-edit-title">
           <div>
             <div className="flex items-start gap-3">
               <span className="mt-1 text-[#5b21b6]">
-                <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24">
+                <svg aria-hidden="true" className="h-7 w-7 sm:h-8 sm:w-8" fill="none" viewBox="0 0 24 24">
                   <path
                     d="M8 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm-6 9a6 6 0 0 1 12 0m6-9v6m-3-3h6"
                     stroke="currentColor"
@@ -873,10 +925,10 @@ export function HouseholdDraftForm({
                 </svg>
               </span>
               <div>
-                <h2 className="text-2xl font-bold text-slate-950" id="household-edit-title">
+                <h2 className="text-xl font-bold text-slate-950 sm:text-2xl" id="household-edit-title">
                   Residentes de la vivienda
                 </h2>
-                <p className="mt-1 text-base leading-7 text-slate-600">
+                <p className="mt-1 text-base leading-6 text-slate-600 sm:leading-7">
                   {introText ??
                     "Agrega la información de las personas que viven en esta vivienda."}
                 </p>
@@ -903,18 +955,18 @@ export function HouseholdDraftForm({
           ) : null}
 
           {!activeResident && savedResidents.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-8 text-center shadow-sm">
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-white px-5 py-6 text-center shadow-sm sm:py-8">
               <div className="flex justify-center">
                 <ResidentIcon plus />
               </div>
-              <h3 className="mt-4 text-xl font-bold text-slate-950">
+              <h3 className="mt-3 text-xl font-bold text-slate-950 sm:mt-4">
                 Aún no has agregado residentes
               </h3>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
                 Empieza con la primera persona que vive en esta vivienda.
               </p>
               <button
-                className="mt-5 inline-flex h-12 items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-sm font-bold text-white transition hover:bg-[#5b21b6]"
+                className="mt-4 inline-flex h-12 items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-sm font-bold text-white transition hover:bg-[#5b21b6] sm:mt-5"
                 onClick={addResident}
                 type="button"
               >
@@ -929,7 +981,7 @@ export function HouseholdDraftForm({
                 activeResident.id,
                 errors[activeResident.id],
               )}
-              className="space-y-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-[0_18px_60px_rgba(15,23,42,0.08)]"
+              className="space-y-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_14px_42px_rgba(15,23,42,0.07)] sm:space-y-4 sm:p-5"
               noValidate
               onSubmit={saveActiveResident}
             >
@@ -980,6 +1032,7 @@ export function HouseholdDraftForm({
                       fullName: event.target.value,
                     })
                   }
+                  onFocus={scrollFocusedControlIntoView}
                   placeholder="Ej. Ana Martínez"
                   required
                   type="text"
@@ -1015,6 +1068,7 @@ export function HouseholdDraftForm({
                       phone: event.target.value,
                     })
                   }
+                  onFocus={scrollFocusedControlIntoView}
                   placeholder="Ej. 5555-5555"
                   type="tel"
                   value={activeResident.phone}
@@ -1051,6 +1105,7 @@ export function HouseholdDraftForm({
                       email: event.target.value,
                     })
                   }
+                  onFocus={scrollFocusedControlIntoView}
                   placeholder="Ej. ana@correo.com"
                   type="email"
                   value={activeResident.email}
@@ -1078,6 +1133,7 @@ export function HouseholdDraftForm({
                       relationship: event.target.value as Relationship,
                     })
                   }
+                  onFocus={scrollFocusedControlIntoView}
                   value={activeResident.relationship}
                 >
                   <option value="">Selecciona una opción</option>

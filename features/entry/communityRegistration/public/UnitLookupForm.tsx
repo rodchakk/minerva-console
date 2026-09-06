@@ -1,6 +1,11 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import {
+  useState,
+  type FocusEvent,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { HouseholdDraftForm } from "./HouseholdDraftForm";
 import { RegistrationStepper } from "./PublicRegistrationShell";
 
@@ -42,6 +47,27 @@ const RATE_LIMITED_MESSAGE =
 const SERVICE_UNAVAILABLE_MESSAGE =
   "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente.";
 
+function scrollFocusedControlIntoView(
+  event: FocusEvent<HTMLInputElement>,
+) {
+  const target = event.currentTarget;
+  if (!window.matchMedia("(max-width: 640px)").matches) return;
+
+  window.setTimeout(() => {
+    target.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+      inline: "nearest",
+    });
+  }, 120);
+}
+
+function scrollRegistrationToTop() {
+  window.requestAnimationFrame(() => {
+    window.scrollTo({ behavior: "smooth", left: 0, top: 0 });
+  });
+}
+
 export function UnitLookupForm({
   intro,
   slug,
@@ -57,6 +83,7 @@ export function UnitLookupForm({
   function resetLookup() {
     setUnitSuffix("");
     setState({ status: "idle" });
+    scrollRegistrationToTop();
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -137,16 +164,21 @@ export function UnitLookupForm({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {intro ? <div>{intro}</div> : null}
 
       <RegistrationStepper currentStep={1} />
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-100 bg-white shadow-[0_22px_70px_rgba(15,23,42,0.08)]">
-        <div className="border-b border-slate-100 px-5 py-6 sm:px-8">
-          <div className="flex gap-4">
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#5b21b6]">
-              <svg aria-hidden="true" className="h-8 w-8" fill="none" viewBox="0 0 24 24">
+      <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_16px_48px_rgba(15,23,42,0.07)]">
+        <div className="border-b border-slate-100 px-5 py-4 sm:px-8 sm:py-6">
+          <div className="flex gap-3 sm:gap-4">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#efe7ff] text-[#5b21b6] sm:h-14 sm:w-14">
+              <svg
+                aria-hidden="true"
+                className="h-7 w-7 sm:h-8 sm:w-8"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
                 <path
                   d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
                   stroke="currentColor"
@@ -157,17 +189,20 @@ export function UnitLookupForm({
               </svg>
             </span>
             <div>
-              <h2 className="text-2xl font-bold text-slate-950">
+              <h2 className="text-xl font-bold text-slate-950 sm:text-2xl">
                 Identifica tu vivienda
               </h2>
-              <p className="mt-2 text-base leading-7 text-slate-600">
+              <p className="mt-1 text-base leading-6 text-slate-600 sm:mt-2 sm:leading-7">
                 Ingresa el código de tu vivienda.
               </p>
             </div>
           </div>
         </div>
 
-        <form className="space-y-5 px-5 py-6 sm:px-8" onSubmit={handleSubmit}>
+        <form
+          className="space-y-4 px-5 py-4 sm:space-y-5 sm:px-8 sm:py-6"
+          onSubmit={handleSubmit}
+        >
           <label className="block" htmlFor="unit-label">
             <span className="text-base font-bold text-slate-950">
               Número de vivienda
@@ -195,6 +230,7 @@ export function UnitLookupForm({
                 maxLength={40}
                 name="unitLabel"
                 onChange={(event) => setUnitSuffix(event.target.value)}
+                onFocus={scrollFocusedControlIntoView}
                 placeholder="Ej. 1 o 5B"
                 required
                 type="text"
