@@ -362,13 +362,8 @@ export function CommunityUsersClient({
       return;
     }
 
-    if (createDraft.role === "RESIDENT" && !createDraft.houseId) {
-      setError("Select a unit for this resident.");
-      return;
-    }
-
-    if (createDraft.role === "ADMIN" && !createDraft.email.trim()) {
-      setError("Email is required for admin accounts.");
+    if ((createDraft.role === "RESIDENT" || createDraft.role === "ADMIN") && !createDraft.houseId) {
+      setError("Select a unit for this user.");
       return;
     }
 
@@ -382,7 +377,7 @@ export function CommunityUsersClient({
         communityId: community.id,
         email: createDraft.email,
         fullName: createDraft.fullName,
-        houseId: createDraft.role === "RESIDENT" ? createDraft.houseId : null,
+        houseId: createDraft.role === "GUARD" ? null : createDraft.houseId,
         password: createDraft.password,
         phone: createDraft.phone,
         role: createDraft.role,
@@ -409,7 +404,12 @@ export function CommunityUsersClient({
       return;
     }
 
-    if ((selectedUser.role === "RESIDENT" || selectedUser.role === "UNASSIGNED") && !draft.houseId) {
+    if (
+      (selectedUser.role === "RESIDENT" ||
+        selectedUser.role === "ADMIN" ||
+        selectedUser.role === "UNASSIGNED") &&
+      !draft.houseId
+    ) {
       setError("Unit is required for this user role.");
       return;
     }
@@ -853,7 +853,7 @@ export function CommunityUsersClient({
                         setCreateDraft((current) => ({
                           ...current,
                           email: nextRole === "GUARD" ? "" : current.email,
-                          houseId: nextRole === "RESIDENT" ? current.houseId : "",
+                          houseId: nextRole === "GUARD" ? "" : current.houseId,
                           role: nextRole,
                           username: nextRole === "GUARD" ? current.username : "",
                         }));
@@ -881,7 +881,7 @@ export function CommunityUsersClient({
                     </label>
                   ) : (
                     <label>
-                      <FieldLabel>{createDraft.role === "RESIDENT" ? "Email (optional)" : "Email *"}</FieldLabel>
+                      <FieldLabel>Email (optional)</FieldLabel>
                       <input
                         id="entry-community-user-contact-email"
                         name="entry_community_user_contact_email"
@@ -889,7 +889,7 @@ export function CommunityUsersClient({
                         type="email"
                         value={createDraft.email}
                         onChange={(event) => setCreateDraft((current) => ({ ...current, email: event.target.value }))}
-                        placeholder={createDraft.role === "RESIDENT" ? "Leave blank for username login" : "name@example.com"}
+                        placeholder="Leave blank for username login"
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                       />
                     </label>
@@ -905,7 +905,7 @@ export function CommunityUsersClient({
                       className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                     />
                   </label>
-                  {createDraft.role === "RESIDENT" ? (
+                  {createDraft.role !== "GUARD" ? (
                     <label>
                       <FieldLabel>Unit *</FieldLabel>
                       <select
@@ -1050,7 +1050,7 @@ export function CommunityUsersClient({
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                       />
                     </label>
-                    {(selectedUser.role === "RESIDENT" || selectedUser.role === "UNASSIGNED") ? (
+                    {(selectedUser.role === "RESIDENT" || selectedUser.role === "ADMIN" || selectedUser.role === "UNASSIGNED") ? (
                       <label>
                         <FieldLabel>Unit *</FieldLabel>
                         <select
