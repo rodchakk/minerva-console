@@ -21,9 +21,10 @@ test("Activation Queue standardizes selected-community return navigation", () =>
   assert.match(headerActions, /Building2/);
   assert.match(headerActions, />\s*Back to community details\s*</);
   assert.doesNotMatch(headerActions, /Launch onboarding/);
+  assert.doesNotMatch(headerActions, /Create community/);
+  assert.doesNotMatch(page, /products\/entry\/communities\/new/);
   assert.match(page, /showLaunchCampaign/);
   assert.match(page, /LaunchCampaignButton/);
-  assert.match(page, />Create community</);
   assert.match(page, /selectedCommunity[\s\S]*\? "Back to community details"[\s\S]*: "Back to communities"/);
   assert.match(page, /actionLabel="Back to communities"/);
 });
