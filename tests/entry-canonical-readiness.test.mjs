@@ -35,3 +35,35 @@ test("ENTRY community list readiness delegates to the canonical onboarding progr
   assert.doesNotMatch(migration, /invitations_ok/);
   assert.doesNotMatch(migration, /facilities_ok/);
 });
+
+test("canonical ENTRY readiness uses the same seven task slots for every community", () => {
+  const migration = read(
+    "supabase/migrations/20260906231226_normalize_entry_onboarding_tasks.sql",
+  );
+
+  for (const key of [
+    "details",
+    "features",
+    "units",
+    "admins",
+    "facilities",
+    "activation_queue",
+    "final_review",
+  ]) {
+    assert.match(migration, new RegExp(`'key', '${key}'`));
+  }
+
+  assert.match(migration, /'required', v_allow_reservations/);
+  assert.match(migration, /'required', v_queue_total > 0/);
+  assert.match(
+    migration,
+    /v_facilities_done := \(not v_allow_reservations\) or v_facilities_count > 0/,
+  );
+  assert.match(
+    migration,
+    /v_activation_done := v_queue_total = 0[\s\S]*or \(v_queue_pending = 0 and v_queue_failed = 0\)/,
+  );
+
+  assert.doesNotMatch(migration, /if v_allow_reservations then[\s\S]*'key', 'facilities'/);
+  assert.doesNotMatch(migration, /if v_queue_total > 0 then[\s\S]*'key', 'activation_queue'/);
+});
