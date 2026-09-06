@@ -23,17 +23,12 @@ export default async function CommunityStaffPage(
         title="Community operators"
         description="Manage resident admins and guard accounts who operate within your community."
         actions={
-          <div className="flex flex-wrap gap-3">
-            <Link href={`/products/entry/communities/${community.id}`}>
-              <Button variant="secondary">
-                <Building2 className="mr-2 h-4 w-4" aria-hidden />
-                Back to community details
-              </Button>
-            </Link>
-            <Link href={`/products/entry/communities/${community.id}#completion-actions`}>
-              <Button>Final review</Button>
-            </Link>
-          </div>
+          <Link href={`/products/entry/communities/${community.id}`}>
+            <Button variant="secondary">
+              <Building2 className="mr-2 h-4 w-4" aria-hidden />
+              Back to community details
+            </Button>
+          </Link>
         }
       />
 
