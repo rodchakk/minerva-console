@@ -9,7 +9,7 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-test("Community Registration admin card replaces Submitted states with resident progress", () => {
+test("Community Registration admin card replaces Submitted states with honest unit progress", () => {
   const card = read("features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx");
   const page = read("app/(console)/products/entry/communities/[communityId]/page.tsx");
 
@@ -19,9 +19,10 @@ test("Community Registration admin card replaces Submitted states with resident 
   assert.match(card, /\{registrationProgress\.percent\}%/);
   assert.match(
     card,
-    /\{registrationProgress\.submittedResidents\} of\{" "\}\s*\{registrationProgress\.totalResidents\} residents submitted/,
+    /\{registrationProgress\.submittedUnits\} of\{" "\}\s*\{registrationProgress\.totalUnits\} units submitted/,
   );
-  assert.match(card, /\{registrationProgress\.remainingResidents\} remaining/);
+  assert.match(card, /\{registrationProgress\.submittedResidents\} residents received/);
+  assert.match(card, /\{registrationProgress\.remainingUnits\} units remaining/);
   assert.match(card, /role="progressbar"/);
   assert.match(card, /aria-valuenow=\{registrationProgress\.percent\}/);
   assert.match(card, /bg-violet-400/);
@@ -29,21 +30,29 @@ test("Community Registration admin card replaces Submitted states with resident 
   assert.match(page, /registrationProgress=\{registrationState\.registrationProgress\}/);
 });
 
-test("Community Registration admin loader derives resident progress from current submitted residents", () => {
+test("Community Registration admin loader derives progress from submitted campaign units", () => {
   const query = read("features/entry/communityRegistration/admin/queries.ts");
 
   assert.match(query, /registrationProgress: CommunityRegistrationAdminProgress/);
-  assert.match(query, /createRegistrationProgress\(0, 0\)/);
+  assert.match(query, /createRegistrationProgress\(0, 0, 0\)/);
   assert.match(query, /\.from\("community_registration_units"\)/);
-  assert.match(query, /\.select\("id,status,resident_limit_override"\)/);
-  assert.match(query, /resident_limit_override/);
-  assert.match(query, /campaign\.defaultResidentLimit/);
+  assert.match(query, /\.select\("id,status"\)/);
+  assert.match(query, /SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES/);
+  assert.match(query, /const submittedUnitCount = campaignUnits\.filter/);
+  assert.match(query, /const totalCampaignUnitCount = campaignUnits\.length/);
+  assert.match(
+    query,
+    /Math\.round\(\(normalizedSubmittedUnits \/ normalizedTotalUnits\) \* 100\)/,
+  );
+  assert.match(query, /remainingUnits: Math\.max/);
+
   assert.match(query, /community_registration_submissions/);
   assert.match(query, /SUBMITTED_COMMUNITY_REGISTRATION_SUBMISSION_STATUSES/);
   assert.match(query, /community_registration_residents/);
   assert.match(query, /\.select\("id", \{ count: "exact", head: true \}\)/);
   assert.match(query, /\.in\("submission_id", currentSubmissionIds\)/);
-  assert.match(query, /Math\.min\(\s*100,/);
-  assert.match(query, /Math\.max\(normalizedTotal - normalizedSubmitted, 0\)/);
-  assert.doesNotMatch(query, /submittedStatuses: readonly string\[\]/);
+  assert.doesNotMatch(query, /resident_limit_override/);
+  assert.doesNotMatch(query, /getEffectiveResidentLimit/);
+  assert.doesNotMatch(query, /totalResidents/);
+  assert.doesNotMatch(query, /remainingResidents/);
 });
