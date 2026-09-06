@@ -48,8 +48,8 @@ test("Community Operators uses canonical community-detail return action", () => 
   assert.match(page, /Building2/);
   assert.match(page, /Back to community details/);
   assert.match(page, /products\/entry\/communities\/\$\{community\.id\}/);
-  assert.match(page, /Final review/);
-  assert.doesNotMatch(page, /Back to community</);
+  assert.doesNotMatch(page, /Final review/);
+  assert.doesNotMatch(page, />\s*Back to community\s*</);
 });
 
 test("Community Users guard creation is username-first and hides email", () => {
