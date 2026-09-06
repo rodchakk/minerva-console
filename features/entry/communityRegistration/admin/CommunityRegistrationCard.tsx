@@ -591,8 +591,8 @@ export function CommunityRegistrationCard({
             {registrationProgress.percent}%
           </p>
           <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            {registrationProgress.submittedResidents} of{" "}
-            {registrationProgress.totalResidents} residents submitted
+            {registrationProgress.submittedUnits} of{" "}
+            {registrationProgress.totalUnits} units submitted
           </p>
           <div
             aria-label="Registration progress"
@@ -607,9 +607,10 @@ export function CommunityRegistrationCard({
               style={{ width: `${registrationProgress.percent}%` }}
             />
           </div>
-          <p className="mt-2 text-xs font-semibold text-violet-100">
-            {registrationProgress.remainingResidents} remaining
-          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-violet-100">
+            <span>{registrationProgress.submittedResidents} residents received</span>
+            <span>{registrationProgress.remainingUnits} units remaining</span>
+          </div>
         </div>
       </div>
 
