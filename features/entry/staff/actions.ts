@@ -263,24 +263,23 @@ export async function createGuardAction(
 
   const communityId = getString(formData, "communityId");
   const fullName = getString(formData, "fullName");
-  const email = getString(formData, "email").toLowerCase();
   const username = normalizeGuardUsername(getString(formData, "username"));
   const phone = getString(formData, "phone");
   const description = getString(formData, "description");
   const password = getString(formData, "password");
-  const accountType = getString(formData, "accountType") || "individual";
-  const isUsernameOnlyGuard = !email;
-  const authEmail = isUsernameOnlyGuard ? buildGuardSyntheticEmail(username) : email;
+  const accountType =
+    getString(formData, "accountType") === "shared" ? "shared" : "individual";
+  const authEmail = buildGuardSyntheticEmail(username);
 
-  if (!communityId || !fullName || !password || (!email && !username)) {
+  if (!communityId || !fullName || !username || !password) {
     return {
       ok: false,
       message:
-        "Guard name, temporary password, and either email or username are required.",
+        "Guard name, username, and temporary password are required.",
     };
   }
 
-  if (isUsernameOnlyGuard && username.length < 3) {
+  if (username.length < 3) {
     return {
       ok: false,
       message:
@@ -309,26 +308,24 @@ export async function createGuardAction(
     };
   }
 
-  if (isUsernameOnlyGuard) {
-    const { data: existingUsername, error: usernameLookupError } = await adminSupabase
-      .from("profiles")
-      .select("user_id")
-      .ilike("username", username)
-      .limit(1);
+  const { data: existingUsername, error: usernameLookupError } = await adminSupabase
+    .from("profiles")
+    .select("user_id")
+    .ilike("username", username)
+    .limit(1);
 
-    if (usernameLookupError) {
-      return {
-        ok: false,
-        message: `Could not validate username uniqueness: ${usernameLookupError.message}`,
-      };
-    }
+  if (usernameLookupError) {
+    return {
+      ok: false,
+      message: `Could not validate username uniqueness: ${usernameLookupError.message}`,
+    };
+  }
 
-    if (Array.isArray(existingUsername) && existingUsername.length > 0) {
-      return {
-        ok: false,
-        message: `Username "${username}" is already in use. Choose another guard username.`,
-      };
-    }
+  if (Array.isArray(existingUsername) && existingUsername.length > 0) {
+    return {
+      ok: false,
+      message: `Username "${username}" is already in use. Choose another guard username.`,
+    };
   }
 
   const { data: createdUser, error: createError } =
@@ -339,7 +336,7 @@ export async function createGuardAction(
       user_metadata: {
         full_name: fullName,
         entry_role: "GUARD",
-        entry_username: isUsernameOnlyGuard ? username : null,
+        entry_username: username,
         guard_account_type: accountType,
         guard_description: description || null,
       },
@@ -388,44 +385,42 @@ export async function createGuardAction(
     };
   }
 
-  if (isUsernameOnlyGuard) {
-    const syntheticEmail = buildGuardSyntheticEmail(username);
-    const { error: profileUpdateError } = await adminSupabase
-      .from("profiles")
-      .update({
-        auth_type: "username",
-        synthetic_email: syntheticEmail,
-        username,
-        username_login_enabled: true,
-      })
-      .eq("user_id", createdUser.user.id)
-      .eq("community_id", communityId);
+  const syntheticEmail = buildGuardSyntheticEmail(username);
+  const { error: profileUpdateError } = await adminSupabase
+    .from("profiles")
+    .update({
+      auth_type: "username",
+      synthetic_email: syntheticEmail,
+      username,
+      username_login_enabled: true,
+    })
+    .eq("user_id", createdUser.user.id)
+    .eq("community_id", communityId);
 
-    if (profileUpdateError) {
-      await Promise.allSettled([
-        adminSupabase
-          .from("community_members")
-          .delete()
-          .eq("user_id", createdUser.user.id)
-          .eq("community_id", communityId),
-        adminSupabase
-          .from("profiles")
-          .delete()
-          .eq("user_id", createdUser.user.id)
-          .eq("community_id", communityId),
-      ]);
-      const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(
-        createdUser.user.id,
-        true,
-      );
+  if (profileUpdateError) {
+    await Promise.allSettled([
+      adminSupabase
+        .from("community_members")
+        .delete()
+        .eq("user_id", createdUser.user.id)
+        .eq("community_id", communityId),
+      adminSupabase
+        .from("profiles")
+        .delete()
+        .eq("user_id", createdUser.user.id)
+        .eq("community_id", communityId),
+    ]);
+    const { error: cleanupError } = await adminSupabase.auth.admin.deleteUser(
+      createdUser.user.id,
+      true,
+    );
 
-      return {
-        ok: false,
-        message: cleanupError
-          ? `${profileUpdateError.message} Cleanup also failed for auth user ${createdUser.user.id}: ${cleanupError.message}`
-          : `${profileUpdateError.message} The newly created auth user was deleted.`,
-      };
-    }
+    return {
+      ok: false,
+      message: cleanupError
+        ? `${profileUpdateError.message} Cleanup also failed for auth user ${createdUser.user.id}: ${cleanupError.message}`
+        : `${profileUpdateError.message} The newly created auth user was deleted.`,
+    };
   }
 
   revalidatePath(`/products/entry/communities/${communityId}`);
@@ -434,10 +429,9 @@ export async function createGuardAction(
 
   return {
     ok: true,
-    message: isUsernameOnlyGuard
-      ? `Guard account created successfully. Username credential: ${username}.`
-      : accountType === "shared"
-        ? "Shared guard account created successfully."
-        : "Guard account created successfully.",
+    message:
+      accountType === "shared"
+        ? `Shared guard account created successfully. Username credential: ${username}.`
+        : `Individual guard account created successfully. Username credential: ${username}.`,
   };
 }

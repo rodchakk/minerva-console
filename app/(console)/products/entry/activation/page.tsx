@@ -49,6 +49,11 @@ export default async function ActivationQueuePage(
         description="Prepared resident records waiting for controlled activation."
         actions={
           <div className="flex flex-wrap gap-3">
+            {selectedCommunity ? (
+              <Link href={`/products/entry/communities/${selectedCommunity.id}`}>
+                <Button variant="secondary">Back to community</Button>
+              </Link>
+            ) : null}
             <Link href="/products/entry/onboarding">
               <Button variant="secondary">Launch onboarding</Button>
             </Link>
@@ -188,8 +193,12 @@ export default async function ActivationQueuePage(
             <EmptyState
               title="No prepared residents found for this community yet."
               description="This community does not have resident activation queue rows for the selected filter yet."
-              actionHref="/products/entry/communities"
-              actionLabel="Back to communities"
+              actionHref={
+                selectedCommunity
+                  ? `/products/entry/communities/${selectedCommunity.id}`
+                  : "/products/entry/communities"
+              }
+              actionLabel={selectedCommunity ? "Back to community" : "Back to communities"}
             />
           )}
         </>
