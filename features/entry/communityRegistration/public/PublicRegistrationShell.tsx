@@ -102,7 +102,7 @@ export function PublicRegistrationShell({
           <div className="flex flex-col items-center gap-2">
             <Image
               alt="Minerva Technologies"
-              className="h-auto w-36 opacity-75 sm:w-40"
+              className="h-auto w-40 opacity-75 sm:w-44"
               height={714}
               src="/brand/minerva-logo-gray.png"
               width={2129}
