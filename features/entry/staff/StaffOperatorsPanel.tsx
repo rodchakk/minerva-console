@@ -5,6 +5,7 @@ import { useFormStatus } from "react-dom";
 import { Check, Copy, Eye, EyeOff, MoreHorizontal, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { ENTRY_ADMIN_TEMP_PASSWORD_HELPER } from "@/features/entry/passwordPolicy";
 import {
   createGuardAction,
   promoteResidentAdminAction,
@@ -424,7 +425,7 @@ export function StaffOperatorsPanel({
                       }}
                       autoComplete="new-password"
                       className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-slate-100 outline-none placeholder:text-[var(--text-muted)]"
-                      placeholder="Minimum 8 characters"
+                      placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
                     />
                     <button
                       type="button"
