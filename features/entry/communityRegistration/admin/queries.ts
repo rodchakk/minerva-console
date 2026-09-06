@@ -47,9 +47,10 @@ export type CommunityRegistrationAdminCampaign = {
 
 export type CommunityRegistrationAdminProgress = {
   percent: number;
-  remainingResidents: number;
+  remainingUnits: number;
   submittedResidents: number;
-  totalResidents: number;
+  submittedUnits: number;
+  totalUnits: number;
 };
 
 export type CommunityRegistrationAdminState = {
@@ -108,29 +109,33 @@ function normalizeUnit(value: unknown): CommunityRegistrationAdminUnit | null {
 }
 
 function createRegistrationProgress(
+  submittedUnits: number,
+  totalUnits: number,
   submittedResidents: number,
-  totalResidents: number,
 ): CommunityRegistrationAdminProgress {
-  const normalizedSubmitted = Math.max(0, Math.floor(submittedResidents));
-  const normalizedTotal = Math.max(0, Math.floor(totalResidents));
+  const normalizedSubmittedUnits = Math.max(0, Math.floor(submittedUnits));
+  const normalizedTotalUnits = Math.max(0, Math.floor(totalUnits));
+  const normalizedSubmittedResidents = Math.max(
+    0,
+    Math.floor(submittedResidents),
+  );
 
   return {
     percent:
-      normalizedTotal === 0
+      normalizedTotalUnits === 0
         ? 0
         : Math.min(
             100,
-            Math.round((normalizedSubmitted / normalizedTotal) * 100),
+            Math.round((normalizedSubmittedUnits / normalizedTotalUnits) * 100),
           ),
-    remainingResidents: Math.max(normalizedTotal - normalizedSubmitted, 0),
-    submittedResidents: normalizedSubmitted,
-    totalResidents: normalizedTotal,
+    remainingUnits: Math.max(
+      normalizedTotalUnits - normalizedSubmittedUnits,
+      0,
+    ),
+    submittedResidents: normalizedSubmittedResidents,
+    submittedUnits: normalizedSubmittedUnits,
+    totalUnits: normalizedTotalUnits,
   };
-}
-
-function getEffectiveResidentLimit(value: unknown, fallback: number) {
-  const parsed = Math.floor(coerceNumber(value));
-  return parsed > 0 ? parsed : fallback;
 }
 
 export async function getCommunityRegistrationAdminState(
@@ -180,7 +185,7 @@ export async function getCommunityRegistrationAdminState(
     return {
       campaign: null,
       hasOperationalCampaign: false,
-      registrationProgress: createRegistrationProgress(0, 0),
+      registrationProgress: createRegistrationProgress(0, 0, 0),
       submittedUnitCount: 0,
       totalCampaignUnitCount: 0,
       units,
@@ -189,7 +194,7 @@ export async function getCommunityRegistrationAdminState(
 
   const { data: campaignUnitsData } = await supabase
     .from("community_registration_units")
-    .select("id,status,resident_limit_override")
+    .select("id,status")
     .eq("campaign_id", campaign.id);
   const [
     { data: activeAccessData },
@@ -237,17 +242,10 @@ export async function getCommunityRegistrationAdminState(
   const submittedStatuses = new Set<string>(
     SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES,
   );
-  const defaultResidentLimit = getEffectiveResidentLimit(
-    campaign.defaultResidentLimit,
-    3,
-  );
-  const totalResidents = campaignUnits.reduce((total, unit) => {
-    const record = unit as Record<string, unknown>;
-    return (
-      total +
-      getEffectiveResidentLimit(record.resident_limit_override, defaultResidentLimit)
-    );
-  }, 0);
+  const submittedUnitCount = campaignUnits.filter((unit) =>
+    submittedStatuses.has(coerceString((unit as Record<string, unknown>).status)),
+  ).length;
+  const totalCampaignUnitCount = campaignUnits.length;
 
   return {
     campaign: {
@@ -256,13 +254,12 @@ export async function getCommunityRegistrationAdminState(
     },
     hasOperationalCampaign: operationalCampaign !== null,
     registrationProgress: createRegistrationProgress(
+      submittedUnitCount,
+      totalCampaignUnitCount,
       submittedResidentCount ?? 0,
-      totalResidents,
     ),
-    submittedUnitCount: campaignUnits.filter((unit) =>
-      submittedStatuses.has(coerceString((unit as Record<string, unknown>).status)),
-    ).length,
-    totalCampaignUnitCount: campaignUnits.length,
+    submittedUnitCount,
+    totalCampaignUnitCount,
     units,
   };
 }
