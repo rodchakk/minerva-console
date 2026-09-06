@@ -52,6 +52,7 @@ export type CommunityUnitPreview = {
   lastAccess: string;
   ownerName: string;
   pendingActivations: number;
+  primaryResidentId: string;
   primaryResidentName: string;
   residentCount: number;
   residents: CommunityUnitResident[];
@@ -102,6 +103,7 @@ export type CommunityUnitResident = {
   houseId: string;
   houseLabel: string;
   isActive: boolean;
+  isPrimary: boolean;
   phone: string;
   role: string;
   status: "active" | "inactive" | "no_account";
@@ -749,6 +751,7 @@ async function loadUnitsPreview(
           ),
           ownerName,
           pendingActivations: 0,
+          primaryResidentId: "",
           primaryResidentName: ownerName === "No owner linked" ? "" : ownerName,
           residentCount:
             coerceNumber(record.resident_count) ||
@@ -806,14 +809,36 @@ async function loadUnitResidents(
   supabase: SupabaseServerClient,
   communityId: string,
 ): Promise<CommunityUnitResident[]> {
-  const { data, error } = await supabase.rpc("sa_list_community_users", {
-    p_community_id: communityId,
-    p_include_inactive: true,
-  });
+  const [{ data, error }, { data: assignmentsData }] = await Promise.all([
+    supabase.rpc("sa_list_community_users", {
+      p_community_id: communityId,
+      p_include_inactive: true,
+    }),
+    supabase
+      .from("house_residents")
+      .select("house_id,user_id,is_primary")
+      .eq("community_id", communityId),
+  ]);
 
   if (error || !Array.isArray(data)) {
     return [];
   }
+
+  const primaryAssignments = new Set(
+    (Array.isArray(assignmentsData) ? assignmentsData : [])
+      .filter((item) => item && typeof item === "object")
+      .map((item) => {
+        const record = item as Record<string, unknown>;
+        if (!coerceBoolean(record.is_primary)) {
+          return "";
+        }
+
+        const houseId = coerceString(record.house_id);
+        const userId = coerceString(record.user_id);
+        return houseId && userId ? `${houseId}:${userId}` : "";
+      })
+      .filter(Boolean),
+  );
 
   return data
     .map((item) => {
@@ -846,6 +871,9 @@ async function loadUnitResidents(
           coerceString(record.unit_label) ||
           "No unit linked",
         isActive,
+        isPrimary:
+          coerceBoolean(record.is_primary) ||
+          primaryAssignments.has(`${houseId}:${userId}`),
         phone: coerceString(record.phone),
         role,
         status: isActive ? "active" : "inactive",
@@ -980,6 +1008,8 @@ function enrichUnits(
     const unitResidents = residentsByHouseId.get(unit.id) ?? [];
     const activeResidents = unitResidents.filter((resident) => resident.isActive);
     const primaryResident =
+      activeResidents.find((resident) => resident.isPrimary) ??
+      unitResidents.find((resident) => resident.isPrimary) ??
       unitResidents.find((resident) => resident.role === "ADMIN") ??
       activeResidents[0] ??
       unitResidents[0] ??
@@ -994,6 +1024,7 @@ function enrichUnits(
       activeResidents: activeResidents.length,
       ownerName: primaryResident?.fullName || "No residents",
       pendingActivations: pendingActivationItems.length,
+      primaryResidentId: primaryResident?.userId || "",
       primaryResidentName: primaryResident?.fullName || "",
       residentCount,
       residents: unitResidents,

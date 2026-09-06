@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
+import { ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH } from "@/features/entry/passwordPolicy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
@@ -23,6 +24,7 @@ export type CreateResidentResult = CommunityUnitActionResult & {
 
 export type UpdateCommunityUnitInput = {
   communityId: string;
+  primaryResidentUserId?: string | null;
   unitId: string;
   unitLabel: string;
 };
@@ -150,6 +152,66 @@ async function ensureResidentInCommunity(input: {
   );
 }
 
+async function setPrimaryResidentForUnit(input: {
+  adminSupabase: ReturnType<typeof createAdminClient>;
+  communityId: string;
+  unitId: string;
+  userId: string | null;
+}): Promise<CommunityUnitActionResult> {
+  const { adminSupabase, communityId, unitId, userId } = input;
+  const { data: assignments, error } = await adminSupabase
+    .from("house_residents")
+    .select("id,user_id")
+    .eq("community_id", communityId)
+    .eq("house_id", unitId);
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  if (!Array.isArray(assignments) || assignments.length === 0) {
+    return userId
+      ? { error: "Selected resident is not linked to this unit.", success: false }
+      : { success: true };
+  }
+
+  if (!userId) {
+    return { success: true };
+  }
+
+  const target = assignments.find(
+    (assignment) => coerceString(assignment.user_id) === userId,
+  );
+
+  if (!target) {
+    return { error: "Selected resident is not linked to this unit.", success: false };
+  }
+
+  const { error: clearError } = await adminSupabase
+    .from("house_residents")
+    .update({ is_primary: false, updated_at: new Date().toISOString() })
+    .eq("community_id", communityId)
+    .eq("house_id", unitId)
+    .neq("user_id", userId);
+
+  if (clearError) {
+    return { error: clearError.message, success: false };
+  }
+
+  const { error: setError } = await adminSupabase
+    .from("house_residents")
+    .update({ is_primary: true, updated_at: new Date().toISOString() })
+    .eq("community_id", communityId)
+    .eq("house_id", unitId)
+    .eq("user_id", userId);
+
+  if (setError) {
+    return { error: setError.message, success: false };
+  }
+
+  return { success: true };
+}
+
 export async function updateCommunityUnitAction(
   input: UpdateCommunityUnitInput,
 ): Promise<CommunityUnitActionResult> {
@@ -163,6 +225,10 @@ export async function updateCommunityUnitAction(
   const communityId = input.communityId.trim();
   const unitId = input.unitId.trim();
   const unitLabel = input.unitLabel.trim();
+  const primaryResidentUserId =
+    input.primaryResidentUserId === undefined
+      ? undefined
+      : input.primaryResidentUserId?.trim() || null;
 
   if (!communityId || !unitId) {
     return {
@@ -201,6 +267,19 @@ export async function updateCommunityUnitAction(
     };
   }
 
+  if (primaryResidentUserId !== undefined) {
+    const primaryResult = await setPrimaryResidentForUnit({
+      adminSupabase: supabase,
+      communityId,
+      unitId,
+      userId: primaryResidentUserId,
+    });
+
+    if (!primaryResult.success) {
+      return primaryResult;
+    }
+  }
+
   revalidateUnitPaths(communityId, unitId);
 
   return { success: true };
@@ -226,12 +305,26 @@ export async function setCommunityUnitActiveStatusAction(
     };
   }
 
-  const supabase = createAdminClient();
-  const { error } = await supabase
-    .from("houses")
-    .update({ is_active: input.isActive })
-    .eq("community_id", communityId)
-    .eq("id", unitId);
+  let unit: Awaited<ReturnType<typeof loadUnitInCommunity>>;
+
+  try {
+    unit = await loadUnitInCommunity({ communityId, unitId });
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not validate the unit.",
+      success: false,
+    };
+  }
+
+  if (!unit) {
+    return { error: "Unit not found in this community.", success: false };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("admin_toggle_house", {
+    p_house_id: unitId,
+    p_is_active: input.isActive,
+  });
 
   if (error) {
     return {
@@ -268,8 +361,11 @@ export async function createQuickResidentAction(
     return { error: "Resident name is required.", success: false };
   }
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters.", success: false };
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+    return {
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      success: false,
+    };
   }
 
   let adminSupabase: ReturnType<typeof createAdminClient>;
@@ -428,8 +524,11 @@ export async function setResidentPasswordAction(
     return { error: "Community and resident are required.", success: false };
   }
 
-  if (password.length < 8) {
-    return { error: "Password must be at least 8 characters.", success: false };
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+    return {
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      success: false,
+    };
   }
 
   const resident = await ensureResidentInCommunity({ communityId, userId });

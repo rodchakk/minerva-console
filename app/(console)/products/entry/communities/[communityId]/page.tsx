@@ -684,6 +684,7 @@ export default async function CommunitySetupPage(
               title="Facilities summary"
               action={
                 <CommunityFacilitiesDrawer
+                  communityId={community.id}
                   facilities={previews.facilities.items}
                   state={previews.facilities.state}
                   triggerLabel="Manage facilities"

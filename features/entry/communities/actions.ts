@@ -37,6 +37,19 @@ export type CreateCommunityState = {
   usedAdvancedImport?: boolean;
 };
 
+export type CreateCommunityFacilitiesInput = {
+  communityId: string;
+  facilityNames: string[];
+};
+
+export type CreateCommunityFacilitiesResult = {
+  error?: string;
+  insertedFacilities?: number;
+  skippedFacilityBlank?: number;
+  skippedFacilityDuplicates?: number;
+  success: boolean;
+};
+
 function parseBooleanField(value: FormDataEntryValue | null) {
   return value === "on" || value === "true";
 }
@@ -452,6 +465,71 @@ export async function createCommunityAction(
     skippedDuplicates,
     success: true,
     usedAdvancedImport: Boolean(parsedAdvancedUnits),
+  };
+}
+
+export async function createCommunityFacilitiesAction(
+  input: CreateCommunityFacilitiesInput,
+): Promise<CreateCommunityFacilitiesResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const parsedFacilities = parseNamedList(input.facilityNames);
+
+  if (!communityId) {
+    return { error: "Community ID is required.", success: false };
+  }
+
+  if (parsedFacilities.names.length === 0) {
+    return {
+      error: "Enter at least one facility name.",
+      skippedFacilityBlank: parsedFacilities.skippedBlank,
+      skippedFacilityDuplicates: parsedFacilities.skippedDuplicates,
+      success: false,
+    };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc(
+    "create_community_facilities_bulk_v1",
+    {
+      p_community_id: communityId,
+      p_facilities: parsedFacilities.names,
+    },
+  );
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  const record = (Array.isArray(data) ? data[0] : data ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const insertedFacilities =
+    coerceNumber(record.inserted_count) || parsedFacilities.names.length;
+  const skippedFacilityDuplicates =
+    parsedFacilities.skippedDuplicates +
+    coerceNumber(record.skipped_duplicates_count);
+  const skippedFacilityBlank =
+    parsedFacilities.skippedBlank + coerceNumber(record.skipped_blank_count);
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+
+  return {
+    insertedFacilities,
+    skippedFacilityBlank,
+    skippedFacilityDuplicates,
+    success: insertedFacilities > 0,
+    error:
+      insertedFacilities > 0
+        ? undefined
+        : "No new facilities were added. Check for duplicates.",
   };
 }
 

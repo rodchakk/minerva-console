@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
+import { createCommunityFacilitiesAction } from "@/features/entry/communities/actions";
 import type {
   CommunityDetailPreviews,
   CommunityFacilityPreview,
@@ -10,6 +12,7 @@ import type {
 type FacilityFilter = "all" | "active" | "inactive" | "free" | "paid";
 
 type CommunityFacilitiesDrawerProps = {
+  communityId: string;
   facilities: CommunityFacilityPreview[];
   state: CommunityDetailPreviews["facilities"]["state"];
   triggerLabel?: string;
@@ -52,16 +55,22 @@ function getFacilityStateCopy(
 }
 
 export function CommunityFacilitiesDrawer({
+  communityId,
   facilities,
   state,
   triggerLabel = "Manage facilities",
 }: CommunityFacilitiesDrawerProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<FacilityFilter>("all");
+  const [facilityName, setFacilityName] = useState("");
+  const [createMessage, setCreateMessage] = useState<string | null>(null);
+  const [createError, setCreateError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(
     facilities[0]?.id ?? null,
   );
+  const [isCreating, startCreateTransition] = useTransition();
 
   const filteredFacilities = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -118,6 +127,71 @@ export function CommunityFacilitiesDrawer({
     null;
   const activeCount = facilities.filter((facility) => facility.isActive).length;
   const stateCopy = getFacilityStateCopy(state, facilities.length > 0);
+  const canCreateFacilities = state !== "disabled" && state !== "unavailable";
+
+  function submitFacility() {
+    setCreateMessage(null);
+    setCreateError(null);
+
+    startCreateTransition(async () => {
+      const result = await createCommunityFacilitiesAction({
+        communityId,
+        facilityNames: [facilityName],
+      });
+
+      if (!result.success) {
+        setCreateError(result.error ?? "Could not add this facility.");
+        return;
+      }
+
+      setFacilityName("");
+      setCreateMessage(
+        result.insertedFacilities === 1
+          ? "Facility added successfully."
+          : "Facilities added successfully.",
+      );
+      router.refresh();
+    });
+  }
+
+  const addFacilityForm = canCreateFacilities ? (
+    <div className="rounded-xl border border-white/10 bg-[var(--surface)] p-4">
+      <label className="block">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          Add facility
+        </span>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+          <input
+            id="entry-community-facility-name"
+            name="entry_community_facility_name"
+            autoComplete="off"
+            value={facilityName}
+            onChange={(event) => setFacilityName(event.target.value)}
+            className="h-11 min-w-0 flex-1 rounded-lg border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50"
+            placeholder="Casa Club, Pool, Gym..."
+          />
+          <button
+            type="button"
+            disabled={isCreating}
+            onClick={submitFacility}
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-transparent bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isCreating ? "Adding..." : "Add facility"}
+          </button>
+        </div>
+      </label>
+      {createMessage ? (
+        <p className="mt-2 text-sm font-semibold text-emerald-200">
+          {createMessage}
+        </p>
+      ) : null}
+      {createError ? (
+        <p className="mt-2 text-sm font-semibold text-rose-200">
+          {createError}
+        </p>
+      ) : null}
+    </div>
+  ) : null;
 
   return (
     <>
@@ -196,16 +270,20 @@ export function CommunityFacilitiesDrawer({
 
             <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
               {stateCopy ? (
-                <div className="grid min-h-0 flex-1 place-items-center rounded-[28px] border border-dashed border-white/10 bg-[var(--surface)] px-6 text-center">
-                  <div>
-                    <p className="text-lg font-semibold text-white">{stateCopy.title}</p>
-                    <p className="mt-2 text-sm text-[var(--text-muted)]">
+                <div className="grid min-h-0 flex-1 place-items-center rounded-xl border border-dashed border-white/10 bg-[var(--surface)] px-6 text-center">
+                  <div className="w-full max-w-xl">
+                    <p className="text-lg font-semibold text-white">
+                      {stateCopy.title}
+                    </p>
+                    <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-muted)]">
                       {stateCopy.body}
                     </p>
+                    <div className="mt-5 text-left">{addFacilityForm}</div>
                   </div>
                 </div>
               ) : (
                 <>
+                  {addFacilityForm}
                   <label className="relative block">
                     <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
                       /
