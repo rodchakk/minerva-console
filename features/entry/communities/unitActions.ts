@@ -305,9 +305,23 @@ export async function setCommunityUnitActiveStatusAction(
     };
   }
 
+  let unit: Awaited<ReturnType<typeof loadUnitInCommunity>>;
+
+  try {
+    unit = await loadUnitInCommunity({ communityId, unitId });
+  } catch (error) {
+    return {
+      error: error instanceof Error ? error.message : "Could not validate the unit.",
+      success: false,
+    };
+  }
+
+  if (!unit) {
+    return { error: "Unit not found in this community.", success: false };
+  }
+
   const supabase = await createClient();
-  const { error } = await supabase.rpc("sa_set_community_unit_active_status", {
-    p_community_id: communityId,
+  const { error } = await supabase.rpc("admin_toggle_house", {
     p_house_id: unitId,
     p_is_active: input.isActive,
   });
