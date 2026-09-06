@@ -70,17 +70,20 @@ test("unit editing persists primary resident through house_residents.is_primary"
   assert.match(unitActions, /\.update\(\{ is_primary: true/);
 });
 
-test("unit deactivation is backend-enforced and cascades resident account state", () => {
-  const migration = read("supabase/migrations/20260906091500_entry_unit_status_cascade.sql");
+test("unit deactivation reuses the existing backend cascade and validates community scope", () => {
+  const migration = read(
+    "supabase/migrations/20260905172110_admin_toggle_house_propagate_resident_status.sql",
+  );
   const unitActions = read("features/entry/communities/unitActions.ts");
   const quickActions = read("features/entry/communities/CommunityUnitQuickActions.tsx");
 
-  assert.match(migration, /create or replace function public\.sa_set_community_unit_active_status/);
+  assert.match(migration, /create or replace function public\.admin_toggle_house/);
   assert.match(migration, /deactivated_by_unit = true/);
   assert.match(migration, /update public\.profiles/);
   assert.match(migration, /update public\.community_members/);
-  assert.match(migration, /update public\.house_residents/);
-  assert.match(unitActions, /rpc\("sa_set_community_unit_active_status"/);
-  assert.doesNotMatch(unitActions, /\.from\("houses"\)[\s\S]*\.update\(\{ is_active: input\.isActive \}\)/);
+  assert.match(migration, /is_community_admin\(v_cid, auth\.uid\(\)\)/);
+  assert.match(unitActions, /loadUnitInCommunity\(\{ communityId, unitId \}\)/);
+  assert.match(unitActions, /rpc\("admin_toggle_house"/);
+  assert.doesNotMatch(unitActions, /rpc\("sa_set_community_unit_active_status"/);
   assert.doesNotMatch(quickActions, /Linked resident account states were not changed/);
 });
