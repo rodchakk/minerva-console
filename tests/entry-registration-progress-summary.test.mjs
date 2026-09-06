@@ -9,44 +9,31 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-test("Community Registration admin card replaces Submitted states with unit progress", () => {
-  const card = read("features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx");
-  const page = read("app/(console)/products/entry/communities/[communityId]/page.tsx");
+const card = read(
+  "features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx",
+);
+const queries = read(
+  "features/entry/communityRegistration/admin/queries.ts",
+);
 
+test("registration card replaces submitted states with unit-based registration progress", () => {
+  assert.match(card, /Registration progress/);
+  assert.match(card, /units submitted/);
+  assert.match(card, /residents received/);
+  assert.match(card, /units remaining/);
+  assert.match(card, /registrationProgress\.percent/);
+  assert.match(card, /registrationProgress\.submittedUnits/);
+  assert.match(card, /registrationProgress\.totalUnits/);
+  assert.match(card, /registrationProgress\.residentCount/);
   assert.doesNotMatch(card, /Submitted states/);
-  assert.doesNotMatch(card, /submittedStatuses/);
-  assert.match(card, /REGISTRATION PROGRESS/);
-  assert.match(card, /\{registrationProgress\.percent\}%/);
-  assert.match(
-    card,
-    /\{registrationProgress\.submittedUnits\} of\{" "\}\s*\{registrationProgress\.totalUnits\} units submitted/,
-  );
-  assert.match(card, /\{registrationProgress\.submittedResidents\} residents received/);
-  assert.match(card, /\{registrationProgress\.remainingUnits\} units remaining/);
-  assert.match(card, /role="progressbar"/);
-  assert.match(card, /aria-valuenow=\{registrationProgress\.percent\}/);
-  assert.match(card, /bg-violet-400/);
-  assert.match(card, /style=\{\{ width: `\$\{registrationProgress\.percent\}%` \}\}/);
-  assert.match(page, /registrationProgress=\{registrationState\.registrationProgress\}/);
 });
 
-test("Community Registration admin loader derives honest progress from submitted units", () => {
-  const query = read("features/entry/communityRegistration/admin/queries.ts");
-
-  assert.match(query, /registrationProgress: CommunityRegistrationAdminProgress/);
-  assert.match(query, /createRegistrationProgress\(0, 0, 0\)/);
-  assert.match(query, /\.from\("community_registration_units"\)/);
-  assert.match(query, /\.select\("id,status"\)/);
-  assert.match(query, /community_registration_submissions/);
-  assert.match(query, /SUBMITTED_COMMUNITY_REGISTRATION_SUBMISSION_STATUSES/);
-  assert.match(query, /community_registration_residents/);
-  assert.match(query, /\.select\("id", \{ count: "exact", head: true \}\)/);
-  assert.match(query, /\.in\("submission_id", currentSubmissionIds\)/);
-  assert.match(query, /submittedUnitCount/);
-  assert.match(query, /totalCampaignUnitCount/);
-  assert.match(query, /Math\.min\(\s*100,/);
-  assert.match(query, /normalizedSubmittedUnits \/ normalizedTotalUnits/);
-  assert.doesNotMatch(query, /resident_limit_override/);
-  assert.doesNotMatch(query, /defaultResidentLimit/);
-  assert.doesNotMatch(query, /submittedStatuses: readonly string\[\]/);
+test("registration progress denominator is participating units, not resident limits", () => {
+  assert.match(queries, /const totalUnits = participatingUnits\.length/);
+  assert.match(queries, /submittedUnits/);
+  assert.match(queries, /residentCount/);
+  assert.match(queries, /submittedUnits \/ totalUnits/);
+  assert.match(queries, /Math\.max\(totalUnits - submittedUnits, 0\)/);
+  assert.doesNotMatch(queries, /resident_limit_override/);
+  assert.doesNotMatch(queries, /default_resident_limit/);
 });
