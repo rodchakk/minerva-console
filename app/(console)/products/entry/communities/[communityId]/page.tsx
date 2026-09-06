@@ -602,7 +602,7 @@ export default async function CommunitySetupPage(
             communityId={community.id}
             communityName={community.name}
             hasOperationalCampaign={registrationState.hasOperationalCampaign}
-            submittedStatuses={registrationState.submittedStatuses}
+            registrationProgress={registrationState.registrationProgress}
             submittedUnitCount={registrationState.submittedUnitCount}
             totalCampaignUnitCount={registrationState.totalCampaignUnitCount}
             totalUnits={community.totalUnits}

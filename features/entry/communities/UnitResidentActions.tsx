@@ -2,13 +2,23 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, MoreVertical, Power, RotateCcw, X } from "lucide-react";
+import {
+  ArrowRightLeft,
+  KeyRound,
+  MoreVertical,
+  Power,
+  RotateCcw,
+  X,
+} from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import type { CommunityUnitResident } from "@/features/entry/communities/detailQueries";
 import {
-  setResidentPasswordAction,
-} from "@/features/entry/communities/unitActions";
+  listResidentMoveUnitOptionsAction,
+  moveResidentToUnitAction,
+  type ResidentMoveUnitOption,
+} from "@/features/entry/communities/residentMoveActions";
+import { setResidentPasswordAction } from "@/features/entry/communities/unitActions";
 import { setCommunityUserActiveStatusAction } from "@/features/entry/users/actions";
 
 type UnitResidentActionsProps = {
@@ -16,7 +26,7 @@ type UnitResidentActionsProps = {
   resident: CommunityUnitResident;
 };
 
-type ModalState = "password" | "status" | null;
+type ModalState = "move" | "password" | "status" | null;
 
 export function UnitResidentActions({
   communityId,
@@ -28,23 +38,54 @@ export function UnitResidentActions({
   const [modal, setModal] = useState<ModalState>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [moveOptions, setMoveOptions] = useState<ResidentMoveUnitOption[]>([]);
+  const [targetHouseId, setTargetHouseId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  function resetMoveState() {
+    setMoveOptions([]);
+    setTargetHouseId("");
+  }
 
   function closeModal() {
     if (isPending) return;
     setModal(null);
     setPassword("");
     setConfirmPassword("");
+    resetMoveState();
     setError(null);
   }
 
-  function openModal(nextModal: ModalState) {
+  function openModal(nextModal: Exclude<ModalState, "move" | null>) {
     setMenuOpen(false);
     setMessage(null);
     setError(null);
+    resetMoveState();
     setModal(nextModal);
+  }
+
+  function openMoveModal() {
+    setMenuOpen(false);
+    setMessage(null);
+    setError(null);
+    resetMoveState();
+    setModal("move");
+
+    startTransition(async () => {
+      const result = await listResidentMoveUnitOptionsAction({
+        communityId,
+        currentHouseId: resident.houseId,
+      });
+
+      if (!result.success) {
+        setError(result.error ?? "Could not load available units.");
+        return;
+      }
+
+      setMoveOptions(result.options ?? []);
+    });
   }
 
   function submitPassword() {
@@ -93,6 +134,47 @@ export function UnitResidentActions({
     });
   }
 
+  function submitMove() {
+    if (!targetHouseId) {
+      setError("Select the unit this resident should move to.");
+      return;
+    }
+
+    const destination = moveOptions.find((option) => option.id === targetHouseId);
+    setError(null);
+
+    startTransition(async () => {
+      const result = await moveResidentToUnitAction({
+        communityId,
+        sourceHouseId: resident.houseId,
+        targetHouseId,
+        userId: resident.userId,
+      });
+
+      if (!result.success) {
+        setError(result.error ?? "Could not move the resident.");
+        return;
+      }
+
+      setMessage(
+        destination?.label
+          ? `Moved to ${destination.label}.`
+          : "Resident moved to the selected unit.",
+      );
+      setModal(null);
+      resetMoveState();
+      router.refresh();
+    });
+  }
+
+  function modalTitle() {
+    if (modal === "password") return `Reset ${resident.fullName}`;
+    if (modal === "move") return `Move ${resident.fullName}`;
+    return resident.isActive
+      ? `Deactivate ${resident.fullName}?`
+      : `Reactivate ${resident.fullName}?`;
+  }
+
   return (
     <div className="flex items-center gap-2">
       {message ? (
@@ -114,8 +196,17 @@ export function UnitResidentActions({
         anchorRef={triggerRef}
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        className="w-52 p-1"
+        className="w-56 p-1"
       >
+        <button
+          type="button"
+          role="menuitem"
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-slate-100 hover:bg-white/6"
+          onClick={openMoveModal}
+        >
+          <ArrowRightLeft className="h-4 w-4 text-violet-200" aria-hidden />
+          Move to another unit
+        </button>
         <button
           type="button"
           role="menuitem"
@@ -155,11 +246,7 @@ export function UnitResidentActions({
                   Resident account
                 </p>
                 <h2 className="mt-1 text-xl font-semibold text-white">
-                  {modal === "password"
-                    ? `Reset ${resident.fullName}`
-                    : resident.isActive
-                      ? `Deactivate ${resident.fullName}?`
-                      : `Reactivate ${resident.fullName}?`}
+                  {modalTitle()}
                 </h2>
               </div>
               <button
@@ -197,6 +284,45 @@ export function UnitResidentActions({
                   />
                 </label>
               </div>
+            ) : modal === "move" ? (
+              <div className="mt-5 grid gap-4">
+                <div className="rounded-lg border border-white/8 bg-white/[0.025] px-4 py-3 text-sm">
+                  <p className="text-[var(--text-muted)]">Current unit</p>
+                  <p className="mt-1 font-semibold text-white">
+                    {resident.houseLabel || "No unit linked"}
+                  </p>
+                </div>
+
+                <label>
+                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    Move to
+                  </span>
+                  <select
+                    value={targetHouseId}
+                    onChange={(event) => setTargetHouseId(event.target.value)}
+                    disabled={isPending || moveOptions.length === 0}
+                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <option value="">
+                      {isPending
+                        ? "Loading units..."
+                        : moveOptions.length === 0
+                          ? "No other active units available"
+                          : "Select destination unit"}
+                    </option>
+                    {moveOptions.map((option) => (
+                      <option key={option.id} value={option.id}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="rounded-lg border border-violet-400/20 bg-violet-500/10 p-4 text-sm leading-6 text-violet-100">
+                  This changes the resident&apos;s linked unit. Their login, role,
+                  account status, and audit history stay unchanged.
+                </div>
+              </div>
             ) : (
               <div className="mt-5 rounded-lg border border-amber-400/20 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
                 {resident.isActive
@@ -218,16 +344,24 @@ export function UnitResidentActions({
               <Button
                 type="button"
                 variant={modal === "status" && resident.isActive ? "danger" : "primary"}
-                onClick={modal === "password" ? submitPassword : submitStatus}
-                disabled={isPending}
+                onClick={
+                  modal === "password"
+                    ? submitPassword
+                    : modal === "move"
+                      ? submitMove
+                      : submitStatus
+                }
+                disabled={isPending || (modal === "move" && !targetHouseId)}
               >
                 {isPending
                   ? "Working..."
                   : modal === "password"
                     ? "Set password"
-                    : resident.isActive
-                      ? "Deactivate account"
-                      : "Reactivate account"}
+                    : modal === "move"
+                      ? "Move resident"
+                      : resident.isActive
+                        ? "Deactivate account"
+                        : "Reactivate account"}
               </Button>
             </div>
           </section>
