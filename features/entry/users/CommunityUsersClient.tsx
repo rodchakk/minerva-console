@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useDeferredValue, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft,
   Building2,
   Check,
   Copy,
@@ -543,13 +542,7 @@ export function CommunityUsersClient({
             <Link href={`/products/entry/communities/${community.id}`}>
               <Button variant="secondary">
                 <Building2 className="mr-2 h-4 w-4" aria-hidden />
-                Community detail
-              </Button>
-            </Link>
-            <Link href="/products/entry/communities">
-              <Button variant="secondary">
-                <ArrowLeft className="mr-2 h-4 w-4" aria-hidden />
-                Back to communities
+                Back to community details
               </Button>
             </Link>
             <Button onClick={openCreate}>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Button } from "@/components/ui/Button";
@@ -51,12 +52,12 @@ export default async function ActivationQueuePage(
           <div className="flex flex-wrap gap-3">
             {selectedCommunity ? (
               <Link href={`/products/entry/communities/${selectedCommunity.id}`}>
-                <Button variant="secondary">Back to community</Button>
+                <Button variant="secondary">
+                  <Building2 className="mr-2 h-4 w-4" aria-hidden />
+                  Back to community details
+                </Button>
               </Link>
             ) : null}
-            <Link href="/products/entry/onboarding">
-              <Button variant="secondary">Launch onboarding</Button>
-            </Link>
             {showLaunchCampaign ? (
               <LaunchCampaignButton
                 communityId={selectedCommunityId}
@@ -198,7 +199,11 @@ export default async function ActivationQueuePage(
                   ? `/products/entry/communities/${selectedCommunity.id}`
                   : "/products/entry/communities"
               }
-              actionLabel={selectedCommunity ? "Back to community" : "Back to communities"}
+              actionLabel={
+                selectedCommunity
+                  ? "Back to community details"
+                  : "Back to communities"
+              }
             />
           )}
         </>

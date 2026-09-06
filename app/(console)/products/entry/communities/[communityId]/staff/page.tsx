@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Building2 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
@@ -24,7 +25,10 @@ export default async function CommunityStaffPage(
         actions={
           <div className="flex flex-wrap gap-3">
             <Link href={`/products/entry/communities/${community.id}`}>
-              <Button variant="secondary">Back to community</Button>
+              <Button variant="secondary">
+                <Building2 className="mr-2 h-4 w-4" aria-hidden />
+                Back to community details
+              </Button>
             </Link>
             <Link href={`/products/entry/communities/${community.id}#completion-actions`}>
               <Button>Final review</Button>

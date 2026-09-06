@@ -9,13 +9,47 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-test("Activation Queue exposes Back to community for the selected community", () => {
+test("Activation Queue standardizes selected-community return navigation", () => {
   const page = read("app/(console)/products/entry/activation/page.tsx");
+  const headerActions = page.slice(
+    page.indexOf("actions={"),
+    page.indexOf("<div className=\"inline-flex"),
+  );
 
   assert.match(page, /selectedCommunity \?/);
   assert.match(page, /products\/entry\/communities\/\$\{selectedCommunity\.id\}/);
-  assert.match(page, />Back to community</);
-  assert.match(page, /actionLabel=\{selectedCommunity \? "Back to community" : "Back to communities"\}/);
+  assert.match(headerActions, /Building2/);
+  assert.match(headerActions, />\s*Back to community details\s*</);
+  assert.doesNotMatch(headerActions, /Launch onboarding/);
+  assert.match(page, /showLaunchCampaign/);
+  assert.match(page, /LaunchCampaignButton/);
+  assert.match(page, />Create community</);
+  assert.match(page, /selectedCommunity[\s\S]*\? "Back to community details"[\s\S]*: "Back to communities"/);
+  assert.match(page, /actionLabel="Back to communities"/);
+});
+
+test("Community Users uses canonical community-detail return action", () => {
+  const client = read("features/entry/users/CommunityUsersClient.tsx");
+  const headerActions = client.slice(
+    client.indexOf("<div className=\"flex flex-wrap gap-2\">"),
+    client.indexOf("<Button onClick={openCreate}>"),
+  );
+
+  assert.match(headerActions, /Building2/);
+  assert.match(headerActions, /Back to community details/);
+  assert.doesNotMatch(headerActions, /Back to communities/);
+  assert.doesNotMatch(headerActions, /Community detail/);
+  assert.match(client, /Create user/);
+});
+
+test("Community Operators uses canonical community-detail return action", () => {
+  const page = read("app/(console)/products/entry/communities/[communityId]/staff/page.tsx");
+
+  assert.match(page, /Building2/);
+  assert.match(page, /Back to community details/);
+  assert.match(page, /products\/entry\/communities\/\$\{community\.id\}/);
+  assert.match(page, /Final review/);
+  assert.doesNotMatch(page, /Back to community</);
 });
 
 test("Community Users guard creation is username-first and hides email", () => {
