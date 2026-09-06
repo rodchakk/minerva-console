@@ -21,6 +21,7 @@ import {
   getCommunityRegistrationAdminState,
 } from "@/features/entry/communityRegistration/admin/queries";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
+import { FieldDestinationsCard } from "@/features/entry/field/FieldDestinationsCard";
 import { FieldRegistrationCard } from "@/features/entry/field/FieldRegistrationCard";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 
@@ -158,6 +159,9 @@ export default async function FieldCommunityDetailPage({
       metric: getAggregateMetricValue(userState, previews.users.counts.admins),
     },
   ];
+  const hasShareableOpenRegistrationLink =
+    registrationState.campaign?.status.trim().toLowerCase() === "open" &&
+    registrationState.campaign.activeCampaignAccessRecoverable;
 
   if (community.activationPendingCount > 0) {
     snapshotMetrics.push({
@@ -229,6 +233,14 @@ export default async function FieldCommunityDetailPage({
         isReadOnlyPreview={isEntryPreviewReadOnly()}
         registrationState={registrationState}
       />
+
+      {hasShareableOpenRegistrationLink ? (
+        <p className="rounded-lg border border-sky-300/20 bg-sky-300/5 px-4 py-3 text-xs leading-5 text-sky-100/90">
+          When sending resident registration, use Field&apos;s Copy or Share action. The browser address shown after opening registration is intentionally token-free and is not the shareable link.
+        </p>
+      ) : null}
+
+      <FieldDestinationsCard destinations={previews.destinations} />
 
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
         <div className="flex items-center gap-2">
