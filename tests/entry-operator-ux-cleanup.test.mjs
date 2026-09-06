@@ -82,6 +82,69 @@ test("Community Operators guard form preserves account type and removes email wo
   assert.match(actions, /Individual guard account created successfully/);
 });
 
+test("Community Operators actions menu manages guards without changing identity", () => {
+  const panel = read("features/entry/staff/StaffOperatorsPanel.tsx");
+  const actions = read("features/entry/staff/actions.ts");
+  const editSource = actions.slice(
+    actions.indexOf("export async function updateGuardOperatorAction"),
+    actions.indexOf("export async function resetGuardPasswordAction"),
+  );
+
+  assert.match(panel, /FloatingActionMenu/);
+  assert.match(panel, /Edit operator/);
+  assert.match(panel, /Reset password/);
+  assert.match(panel, /Copy username/);
+  assert.match(panel, /Deactivate/);
+  assert.match(panel, /Reactivate/);
+  assert.match(panel, /operator\.username \|\| "Not available"/);
+  assert.match(panel, /Username\s*\{" "\}/);
+
+  assert.match(editSource, /export async function updateGuardOperatorAction/);
+  assert.match(editSource, /guard_account_type: accountType/);
+  assert.match(editSource, /guard_description: description \|\| null/);
+  assert.match(editSource, /\.from\("profiles"\)[\s\S]*\.update\(\{ full_name: fullName, phone: phone \|\| null \}\)/);
+  assert.doesNotMatch(editSource, /entry_username/);
+  assert.doesNotMatch(editSource, /synthetic_email/);
+});
+
+test("Community Operators can reset and toggle guard access through existing paths", () => {
+  const panel = read("features/entry/staff/StaffOperatorsPanel.tsx");
+  const actions = read("features/entry/staff/actions.ts");
+  const resetAndStatusSource = actions.slice(
+    actions.indexOf("export async function resetGuardPasswordAction"),
+    actions.indexOf("export async function removeResidentAdminAccessAction"),
+  );
+
+  assert.match(panel, /ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
+  assert.match(panel, /type=\{showPassword \? "text" : "password"\}/);
+  assert.match(panel, /aria-label="Copy password"/);
+  assert.match(panel, /Saving a new password immediately replaces the current guard password/);
+
+  assert.match(actions, /export async function resetGuardPasswordAction/);
+  assert.match(actions, /ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
+  assert.match(actions, /auth\.admin\.updateUserById\(userId, \{\s*password,/);
+  assert.match(actions, /export async function setGuardActiveStatusAction/);
+  assert.match(actions, /sa_set_community_user_active_status/);
+  assert.match(actions, /p_include_inactive: true/);
+  assert.match(actions, /item\.role\.toUpperCase\(\) === "GUARD"/);
+  assert.doesNotMatch(resetAndStatusSource, /auth\.admin\.deleteUser/);
+});
+
+test("Community Operators remove resident admin access without disabling residents", () => {
+  const panel = read("features/entry/staff/StaffOperatorsPanel.tsx");
+  const actions = read("features/entry/staff/actions.ts");
+
+  assert.match(panel, /Remove admin access/);
+  assert.match(panel, /remain an\s*active resident linked to/);
+  assert.match(panel, /updateCommunityUserAction/);
+
+  assert.match(actions, /export async function removeResidentAdminAccessAction/);
+  assert.match(actions, /sa_change_user_role/);
+  assert.match(actions, /p_new_role: "RESIDENT"/);
+  assert.doesNotMatch(actions, /removeResidentAdminAccessAction[\s\S]*sa_set_community_user_active_status/);
+  assert.doesNotMatch(actions, /removeResidentAdminAccessAction[\s\S]*deleteUser/);
+});
+
 test("Console login remains email-only while guard creation stores username identity", () => {
   const actions = read("features/auth/actions.ts");
   const loginForm = read("features/auth/LoginForm.tsx");

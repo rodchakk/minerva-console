@@ -11,12 +11,15 @@ import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
 export type StaffUserItem = {
   accountMode: string;
   contact: string;
+  description: string;
   fullName: string;
   houseId: string;
   houseLabel: string;
   id: string;
   isActive: boolean;
+  phone: string;
   role: string;
+  username: string;
 };
 
 export type CommunityStaffPageData = {
@@ -28,6 +31,37 @@ export type CommunityStaffPageData = {
 export type StaffActionState = {
   message?: string;
   ok?: boolean;
+};
+
+export type StaffMutationResult = {
+  error?: string;
+  success: boolean;
+};
+
+export type UpdateGuardOperatorInput = {
+  accountType: "individual" | "shared";
+  communityId: string;
+  description: string;
+  fullName: string;
+  phone: string;
+  userId: string;
+};
+
+export type ResetGuardPasswordInput = {
+  communityId: string;
+  password: string;
+  userId: string;
+};
+
+export type SetGuardActiveStatusInput = {
+  communityId: string;
+  isActive: boolean;
+  userId: string;
+};
+
+export type RemoveResidentAdminAccessInput = {
+  communityId: string;
+  userId: string;
 };
 
 function getString(formData: FormData, key: string) {
@@ -58,6 +92,29 @@ function normalizeGuardUsername(value: string) {
 
 function buildGuardSyntheticEmail(username: string) {
   return `guard-${username}@entry.internal`;
+}
+
+function normalizeGuardAccountType(value: string) {
+  return value.trim().toLowerCase() === "shared" ? "shared" : "individual";
+}
+
+function normalizeFullName(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function normalizePhone(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function revalidateStaffPaths(communityId: string) {
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/products/entry/communities/${communityId}/staff`);
+  revalidatePath(`/products/entry/communities/${communityId}/users`);
+  revalidatePath("/products/entry/users");
+  revalidatePath(`/field/entry/communities/${communityId}`);
+  revalidatePath(`/field/entry/communities/${communityId}/people`);
+  revalidatePath("/field/entry/access");
+  revalidatePath("/field/entry/people");
 }
 
 function getPreferredContact(record: Record<string, unknown>) {
@@ -94,6 +151,38 @@ async function loadCommunityStaffProfiles(communityId: string, userIds: string[]
   }
 }
 
+async function loadCommunityStaffAuthMetadata(userIds: string[]) {
+  if (userIds.length === 0) {
+    return new Map<string, Record<string, unknown>>();
+  }
+
+  try {
+    const adminSupabase = createAdminClient();
+    const results = await Promise.allSettled(
+      userIds.map(async (userId) => {
+        const { data, error } = await adminSupabase.auth.admin.getUserById(userId);
+
+        if (error || !data.user) {
+          return null;
+        }
+
+        return [
+          userId,
+          (data.user.user_metadata ?? {}) as Record<string, unknown>,
+        ] as const;
+      }),
+    );
+
+    return new Map(
+      results
+        .map((result) => (result.status === "fulfilled" ? result.value : null))
+        .filter((item): item is readonly [string, Record<string, unknown>] => item !== null),
+    );
+  } catch {
+    return new Map<string, Record<string, unknown>>();
+  }
+}
+
 function mapStaffUser(record: Record<string, unknown>): StaffUserItem {
   return {
     accountMode:
@@ -101,13 +190,43 @@ function mapStaffUser(record: Record<string, unknown>): StaffUserItem {
       coerceString(record.guard_account_type) ||
       coerceString(record.account_type),
     contact: getPreferredContact(record),
+    description:
+      coerceString(record.guard_description) ||
+      coerceString(record.description),
     fullName: coerceString(record.full_name, "Unnamed user"),
     houseId: coerceString(record.house_id),
     houseLabel: coerceString(record.house_label, "No unit linked"),
     id: coerceString(record.user_id),
     isActive: coerceBoolean(record.is_active),
+    phone: coerceString(record.phone),
     role: coerceString(record.role, "Unknown"),
+    username: coerceString(record.username),
   };
+}
+
+async function loadCommunityUserRecord(communityId: string, userId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("sa_list_community_users", {
+    p_community_id: communityId,
+    p_include_inactive: true,
+  });
+
+  if (error || !Array.isArray(data)) {
+    return {
+      error: error?.message ?? "Could not validate the selected operator.",
+      record: null,
+    };
+  }
+
+  const record =
+    data
+      .map((item) => item as Record<string, unknown>)
+      .find((item) => {
+        const id = coerceString(item.user_id) || coerceString(item.id);
+        return id === userId;
+      }) ?? null;
+
+  return { error: null, record };
 }
 
 export async function getCommunityStaffPageData(
@@ -116,9 +235,9 @@ export async function getCommunityStaffPageData(
   await requireSuperadmin();
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("sa_list_users", {
+  const { data, error } = await supabase.rpc("sa_list_community_users", {
     p_community_id: communityId,
-    p_search: null,
+    p_include_inactive: true,
   });
 
   if (error || !Array.isArray(data)) {
@@ -137,7 +256,19 @@ export async function getCommunityStaffPageData(
         .filter(Boolean),
     ),
   );
+  const operatorUserIds = Array.from(
+    new Set(
+      userRecords
+        .filter((item) => {
+          const role = coerceString(item.role).toUpperCase();
+          return role === "ADMIN" || role === "GUARD";
+        })
+        .map((item) => coerceString(item.user_id) || coerceString(item.id))
+        .filter(Boolean),
+    ),
+  );
   const profilesData = await loadCommunityStaffProfiles(communityId, userIds);
+  const metadataByUserId = await loadCommunityStaffAuthMetadata(operatorUserIds);
   const profilesByUserId = new Map(
     profilesData.map((profile) => [
       coerceString(profile.user_id),
@@ -149,9 +280,16 @@ export async function getCommunityStaffPageData(
     .map((item) => {
       const userId = coerceString(item.user_id) || coerceString(item.id);
       const profile = profilesByUserId.get(userId);
+      const metadata = metadataByUserId.get(userId);
 
       return mapStaffUser({
         ...item,
+        account_mode:
+          coerceString(metadata?.guard_account_type) ||
+          coerceString(item.account_mode),
+        description:
+          coerceString(metadata?.guard_description) ||
+          coerceString(item.description),
         email: isSyntheticEmail(coerceString(item.email))
           ? coerceString(profile?.synthetic_email) || coerceString(item.email)
           : coerceString(item.email),
@@ -159,12 +297,16 @@ export async function getCommunityStaffPageData(
         username: coerceString(profile?.username) || coerceString(item.username),
       });
     })
-    .filter((item) => item.id && item.isActive);
+    .filter((item) => item.id);
 
   return {
-    admins: users.filter((item) => item.role.toUpperCase() === "ADMIN"),
+    admins: users.filter(
+      (item) => item.role.toUpperCase() === "ADMIN" && item.isActive,
+    ),
     guards: users.filter((item) => item.role.toUpperCase() === "GUARD"),
-    residents: users.filter((item) => item.role.toUpperCase() === "RESIDENT"),
+    residents: users.filter(
+      (item) => item.role.toUpperCase() === "RESIDENT" && item.isActive,
+    ),
   };
 }
 
@@ -435,4 +577,279 @@ export async function createGuardAction(
         ? `Shared guard account created successfully. Username credential: ${username}.`
         : `Individual guard account created successfully. Username credential: ${username}.`,
   };
+}
+
+export async function updateGuardOperatorAction(
+  input: UpdateGuardOperatorInput,
+): Promise<StaffMutationResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  const fullName = normalizeFullName(input.fullName);
+  const phone = normalizePhone(input.phone);
+  const description = input.description.trim();
+  const accountType = normalizeGuardAccountType(input.accountType);
+
+  if (!communityId || !userId) {
+    return { error: "Community and guard are required.", success: false };
+  }
+
+  if (!fullName) {
+    return { error: "Guard name is required.", success: false };
+  }
+
+  if (fullName.length > 120) {
+    return { error: "Guard name must be 120 characters or fewer.", success: false };
+  }
+
+  if (phone.length > 40) {
+    return { error: "Phone must be 40 characters or fewer.", success: false };
+  }
+
+  if (description.length > 160) {
+    return { error: "Description must be 160 characters or fewer.", success: false };
+  }
+
+  const { error: lookupError, record } = await loadCommunityUserRecord(
+    communityId,
+    userId,
+  );
+
+  if (lookupError || !record) {
+    return {
+      error: lookupError ?? "Guard account was not found in this community.",
+      success: false,
+    };
+  }
+
+  if (coerceString(record.role).trim().toUpperCase() !== "GUARD") {
+    return { error: "Only guard accounts can be edited here.", success: false };
+  }
+
+  let adminSupabase: ReturnType<typeof createAdminClient>;
+  try {
+    adminSupabase = createAdminClient();
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Missing Supabase admin configuration.",
+      success: false,
+    };
+  }
+
+  const { error: profileError } = await adminSupabase
+    .from("profiles")
+    .update({ full_name: fullName, phone: phone || null })
+    .eq("community_id", communityId)
+    .eq("user_id", userId);
+
+  if (profileError) {
+    return { error: profileError.message, success: false };
+  }
+
+  const { data: authUser, error: authLookupError } =
+    await adminSupabase.auth.admin.getUserById(userId);
+
+  if (authLookupError || !authUser.user) {
+    return {
+      error: authLookupError?.message ?? "Could not load guard auth metadata.",
+      success: false,
+    };
+  }
+
+  const existingMetadata = (authUser.user.user_metadata ?? {}) as Record<
+    string,
+    unknown
+  >;
+  const { error: authUpdateError } =
+    await adminSupabase.auth.admin.updateUserById(userId, {
+      user_metadata: {
+        ...existingMetadata,
+        entry_role: "GUARD",
+        full_name: fullName,
+        guard_account_type: accountType,
+        guard_description: description || null,
+      },
+    });
+
+  if (authUpdateError) {
+    return { error: authUpdateError.message, success: false };
+  }
+
+  revalidateStaffPaths(communityId);
+
+  return { success: true };
+}
+
+export async function resetGuardPasswordAction(
+  input: ResetGuardPasswordInput,
+): Promise<StaffMutationResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  const password = input.password.trim();
+
+  if (!communityId || !userId) {
+    return { error: "Community and guard are required.", success: false };
+  }
+
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+    return {
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      success: false,
+    };
+  }
+
+  const { error: lookupError, record } = await loadCommunityUserRecord(
+    communityId,
+    userId,
+  );
+
+  if (lookupError || !record) {
+    return {
+      error: lookupError ?? "Guard account was not found in this community.",
+      success: false,
+    };
+  }
+
+  if (coerceString(record.role).trim().toUpperCase() !== "GUARD") {
+    return { error: "Only guard account passwords can be reset here.", success: false };
+  }
+
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase.auth.admin.updateUserById(userId, {
+    password,
+  });
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  revalidateStaffPaths(communityId);
+
+  return { success: true };
+}
+
+export async function setGuardActiveStatusAction(
+  input: SetGuardActiveStatusInput,
+): Promise<StaffMutationResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+
+  if (!communityId || !userId) {
+    return { error: "Community and guard are required.", success: false };
+  }
+
+  const { error: lookupError, record } = await loadCommunityUserRecord(
+    communityId,
+    userId,
+  );
+
+  if (lookupError || !record) {
+    return {
+      error: lookupError ?? "Guard account was not found in this community.",
+      success: false,
+    };
+  }
+
+  if (coerceString(record.role).trim().toUpperCase() !== "GUARD") {
+    return { error: "Only guard accounts can be deactivated here.", success: false };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sa_set_community_user_active_status", {
+    p_community_id: communityId,
+    p_is_active: input.isActive,
+    p_target_user_id: userId,
+  });
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  revalidateStaffPaths(communityId);
+
+  return { success: true };
+}
+
+export async function removeResidentAdminAccessAction(
+  input: RemoveResidentAdminAccessInput,
+): Promise<StaffMutationResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+
+  if (!communityId || !userId) {
+    return { error: "Community and resident admin are required.", success: false };
+  }
+
+  const { error: lookupError, record } = await loadCommunityUserRecord(
+    communityId,
+    userId,
+  );
+
+  if (lookupError || !record) {
+    return {
+      error: lookupError ?? "Resident admin was not found in this community.",
+      success: false,
+    };
+  }
+
+  if (coerceString(record.role).trim().toUpperCase() !== "ADMIN") {
+    return {
+      error: "Only resident admin access can be removed here.",
+      success: false,
+    };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("sa_change_user_role", {
+    p_community_id: communityId,
+    p_new_role: "RESIDENT",
+    p_user_id: userId,
+  });
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  revalidateStaffPaths(communityId);
+  const houseId = coerceString(record.house_id) || coerceString(record.unit_id);
+
+  if (houseId) {
+    revalidatePath(`/products/entry/communities/${communityId}/units/${houseId}`);
+    revalidatePath(`/field/entry/communities/${communityId}/people/units/${houseId}`);
+    revalidatePath(
+      `/field/entry/communities/${communityId}/people/residents/${userId}`,
+    );
+  }
+
+  return { success: true };
 }
