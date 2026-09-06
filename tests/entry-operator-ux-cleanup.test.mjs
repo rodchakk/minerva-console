@@ -37,6 +37,24 @@ test("Community Users guard creation is username-first and hides email", () => {
   assert.doesNotMatch(actions, /Email is required for admin and guard accounts/);
 });
 
+test("Community Users keeps resident and admin creation structurally identical", () => {
+  const client = read("features/entry/users/CommunityUsersClient.tsx");
+  const actions = read("features/entry/users/communityUserActions.ts");
+
+  assert.match(client, /<FieldLabel>Email \(optional\)<\/FieldLabel>/);
+  assert.match(client, /placeholder="Leave blank for username login"/);
+  assert.match(client, /createDraft\.role !== "GUARD" \? \(/);
+  assert.match(client, /houseId: createDraft\.role === "GUARD" \? null : createDraft\.houseId/);
+  assert.match(client, /createDraft\.role === "RESIDENT" \|\| createDraft\.role === "ADMIN"/);
+  assert.doesNotMatch(client, /Email is required for admin accounts/);
+
+  assert.match(actions, /\(role === "RESIDENT" \|\| role === "ADMIN"\) && !houseId/);
+  assert.match(actions, /A unit is required for resident and admin accounts/);
+  assert.match(actions, /p_house_id: role === "GUARD" \? null : houseId/);
+  assert.match(actions, /authEmail = `\$\{role\.toLowerCase\(\)\}-\$\{username\}@entry\.internal`/);
+  assert.doesNotMatch(actions, /Email is required for admin accounts/);
+});
+
 test("Community Operators guard form preserves account type and removes email workflow", () => {
   const panel = read("features/entry/staff/StaffOperatorsPanel.tsx");
   const guardForm = panel.slice(
