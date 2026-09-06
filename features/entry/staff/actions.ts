@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
+import { ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH } from "@/features/entry/passwordPolicy";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { coerceBoolean, coerceString } from "@/lib/supabase/utils";
@@ -287,10 +288,10 @@ export async function createGuardAction(
     };
   }
 
-  if (password.length < 8) {
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
     return {
       ok: false,
-      message: "Temporary password must be at least 8 characters.",
+      message: `Temporary password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
     };
   }
 
