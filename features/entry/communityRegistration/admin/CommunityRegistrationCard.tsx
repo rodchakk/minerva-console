@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useMemo, useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/features/entry/communityRegistration/admin/actions";
 import type {
   CommunityRegistrationAdminCampaign,
+  CommunityRegistrationAdminProgress,
   CommunityRegistrationAdminUnit,
 } from "@/features/entry/communityRegistration/admin/queries";
 
@@ -21,7 +22,7 @@ type CommunityRegistrationCardProps = {
   communityId: string;
   communityName: string;
   hasOperationalCampaign: boolean;
-  submittedStatuses: readonly string[];
+  registrationProgress: CommunityRegistrationAdminProgress;
   submittedUnitCount: number;
   totalCampaignUnitCount: number;
   totalUnits: number;
@@ -526,7 +527,7 @@ export function CommunityRegistrationCard({
   communityId,
   communityName,
   hasOperationalCampaign,
-  submittedStatuses,
+  registrationProgress,
   submittedUnitCount,
   totalCampaignUnitCount,
   totalUnits,
@@ -538,10 +539,6 @@ export function CommunityRegistrationCard({
   const canStart = !hasOperationalCampaign && units.length > 0;
   const campaignOpen = campaign?.status.trim().toLowerCase() === "open";
   const canOpenReview = Boolean(campaign && submittedUnitCount > 0);
-  const submittedStatusText = useMemo(
-    () => submittedStatuses.join(", "),
-    [submittedStatuses],
-  );
 
   return (
     <section
@@ -588,10 +585,30 @@ export function CommunityRegistrationCard({
         </div>
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
           <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Submitted states
+            REGISTRATION PROGRESS
           </p>
-          <p className="mt-2 truncate text-sm font-semibold text-white" title={submittedStatusText}>
-            {submittedStatusText}
+          <p className="mt-2 text-3xl font-semibold text-white">
+            {registrationProgress.percent}%
+          </p>
+          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+            {registrationProgress.submittedResidents} of{" "}
+            {registrationProgress.totalResidents} residents submitted
+          </p>
+          <div
+            aria-label="Registration progress"
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={registrationProgress.percent}
+            className="mt-3 h-2 overflow-hidden rounded-full bg-slate-950"
+            role="progressbar"
+          >
+            <div
+              className="h-full rounded-full bg-violet-400"
+              style={{ width: `${registrationProgress.percent}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs font-semibold text-violet-100">
+            {registrationProgress.remainingResidents} remaining
           </p>
         </div>
       </div>

@@ -16,6 +16,14 @@ export const SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES = [
   "processed",
 ] as const;
 
+const SUBMITTED_COMMUNITY_REGISTRATION_SUBMISSION_STATUSES = [
+  "submitted",
+  "edit_enabled",
+  "reviewed",
+  "confirmed",
+  "converted",
+] as const;
+
 const OPERATIONAL_CAMPAIGN_STATUSES = [
   "open",
   "paused",
@@ -37,10 +45,17 @@ export type CommunityRegistrationAdminCampaign = {
   status: string;
 };
 
+export type CommunityRegistrationAdminProgress = {
+  percent: number;
+  remainingResidents: number;
+  submittedResidents: number;
+  totalResidents: number;
+};
+
 export type CommunityRegistrationAdminState = {
   campaign: CommunityRegistrationAdminCampaign | null;
   hasOperationalCampaign: boolean;
-  submittedStatuses: readonly string[];
+  registrationProgress: CommunityRegistrationAdminProgress;
   submittedUnitCount: number;
   totalCampaignUnitCount: number;
   units: CommunityRegistrationAdminUnit[];
@@ -92,6 +107,32 @@ function normalizeUnit(value: unknown): CommunityRegistrationAdminUnit | null {
   };
 }
 
+function createRegistrationProgress(
+  submittedResidents: number,
+  totalResidents: number,
+): CommunityRegistrationAdminProgress {
+  const normalizedSubmitted = Math.max(0, Math.floor(submittedResidents));
+  const normalizedTotal = Math.max(0, Math.floor(totalResidents));
+
+  return {
+    percent:
+      normalizedTotal === 0
+        ? 0
+        : Math.min(
+            100,
+            Math.round((normalizedSubmitted / normalizedTotal) * 100),
+          ),
+    remainingResidents: Math.max(normalizedTotal - normalizedSubmitted, 0),
+    submittedResidents: normalizedSubmitted,
+    totalResidents: normalizedTotal,
+  };
+}
+
+function getEffectiveResidentLimit(value: unknown, fallback: number) {
+  const parsed = Math.floor(coerceNumber(value));
+  return parsed > 0 ? parsed : fallback;
+}
+
 export async function getCommunityRegistrationAdminState(
   communityId: string,
 ): Promise<CommunityRegistrationAdminState> {
@@ -139,7 +180,7 @@ export async function getCommunityRegistrationAdminState(
     return {
       campaign: null,
       hasOperationalCampaign: false,
-      submittedStatuses: SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES,
+      registrationProgress: createRegistrationProgress(0, 0),
       submittedUnitCount: 0,
       totalCampaignUnitCount: 0,
       units,
@@ -148,31 +189,65 @@ export async function getCommunityRegistrationAdminState(
 
   const { data: campaignUnitsData } = await supabase
     .from("community_registration_units")
-    .select("status")
+    .select("id,status,resident_limit_override")
     .eq("campaign_id", campaign.id);
-  const { data: activeAccessData } = await supabase
-    .from("community_registration_access_tokens")
-    .select("id")
-    .eq("campaign_id", campaign.id)
-    .eq("token_type", "campaign_access")
-    .eq("status", "active");
-  const { data: recoverableAccessData } = await supabase
-    .from("community_registration_access_tokens")
-    .select("id")
-    .eq("campaign_id", campaign.id)
-    .eq("token_type", "campaign_access")
-    .eq("status", "active")
-    .not("encrypted_token_payload", "is", null);
+  const [
+    { data: activeAccessData },
+    { data: recoverableAccessData },
+    { data: currentSubmissionsData },
+  ] = await Promise.all([
+    supabase
+      .from("community_registration_access_tokens")
+      .select("id")
+      .eq("campaign_id", campaign.id)
+      .eq("token_type", "campaign_access")
+      .eq("status", "active"),
+    supabase
+      .from("community_registration_access_tokens")
+      .select("id")
+      .eq("campaign_id", campaign.id)
+      .eq("token_type", "campaign_access")
+      .eq("status", "active")
+      .not("encrypted_token_payload", "is", null),
+    supabase
+      .from("community_registration_submissions")
+      .select("id")
+      .eq("campaign_id", campaign.id)
+      .in("status", SUBMITTED_COMMUNITY_REGISTRATION_SUBMISSION_STATUSES),
+  ]);
   const campaignUnits = Array.isArray(campaignUnitsData) ? campaignUnitsData : [];
   const activeAccessRows = Array.isArray(activeAccessData) ? activeAccessData : [];
   const recoverableAccessRows = Array.isArray(recoverableAccessData)
     ? recoverableAccessData
     : [];
+  const currentSubmissionIds = Array.isArray(currentSubmissionsData)
+    ? currentSubmissionsData
+        .map((submission) => coerceString((submission as Record<string, unknown>).id))
+        .filter(Boolean)
+    : [];
+  const { count: submittedResidentCount } =
+    currentSubmissionIds.length > 0
+      ? await supabase
+          .from("community_registration_residents")
+          .select("id", { count: "exact", head: true })
+          .in("submission_id", currentSubmissionIds)
+      : { count: 0 };
   const activeCampaignAccessRecoverable =
     activeAccessRows.length === 1 && recoverableAccessRows.length === 1;
   const submittedStatuses = new Set<string>(
     SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES,
   );
+  const defaultResidentLimit = getEffectiveResidentLimit(
+    campaign.defaultResidentLimit,
+    3,
+  );
+  const totalResidents = campaignUnits.reduce((total, unit) => {
+    const record = unit as Record<string, unknown>;
+    return (
+      total +
+      getEffectiveResidentLimit(record.resident_limit_override, defaultResidentLimit)
+    );
+  }, 0);
 
   return {
     campaign: {
@@ -180,7 +255,10 @@ export async function getCommunityRegistrationAdminState(
       activeCampaignAccessRecoverable,
     },
     hasOperationalCampaign: operationalCampaign !== null,
-    submittedStatuses: SUBMITTED_COMMUNITY_REGISTRATION_UNIT_STATUSES,
+    registrationProgress: createRegistrationProgress(
+      submittedResidentCount ?? 0,
+      totalResidents,
+    ),
     submittedUnitCount: campaignUnits.filter((unit) =>
       submittedStatuses.has(coerceString((unit as Record<string, unknown>).status)),
     ).length,
