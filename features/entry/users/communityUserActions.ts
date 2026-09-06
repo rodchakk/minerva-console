@@ -124,7 +124,7 @@ async function validateHouse(communityId: string, houseId: string) {
   if (error) throw new Error(error.message);
   if (!data) return { error: "Unit not found in this community." } as const;
   if (data.is_active === false) {
-    return { error: "Activate this unit before creating a resident account." } as const;
+    return { error: "Activate this unit before creating the account." } as const;
   }
 
   return { id: coerceString(data.id) } as const;
@@ -176,12 +176,8 @@ export async function createCommunityUserAction(
     };
   }
 
-  if (role === "RESIDENT" && !houseId) {
-    return { error: "A unit is required for resident accounts.", success: false };
-  }
-
-  if (role === "ADMIN" && !email) {
-    return { error: "Email is required for admin accounts.", success: false };
+  if ((role === "RESIDENT" || role === "ADMIN") && !houseId) {
+    return { error: "A unit is required for resident and admin accounts.", success: false };
   }
 
   if (role === "GUARD" && !requestedUsername) {
@@ -196,7 +192,7 @@ export async function createCommunityUserAction(
     };
   }
 
-  if (role === "RESIDENT" && houseId) {
+  if ((role === "RESIDENT" || role === "ADMIN") && houseId) {
     try {
       const house = await validateHouse(communityId, houseId);
       if ("error" in house) return { error: house.error, success: false };
@@ -244,7 +240,7 @@ export async function createCommunityUserAction(
       };
     }
 
-    authEmail = `resident-${username}@entry.internal`;
+    authEmail = `${role.toLowerCase()}-${username}@entry.internal`;
     authType = "username";
   }
 
@@ -272,7 +268,7 @@ export async function createCommunityUserAction(
     p_community_id: communityId,
     p_full_name: fullName,
     p_role: role,
-    p_house_id: role === "RESIDENT" ? houseId : null,
+    p_house_id: role === "GUARD" ? null : houseId,
     p_phone: phone || null,
   });
 
