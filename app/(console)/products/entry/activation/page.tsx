@@ -65,9 +65,6 @@ export default async function ActivationQueuePage(
                 preview={campaignPreview}
               />
             ) : null}
-            <Link href="/products/entry/communities/new">
-              <Button>Create community</Button>
-            </Link>
           </div>
         }
       />
