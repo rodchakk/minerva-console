@@ -11,7 +11,7 @@ function read(path) {
 
 test("ENTRY community list readiness delegates to the canonical onboarding progress RPC", () => {
   const migration = read(
-    "supabase/migrations/20260906223500_unify_entry_onboarding_readiness.sql",
+    "supabase/migrations/20260906224056_unify_entry_onboarding_readiness.sql",
   );
 
   assert.match(
