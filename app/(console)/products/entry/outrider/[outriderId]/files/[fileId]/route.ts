@@ -8,6 +8,8 @@ import { getOutriderDetail } from "@/features/entry/outrider/queries";
 
 export const dynamic = "force-dynamic";
 
+const SIGNED_DOWNLOAD_SECONDS = 5 * 60;
+
 export async function GET(
   _request: Request,
   context: { params: Promise<{ fileId: string; outriderId: string }> },
@@ -23,19 +25,22 @@ export async function GET(
   const supabase = createAdminClient();
   const { data, error } = await supabase.storage
     .from(OUTRIDER_STORAGE_BUCKET)
-    .download(file.storagePath);
+    .createSignedUrl(file.storagePath, SIGNED_DOWNLOAD_SECONDS);
 
-  if (error || !data) {
+  if (error || !data?.signedUrl) {
     return NextResponse.json({ error: "file_unavailable" }, { status: 404 });
   }
 
-  return new NextResponse(data, {
+  const downloadUrl = new URL(data.signedUrl);
+  downloadUrl.searchParams.set(
+    "download",
+    sanitizeOutriderFilename(file.originalFilename),
+  );
+
+  return NextResponse.redirect(downloadUrl, {
     headers: {
       "Cache-Control": "private, no-store, max-age=0",
-      "Content-Disposition": `attachment; filename="${sanitizeOutriderFilename(
-        file.originalFilename,
-      )}"`,
-      "Content-Type": file.mimeType || "application/octet-stream",
     },
+    status: 302,
   });
 }
