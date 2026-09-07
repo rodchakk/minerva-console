@@ -19,10 +19,13 @@ function protectPublicRegistrationResponse(response: NextResponse) {
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const isPublicRegistrationRoute =
-    pathname === "/entry/register" || pathname.startsWith("/entry/register/");
+  const isPublicEntryIntakeRoute =
+    pathname === "/entry/register" ||
+    pathname.startsWith("/entry/register/") ||
+    pathname === "/entry/outrider" ||
+    pathname.startsWith("/entry/outrider/");
 
-  if (isPublicRegistrationRoute) {
+  if (isPublicEntryIntakeRoute) {
     return protectPublicRegistrationResponse(NextResponse.next({ request }));
   }
 

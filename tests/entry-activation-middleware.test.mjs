@@ -25,15 +25,17 @@ test("middleware keeps activation mediation public and Console routes private", 
   assert.doesNotMatch(publicRouteBlock, /\/dashboard/);
 });
 
-test("middleware preserves public registration boundary and headers", () => {
+test("middleware preserves public ENTRY intake boundary and headers", () => {
   const source = read("lib/supabase/middleware.ts");
-  const publicRegistrationBlock = source.slice(
-    source.indexOf("const isPublicRegistrationRoute"),
-    source.indexOf("if (isPublicRegistrationRoute)"),
+  const publicEntryIntakeBlock = source.slice(
+    source.indexOf("const isPublicEntryIntakeRoute"),
+    source.indexOf("if (isPublicEntryIntakeRoute)"),
   );
 
-  assert.match(publicRegistrationBlock, /pathname === "\/entry\/register"/);
-  assert.match(publicRegistrationBlock, /pathname\.startsWith\("\/entry\/register\/"\)/);
+  assert.match(publicEntryIntakeBlock, /pathname === "\/entry\/register"/);
+  assert.match(publicEntryIntakeBlock, /pathname\.startsWith\("\/entry\/register\/"\)/);
+  assert.match(publicEntryIntakeBlock, /pathname === "\/entry\/outrider"/);
+  assert.match(publicEntryIntakeBlock, /pathname\.startsWith\("\/entry\/outrider\/"\)/);
   assert.match(source, /protectPublicRegistrationResponse\(NextResponse\.next\(\{ request \}\)\)/);
   assert.match(source, /Cache-Control", "no-store, max-age=0"/);
   assert.match(source, /X-Robots-Tag", "noindex, nofollow"/);
