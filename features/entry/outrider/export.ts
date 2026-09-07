@@ -204,6 +204,7 @@ export function buildOutriderSummary(
       mimeType: file.mimeType,
     })),
     community: {
+      city: detail.communityCity === "Not set" ? null : detail.communityCity,
       id: detail.communityId,
       name: detail.communityName,
     },
@@ -229,6 +230,10 @@ export function buildOutriderSummary(
       submittedAt: detail.submittedAt,
     },
     reviewNote: detail.reviewNote,
+    securityStaff: {
+      count: detail.securityStaffCount,
+      notes: detail.securityStaffNotes,
+    },
     setupBoundary:
       "No live ENTRY operational records are automatically imported by Outrider.",
     unitProfile: {
@@ -262,6 +267,10 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
     "",
     summary.setupBoundary,
     "",
+    "## Community",
+    `- Name: ${summary.community.name}`,
+    `- City: ${summary.community.city ?? "Not provided"}`,
+    "",
     "## Status",
     `- Status: ${summary.metadata.status}`,
     `- Progress: ${summary.metadata.progressPercent}%`,
@@ -280,6 +289,10 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
     "## Inactive Units",
     `- Has inactive units: ${String(summary.inactiveUnits.hasInactiveUnits)}`,
     `- Notes: ${summary.inactiveUnits.notes ?? "None"}`,
+    "",
+    "## Security Staff",
+    `- Count: ${summary.securityStaff.count ?? "Not provided"}`,
+    `- Notes: ${summary.securityStaff.notes ?? "None"}`,
     "",
     "## Contact",
     `- Name: ${summary.contact.name ?? "Not provided"}`,
