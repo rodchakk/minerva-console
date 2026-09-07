@@ -9,6 +9,18 @@ import {
 } from "@/features/entry/outrider/model";
 import { getOutriderDetail, type OutriderDetail } from "@/features/entry/outrider/queries";
 
+type PortableOutriderExportSummary = Omit<
+  OutriderExportSummary,
+  "attachments" | "unitProfile"
+> & {
+  attachments: Array<
+    Omit<OutriderExportSummary["attachments"][number], "storagePath">
+  >;
+  unitProfile: OutriderExportSummary["unitProfile"] & {
+    namingExample: string | null;
+  };
+};
+
 const ZIP_EPOCH = new Date("1980-01-01T00:00:00Z").getTime();
 function dosDateTime(date = new Date()) {
   const safeDate = new Date(Math.max(date.getTime(), ZIP_EPOCH));
@@ -161,14 +173,13 @@ function makeUniquePath(basePath: string, used: Set<string>) {
 
 export function buildOutriderSummary(
   detail: OutriderDetail,
-): OutriderExportSummary {
+): PortableOutriderExportSummary {
   return {
     attachments: detail.files.map((file) => ({
       byteSize: file.byteSize,
       category: file.category,
       filename: file.originalFilename,
       mimeType: file.mimeType,
-      storagePath: file.storagePath,
     })),
     community: {
       id: detail.communityId,
@@ -199,13 +210,14 @@ export function buildOutriderSummary(
     setupBoundary:
       "No live ENTRY operational records are automatically imported by Outrider.",
     unitProfile: {
+      namingExample: detail.unitNamingExample,
       otherUnitType: detail.otherUnitType,
       types: detail.unitTypes,
     },
   };
 }
 
-export function buildOutriderMarkdown(summary: OutriderExportSummary) {
+export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
   const unitTypes = summary.unitProfile.types
     .map(getOutriderUnitTypeLabel)
     .join(", ");
@@ -236,6 +248,7 @@ export function buildOutriderMarkdown(summary: OutriderExportSummary) {
     "",
     "## Unit Profile",
     `- Types: ${unitTypes || "Not provided"}`,
+    `- Naming example: ${summary.unitProfile.namingExample ?? "Not provided"}`,
     `- Other: ${summary.unitProfile.otherUnitType ?? "None"}`,
     "",
     "## Destinations",
