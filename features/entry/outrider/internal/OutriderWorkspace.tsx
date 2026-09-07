@@ -71,6 +71,7 @@ function StartOutriderDialog({
   communities: OutriderCommunityOption[];
   onClose: () => void;
 }) {
+  const [linkExisting, setLinkExisting] = useState(false);
   const [state, formAction, pending] = useActionState(
     createOutriderSession,
     initialActionState,
@@ -130,27 +131,74 @@ function StartOutriderDialog({
           Start community intake
         </h3>
         <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-          Choose an active community that does not already have an Outrider
-          intake.
+          Create the Outrider record before the community is configured in ENTRY.
         </p>
 
-        <label className="mt-5 block">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Community
-          </span>
-          <select
-            name="community_id"
-            required
-            className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-          >
-            <option value="">Select community</option>
-            {communities.map((community) => (
-              <option key={community.id} value={community.id}>
-                {community.name} - {community.city}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!linkExisting ? (
+          <>
+            <input type="hidden" name="community_id" value="" />
+            <label className="mt-5 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Community name
+              </span>
+              <input
+                name="community_name"
+                required
+                maxLength={180}
+                placeholder="Residencial Andalucía"
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+              />
+            </label>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                City <span className="font-normal normal-case tracking-normal">(optional)</span>
+              </span>
+              <input
+                name="community_city"
+                maxLength={180}
+                placeholder="San Pedro Sula"
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <input type="hidden" name="community_name" value="" />
+            <input type="hidden" name="community_city" value="" />
+            <label className="mt-5 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Existing ENTRY community
+              </span>
+              <select
+                name="community_id"
+                required
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+              >
+                <option value="">Select community</option>
+                {communities.map((community) => (
+                  <option key={community.id} value={community.id}>
+                    {community.name} - {community.city}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {communities.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                Every active ENTRY community already has an Outrider intake.
+              </p>
+            ) : null}
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setLinkExisting((value) => !value)}
+          className="mt-4 text-left text-sm font-medium text-violet-200 transition-colors hover:text-white"
+        >
+          {linkExisting
+            ? "Create a new community intake instead"
+            : "Already exists in ENTRY? Link existing community"}
+        </button>
 
         {state && !state.success ? (
           <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -158,17 +206,14 @@ function StartOutriderDialog({
           </p>
         ) : null}
 
-        {communities.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            Every active community already has an Outrider intake.
-          </p>
-        ) : null}
-
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending || communities.length === 0}>
+          <Button
+            type="submit"
+            disabled={pending || (linkExisting && communities.length === 0)}
+          >
             {pending ? "Starting..." : "Start Outrider"}
           </Button>
         </div>
@@ -191,6 +236,7 @@ function SessionRow({ session }: { session: OutriderListItem }) {
           <Badge tone={statusTone(session.status)}>
             {getOutriderStatusLabel(session.status)}
           </Badge>
+          {!session.communityId ? <Badge tone="default">Pre-ENTRY</Badge> : null}
         </div>
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
           {session.communityCity} · {session.attachmentCount} attachments · updated{" "}
@@ -354,7 +400,7 @@ export function OutriderWorkspace({
             </div>
             <h3 className="mt-4 text-lg font-semibold text-white">No Outrider intakes yet</h3>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
-              Start one for an active community and share the secure public link.
+              Start one before ENTRY setup and share the secure public link.
             </p>
             <Button
               type="button"
