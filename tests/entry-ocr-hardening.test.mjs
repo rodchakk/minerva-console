@@ -21,17 +21,25 @@ test("OCR source is recovered without the legacy hardcoded shared secret", () =>
   assert.match(migration, /'Bearer '\s*\|\|\s*v_service_role_key/);
 });
 
+test("OCR Edge endpoint is internal service-role only", () => {
+  assert.match(edge, /bearerToken !== SUPABASE_SERVICE_ROLE_KEY/);
+  assert.match(edge, /Internal service role required/);
+  assert.doesNotMatch(edge, /SUPABASE_ANON_KEY/);
+  assert.doesNotMatch(edge, /community_members/);
+  assert.doesNotMatch(edge, /\.in\("role"/);
+});
+
 test("Gemini API key is sent as a header, never embedded in the request URL", () => {
   assert.match(edge, /"x-goog-api-key": GEMINI_API_KEY/);
   assert.doesNotMatch(edge, /GEMINI_ENDPOINT\}\?key=/);
   assert.doesNotMatch(edge, /encodeURIComponent\(GEMINI_API_KEY\)/);
 });
 
-test("OCR requests are scoped to the real entry log and its community", () => {
+test("OCR requests are bound to the real entry log and its exact image", () => {
   assert.match(edge, /entry_log_id required/);
   assert.match(edge, /OCR image does not match entry log/);
-  assert.match(edge, /\.eq\("community_id", entryLog\.community_id\)/);
-  assert.match(edge, /\.in\("role", \["GUARD", "ADMIN"\]\)/);
+  assert.match(edge, /\.eq\("id", entryLogId\)/);
+  assert.match(edge, /entryLog\.vehicle_photo_path !== imagePath/);
   assert.match(edge, /requestedBucket !== OCR_BUCKET/);
 });
 
