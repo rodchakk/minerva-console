@@ -73,6 +73,18 @@ test("successful provider completion closes the queue even when no plate is read
   assert.match(edge, /completed_at: new Date\(\)\.toISOString\(\)/);
 });
 
+test("successful result persistence atomically closes queue work and DONE cannot reopen", () => {
+  assert.match(migration, /_entry_ocr_complete_queue_on_result_v1/);
+  assert.match(migration, /after update of vehicle_plate_text on public\.entry_logs/i);
+  assert.match(
+    migration,
+    /update public\.plate_ocr_queue[\s\S]*status = 'DONE'[\s\S]*entry_log_id = NEW\.id/,
+  );
+  assert.match(migration, /_entry_ocr_preserve_done_queue_v1/);
+  assert.match(migration, /if OLD\.status = 'DONE' then[\s\S]*NEW\.status := 'DONE'/);
+  assert.match(migration, /NO_PLATE/);
+});
+
 test("OCR queue is durable, unique, retryable and concurrency safe", () => {
   assert.match(migration, /idx_plate_ocr_queue_entry_log_unique/);
   assert.match(migration, /on conflict \(entry_log_id\)/i);
@@ -81,6 +93,14 @@ test("OCR queue is durable, unique, retryable and concurrency safe", () => {
   assert.match(migration, /attempts = attempts \+ 1/);
   assert.match(migration, /attempts >= max_attempts/);
   assert.match(migration, /OCR_DISPATCH_FAILED/);
+});
+
+test("legacy successful rows are reconciled before retry dispatch", () => {
+  const reconcileIndex = migration.indexOf("Reconcile successful legacy/partial writes");
+  const dispatchLoopIndex = migration.indexOf("for v_item in");
+  assert.ok(reconcileIndex >= 0);
+  assert.ok(dispatchLoopIndex >= 0);
+  assert.ok(reconcileIndex < dispatchLoopIndex);
 });
 
 test("OCR retry worker is scheduled autonomously", () => {
