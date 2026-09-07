@@ -12,15 +12,15 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  OUTRIDER_FILE_CATEGORIES,
+  OUTRIDER_PUBLIC_UPLOAD_CATEGORIES,
   OUTRIDER_STORAGE_BUCKET,
   calculateOutriderCompletedSections,
   getOutriderProgressPercent,
   getOutriderUnitTypeLabel,
   isOutriderEditable,
   type OutriderDraft,
-  type OutriderFileCategory,
   type OutriderFileRecord,
+  type OutriderPublicUploadCategory,
   type OutriderSection,
   type OutriderStatus,
   type OutriderUnitType,
@@ -35,23 +35,15 @@ type OutriderPublicFormProps = {
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 const CATEGORY_COPY: Record<
-  OutriderFileCategory,
+  OutriderPublicUploadCategory,
   {
     label: string;
     note: string;
   }
 > = {
-  common_areas: {
-    label: "Listado de áreas comunes o recreativas",
-    note: "Piscina, cancha, casa club u otros destinos.",
-  },
   residents: {
     label: "Listado actual de residentes por unidad",
-    note: "Puede ser el archivo que ya usa administracion.",
-  },
-  security_staff: {
-    label: "Listado de personal de seguridad",
-    note: "Turnos, nombres o teléfonos si ya los tienen.",
+    note: "Puede ser el archivo que ya usa administración.",
   },
   units: {
     label: "Listado de unidades o numeración de la residencial",
@@ -119,7 +111,7 @@ export function OutriderPublicForm({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [error, setError] = useState<string | null>(null);
   const [uploadingCategory, setUploadingCategory] =
-    useState<OutriderFileCategory | null>(null);
+    useState<OutriderPublicUploadCategory | null>(null);
   const saveTimer = useRef<number | null>(null);
   const dirty = useRef(false);
   const editable = isOutriderEditable(status);
@@ -248,7 +240,7 @@ export function OutriderPublicForm({
     }
   }
 
-  async function uploadFile(category: OutriderFileCategory, file: File) {
+  async function uploadFile(category: OutriderPublicUploadCategory, file: File) {
     if (!editable) return;
 
     setUploadingCategory(category);
@@ -317,9 +309,8 @@ export function OutriderPublicForm({
         availableInformation: uniqueStrings([
           ...draft.availableInformation,
           category,
-        ]) as OutriderFileCategory[],
+        ]) as OutriderDraft["availableInformation"],
       });
-      await save(["available_information"]);
     } catch (caught) {
       setError(
         caught instanceof Error ? caught.message : "No pudimos cargar el archivo.",
@@ -589,13 +580,61 @@ export function OutriderPublicForm({
           index={4}
           title="Información disponible"
         >
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+            <p className="text-sm font-semibold text-slate-900">
+              Personal de seguridad
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Indíquenos cuántas personas forman parte actualmente del personal
+              de seguridad. Si desea, agregue nombres, turnos u otra información.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800">
+                  Cantidad de personal de seguridad
+                </span>
+                <input
+                  disabled={!editable}
+                  type="number"
+                  min={0}
+                  max={500}
+                  inputMode="numeric"
+                  value={draft.securityStaffCount ?? ""}
+                  onBlur={() => void save()}
+                  onChange={(event) => {
+                    const value = event.currentTarget.value;
+                    updateDraft({
+                      securityStaffCount: value === "" ? null : Number(value),
+                    });
+                  }}
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                />
+              </label>
+              <label className="block sm:col-span-2">
+                <span className="text-sm font-semibold text-slate-800">
+                  Nombres, turnos u otra información (opcional)
+                </span>
+                <textarea
+                  disabled={!editable}
+                  value={draft.securityStaffNotes ?? ""}
+                  onBlur={() => void save()}
+                  onChange={(event) =>
+                    updateDraft({ securityStaffNotes: event.currentTarget.value })
+                  }
+                  rows={3}
+                  className="mt-2 w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none focus:border-violet-600"
+                />
+              </label>
+            </div>
+          </div>
+
           <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm leading-6 text-emerald-900">
-            No necesita reorganizar la información para nosotros. Envíenos el
-            archivo que ya utiliza y Minerva se encargará de prepararlo para
-            ENTRY.
+            No necesita reorganizar la información para nosotros. Si ya tiene
+            estos archivos, envíelos tal como los utiliza y Minerva se encargará
+            de prepararlos para ENTRY. Los archivos son opcionales.
           </p>
           <div className="space-y-3">
-            {OUTRIDER_FILE_CATEGORIES.map((category) => (
+            {OUTRIDER_PUBLIC_UPLOAD_CATEGORIES.map((category) => (
               <div
                 key={category}
                 className="rounded-md border border-slate-200 px-3 py-3"
