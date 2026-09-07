@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { isOutriderEditable } from "@/features/entry/outrider/model";
+import { OutriderOptionalFilesAcknowledge } from "@/features/entry/outrider/public/OutriderOptionalFilesAcknowledge";
 import { OutriderPublicForm } from "@/features/entry/outrider/public/OutriderPublicForm";
 import { resolvePublicOutrider } from "@/features/entry/outrider/public/gateway";
 import { hashOutriderToken } from "@/features/entry/outrider/token";
@@ -44,7 +46,18 @@ export default async function PublicOutriderPage(
     return <UnavailableOutrider />;
   }
 
-  return <OutriderPublicForm session={session} token={token} />;
+  const canAcknowledgeNoFiles =
+    isOutriderEditable(session.status) &&
+    !session.completedSections.includes("available_information");
+
+  return (
+    <>
+      {canAcknowledgeNoFiles ? (
+        <OutriderOptionalFilesAcknowledge token={token} />
+      ) : null}
+      <OutriderPublicForm session={session} token={token} />
+    </>
+  );
 }
 
 export const viewport = {
