@@ -67,7 +67,7 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
   const communityId = asString(community.id);
   const communityName = asString(community.name);
 
-  if (!id || !communityId || !communityName || !isOutriderStatus(status)) {
+  if (!id || !communityName || !isOutriderStatus(status)) {
     return { available: false };
   }
 
