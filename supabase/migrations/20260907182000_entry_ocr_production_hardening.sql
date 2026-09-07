@@ -5,12 +5,70 @@
 --   * authenticate internal DB -> Edge calls with the service_role JWT stored in Vault
 --   * make queue retries autonomous and concurrency-safe
 --   * preserve check-in availability even if OCR dispatch is unavailable
+--   * make successful OCR completion monotonic so queue-write/transport races do not rebill
 --
 -- The Edge Function itself is recovered under supabase/functions/extract-plate-text
 -- and must be deployed with verify_jwt=true after this migration is released.
 
 create unique index if not exists idx_plate_ocr_queue_entry_log_unique
   on public.plate_ocr_queue (entry_log_id);
+
+-- A successful Edge persistence update is the durable completion boundary. PostgreSQL
+-- fires UPDATE OF even when the new plate value is NULL, so a valid Gemini NO_PLATE
+-- result also closes the queue in the same transaction as the entry_logs write.
+create or replace function public._entry_ocr_complete_queue_on_result_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = 'public', 'pg_temp'
+as $function$
+begin
+  update public.plate_ocr_queue
+  set
+    status = 'DONE',
+    completed_at = coalesce(completed_at, now()),
+    last_error = null
+  where entry_log_id = NEW.id
+    and status in ('PENDING', 'PROCESSING');
+
+  return NEW;
+end;
+$function$;
+
+drop trigger if exists trg_entry_ocr_complete_queue_on_result_v1 on public.entry_logs;
+create trigger trg_entry_ocr_complete_queue_on_result_v1
+after update of vehicle_plate_text on public.entry_logs
+for each row
+execute function public._entry_ocr_complete_queue_on_result_v1();
+
+-- DONE is terminal for the autonomous worker. If an Edge request loses its HTTP
+-- response after the DB transaction committed, its catch/retry path must not reopen
+-- the already-completed queue row and accidentally pay for the same image again.
+create or replace function public._entry_ocr_preserve_done_queue_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = 'public', 'pg_temp'
+as $function$
+begin
+  if OLD.status = 'DONE' then
+    NEW.status := 'DONE';
+    NEW.completed_at := coalesce(OLD.completed_at, NEW.completed_at, now());
+    NEW.last_error := null;
+  end if;
+
+  return NEW;
+end;
+$function$;
+
+drop trigger if exists trg_plate_ocr_queue_preserve_done_v1 on public.plate_ocr_queue;
+create trigger trg_plate_ocr_queue_preserve_done_v1
+before update on public.plate_ocr_queue
+for each row
+execute function public._entry_ocr_preserve_done_queue_v1();
+
+revoke all on function public._entry_ocr_complete_queue_on_result_v1() from public, anon, authenticated;
+revoke all on function public._entry_ocr_preserve_done_queue_v1() from public, anon, authenticated;
 
 create or replace function public.trigger_plate_ocr_on_checkin()
 returns trigger
@@ -112,6 +170,19 @@ begin
     );
   end if;
 
+  -- Reconcile successful legacy/partial writes before selecting retry work. This
+  -- avoids dispatching a duplicate provider call for a row whose plate was already
+  -- persisted by an older OCR version.
+  update public.plate_ocr_queue q
+  set
+    status = 'DONE',
+    completed_at = coalesce(q.completed_at, now()),
+    last_error = null
+  from public.entry_logs el
+  where el.id = q.entry_log_id
+    and el.vehicle_plate_text is not null
+    and q.status in ('PENDING', 'PROCESSING');
+
   for v_item in
     select
       q.id,
@@ -181,17 +252,6 @@ begin
     end;
   end loop;
 
-  -- Defensive reconciliation for rows completed by older OCR versions.
-  update public.plate_ocr_queue q
-  set
-    status = 'DONE',
-    completed_at = coalesce(q.completed_at, now()),
-    last_error = null
-  from public.entry_logs el
-  where el.id = q.entry_log_id
-    and el.vehicle_plate_text is not null
-    and q.status in ('PENDING', 'PROCESSING');
-
   update public.plate_ocr_queue
   set
     status = 'FAILED',
@@ -235,3 +295,7 @@ comment on function public.process_plate_ocr_queue() is
   'Autonomous ENTRY plate OCR retry worker. Uses Vault service_role auth and pg_net; no hardcoded bearer credential.';
 comment on function public.trigger_plate_ocr_on_checkin() is
   'Queues and best-effort dispatches ENTRY plate OCR after CHECK_IN without blocking gate access.';
+comment on function public._entry_ocr_complete_queue_on_result_v1() is
+  'Marks plate OCR queue work DONE in the same transaction that persists the OCR result, including NO_PLATE/null results.';
+comment on function public._entry_ocr_preserve_done_queue_v1() is
+  'Keeps DONE plate OCR queue rows terminal so transport-error retry paths cannot reopen completed provider work.';
