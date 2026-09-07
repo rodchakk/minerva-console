@@ -9,6 +9,8 @@
 --   It is recorded as status=success with result=rejected, not as a system
 --   failure. This avoids turning normal security/business rejections into
 --   false outages.
+-- - A push queue row that cannot send because the audience has no active push
+--   tokens is a skipped delivery, not a provider/system failure.
 -- - Missing traffic remains Unknown in Observability. No heartbeat is invented.
 -- - No pass PIN/QR token, email, push body/title, image, or other user content is
 --   copied into system_event_log.
@@ -203,23 +205,42 @@ security definer
 set search_path = ''
 as $function$
 declare
-  v_failed boolean := lower(coalesce(NEW.status, '')) = 'failed';
+  v_terminal_status text := lower(coalesce(NEW.status, ''));
+  v_no_active_tokens boolean :=
+    lower(btrim(coalesce(NEW.last_error, ''))) like 'no active push tokens%';
+  v_operational_status text;
+  v_is_failure boolean;
 begin
-  if lower(coalesce(NEW.status, '')) not in ('sent', 'failed') then
+  if v_terminal_status not in ('sent', 'failed') then
     return NEW;
   end if;
 
+  v_operational_status := case
+    when v_terminal_status = 'sent' then 'success'
+    when v_no_active_tokens then 'skipped'
+    else 'failed'
+  end;
+  v_is_failure := v_operational_status = 'failed';
+
   begin
     perform public.log_system_event(
-      case when v_failed then 'ERROR' else 'INFO' end,
+      case when v_is_failure then 'ERROR' else 'INFO' end,
       'notifications',
-      case when v_failed then 'NOTIFICATION_FAILED' else 'NOTIFICATION_SENT' end,
-      case when v_failed then 'Community push delivery failed' else 'Community push delivery completed' end,
+      case when v_terminal_status = 'sent' then 'NOTIFICATION_SENT' else 'NOTIFICATION_FAILED' end,
+      case
+        when v_terminal_status = 'sent' then 'Community push delivery completed'
+        when v_no_active_tokens then 'Community push skipped because no active push tokens exist'
+        else 'Community push delivery failed'
+      end,
       jsonb_strip_nulls(jsonb_build_object(
-        'status', case when v_failed then 'failed' else 'success' end,
+        'status', v_operational_status,
         'attempts', NEW.attempts,
         'enqueue_source', nullif(NEW.enqueue_source, ''),
-        'error_code', case when v_failed then 'PUSH_DELIVERY_FAILED' else null end
+        'error_code', case
+          when v_no_active_tokens then 'PUSH_NO_ACTIVE_TOKENS'
+          when v_is_failure then 'PUSH_DELIVERY_FAILED'
+          else null
+        end
       )),
       NEW.community_id,
       null,
