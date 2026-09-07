@@ -107,6 +107,51 @@ type ClaimedMessage = {
   dry_run: boolean;
 };
 
+async function recordEntryUsage(input: {
+  durationMs: number;
+  errorCode?: string | null;
+  providerMessageId?: string | null;
+  status: "success" | "failed";
+  message: ClaimedMessage;
+}) {
+  try {
+    await supabase.rpc("record_entry_usage_v1", {
+      p_actor_id: null,
+      p_community_id: input.message.community_id,
+      p_correlation_id: input.message.campaign_id,
+      p_currency: "USD",
+      p_duration_ms: input.durationMs,
+      p_error_code: input.errorCode ?? null,
+      p_error_fingerprint:
+        input.status === "failed" ? "resend:onboarding_email" : null,
+      p_estimated_cost: null,
+      p_image_count: null,
+      p_input_tokens: null,
+      p_metadata: {
+        activation_queue_id: input.message.activation_queue_id,
+        campaign_id: input.message.campaign_id,
+        campaign_message_id: input.message.id,
+        channel: "email",
+      },
+      p_operation: "onboarding_email",
+      p_output_tokens: null,
+      p_pricing_version: null,
+      p_provider: "resend",
+      p_provider_request_id: input.providerMessageId ?? null,
+      p_quantity: 1,
+      p_request_id: input.message.id,
+      p_service_model: "email",
+      p_status: input.status,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("entry usage ledger write failed", {
+      campaign_message_id: input.message.id,
+      message: message.slice(0, 160),
+    });
+  }
+}
+
 async function claimPendingMessages(args: {
   campaignId: string;
   limit: number;
@@ -191,6 +236,7 @@ async function processMessage(
       provider = "dry_run";
       providerMessageId = `dry_run_${msg.id}`;
     } else {
+      const providerStartedAt = Date.now();
       const { data: emailData, error: emailErr } = await resend.emails.send({
         from: FROM_ADDRESS,
         to: [msg.recipient_email],
@@ -202,8 +248,15 @@ async function processMessage(
           activationLink,
         }),
       });
-      if (emailErr) throw new Error(emailErr.message ?? "resend_send_failed");
       providerMessageId = (emailData as { id?: string } | null)?.id ?? null;
+      await recordEntryUsage({
+        durationMs: Date.now() - providerStartedAt,
+        errorCode: emailErr ? "RESEND_SEND_FAILED" : null,
+        message: msg,
+        providerMessageId,
+        status: emailErr ? "failed" : "success",
+      });
+      if (emailErr) throw new Error(emailErr.message ?? "resend_send_failed");
     }
 
     await supabase
