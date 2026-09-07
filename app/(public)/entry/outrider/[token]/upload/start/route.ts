@@ -6,7 +6,7 @@ import {
   buildOutriderStoragePath,
   isAllowedOutriderFile,
   isOutriderEditable,
-  isOutriderFileCategory,
+  isOutriderPublicUploadCategory,
 } from "@/features/entry/outrider/model";
 import { resolvePublicOutrider } from "@/features/entry/outrider/public/gateway";
 import {
@@ -68,7 +68,7 @@ export async function POST(
   const byteSize = Number(body?.byteSize ?? 0);
 
   if (
-    !isOutriderFileCategory(category) ||
+    !isOutriderPublicUploadCategory(category) ||
     !isAllowedOutriderFile({ byteSize, mimeType, originalFilename })
   ) {
     return jsonOutriderResponse(
