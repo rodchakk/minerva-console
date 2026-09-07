@@ -377,7 +377,7 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
   const [showRequestInfo, setShowRequestInfo] = useState(false);
   const [showApprove, setShowApprove] = useState(false);
   const canApprove = detail.status === "ready_for_review";
-  const canRequestInfo = ["ready_for_review", "approved"].includes(detail.status);
+  const canRequestInfo = detail.status === "ready_for_review";
 
   return (
     <div className="space-y-5">
