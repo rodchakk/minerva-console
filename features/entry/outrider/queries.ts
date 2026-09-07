@@ -29,7 +29,7 @@ export type OutriderListItem = {
   approvedAt: string | null;
   attachmentCount: number;
   communityCity: string;
-  communityId: string | null;
+  communityId: string;
   communityName: string;
   completedSections: OutriderSection[];
   contactName: string | null;
@@ -158,7 +158,7 @@ function mapListItem(
     approvedAt: nullableString(row.approved_at),
     attachmentCount,
     communityCity,
-    communityId: rawCommunityId,
+    communityId: rawCommunityId ?? "",
     communityName,
     completedSections,
     contactName: nullableString(row.contact_name),
