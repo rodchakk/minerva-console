@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { outriderPublicMetadata } from "@/app/(public)/entry/publicMetadata";
 import { OutriderPublicForm } from "@/features/entry/outrider/public/OutriderPublicForm";
 import { resolvePublicOutrider } from "@/features/entry/outrider/public/gateway";
 import { hashOutriderToken } from "@/features/entry/outrider/token";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  robots: {
-    follow: false,
-    index: false,
-  },
-  title: "ENTRY Outrider",
-};
+export const metadata: Metadata = outriderPublicMetadata;
 
 function UnavailableOutrider() {
   return (

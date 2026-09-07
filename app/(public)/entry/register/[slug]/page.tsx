@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { entryRegistrationMetadata } from "@/app/(public)/entry/publicMetadata";
 import {
   getCampaignAccessCookieName,
   normalizePublicSlug,
@@ -24,13 +25,7 @@ import { UnitLookupForm } from "@/features/entry/communityRegistration/public/Un
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-export const metadata: Metadata = {
-  title: "Registro de residentes | ENTRY",
-  robots: {
-    follow: false,
-    index: false,
-  },
-};
+export const metadata: Metadata = entryRegistrationMetadata;
 
 function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
