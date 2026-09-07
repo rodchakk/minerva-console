@@ -143,6 +143,62 @@ $function$;
 
 revoke all on function public._entry_observability_flow_status_v1(integer, integer, timestamptz, integer) from public, anon, authenticated;
 
+create or replace function public._entry_observability_severity_rank_v1(
+  p_severity text
+)
+returns integer
+language sql
+immutable
+set search_path = ''
+as $function$
+  select case upper(coalesce(nullif(btrim(p_severity), ''), 'INFO'))
+    when 'CRITICAL' then 4
+    when 'ERROR' then 3
+    when 'WARNING' then 2
+    when 'WARN' then 2
+    else 1
+  end;
+$function$;
+
+revoke all on function public._entry_observability_severity_rank_v1(text) from public, anon, authenticated;
+
+create or replace function public._entry_observability_normalize_severity_v1(
+  p_severity text
+)
+returns text
+language sql
+immutable
+set search_path = ''
+as $function$
+  select case public._entry_observability_severity_rank_v1(p_severity)
+    when 4 then 'CRITICAL'
+    when 3 then 'ERROR'
+    when 2 then 'WARNING'
+    else 'INFO'
+  end;
+$function$;
+
+revoke all on function public._entry_observability_normalize_severity_v1(text) from public, anon, authenticated;
+
+create or replace function public._entry_observability_jsonb_integer_v1(
+  p_details jsonb,
+  p_key text
+)
+returns integer
+language sql
+immutable
+set search_path = ''
+as $function$
+  select case
+    when coalesce(p_details, '{}'::jsonb) ? p_key
+      and coalesce(p_details->>p_key, '') ~ '^[0-9]+$'
+      then (p_details->>p_key)::integer
+    else null::integer
+  end;
+$function$;
+
+revoke all on function public._entry_observability_jsonb_integer_v1(jsonb, text) from public, anon, authenticated;
+
 create or replace function public.record_entry_usage_v1(
   p_community_id uuid,
   p_operation text,
@@ -302,16 +358,25 @@ begin
       s.community_id,
       coalesce(nullif(s.source, ''), nullif(s.module, ''), 'system') as source,
       s.event_type,
-      coalesce(nullif(s.status, ''), case when upper(coalesce(s.severity, '')) in ('ERROR', 'CRITICAL') then 'failed' else 'unknown' end) as status,
-      upper(coalesce(nullif(s.severity, ''), 'INFO')) as severity,
-      s.duration_ms,
-      s.error_code,
+      case
+        when lower(coalesce(s.details->>'status', '')) in ('success', 'ok', 'completed', 'sent') then 'success'
+        when lower(coalesce(s.details->>'status', '')) in ('failed', 'failure', 'error') then 'failed'
+        when lower(coalesce(s.details->>'status', '')) in ('skipped', 'cancelled') then 'skipped'
+        when public._entry_observability_severity_rank_v1(s.severity) >= 3 then 'failed'
+        else 'unknown'
+      end as status,
+      public._entry_observability_normalize_severity_v1(s.severity) as severity,
       coalesce(
-        nullif(s.error_fingerprint, ''),
+        public._entry_observability_jsonb_integer_v1(s.details, 'duration_ms'),
+        public._entry_observability_jsonb_integer_v1(s.details, 'durationMs')
+      ) as duration_ms,
+      nullif(coalesce(s.details->>'error_code', s.details->>'code'), '') as error_code,
+      coalesce(
+        nullif(coalesce(s.details->>'error_fingerprint', s.details->>'fingerprint'), ''),
         public._entry_observability_normalize_fingerprint_v1(
           coalesce(nullif(s.source, ''), nullif(s.module, ''), 'system'),
           s.event_type,
-          s.error_code,
+          nullif(coalesce(s.details->>'error_code', s.details->>'code'), ''),
           s.message
         )
       ) as fingerprint,
@@ -320,7 +385,7 @@ begin
     where s.created_at >= v_start
       and s.created_at < v_end
       and (
-        s.community_id is null
+        (v_selected_community is null and s.community_id is null)
         or exists (
           select 1 from selected_communities sc where sc.id = s.community_id
         )
@@ -365,7 +430,7 @@ begin
       el.action_at as occurred_at,
       el.community_id,
       'entry_access'::text as source,
-      coalesce(el.action, 'ENTRY_ACCESS') as event_type,
+      coalesce(el.action::text, 'ENTRY_ACCESS') as event_type,
       'success'::text as status,
       'INFO'::text as severity,
       null::integer as duration_ms,
@@ -443,7 +508,7 @@ begin
     where u.occurred_at >= v_start
       and u.occurred_at < v_end
       and (
-        u.community_id is null
+        (v_selected_community is null and u.community_id is null)
         or exists (
           select 1 from selected_communities sc where sc.id = u.community_id
         )
@@ -547,7 +612,7 @@ begin
         nullif(a.fingerprint, ''),
         public._entry_observability_normalize_fingerprint_v1(a.source, a.event_type, a.error_code, a.explanation)
       ) as fingerprint,
-      max(a.severity) as severity,
+      (array_agg(a.severity order by public._entry_observability_severity_rank_v1(a.severity) desc))[1] as severity,
       max(a.source) as source,
       max(a.event_type) as event_type,
       max(a.error_code) as error_code,
@@ -560,6 +625,7 @@ begin
     where a.is_failure
     group by 1
     having count(*) >= 2
+      or max(public._entry_observability_severity_rank_v1(a.severity)) = 4
   ),
   incident_communities as (
     select
@@ -634,7 +700,7 @@ begin
     where u.occurred_at >= v_start
       and u.occurred_at < v_end
       and (
-        u.community_id is null
+        (v_selected_community is null and u.community_id is null)
         or exists (select 1 from selected_communities sc where sc.id = u.community_id)
       )
   ),
@@ -670,7 +736,7 @@ begin
       where u.occurred_at >= v_start
         and u.occurred_at < v_end
         and (
-          u.community_id is null
+          (v_selected_community is null and u.community_id is null)
           or exists (select 1 from selected_communities sc where sc.id = u.community_id)
         )
       group by u.provider, coalesce(u.service_model, 'not specified'), u.operation
@@ -707,7 +773,7 @@ begin
       where u.occurred_at >= v_start
         and u.occurred_at < v_end
         and (
-          u.community_id is null
+          (v_selected_community is null and u.community_id is null)
           or exists (select 1 from selected_communities sc2 where sc2.id = u.community_id)
         )
       group by u.community_id, coalesce(sc.name, 'ENTRY system')
@@ -735,7 +801,7 @@ begin
       where u.occurred_at >= v_start
         and u.occurred_at < v_end
         and (
-          u.community_id is null
+          (v_selected_community is null and u.community_id is null)
           or exists (select 1 from selected_communities sc where sc.id = u.community_id)
         )
       group by date_trunc('day', u.occurred_at)
@@ -750,7 +816,13 @@ begin
       c.id as community_id,
       coalesce(c.name, 'ENTRY system') as community_name,
       a.action as action,
-      'Minerva'::text as actor,
+      coalesce(
+        actor_profile.full_name,
+        case
+          when a.actor_user_id is not null then 'actor:' || left(a.actor_user_id::text, 8)
+          else 'System'
+        end
+      ) as actor,
       coalesce(a.target_type, 'console') as target
     from public.superadmin_audit_log a
     left join public.communities c
@@ -758,10 +830,17 @@ begin
         nullif(a.metadata->>'community_id', ''),
         case when a.target_type = 'community' then a.target_id::text end
       )
+    left join lateral (
+      select nullif(btrim(p.full_name), '') as full_name
+      from public.profiles p
+      where p.user_id = a.actor_user_id
+      order by p.created_at desc
+      limit 1
+    ) actor_profile on true
     where a.created_at >= v_start
       and a.created_at < v_end
       and (
-        c.id is null
+        (v_selected_community is null and c.id is null)
         or exists (select 1 from selected_communities sc where sc.id = c.id)
       )
 
@@ -774,14 +853,24 @@ begin
       l.community_id,
       sc.name,
       l.action_type,
-      case upper(coalesce(l.actor_role, ''))
-        when 'SUPERADMIN' then 'Minerva'
-        when 'ADMIN' then 'Admin'
-        else 'System'
-      end,
+      coalesce(
+        actor_profile.full_name,
+        case
+          when l.actor_user_id is not null then 'actor:' || left(l.actor_user_id::text, 8)
+          when nullif(l.actor_role, '') is not null then l.actor_role
+          else 'System'
+        end
+      ),
       'community'
     from public.community_admin_activity_log l
     join selected_communities sc on sc.id = l.community_id
+    left join lateral (
+      select nullif(btrim(p.full_name), '') as full_name
+      from public.profiles p
+      where p.user_id = l.actor_user_id
+      order by p.created_at desc
+      limit 1
+    ) actor_profile on true
     where l.created_at >= v_start
       and l.created_at < v_end
   ),
@@ -817,11 +906,11 @@ begin
   ),
   global_status as (
     select case
-      when exists (select 1 from incidents where severity in ('CRITICAL', 'ERROR')) then 'degraded'
       when exists (
         select 1 from flows f
         where public._entry_observability_flow_status_v1(f.success_count, f.failure_count, f.last_success_at, f.evidence_count) = 'down'
       ) then 'down'
+      when exists (select 1 from incidents where severity in ('CRITICAL', 'ERROR')) then 'degraded'
       when exists (
         select 1 from flows f
         where public._entry_observability_flow_status_v1(f.success_count, f.failure_count, f.last_success_at, f.evidence_count) = 'degraded'

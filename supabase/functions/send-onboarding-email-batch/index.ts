@@ -115,7 +115,7 @@ async function recordEntryUsage(input: {
   message: ClaimedMessage;
 }) {
   try {
-    await supabase.rpc("record_entry_usage_v1", {
+    const { error } = await supabase.rpc("record_entry_usage_v1", {
       p_actor_id: null,
       p_community_id: input.message.community_id,
       p_correlation_id: input.message.campaign_id,
@@ -143,10 +143,19 @@ async function recordEntryUsage(input: {
       p_service_model: "email",
       p_status: input.status,
     });
+
+    if (error) {
+      console.warn("entry usage ledger write failed", {
+        campaign_message_id: input.message.id,
+        code: error.code ?? null,
+        message: (error.message ?? "Supabase RPC error").slice(0, 160),
+      });
+    }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.warn("entry usage ledger write failed", {
       campaign_message_id: input.message.id,
+      code: null,
       message: message.slice(0, 160),
     });
   }
