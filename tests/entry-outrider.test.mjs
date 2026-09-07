@@ -200,13 +200,16 @@ test("upload completion verifies the private Storage object and scoped path", ()
   );
 });
 
-test("Operations page uses Outrider as the fourth KPI and primary panel", () => {
+test("Operations keeps Outrider as the fourth KPI while restoring the general setup dashboard", () => {
   assert.match(operationsPage, /label="Outrider"/);
   assert.match(operationsPage, /getOutriderAttentionCount/);
   assert.doesNotMatch(operationsPage, /Messages \(24h\)/);
-  assert.match(operationsPage, /title="Outrider operations"/);
-  assert.doesNotMatch(operationsPage, /Recent Outrider Activity/i);
+  assert.match(operationsPage, /Setup priorities across ENTRY/);
+  assert.match(operationsPage, />Outrider</);
+  assert.match(operationsPage, /Recent Outrider activity/);
   assert.match(operationsPage, /Setup Overview/);
+  assert.match(operationsPage, /OperationalActivityFeed/);
+  assert.doesNotMatch(operationsPage, /title="Outrider operations"/);
 });
 
 test("Outrider queue is ordered by operational priority and open excludes approved", () => {
