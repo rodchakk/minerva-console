@@ -105,13 +105,23 @@ test("public routes reject invalid tokens and protect mutations", () => {
   assert.match(optionalFilesRoute, /enforceOutriderRateLimit/);
 });
 
+test("public Outrider reuses the resident-registration Minerva footer treatment", () => {
+  assert.match(publicPage, /src="\/brand\/minerva-logo-gray\.png"/);
+  assert.match(publicPage, /alt="Minerva Technologies"/);
+  assert.match(publicPage, /Tus datos están protegidos/);
+  assert.match(publicPage, /border-t border-slate-200\/80/);
+  assert.match(publicPage, /bg-slate-50/);
+  assert.match(publicPage, /<OutriderPublicForm session=\{session\} token=\{token\} \/>/);
+  assert.match(publicPage, /<OutriderBrandFooter \/>/);
+});
+
 test("section four uses structured security staffing while files remain optional", () => {
   assert.doesNotMatch(publicPage, /OutriderOptionalFilesAcknowledge/);
   assert.match(model, /draft\.securityStaffCount !== null/);
   assert.match(publicForm, /Cantidad de personal de seguridad/);
   assert.match(publicForm, /Nombres, turnos u otra información \(opcional\)/);
-  assert.match(publicForm, /Los archivos son opcionales/);
-  assert.match(model, /OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = \["units", "residents"\]/);
+  assert.match(publicForm, /El archivo es opcional/);
+  assert.match(model, /OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = \["community_data"\]/);
   assert.match(uploadStartRoute, /isOutriderPublicUploadCategory/);
   assert.match(uploadCompleteRoute, /isOutriderPublicUploadCategory/);
   assert.doesNotMatch(publicForm, /Listado de personal de seguridad/);

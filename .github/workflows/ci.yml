@@ -70,6 +70,7 @@ jobs:
             tests/entry-outrider.test.mjs \
             tests/entry-outrider-standalone.test.mjs \
             tests/entry-outrider-initial-admins.test.mjs \
+            tests/entry-outrider-single-source-upload.test.mjs \
             tests/entry-activation-middleware.test.mjs \
             tests/entry-unit-resident-move.test.mjs
 

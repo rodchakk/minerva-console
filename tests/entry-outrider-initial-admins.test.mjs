@@ -20,6 +20,9 @@ const adminSummary = read(
 const migration = read(
   "supabase/migrations/20260907071000_outrider_initial_administrators.sql",
 );
+const resolverFix = read(
+  "supabase/migrations/20260907074018_outrider_resolver_null_admin_count.sql",
+);
 
 test("destination copy describes businesses and service points instead of common areas", () => {
   assert.match(form, /comercios, talleres, pulperías, oficinas u otros lugares/);
@@ -70,6 +73,16 @@ test("database keeps initial admins in Outrider only and requires them before su
       new RegExp(`\\b(insert into|update|delete from)\\s+public\\.${table}\\b`, "i"),
     );
   }
+});
+
+test("resolver preserves fresh Outrider payload when initial admin count is null", () => {
+  assert.match(
+    resolverFix,
+    /coalesce\(to_jsonb\(v_outrider\.initial_admin_count\), 'null'::jsonb\)/,
+  );
+  assert.match(resolverFix, /'\{outrider,initial_admin_count\}'/);
+  assert.match(resolverFix, /grant execute on function public\.resolve_community_outrider_v1\(text\)\s+to service_role/);
+  assert.doesNotMatch(resolverFix, /insert into public\.(houses|community_users|guards|community_destinations)/i);
 });
 
 test("internal review and exports expose administrators for activation preparation", () => {

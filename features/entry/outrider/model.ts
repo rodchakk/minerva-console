@@ -30,9 +30,11 @@ export const OUTRIDER_SECTIONS = [
 
 export type OutriderSection = (typeof OUTRIDER_SECTIONS)[number];
 
-// Keep legacy categories readable/exportable, but only units and residents are
-// offered as new public uploads after the first production QA walkthrough.
+// Keep legacy categories readable/exportable, but expose one generic source-file
+// slot to new public Outrider intakes so the patronato does not have to classify
+// its existing spreadsheet/document before sending it to Minerva.
 export const OUTRIDER_FILE_CATEGORIES = [
+  "community_data",
   "units",
   "residents",
   "security_staff",
@@ -41,7 +43,7 @@ export const OUTRIDER_FILE_CATEGORIES = [
 
 export type OutriderFileCategory = (typeof OUTRIDER_FILE_CATEGORIES)[number];
 
-export const OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = ["units", "residents"] as const;
+export const OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = ["community_data"] as const;
 export type OutriderPublicUploadCategory =
   (typeof OUTRIDER_PUBLIC_UPLOAD_CATEGORIES)[number];
 

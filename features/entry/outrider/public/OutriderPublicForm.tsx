@@ -39,13 +39,9 @@ const CATEGORY_COPY: Record<
   OutriderPublicUploadCategory,
   { label: string; note: string }
 > = {
-  residents: {
-    label: "Listado actual de residentes por unidad",
-    note: "Puede ser el archivo que ya usa administración.",
-  },
-  units: {
-    label: "Listado de unidades o numeración de la residencial",
-    note: "Casas, apartamentos, oficinas u otra numeración.",
+  community_data: {
+    label: "Archivo de información de la comunidad",
+    note: "Puede contener unidades, residentes o ambos. Envíe el archivo que ya utiliza administración.",
   },
 };
 
@@ -651,9 +647,9 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
           </div>
 
           <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm leading-6 text-emerald-900">
-            No necesita reorganizar la información para nosotros. Si ya tiene
-            estos archivos, envíelos tal como los utiliza y Minerva se encargará
-            de prepararlos para ENTRY. Los archivos son opcionales.
+            No necesita reorganizar la información para nosotros. Si ya tiene un
+            archivo con unidades, residentes o ambos, envíelo tal como lo utiliza
+            y Minerva se encargará de prepararlo para ENTRY. El archivo es opcional.
           </p>
           <div className="space-y-3">
             {OUTRIDER_PUBLIC_UPLOAD_CATEGORIES.map((category) => (
@@ -670,35 +666,41 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
                       {CATEGORY_COPY[category].note}
                     </p>
                   </div>
-                  <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
-                    {uploadingCategory === category ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <FileUp className="h-4 w-4" />
-                    )}
-                    Cargar
-                    <input
-                      type="file"
-                      disabled={!editable || uploadingCategory !== null}
-                      accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg"
-                      className="sr-only"
-                      onChange={(event) => {
-                        const file = event.currentTarget.files?.[0];
-                        event.currentTarget.value = "";
-                        if (file) void uploadFile(category, file);
-                      }}
-                    />
-                  </label>
+                  {files.length === 0 ? (
+                    <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
+                      {uploadingCategory === category ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileUp className="h-4 w-4" />
+                      )}
+                      Cargar archivo
+                      <input
+                        type="file"
+                        disabled={!editable || uploadingCategory !== null}
+                        accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          event.currentTarget.value = "";
+                          if (file) void uploadFile(category, file);
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <span className="inline-flex h-9 items-center rounded-md bg-emerald-50 px-3 text-xs font-semibold text-emerald-800">
+                      Archivo recibido
+                    </span>
+                  )}
                 </div>
-                <div className="mt-3 space-y-1">
-                  {files
-                    .filter((file) => file.category === category)
-                    .map((file) => (
+                {files.length > 0 ? (
+                  <div className="mt-3 space-y-1">
+                    {files.map((file) => (
                       <p key={file.id} className="text-xs text-slate-600">
                         {file.originalFilename} · {fileSizeLabel(file.byteSize)}
                       </p>
                     ))}
-                </div>
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
