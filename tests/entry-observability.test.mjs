@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 
@@ -12,13 +12,18 @@ function read(path) {
 const migration = read(
   "supabase/migrations/20260907090000_entry_observability_v1.sql",
 );
+const ocrStatusMigration = read(
+  "supabase/migrations/20260907182500_entry_ocr_observability_status.sql",
+);
 const page = read("app/(console)/products/entry/observability/page.tsx");
 const loading = read("app/(console)/products/entry/observability/loading.tsx");
 const filters = read("features/entry/observability/ObservabilityFilters.tsx");
 const queries = read("features/entry/observability/queries.ts");
 const sidebar = read("components/layout/AppSidebar.tsx");
 const worker = read("supabase/functions/send-onboarding-email-batch/index.ts");
+const ocrSource = read("supabase/functions/extract-plate-text/index.ts");
 const docs = read("docs/entry-observability.md");
+const ocrDocs = read("docs/entry-ocr-production-hardening.md");
 const ci = read(".github/workflows/ci.yml");
 
 const severityRank = new Map([
@@ -397,14 +402,16 @@ test("selected-community scope excludes unrelated global operational rows", () =
   assert.equal(includesCommunityScopedRow(null, null), true);
 });
 
-test("OCR queue visibility uses queue state without claiming provider economics", () => {
+test("OCR queue visibility uses queue state and the hardening release flips provider capability", () => {
   assert.match(migration, /from public\.plate_ocr_queue q/);
   assert.match(migration, /join public\.entry_logs el on el\.id = q\.entry_log_id/);
   assert.match(migration, /when q\.status in \('PENDING', 'PROCESSING'\) then least\(q\.created_at, now\(\)\)/);
   assert.match(migration, /q\.status in \('PENDING', 'PROCESSING'\)[\s\S]*q\.status in \('DONE', 'FAILED'\)[\s\S]*coalesce\(q\.completed_at, q\.scheduled_at, q\.created_at\) >= v_start[\s\S]*coalesce\(q\.completed_at, q\.scheduled_at, q\.created_at\) < v_end/);
   assert.match(migration, /provider_usage_status', 'not_instrumented'/);
+  assert.match(ocrStatusMigration, /provider_instrumented\}'[\s\S]*'true'::jsonb/);
+  assert.match(ocrStatusMigration, /provider_usage_status\}'[\s\S]*'instrumented'/);
   assert.match(page, /OCR queue/);
-  assert.match(page, /Not instrumented/);
+  assert.match(page, /Instrumented/);
   assert.match(docs, /fresh PENDING row is not degradation/);
   assert.match(docs, /exhausted attempts can degrade Image OCR health/);
   assert.equal(
@@ -538,15 +545,17 @@ test("onboarding email worker records actual Resend provider calls best-effort w
   assert.doesNotMatch(worker, /p_metadata:[\s\S]{0,500}pin/);
 });
 
-test("OCR economics are foundation-ready but not claimed as instrumented without source", () => {
-  assert.equal(
-    existsSync(join(root, "supabase/functions/extract-plate-text/index.ts")),
-    false,
-  );
-  assert.match(migration, /'image_ocr'/);
-  assert.match(docs, /foundation-ready but not yet instrumented/);
-  assert.match(docs, /extract-plate-text/);
+test("OCR economics are repository-controlled and measured at the provider boundary", () => {
+  assert.match(ocrSource, /record_entry_usage_v1/);
+  assert.match(ocrSource, /usageMetadata/);
+  assert.match(ocrSource, /p_provider: "google_gemini"/);
+  assert.match(ocrSource, /p_operation: "image_ocr"/);
+  assert.match(ocrSource, /p_image_count: 1/);
+  assert.match(ocrSource, /p_pricing_version: PRICING_VERSION/);
+  assert.match(ocrDocs, /pricing snapshot/i);
+  assert.match(ocrDocs, /one usage-ledger row/i);
   assert.match(docs, /Do not infer token usage from image count/);
+  assert.match(docs, /ENTRY-OCR-001/);
 });
 
 test("observability docs define ownership, privacy, and future instrumentation rules", () => {
