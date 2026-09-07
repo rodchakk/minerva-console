@@ -48,6 +48,30 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+  entry-outrider-tests:
+    name: ENTRY Outrider regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run stable ENTRY Outrider regression scope
+        run: |
+          node --test \
+            tests/entry-outrider.test.mjs \
+            tests/entry-activation-middleware.test.mjs \
+            tests/entry-unit-resident-move.test.mjs \
+            tests/console-user-access-foundation.test.mjs
+
   lint-brain:
     name: Lint (Brain + layout)
     runs-on: ubuntu-latest
