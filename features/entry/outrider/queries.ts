@@ -67,6 +67,14 @@ export type OutriderDetail = OutriderListItem & {
 
 type Row = Record<string, unknown>;
 
+const OUTRIDER_STATUS_PRIORITY: Record<OutriderStatus, number> = {
+  ready_for_review: 0,
+  needs_information: 1,
+  in_progress: 2,
+  not_started: 3,
+  approved: 4,
+};
+
 function asRows(data: unknown): Row[] {
   return Array.isArray(data) ? (data as Row[]) : [];
 }
@@ -99,6 +107,23 @@ function unitTypeArray(value: unknown) {
 function statusFrom(value: unknown): OutriderStatus {
   const status = coerceString(value);
   return isOutriderStatus(status) ? status : "not_started";
+}
+
+function compareOperationalPriority(
+  left: OutriderListItem,
+  right: OutriderListItem,
+) {
+  const statusDifference =
+    OUTRIDER_STATUS_PRIORITY[left.status] - OUTRIDER_STATUS_PRIORITY[right.status];
+  if (statusDifference !== 0) return statusDifference;
+
+  const rightUpdated = new Date(right.updatedAt).getTime();
+  const leftUpdated = new Date(left.updatedAt).getTime();
+  if (Number.isFinite(rightUpdated) && Number.isFinite(leftUpdated)) {
+    return rightUpdated - leftUpdated;
+  }
+
+  return left.communityName.localeCompare(right.communityName);
 }
 
 function communityById(
@@ -226,7 +251,8 @@ export async function listOutriderSessions(): Promise<OutriderListItem[]> {
     .map((row) =>
       mapListItem(row, communities, attachmentCounts.get(coerceString(row.id)) ?? 0),
     )
-    .filter((item): item is OutriderListItem => item !== null);
+    .filter((item): item is OutriderListItem => item !== null)
+    .sort(compareOperationalPriority);
 }
 
 export async function getOutriderAttentionCount() {
