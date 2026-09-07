@@ -80,8 +80,8 @@ const UNIT_TYPE_LABELS: Record<OutriderUnitType, string> = {
 
 const SECTION_LABELS: Record<OutriderSection, string> = {
   available_information: "Informacion disponible",
-  contact: "Contacto",
-  destinations: "Destinos internos",
+  contact: "Contacto y administradores",
+  destinations: "Destinos de la comunidad",
   inactive_units: "Unidades inactivas",
   units: "Unidades",
 };
@@ -104,6 +104,13 @@ export type OutriderFileRecord = {
   storagePath: string;
 };
 
+export type OutriderAdministrator = {
+  email: string | null;
+  name: string | null;
+  phone: string | null;
+  unit: string | null;
+};
+
 export type OutriderDraft = {
   availableInformation: OutriderFileCategory[];
   contactEmail: string | null;
@@ -113,6 +120,8 @@ export type OutriderDraft = {
   hasDestinations: boolean | null;
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
+  initialAdminCount: number | null;
+  initialAdmins: OutriderAdministrator[];
   otherUnitType: string | null;
   securityStaffCount: number | null;
   securityStaffNotes: string | null;
@@ -149,6 +158,8 @@ export type OutriderSavePayload = {
   hasDestinations?: unknown;
   hasInactiveUnits?: unknown;
   inactiveUnitNotes?: unknown;
+  initialAdminCount?: unknown;
+  initialAdmins?: unknown;
   markSectionsComplete?: unknown;
   otherUnitType?: unknown;
   securityStaffCount?: unknown;
@@ -162,6 +173,10 @@ export type NormalizedOutriderSave = OutriderDraft & {
 };
 
 export type OutriderExportSummary = {
+  administrators: {
+    count: number | null;
+    people: OutriderAdministrator[];
+  };
   attachments: Array<{
     byteSize: number;
     category: OutriderFileCategory;
@@ -336,9 +351,40 @@ function normalizeCompletedSections(value: unknown) {
   return Array.from(normalized);
 }
 
+function normalizeAdministrators(value: unknown): OutriderAdministrator[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 25).map((item) => {
+    const record =
+      item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+
+    return {
+      email: normalizeOutriderText(record.email, 254),
+      name: normalizeOutriderText(record.name, 180),
+      phone: normalizeOutriderText(record.phone, 80),
+      unit: normalizeOutriderText(record.unit, 160),
+    };
+  });
+}
+
 export function isValidOutriderEmail(value: string | null) {
   if (!value) return false;
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
+}
+
+function isAdministratorComplete(administrator: OutriderAdministrator) {
+  const emailValid = administrator.email
+    ? isValidOutriderEmail(administrator.email)
+    : true;
+
+  return Boolean(
+    administrator.name &&
+      administrator.unit &&
+      emailValid &&
+      (administrator.phone || isValidOutriderEmail(administrator.email)),
+  );
 }
 
 export function normalizeOutriderSavePayload(
@@ -354,6 +400,8 @@ export function normalizeOutriderSavePayload(
     hasDestinations: normalizeBoolean(payload.hasDestinations),
     hasInactiveUnits: normalizeBoolean(payload.hasInactiveUnits),
     inactiveUnitNotes: normalizeOutriderText(payload.inactiveUnitNotes, 1000),
+    initialAdminCount: normalizeInteger(payload.initialAdminCount, 0, 25),
+    initialAdmins: normalizeAdministrators(payload.initialAdmins),
     otherUnitType: normalizeOutriderText(payload.otherUnitType, 120),
     securityStaffCount: normalizeInteger(payload.securityStaffCount, 0, 500),
     securityStaffNotes: normalizeOutriderText(payload.securityStaffNotes, 2000),
@@ -402,13 +450,17 @@ export function calculateOutriderCompletedSections(
     completed.delete("available_information");
   }
 
-  const contactEmailValid =
-    !draft.contactEmail || isValidOutriderEmail(draft.contactEmail);
-  if (
+  const contactComplete = Boolean(
     draft.contactName &&
-    (draft.contactPhone || isValidOutriderEmail(draft.contactEmail)) &&
-    contactEmailValid
-  ) {
+      (draft.contactPhone || isValidOutriderEmail(draft.contactEmail)),
+  );
+  const administratorsComplete = Boolean(
+    draft.initialAdminCount !== null &&
+      draft.initialAdmins.length === draft.initialAdminCount &&
+      draft.initialAdmins.every(isAdministratorComplete),
+  );
+
+  if (contactComplete && administratorsComplete) {
     completed.add("contact");
   } else {
     completed.delete("contact");
