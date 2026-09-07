@@ -209,11 +209,9 @@ async function loadUnits(
   communityId: string,
   residents: FieldPeopleResult<FieldResident>,
 ): Promise<FieldPeopleResult<FieldUnit>> {
-  const { data, error } = await supabase
-    .from("houses")
-    .select("id,house_label,is_active")
-    .eq("community_id", communityId)
-    .order("house_label", { ascending: true });
+  const { data, error } = await supabase.rpc("admin_list_houses", {
+    p_community_id: communityId,
+  });
 
   if (error) {
     return {
@@ -238,14 +236,20 @@ async function loadUnits(
   const items = Array.isArray(data)
     ? data
         .map((item) => {
-          const id = coerceString(item.id);
+          const record = item as Record<string, unknown>;
+          const id = coerceString(record.id);
           if (!id) return null;
 
           return {
             id,
             isActive:
-              item.is_active === undefined ? true : coerceBoolean(item.is_active),
-            label: formatFallback(coerceString(item.house_label), "Unnamed unit"),
+              record.is_active === undefined
+                ? true
+                : coerceBoolean(record.is_active),
+            label: formatFallback(
+              coerceString(record.house_label),
+              "Unnamed unit",
+            ),
             residentCount: residentCountsByUnit
               ? residentCountsByUnit.get(id) ?? 0
               : null,
