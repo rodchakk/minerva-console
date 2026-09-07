@@ -402,9 +402,12 @@ export function calculateOutriderCompletedSections(
     completed.delete("available_information");
   }
 
+  const contactEmailValid =
+    !draft.contactEmail || isValidOutriderEmail(draft.contactEmail);
   if (
     draft.contactName &&
-    (draft.contactPhone || isValidOutriderEmail(draft.contactEmail))
+    (draft.contactPhone || isValidOutriderEmail(draft.contactEmail)) &&
+    contactEmailValid
   ) {
     completed.add("contact");
   } else {
