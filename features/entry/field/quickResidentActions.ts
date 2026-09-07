@@ -214,12 +214,17 @@ export async function createFieldQuickResident(
   }
 
   const supabase = await createClient();
-  const { data: unitData, error: unitError } = await supabase
-    .from("houses")
-    .select("id,house_label,is_active")
-    .eq("community_id", communityId)
-    .eq("id", unitId)
-    .maybeSingle();
+  const { data: unitRows, error: unitError } = await supabase.rpc(
+    "admin_list_houses",
+    {
+      p_community_id: communityId,
+    },
+  );
+  const unitData = Array.isArray(unitRows)
+    ? unitRows
+        .map((item) => item as Record<string, unknown>)
+        .find((item) => coerceString(item.id) === unitId) ?? null
+    : null;
 
   if (unitError || !unitData) {
     return {
