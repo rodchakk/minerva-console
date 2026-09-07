@@ -40,19 +40,22 @@ Token accounting uses `usageMetadata.promptTokenCount` for input and candidates 
 - Internal Postgres calls use service-role JWT material from Supabase Vault at runtime.
 - No service-role value is copied into migrations, source code, logs, or documentation.
 - Client calls cannot select an arbitrary storage object or cross community boundaries.
+- The Gemini API key is sent in the `x-goog-api-key` request header, not in the request URL.
 - OCR remains auxiliary: trigger exceptions never fail a real gate check-in.
 
 ## Release order
 
-To avoid an authentication mismatch between the old Edge Function and the hardened DB dispatcher, release in this order with minimal gap:
+The old DB dispatcher and the hardened Edge Function use different internal authentication. A brief mismatch during rollout is acceptable because the queue is durable and OCR never blocks check-in.
 
-1. Deploy the repository-owned `extract-plate-text` code in compatibility mode if necessary.
-2. Apply `20260907182000_entry_ocr_production_hardening.sql`.
-3. Deploy the same Edge source with `verify_jwt=true` as the final state.
-4. Confirm the live function reports `verify_jwt=true` and the OCR cron job is active.
+Release in this order:
+
+1. Deploy the repository-owned `extract-plate-text` with `verify_jwt=true`.
+2. Immediately apply `20260907182000_entry_ocr_production_hardening.sql` so DB dispatch switches to the Vault service-role JWT and the retry scheduler becomes active.
+3. Confirm the live Edge Function reports `verify_jwt=true` and the OCR cron job is active.
+4. Confirm no queue rows were exhausted during the short rollout window; any temporary pending row should be retried by the scheduler.
 5. Run one controlled Paradis check-in with a vehicle image and verify queue completion + one usage-ledger row.
 
-Do not reintroduce a custom shared bearer credential to simplify deployment.
+Do not reintroduce a custom shared bearer credential to create a compatibility deployment.
 
 ## Production smoke acceptance
 
