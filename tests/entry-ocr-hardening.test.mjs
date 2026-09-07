@@ -21,9 +21,11 @@ test("OCR source is recovered without the legacy hardcoded shared secret", () =>
   assert.match(migration, /'Bearer '\s*\|\|\s*v_service_role_key/);
 });
 
-test("OCR Edge endpoint is internal service-role only", () => {
-  assert.match(edge, /bearerToken !== SUPABASE_SERVICE_ROLE_KEY/);
+test("OCR Edge endpoint accepts only a gateway-verified service-role JWT", () => {
+  assert.match(edge, /function jwtRole\(token: string\)/);
+  assert.match(edge, /jwtRole\(bearerToken\) !== "service_role"/);
   assert.match(edge, /Internal service role required/);
+  assert.doesNotMatch(edge, /bearerToken !== SUPABASE_SERVICE_ROLE_KEY/);
   assert.doesNotMatch(edge, /SUPABASE_ANON_KEY/);
   assert.doesNotMatch(edge, /community_members/);
   assert.doesNotMatch(edge, /\.in\("role"/);
