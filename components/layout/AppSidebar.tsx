@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Building2,
+  BarChart3,
   Bell,
   ChevronRight,
   ChevronsLeft,
@@ -58,6 +59,7 @@ const entryNavItems: NavItem[] = [
   { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
   { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
   { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
+  { label: "Observability", href: "/products/entry/observability", icon: BarChart3 },
 ];
 
 const systemNavGroup: NavGroup = {

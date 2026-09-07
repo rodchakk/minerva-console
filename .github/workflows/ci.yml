@@ -74,6 +74,25 @@ jobs:
             tests/entry-activation-middleware.test.mjs \
             tests/entry-unit-resident-move.test.mjs
 
+  entry-observability-tests:
+    name: ENTRY Observability regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ENTRY Observability regression scope
+        run: node --test tests/entry-observability.test.mjs
+
   lint-brain:
     name: Lint (Brain + layout)
     runs-on: ubuntu-latest

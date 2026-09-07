@@ -107,6 +107,60 @@ type ClaimedMessage = {
   dry_run: boolean;
 };
 
+async function recordEntryUsage(input: {
+  durationMs: number;
+  errorCode?: string | null;
+  providerMessageId?: string | null;
+  status: "success" | "failed";
+  message: ClaimedMessage;
+}) {
+  try {
+    const { error } = await supabase.rpc("record_entry_usage_v1", {
+      p_actor_id: null,
+      p_community_id: input.message.community_id,
+      p_correlation_id: input.message.campaign_id,
+      p_currency: "USD",
+      p_duration_ms: input.durationMs,
+      p_error_code: input.errorCode ?? null,
+      p_error_fingerprint:
+        input.status === "failed" ? "resend:onboarding_email" : null,
+      p_estimated_cost: null,
+      p_image_count: null,
+      p_input_tokens: null,
+      p_metadata: {
+        activation_queue_id: input.message.activation_queue_id,
+        campaign_id: input.message.campaign_id,
+        campaign_message_id: input.message.id,
+        channel: "email",
+      },
+      p_operation: "onboarding_email",
+      p_output_tokens: null,
+      p_pricing_version: null,
+      p_provider: "resend",
+      p_provider_request_id: input.providerMessageId ?? null,
+      p_quantity: 1,
+      p_request_id: input.message.id,
+      p_service_model: "email",
+      p_status: input.status,
+    });
+
+    if (error) {
+      console.warn("entry usage ledger write failed", {
+        campaign_message_id: input.message.id,
+        code: error.code ?? null,
+        message: (error.message ?? "Supabase RPC error").slice(0, 160),
+      });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("entry usage ledger write failed", {
+      campaign_message_id: input.message.id,
+      code: null,
+      message: message.slice(0, 160),
+    });
+  }
+}
+
 async function claimPendingMessages(args: {
   campaignId: string;
   limit: number;
@@ -186,24 +240,48 @@ async function processMessage(
 
     let provider = "resend";
     let providerMessageId: string | null = null;
+    let providerStartedAt: number | null = null;
+    let providerUsageRecorded = false;
 
     if (dryRunEffective || !resend) {
       provider = "dry_run";
       providerMessageId = `dry_run_${msg.id}`;
     } else {
-      const { data: emailData, error: emailErr } = await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: [msg.recipient_email],
-        subject: "Your ENTRY activation code",
-        html: buildEmailHtml({
-          residentName: msg.resident_name,
-          unitLabel: msg.unit_label,
-          pin: generatedPin,
-          activationLink,
-        }),
-      });
-      if (emailErr) throw new Error(emailErr.message ?? "resend_send_failed");
-      providerMessageId = (emailData as { id?: string } | null)?.id ?? null;
+      providerStartedAt = Date.now();
+      try {
+        const { data: emailData, error: emailErr } = await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: [msg.recipient_email],
+          subject: "Your ENTRY activation code",
+          html: buildEmailHtml({
+            residentName: msg.resident_name,
+            unitLabel: msg.unit_label,
+            pin: generatedPin,
+            activationLink,
+          }),
+        });
+        providerMessageId = (emailData as { id?: string } | null)?.id ?? null;
+        await recordEntryUsage({
+          durationMs: Date.now() - providerStartedAt,
+          errorCode: emailErr ? "RESEND_SEND_FAILED" : null,
+          message: msg,
+          providerMessageId,
+          status: emailErr ? "failed" : "success",
+        });
+        providerUsageRecorded = true;
+        if (emailErr) throw new Error(emailErr.message ?? "resend_send_failed");
+      } catch (providerErr) {
+        if (!providerUsageRecorded) {
+          await recordEntryUsage({
+            durationMs: Date.now() - providerStartedAt,
+            errorCode: "RESEND_SEND_THROWN",
+            message: msg,
+            providerMessageId: null,
+            status: "failed",
+          });
+        }
+        throw providerErr;
+      }
     }
 
     await supabase
