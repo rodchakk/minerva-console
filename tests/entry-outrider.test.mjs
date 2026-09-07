@@ -14,12 +14,14 @@ const migration = [
   read("supabase/migrations/20260907013000_entry_outrider_review_fixes.sql"),
   read("supabase/migrations/20260907014000_entry_outrider_optional_files.sql"),
   read("supabase/migrations/20260907015000_entry_outrider_export_bucket.sql"),
+  read("supabase/migrations/20260907061021_outrider_standalone_intakes.sql"),
+  read("supabase/migrations/20260907070000_outrider_qa_hardening.sql"),
 ].join("\n");
 const reviewMigration = read(
   "supabase/migrations/20260907013000_entry_outrider_review_fixes.sql",
 );
-const optionalFilesMigration = read(
-  "supabase/migrations/20260907014000_entry_outrider_optional_files.sql",
+const qaMigration = read(
+  "supabase/migrations/20260907070000_outrider_qa_hardening.sql",
 );
 const exportBucketMigration = read(
   "supabase/migrations/20260907015000_entry_outrider_export_bucket.sql",
@@ -27,9 +29,7 @@ const exportBucketMigration = read(
 const model = read("features/entry/outrider/model.ts");
 const operationsPage = read("app/(console)/products/entry/page.tsx");
 const publicPage = read("app/(public)/entry/outrider/[token]/page.tsx");
-const optionalFilesComponent = read(
-  "features/entry/outrider/public/OutriderOptionalFilesAcknowledge.tsx",
-);
+const publicForm = read("features/entry/outrider/public/OutriderPublicForm.tsx");
 const optionalFilesRoute = read(
   "app/(public)/entry/outrider/[token]/available-information/complete/route.ts",
 );
@@ -88,10 +88,8 @@ test("Outrider status transitions are explicit and terminal approval is read-onl
     detailWorkspace,
     /const canRequestInfo = detail\.status === "ready_for_review";/,
   );
-  assert.doesNotMatch(
-    detailWorkspace,
-    /\["ready_for_review", "approved"\]\.includes\(detail\.status\)/,
-  );
+  assert.match(detailWorkspace, /canRotate=\{detail\.status !== "approved"\}/);
+  assert.match(detailWorkspace, /\{canRotate \? \(/);
 });
 
 test("public routes reject invalid tokens and protect mutations", () => {
@@ -107,19 +105,38 @@ test("public routes reject invalid tokens and protect mutations", () => {
   assert.match(optionalFilesRoute, /enforceOutriderRateLimit/);
 });
 
-test("section four can be explicitly completed with zero files", () => {
-  assert.match(publicPage, /OutriderOptionalFilesAcknowledge/);
-  assert.match(publicPage, /!session\.completedSections\.includes\("available_information"\)/);
-  assert.match(optionalFilesComponent, /Continuar sin adjuntar archivos/);
+test("section four uses structured security staffing while files remain optional", () => {
+  assert.doesNotMatch(publicPage, /OutriderOptionalFilesAcknowledge/);
+  assert.match(model, /draft\.securityStaffCount !== null/);
+  assert.match(publicForm, /Cantidad de personal de seguridad/);
+  assert.match(publicForm, /Nombres, turnos u otra información \(opcional\)/);
+  assert.match(publicForm, /Los archivos son opcionales/);
+  assert.match(model, /OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = \["units", "residents"\]/);
+  assert.match(uploadStartRoute, /isOutriderPublicUploadCategory/);
+  assert.match(uploadCompleteRoute, /isOutriderPublicUploadCategory/);
+  assert.doesNotMatch(publicForm, /Listado de personal de seguridad/);
+  assert.doesNotMatch(publicForm, /Listado de áreas comunes o recreativas/);
+});
+
+test("selecting Otro is a valid incomplete draft instead of a persistence error", () => {
   assert.match(
-    optionalFilesRoute,
-    /complete_community_outrider_available_information_v1/,
+    qaMigration,
+    /drop constraint if exists community_outrider_sessions_other_requires_value/,
   );
   assert.match(
-    optionalFilesMigration,
-    /array_append\(v_completed_sections, 'available_information'\)/,
+    qaMigration,
+    /'otro' <> all\(coalesce\(p_unit_types, '\{\}'::text\[\]\)\)[\s\S]*p_unit_type_other/,
   );
-  assert.match(optionalFilesMigration, /'without_files', true/);
+  assert.match(model, /!draft\.unitTypes\.includes\("otro"\) \|\| Boolean\(draft\.otherUnitType\)/);
+});
+
+test("draft autosave tolerates partial email but submit keeps strict validation", () => {
+  assert.match(qaMigration, /Draft autosave must tolerate a partially typed email/);
+  assert.match(qaMigration, /if v_contact_email is not null and length\(v_contact_email\) > 254/);
+  assert.match(
+    qaMigration,
+    /submit_community_outrider_v1[\s\S]*contact_email !~ '\^\[\^@\\s\]\+@/,
+  );
 });
 
 test("successful submit preserves completed sections and 100 percent progress", () => {
@@ -135,14 +152,10 @@ test("successful submit preserves completed sections and 100 percent progress", 
 });
 
 test("Outrider autosave activity is curated rather than keystroke-level", () => {
-  assert.match(reviewMigration, /v_previous_status = 'not_started'/);
+  assert.match(qaMigration, /v_previous_status = 'not_started'/);
   assert.match(
-    reviewMigration,
+    qaMigration,
     /v_previous_completed_sections is distinct from v_completed_sections/,
-  );
-  assert.match(
-    reviewMigration,
-    /if v_previous_status = 'not_started'[\s\S]*insert into public\.community_outrider_events/,
   );
 });
 
@@ -153,7 +166,10 @@ test("token material is hashed or encrypted and not exported", () => {
   assert.match(exportBuilder, /entry-outrider-export-v1/);
 });
 
-test("canonical export includes naming example without internal storage paths", () => {
+test("canonical export includes city, security staffing and naming example without internal storage paths", () => {
+  assert.match(exportBuilder, /city: detail\.communityCity/);
+  assert.match(exportBuilder, /count: detail\.securityStaffCount/);
+  assert.match(exportBuilder, /notes: detail\.securityStaffNotes/);
   assert.match(exportBuilder, /namingExample: detail\.unitNamingExample/);
   assert.match(exportBuilder, /Naming example:/);
   assert.doesNotMatch(exportBuilder, /storagePath: file\.storagePath/);
@@ -190,10 +206,8 @@ test("payload normalization and attachment category validation are centralized",
   }
   assert.match(model, /OUTRIDER_ALLOWED_FILE_TYPES/);
   assert.match(model, /OUTRIDER_MAX_FILE_BYTES/);
-  assert.match(reviewMigration, /'destinations', 75, 180/);
-  assert.match(reviewMigration, /length\(v_contact_name\) > 180/);
-  assert.match(reviewMigration, /length\(v_contact_phone\) > 80/);
-  assert.match(reviewMigration, /length\(v_inactive_units_notes\) > 1000/);
+  assert.match(qaMigration, /security_staff_count/);
+  assert.match(qaMigration, /security_staff_notes/);
 });
 
 test("upload completion verifies the private Storage object and scoped path", () => {
@@ -273,10 +287,6 @@ test("migration security posture keeps Outrider narrow and service-role mediated
   assert.match(
     migration,
     /grant execute on function public\.resolve_community_outrider_v1\(text\) to service_role/,
-  );
-  assert.match(
-    migration,
-    /grant execute on function public\.complete_community_outrider_available_information_v1\(text\)[\s\S]*to service_role/,
   );
   assert.match(migration, /'entry-outrider'/);
   assert.match(migration, /public = false/);
