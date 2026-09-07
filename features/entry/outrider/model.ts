@@ -30,6 +30,8 @@ export const OUTRIDER_SECTIONS = [
 
 export type OutriderSection = (typeof OUTRIDER_SECTIONS)[number];
 
+// Keep legacy categories readable/exportable, but only units and residents are
+// offered as new public uploads after the first production QA walkthrough.
 export const OUTRIDER_FILE_CATEGORIES = [
   "units",
   "residents",
@@ -38,6 +40,10 @@ export const OUTRIDER_FILE_CATEGORIES = [
 ] as const;
 
 export type OutriderFileCategory = (typeof OUTRIDER_FILE_CATEGORIES)[number];
+
+export const OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = ["units", "residents"] as const;
+export type OutriderPublicUploadCategory =
+  (typeof OUTRIDER_PUBLIC_UPLOAD_CATEGORIES)[number];
 
 export const OUTRIDER_MAX_FILE_BYTES = 20 * 1024 * 1024;
 
@@ -74,8 +80,8 @@ const UNIT_TYPE_LABELS: Record<OutriderUnitType, string> = {
 
 const SECTION_LABELS: Record<OutriderSection, string> = {
   available_information: "Informacion disponible",
-  contact: "Contacto",
-  destinations: "Destinos internos",
+  contact: "Contacto y administradores",
+  destinations: "Destinos de la comunidad",
   inactive_units: "Unidades inactivas",
   units: "Unidades",
 };
@@ -98,6 +104,13 @@ export type OutriderFileRecord = {
   storagePath: string;
 };
 
+export type OutriderAdministrator = {
+  email: string | null;
+  name: string | null;
+  phone: string | null;
+  unit: string | null;
+};
+
 export type OutriderDraft = {
   availableInformation: OutriderFileCategory[];
   contactEmail: string | null;
@@ -107,7 +120,11 @@ export type OutriderDraft = {
   hasDestinations: boolean | null;
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
+  initialAdminCount: number | null;
+  initialAdmins: OutriderAdministrator[];
   otherUnitType: string | null;
+  securityStaffCount: number | null;
+  securityStaffNotes: string | null;
   unitNamingExample: string | null;
   unitTypes: OutriderUnitType[];
 };
@@ -141,8 +158,12 @@ export type OutriderSavePayload = {
   hasDestinations?: unknown;
   hasInactiveUnits?: unknown;
   inactiveUnitNotes?: unknown;
+  initialAdminCount?: unknown;
+  initialAdmins?: unknown;
   markSectionsComplete?: unknown;
   otherUnitType?: unknown;
+  securityStaffCount?: unknown;
+  securityStaffNotes?: unknown;
   unitNamingExample?: unknown;
   unitTypes?: unknown;
 };
@@ -152,6 +173,10 @@ export type NormalizedOutriderSave = OutriderDraft & {
 };
 
 export type OutriderExportSummary = {
+  administrators: {
+    count: number | null;
+    people: OutriderAdministrator[];
+  };
   attachments: Array<{
     byteSize: number;
     category: OutriderFileCategory;
@@ -160,6 +185,7 @@ export type OutriderExportSummary = {
     storagePath: string;
   }>;
   community: {
+    city: string | null;
     id: string;
     name: string;
   };
@@ -185,6 +211,10 @@ export type OutriderExportSummary = {
     submittedAt: string | null;
   };
   reviewNote: string | null;
+  securityStaff: {
+    count: number | null;
+    notes: string | null;
+  };
   setupBoundary: string;
   unitProfile: {
     otherUnitType: string | null;
@@ -205,6 +235,17 @@ export function isOutriderFileCategory(
   return (
     typeof value === "string" &&
     OUTRIDER_FILE_CATEGORIES.includes(value as OutriderFileCategory)
+  );
+}
+
+export function isOutriderPublicUploadCategory(
+  value: unknown,
+): value is OutriderPublicUploadCategory {
+  return (
+    typeof value === "string" &&
+    OUTRIDER_PUBLIC_UPLOAD_CATEGORIES.includes(
+      value as OutriderPublicUploadCategory,
+    )
   );
 }
 
@@ -231,6 +272,13 @@ export function normalizeOutriderText(value: unknown, maxLength: number) {
 
 function normalizeBoolean(value: unknown) {
   return typeof value === "boolean" ? value : null;
+}
+
+function normalizeInteger(value: unknown, min: number, max: number) {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(numeric) || numeric < min || numeric > max) return null;
+  return numeric;
 }
 
 function normalizeStringArray(value: unknown, maxItems: number, maxLength: number) {
@@ -303,6 +351,42 @@ function normalizeCompletedSections(value: unknown) {
   return Array.from(normalized);
 }
 
+function normalizeAdministrators(value: unknown): OutriderAdministrator[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 25).map((item) => {
+    const record =
+      item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+
+    return {
+      email: normalizeOutriderText(record.email, 254),
+      name: normalizeOutriderText(record.name, 180),
+      phone: normalizeOutriderText(record.phone, 80),
+      unit: normalizeOutriderText(record.unit, 160),
+    };
+  });
+}
+
+export function isValidOutriderEmail(value: string | null) {
+  if (!value) return false;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
+}
+
+function isAdministratorComplete(administrator: OutriderAdministrator) {
+  const emailValid = administrator.email
+    ? isValidOutriderEmail(administrator.email)
+    : true;
+
+  return Boolean(
+    administrator.name &&
+      administrator.unit &&
+      emailValid &&
+      (administrator.phone || isValidOutriderEmail(administrator.email)),
+  );
+}
+
 export function normalizeOutriderSavePayload(
   payload: OutriderSavePayload,
 ): NormalizedOutriderSave {
@@ -316,7 +400,11 @@ export function normalizeOutriderSavePayload(
     hasDestinations: normalizeBoolean(payload.hasDestinations),
     hasInactiveUnits: normalizeBoolean(payload.hasInactiveUnits),
     inactiveUnitNotes: normalizeOutriderText(payload.inactiveUnitNotes, 1000),
+    initialAdminCount: normalizeInteger(payload.initialAdminCount, 0, 25),
+    initialAdmins: normalizeAdministrators(payload.initialAdmins),
     otherUnitType: normalizeOutriderText(payload.otherUnitType, 120),
+    securityStaffCount: normalizeInteger(payload.securityStaffCount, 0, 500),
+    securityStaffNotes: normalizeOutriderText(payload.securityStaffNotes, 2000),
     unitNamingExample: normalizeOutriderText(payload.unitNamingExample, 160),
     unitTypes: normalizeUnitTypes(payload.unitTypes),
   };
@@ -334,6 +422,8 @@ export function calculateOutriderCompletedSections(
     (!draft.unitTypes.includes("otro") || Boolean(draft.otherUnitType))
   ) {
     completed.add("units");
+  } else {
+    completed.delete("units");
   }
 
   if (
@@ -341,6 +431,8 @@ export function calculateOutriderCompletedSections(
     (draft.hasDestinations === true && draft.destinationNames.length > 0)
   ) {
     completed.add("destinations");
+  } else {
+    completed.delete("destinations");
   }
 
   if (
@@ -348,14 +440,30 @@ export function calculateOutriderCompletedSections(
     (draft.hasInactiveUnits === true && Boolean(draft.inactiveUnitNotes))
   ) {
     completed.add("inactive_units");
+  } else {
+    completed.delete("inactive_units");
   }
 
-  if (draft.availableInformation.length > 0) {
+  if (draft.securityStaffCount !== null) {
     completed.add("available_information");
+  } else {
+    completed.delete("available_information");
   }
 
-  if (draft.contactName && (draft.contactPhone || draft.contactEmail)) {
+  const contactComplete = Boolean(
+    draft.contactName &&
+      (draft.contactPhone || isValidOutriderEmail(draft.contactEmail)),
+  );
+  const administratorsComplete = Boolean(
+    draft.initialAdminCount !== null &&
+      draft.initialAdmins.length === draft.initialAdminCount &&
+      draft.initialAdmins.every(isAdministratorComplete),
+  );
+
+  if (contactComplete && administratorsComplete) {
     completed.add("contact");
+  } else {
+    completed.delete("contact");
   }
 
   return OUTRIDER_SECTIONS.filter((section) => completed.has(section));

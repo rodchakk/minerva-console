@@ -5,6 +5,7 @@ import {
   isOutriderFileCategory,
   isOutriderStatus,
   normalizeOutriderSavePayload,
+  type OutriderAdministrator,
   type OutriderFileCategory,
   type OutriderSavePayload,
   type OutriderSection,
@@ -27,6 +28,12 @@ function asString(value: unknown) {
 function asNullableString(value: unknown) {
   const text = asString(value).trim();
   return text || null;
+}
+
+function asNullableInteger(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : null;
 }
 
 function asStringArray(value: unknown) {
@@ -54,6 +61,20 @@ function asOutriderUnitTypes(value: unknown) {
       unitType,
     ),
   );
+}
+
+function asAdministrators(value: unknown): OutriderAdministrator[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 25).map((item) => {
+    const record = asRecord(item);
+    return {
+      email: asNullableString(record.email),
+      name: asNullableString(record.name),
+      phone: asNullableString(record.phone),
+      unit: asNullableString(record.unit),
+    };
+  });
 }
 
 function mapPublicOutrider(data: unknown): PublicOutriderResult {
@@ -111,7 +132,11 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
       hasDestinations: asBoolean(outrider.has_destinations),
       hasInactiveUnits: asBoolean(outrider.has_inactive_units),
       inactiveUnitNotes: asNullableString(outrider.inactive_units_notes),
+      initialAdminCount: asNullableInteger(outrider.initial_admin_count),
+      initialAdmins: asAdministrators(outrider.initial_admins),
       otherUnitType: asNullableString(outrider.unit_type_other),
+      securityStaffCount: asNullableInteger(outrider.security_staff_count),
+      securityStaffNotes: asNullableString(outrider.security_staff_notes),
       unitNamingExample: asNullableString(outrider.unit_naming_example),
       unitTypes: asOutriderUnitTypes(outrider.unit_types),
     },
@@ -137,6 +162,10 @@ function toRpcPayload(payload: OutriderSavePayload) {
       has_destinations: normalized.hasDestinations,
       has_inactive_units: normalized.hasInactiveUnits,
       inactive_units_notes: normalized.inactiveUnitNotes,
+      initial_admin_count: normalized.initialAdminCount,
+      initial_admins: normalized.initialAdmins,
+      security_staff_count: normalized.securityStaffCount,
+      security_staff_notes: normalized.securityStaffNotes,
       unit_naming_example: normalized.unitNamingExample,
       unit_type_other: normalized.otherUnitType,
       unit_types: normalized.unitTypes,

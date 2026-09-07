@@ -4,7 +4,7 @@ import {
   OUTRIDER_STORAGE_BUCKET,
   isAllowedOutriderFile,
   isOutriderEditable,
-  isOutriderFileCategory,
+  isOutriderPublicUploadCategory,
   sanitizeOutriderFilename,
 } from "@/features/entry/outrider/model";
 import {
@@ -78,7 +78,7 @@ export async function POST(
 
   if (
     !storagePath ||
-    !isOutriderFileCategory(category) ||
+    !isOutriderPublicUploadCategory(category) ||
     !isAllowedOutriderFile({
       byteSize: declaredByteSize,
       mimeType: declaredMimeType,
