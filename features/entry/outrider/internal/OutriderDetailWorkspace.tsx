@@ -121,7 +121,13 @@ function CopyField({ url }: { url: string }) {
   );
 }
 
-function LinkControls({ outriderId }: { outriderId: string }) {
+function LinkControls({
+  canRotate,
+  outriderId,
+}: {
+  canRotate: boolean;
+  outriderId: string;
+}) {
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
@@ -166,24 +172,27 @@ function LinkControls({ outriderId }: { outriderId: string }) {
             <Copy className="h-4 w-4 stroke-[1.75]" />
             {isPending ? "Preparing..." : "Recover link"}
           </Button>
-          <form action={rotateAction}>
-            <input type="hidden" name="outrider_id" value={outriderId} />
-            <Button
-              type="submit"
-              variant="secondary"
-              disabled={isPending || rotatePending}
-              className="gap-2"
-            >
-              <RotateCw className="h-4 w-4 stroke-[1.75]" />
-              {rotatePending ? "Rotating..." : "Rotate link"}
-            </Button>
-          </form>
+          {canRotate ? (
+            <form action={rotateAction}>
+              <input type="hidden" name="outrider_id" value={outriderId} />
+              <Button
+                type="submit"
+                variant="secondary"
+                disabled={isPending || rotatePending}
+                className="gap-2"
+              >
+                <RotateCw className="h-4 w-4 stroke-[1.75]" />
+                {rotatePending ? "Rotating..." : "Rotate link"}
+              </Button>
+            </form>
+          ) : null}
         </div>
       </div>
 
       <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-        Recovering shows the current link when the encrypted payload is valid.
-        Rotating invalidates the previous link and returns a replacement.
+        {canRotate
+          ? "Recovering shows the current link when the encrypted payload is valid. Rotating invalidates the previous link and returns a replacement."
+          : "Recovering shows the approved read-only link when the encrypted payload is valid."}
       </p>
 
       {message ? (
@@ -191,7 +200,7 @@ function LinkControls({ outriderId }: { outriderId: string }) {
           {message}
         </p>
       ) : null}
-      {rotateState && !rotateState.success ? (
+      {canRotate && rotateState && !rotateState.success ? (
         <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {rotateState.error}
         </p>
@@ -503,6 +512,21 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
               }
             />
             <DataCard
+              label="Personal de seguridad"
+              value={
+                <div className="space-y-1">
+                  <p>
+                    {detail.securityStaffCount === null
+                      ? "Not answered"
+                      : `${detail.securityStaffCount} personas`}
+                  </p>
+                  <p className="text-[var(--text-muted)]">
+                    {detail.securityStaffNotes ?? "No notes"}
+                  </p>
+                </div>
+              }
+            />
+            <DataCard
               label={getOutriderSectionLabel("contact")}
               value={
                 <div className="space-y-1">
@@ -520,7 +544,10 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
         </section>
 
         <div className="space-y-4">
-          <LinkControls outriderId={detail.id} />
+          <LinkControls
+            canRotate={detail.status !== "approved"}
+            outriderId={detail.id}
+          />
 
           <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
