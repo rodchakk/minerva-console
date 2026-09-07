@@ -29,6 +29,7 @@ test("ENTRY Operations restores the pre-Outrider dashboard composition", () => {
 
 test("Outrider is intentionally narrow on Operations", () => {
   const operations = read("app/(console)/products/entry/page.tsx");
+  const operationsQueries = read("features/entry/operations/queries.ts");
 
   assert.match(operations, /Open Activation Queue/);
   assert.match(operations, /Open Outrider/);
@@ -41,6 +42,7 @@ test("Outrider is intentionally narrow on Operations", () => {
   assert.doesNotMatch(operations, /Recent Outrider activity/i);
   assert.doesNotMatch(operations, /listRecentOutriderActivity/);
   assert.doesNotMatch(operations, /title="Outrider operations"/);
+  assert.match(operationsQueries, /item\.source === "outrider"/);
 });
 
 test("Outrider remains a separate branded workspace using the approved artwork and copy", () => {
