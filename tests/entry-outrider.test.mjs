@@ -13,12 +13,16 @@ const migration = [
   read("supabase/migrations/20260907010000_entry_outrider_v1.sql"),
   read("supabase/migrations/20260907013000_entry_outrider_review_fixes.sql"),
   read("supabase/migrations/20260907014000_entry_outrider_optional_files.sql"),
+  read("supabase/migrations/20260907015000_entry_outrider_export_bucket.sql"),
 ].join("\n");
 const reviewMigration = read(
   "supabase/migrations/20260907013000_entry_outrider_review_fixes.sql",
 );
 const optionalFilesMigration = read(
   "supabase/migrations/20260907014000_entry_outrider_optional_files.sql",
+);
+const exportBucketMigration = read(
+  "supabase/migrations/20260907015000_entry_outrider_export_bucket.sql",
 );
 const model = read("features/entry/outrider/model.ts");
 const operationsPage = read("app/(console)/products/entry/page.tsx");
@@ -35,6 +39,9 @@ const publicSubmitRoute = read("app/(public)/entry/outrider/[token]/submit/route
 const uploadStartRoute = read("app/(public)/entry/outrider/[token]/upload/start/route.ts");
 const uploadCompleteRoute = read(
   "app/(public)/entry/outrider/[token]/upload/complete/route.ts",
+);
+const packageRoute = read(
+  "app/(console)/products/entry/outrider/[outriderId]/export/package/route.ts",
 );
 const exportBuilder = read("features/entry/outrider/export.ts");
 const detailWorkspace = read(
@@ -149,6 +156,19 @@ test("canonical export includes naming example without internal storage paths", 
   assert.doesNotMatch(exportBuilder, /storagePath: file\.storagePath/);
   assert.match(exportBuilder, /filename: file\.originalFilename/);
   assert.match(exportBuilder, /mimeType: file\.mimeType/);
+});
+
+test("ZIP packages are staged in private Storage instead of returned through Vercel", () => {
+  assert.match(exportBucketMigration, /'entry-outrider-exports'/);
+  assert.match(exportBucketMigration, /public,\s*file_size_limit/);
+  assert.match(exportBucketMigration, /false,\s*104857600/);
+  assert.match(exportBucketMigration, /'application\/zip'/);
+  assert.match(exportBuilder, /OUTRIDER_EXPORT_MAX_INPUT_BYTES = 95 \* 1024 \* 1024/);
+  assert.match(exportBuilder, /\.from\(OUTRIDER_EXPORT_STORAGE_BUCKET\)[\s\S]*\.upload\(storagePath, zipBytes/);
+  assert.match(exportBuilder, /\.createSignedUrl\(storagePath, OUTRIDER_EXPORT_SIGNED_URL_SECONDS/);
+  assert.match(packageRoute, /NextResponse\.redirect\(zip\.downloadUrl/);
+  assert.doesNotMatch(packageRoute, /new NextResponse\(zip\.bytes/);
+  assert.match(packageRoute, /package_too_large/);
 });
 
 test("payload normalization and attachment category validation are centralized", () => {
