@@ -61,6 +61,8 @@ export type OutriderDetail = OutriderListItem & {
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
   otherUnitType: string | null;
+  securityStaffCount: number | null;
+  securityStaffNotes: string | null;
   unitNamingExample: string | null;
   unitTypes: OutriderUnitType[];
 };
@@ -82,6 +84,12 @@ function asRows(data: unknown): Row[] {
 function nullableString(value: unknown) {
   const text = coerceString(value).trim();
   return text || null;
+}
+
+function nullableInteger(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : null;
 }
 
 function stringArray(value: unknown) {
@@ -377,6 +385,8 @@ export async function getOutriderDetail(
         : coerceBoolean(row.has_inactive_units),
     inactiveUnitNotes: nullableString(row.inactive_units_notes),
     otherUnitType: nullableString(row.unit_type_other),
+    securityStaffCount: nullableInteger(row.security_staff_count),
+    securityStaffNotes: nullableString(row.security_staff_notes),
     unitNamingExample: nullableString(row.unit_naming_example),
     unitTypes: unitTypeArray(row.unit_types),
   };
