@@ -72,13 +72,6 @@ function statusCount(
 
 const quickActions = [
   {
-    label: "Create community",
-    href: "/products/entry/communities/new",
-    note: "Start a new onboarding flow",
-    icon: UsersRound,
-    tone: "border-violet-400/15 bg-violet-500/[0.10] text-violet-200",
-  },
-  {
     label: "Open Activation Queue",
     href: "/products/entry/activation",
     note: "Review residents waiting for setup",
@@ -98,13 +91,6 @@ const quickActions = [
     note: "Search current user records",
     icon: Users,
     tone: "border-cyan-400/15 bg-cyan-500/[0.10] text-cyan-200",
-  },
-  {
-    label: "Publish message",
-    href: "/products/entry/messages",
-    note: "Prepare official Minerva updates",
-    icon: MessageSquare,
-    tone: "border-fuchsia-400/15 bg-fuchsia-500/[0.10] text-fuchsia-200",
   },
 ];
 
