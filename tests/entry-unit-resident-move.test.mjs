@@ -49,16 +49,15 @@ test("resident unit move RPC preserves identity and primary-resident consistency
   assert.doesNotMatch(migration, /delete from auth/i);
 });
 
-test("ENTRY Operations labels activation backlog explicitly", () => {
+test("ENTRY Operations promotes Outrider and keeps activation queue explicit", () => {
   const dashboard = read("app/(console)/products/entry/page.tsx");
 
-  assert.match(
-    dashboard,
-    /<span className="block">Pending<\/span>[\s\S]*<span className="block">activations<\/span>/,
-  );
+  assert.match(dashboard, /label="Residents in activation queue"/);
+  assert.match(dashboard, /label="Outrider"/);
+  assert.match(dashboard, /Outrider operations/);
   assert.doesNotMatch(
     dashboard,
     /<th className="px-4 py-3 font-medium">Pending<\/th>/,
   );
-  assert.match(dashboard, /community\.activationPendingCount/);
+  assert.match(dashboard, /residentsInActivationQueue/);
 });
