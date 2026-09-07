@@ -17,13 +17,15 @@ Observability measures whether an ENTRY subsystem executed correctly, not whethe
 
 A malformed, expired, unknown, or unauthorized QR can be correctly rejected by the access resolver. That is a successful execution of the QR validation subsystem, so the telemetry event uses `status = success` with `result = rejected` and an optional sanitized reason. Normal security/business rejection must not turn QR health Degraded or Down.
 
+A push queue row can also terminate as `failed` because the target audience has no active push tokens. That means there was nothing deliverable, not that Expo/provider infrastructure failed. This known condition is emitted as `status = skipped` with the generic code `PUSH_NO_ACTIVE_TOKENS`; raw queue error text is not copied into telemetry. Other terminal push failures remain operational failures.
+
 True runtime/provider failures can still be emitted as failed operational events by their owning boundary. No-traffic windows remain `Unknown`; ENTRY does not manufacture heartbeats to make the dashboard green.
 
 ## Safety
 
 Every trigger is fail-open for product operation. An observability write failure must not block pass creation, QR resolution, resident sign-in, or notification queue state changes.
 
-Telemetry is allowlisted and does not copy pass PINs, QR tokens, email addresses, push title/body, provider responses, images, or other user content. Community, actor/entity IDs, event type, outcome, short operational metadata, and correlation IDs are sufficient for this layer.
+Telemetry is allowlisted and does not copy pass PINs, QR tokens, email addresses, push title/body, provider responses, images, raw queue errors, or other user content. Community, actor/entity IDs, event type, outcome, short operational metadata, and correlation IDs are sufficient for this layer.
 
 ## Validation
 
