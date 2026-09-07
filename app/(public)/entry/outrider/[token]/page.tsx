@@ -34,7 +34,7 @@ function UnavailableOutrider() {
 
 function OutriderBrandFooter() {
   return (
-    <div className="bg-slate-50 px-4 pb-8 sm:px-6 sm:pb-10">
+    <div className="bg-slate-50 px-4 pb-8 pt-2 sm:px-6 sm:pb-10 sm:pt-3">
       <footer className="mx-auto w-full max-w-3xl border-t border-slate-200/80 pt-5">
         <div className="flex flex-col items-center gap-2">
           <Image
