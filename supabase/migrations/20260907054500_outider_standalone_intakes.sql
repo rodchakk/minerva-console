@@ -36,6 +36,47 @@ alter table public.community_outrider_sessions
 alter table public.community_outrider_events
   alter column community_id drop not null;
 
+create or replace function public._outrider_fill_community_snapshot_v2()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+declare
+  v_name text;
+  v_city text;
+begin
+  if new.community_id is not null then
+    select c.name, c.city
+      into v_name, v_city
+      from public.communities c
+     where c.id = new.community_id;
+
+    if found then
+      new.community_name := coalesce(
+        public._outrider_normalize_text_v1(new.community_name),
+        public._outrider_normalize_text_v1(v_name)
+      );
+      new.community_city := coalesce(
+        public._outrider_normalize_text_v1(new.community_city),
+        public._outrider_normalize_text_v1(v_city)
+      );
+    end if;
+  end if;
+
+  return new;
+end;
+$function$;
+
+revoke all on function public._outrider_fill_community_snapshot_v2()
+  from public, anon, authenticated;
+
+drop trigger if exists trg_community_outrider_sessions_snapshot_v2
+  on public.community_outrider_sessions;
+create trigger trg_community_outrider_sessions_snapshot_v2
+  before insert or update of community_id, community_name, community_city
+  on public.community_outrider_sessions
+  for each row execute function public._outrider_fill_community_snapshot_v2();
+
 create or replace function public.create_community_outrider_session_v2(
   p_community_name text,
   p_community_city text,
