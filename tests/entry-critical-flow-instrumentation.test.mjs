@@ -49,10 +49,12 @@ test("community push outcomes feed Notifications without copying message content
   assert.match(migration, /'NOTIFICATION_SENT'/);
   assert.match(migration, /lower\(coalesce\(NEW\.status, ''\)\) in \('sent', 'failed'\)/);
   assert.match(migration, /'PUSH_DELIVERY_FAILED'/);
+  assert.match(migration, /'PUSH_NO_ACTIVE_TOKENS'/);
+  assert.match(migration, /v_no_active_tokens[\s\S]*then 'skipped'/);
   assert.doesNotMatch(migration, /NEW\.push_title/);
   assert.doesNotMatch(migration, /NEW\.push_body/);
   assert.doesNotMatch(migration, /NEW\.provider_response/);
-  assert.doesNotMatch(migration, /NEW\.last_error/);
+  assert.doesNotMatch(migration, /'last_error'\s*,/);
 });
 
 test("all runtime telemetry hooks fail open so Observability cannot break ENTRY", () => {
