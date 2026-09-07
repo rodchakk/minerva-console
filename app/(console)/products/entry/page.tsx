@@ -241,11 +241,8 @@ export default async function DashboardPage() {
     0,
   );
   const inactiveCommunities = communities.filter((community) => !community.isActive);
-  const prioritizedCommunities = [...communities]
+  const prioritizedCommunities = [...pendingSetup]
     .sort((a, b) => {
-      const aPending = a.onboardingStatus !== "complete_active" ? 1 : 0;
-      const bPending = b.onboardingStatus !== "complete_active" ? 1 : 0;
-      if (aPending !== bPending) return bPending - aPending;
       if (a.activationPendingCount !== b.activationPendingCount) {
         return b.activationPendingCount - a.activationPendingCount;
       }
@@ -369,7 +366,7 @@ export default async function DashboardPage() {
           <ConsolePanel className="h-full overflow-hidden">
             <SectionHeading
               title="Setup priorities across ENTRY"
-              description="Communities sorted by onboarding urgency and activation load."
+              description="Incomplete communities sorted by onboarding urgency and activation load."
               action={
                 <ActionLink href="/products/entry/communities">
                   View all communities
@@ -494,10 +491,10 @@ export default async function DashboardPage() {
             ) : (
               <div className="px-5 py-10 text-center">
                 <h3 className="text-lg font-semibold text-white">
-                  No community records yet
+                  No setup work pending
                 </h3>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
-                  Communities that need operational attention will appear here.
+                  New or incomplete communities will appear here when setup work is needed.
                 </p>
               </div>
             )}
