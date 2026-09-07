@@ -21,7 +21,18 @@ type PortableOutriderExportSummary = Omit<
   };
 };
 
+const OUTRIDER_EXPORT_STORAGE_BUCKET = "entry-outrider-exports";
+const OUTRIDER_EXPORT_MAX_INPUT_BYTES = 95 * 1024 * 1024;
+const OUTRIDER_EXPORT_SIGNED_URL_SECONDS = 10 * 60;
 const ZIP_EPOCH = new Date("1980-01-01T00:00:00Z").getTime();
+
+export class OutriderExportTooLargeError extends Error {
+  constructor() {
+    super("Outrider package exceeds the 95 MB export limit.");
+    this.name = "OutriderExportTooLargeError";
+  }
+}
+
 function dosDateTime(date = new Date()) {
   const safeDate = new Date(Math.max(date.getTime(), ZIP_EPOCH));
   const year = safeDate.getFullYear();
@@ -171,6 +182,17 @@ function makeUniquePath(basePath: string, used: Set<string>) {
   throw new Error("Could not allocate a unique ZIP path.");
 }
 
+function assertExportSize(detail: OutriderDetail) {
+  const sourceBytes = detail.files.reduce(
+    (total, file) => total + Math.max(0, file.byteSize),
+    0,
+  );
+
+  if (sourceBytes > OUTRIDER_EXPORT_MAX_INPUT_BYTES) {
+    throw new OutriderExportTooLargeError();
+  }
+}
+
 export function buildOutriderSummary(
   detail: OutriderDetail,
 ): PortableOutriderExportSummary {
@@ -282,6 +304,8 @@ export async function getOutriderZipExport(outriderId: string) {
   const detail = await getOutriderDetail(outriderId);
   if (!detail) return null;
 
+  assertExportSize(detail);
+
   const summary = buildOutriderSummary(detail);
   const entries: Array<{ content: Uint8Array; path: string }> = [
     {
@@ -301,7 +325,9 @@ export async function getOutriderZipExport(outriderId: string) {
       .from(OUTRIDER_STORAGE_BUCKET)
       .download(file.storagePath);
 
-    if (error || !data) continue;
+    if (error || !data) {
+      throw new Error(`Outrider attachment unavailable: ${file.id}`);
+    }
 
     const bytes = new Uint8Array(await data.arrayBuffer());
     const safeFilename = sanitizeOutriderFilename(file.originalFilename);
@@ -312,8 +338,38 @@ export async function getOutriderZipExport(outriderId: string) {
     entries.push({ content: bytes, path });
   }
 
+  const filename = `${sanitizeOutriderFilename(detail.communityName)}-outrider-handoff.zip`;
+  const storagePath = `${detail.id}/${filename}`;
+  const zipBytes = buildZip(entries);
+
+  if (zipBytes.byteLength > 100 * 1024 * 1024) {
+    throw new OutriderExportTooLargeError();
+  }
+
+  const { error: uploadError } = await supabase.storage
+    .from(OUTRIDER_EXPORT_STORAGE_BUCKET)
+    .upload(storagePath, zipBytes, {
+      cacheControl: "0",
+      contentType: "application/zip",
+      upsert: true,
+    });
+
+  if (uploadError) {
+    throw new Error(`Could not stage Outrider package: ${uploadError.message}`);
+  }
+
+  const { data: signedData, error: signedError } = await supabase.storage
+    .from(OUTRIDER_EXPORT_STORAGE_BUCKET)
+    .createSignedUrl(storagePath, OUTRIDER_EXPORT_SIGNED_URL_SECONDS, {
+      download: true,
+    });
+
+  if (signedError || !signedData?.signedUrl) {
+    throw new Error("Could not sign Outrider package download.");
+  }
+
   return {
-    bytes: buildZip(entries),
-    filename: `${sanitizeOutriderFilename(detail.communityName)}-outrider-handoff.zip`,
+    downloadUrl: signedData.signedUrl,
+    filename,
   };
 }
