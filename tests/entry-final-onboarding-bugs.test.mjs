@@ -87,3 +87,50 @@ test("unit deactivation reuses the existing backend cascade and validates commun
   assert.doesNotMatch(unitActions, /rpc\("sa_set_community_unit_active_status"/);
   assert.doesNotMatch(quickActions, /Linked resident account states were not changed/);
 });
+
+test("Field unit discovery and quick resident validation reuse the canonical admin unit directory", () => {
+  const peopleData = read("features/entry/field/peopleData.ts");
+  const quickResidentActions = read("features/entry/field/quickResidentActions.ts");
+
+  assert.match(peopleData, /rpc\("admin_list_houses", \{/);
+  assert.match(peopleData, /p_community_id: communityId/);
+  assert.doesNotMatch(
+    peopleData,
+    /\.from\("houses"\)[\s\S]*\.select\("id,house_label,is_active"\)/,
+  );
+
+  assert.match(quickResidentActions, /rpc\(\s*"admin_list_houses"/);
+  assert.match(quickResidentActions, /coerceString\(item\.id\) === unitId/);
+  assert.doesNotMatch(
+    quickResidentActions,
+    /\.from\("houses"\)[\s\S]*\.select\("id,house_label,is_active"\)/,
+  );
+});
+
+test("Field keeps unit status recovery and destination visibility on the onsite community flow", () => {
+  const communityPage = read(
+    "app/(field)/field/entry/communities/[communityId]/page.tsx",
+  );
+  const destinations = read("features/entry/field/FieldDestinationsCard.tsx");
+  const fieldUnitActions = read("features/entry/field/FieldUnitActions.tsx");
+  const unitStatusActions = read("features/entry/field/unitStatusActions.ts");
+  const unitActions = read("features/entry/communities/unitActions.ts");
+
+  assert.match(communityPage, /FieldDestinationsCard/);
+  assert.match(communityPage, /destinations=\{previews\.destinations\}/);
+  assert.match(destinations, /Configured destinations/);
+  assert.match(fieldUnitActions, /Reactivate unit/);
+  assert.match(fieldUnitActions, /Residents previously deactivated by this unit/);
+  assert.match(unitStatusActions, /setCommunityUnitActiveStatusAction/);
+  assert.match(unitActions, /rpc\("admin_toggle_house"/);
+});
+
+test("Field unit search tolerates common zero-padded labels without breaking custom labels", () => {
+  const peopleModel = read("features/entry/field/peopleModel.ts");
+
+  assert.match(peopleModel, /function normalizeFieldUnitSearch/);
+  assert.match(peopleModel, /function collapseNumericUnitTokens/);
+  assert.match(peopleModel, /Number\.parseInt\(token, 10\)/);
+  assert.match(peopleModel, /normalizedLabel\.includes\(normalized\)/);
+  assert.match(peopleModel, /collapsedLabel\.includes\(collapsedQuery\)/);
+});
