@@ -58,8 +58,28 @@ Health states are:
 No telemetry must stay Unknown. Low-volume communities are not marked Down only
 because no one used a feature recently.
 
+Global system health is intentionally conservative:
+
+1. Down if meaningful critical-flow evidence says a flow is Down.
+2. Degraded if a flow is Degraded, or if a meaningful ERROR/CRITICAL incident
+   is active.
+3. Unknown if any critical flow still lacks enough classified evidence for a
+   system-wide health claim.
+4. Healthy only when every critical flow has enough evidence and none is Down or
+   Degraded.
+
 The v1 SQL helper `_entry_observability_flow_status_v1` centralizes the basic
 thresholds. If thresholds change, update that helper and this document together.
+
+QR validation health is method-specific. `entry_logs.method = 'QR'` can provide
+successful QR evidence. `PIN`, `SELF`, and `MANUAL` access events remain tracked
+activity, but they do not prove that QR validation is working.
+
+Registration health uses explicit event classification. Resident/public
+submission and unit activation workflow events can provide success evidence;
+known conversion blockers/failures provide failure evidence. Setup, admin,
+token, campaign, and access-management events remain unclassified activity and
+must not make Registration Healthy.
 
 ## Incident Grouping
 
@@ -98,6 +118,11 @@ it. If cost can be calculated from an explicit pricing configuration, store the
 cost and pricing version at write time. If pricing is not safely represented,
 store the measurable usage and leave `estimated_cost` null.
 
+The dashboard error rate uses only classified outcomes:
+`failed_operations / known_outcome_operations`, where known outcomes are
+successful plus failed operations. Unknown or informational events remain visible
+as `unclassified_operations` but must not dilute the error rate.
+
 Historical ledger rows preserve the pricing assumption used at the time. Do not
 recalculate old rows with newer prices.
 
@@ -127,6 +152,13 @@ ledger/read-model foundation for OCR economics, but OCR provider instrumentation
 remains not yet instrumented and must be completed only after the function source
 and its unsafe internal authentication drift are repaired without duplicating or
 preserving hardcoded credentials.
+
+Until provider instrumentation is repository-controlled, Observability v1 still
+uses `plate_ocr_queue` for safe operational visibility: pending, processing,
+failed, completed, retry/exhaustion, oldest-open, and latest-completion signals.
+A fresh PENDING row is not degradation by itself. Old/stuck open work, repeated
+failures, or exhausted attempts can degrade Image OCR health without implying
+Gemini token or cost accounting is complete.
 
 ## Request And Correlation IDs
 

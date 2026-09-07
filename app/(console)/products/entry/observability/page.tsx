@@ -21,6 +21,7 @@ import {
   type EntryObservabilityData,
   type EntryObservabilityFlow,
   type EntryObservabilityIncident,
+  type EntryObservabilityOcrQueue,
   type EntryObservabilityStatus,
 } from "@/features/entry/observability/queries";
 import { cn } from "@/lib/supabase/utils";
@@ -525,6 +526,60 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
   );
 }
 
+function OcrQueue({ queue }: { queue: EntryObservabilityOcrQueue }) {
+  const hasOpenWork = queue.pendingCount > 0 || queue.processingCount > 0;
+
+  return (
+    <Panel>
+      <PanelHeader
+        description="Queue health uses existing OCR queue state; provider token and cost accounting remains separate."
+        icon={FileImage}
+        title="OCR queue"
+      />
+      <div className="grid gap-0 md:grid-cols-4">
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs font-medium text-[var(--console-text-muted)]">Open work</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatNumber(queue.pendingCount + queue.processingCount)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            {formatNumber(queue.pendingCount)} pending / {formatNumber(queue.processingCount)} processing
+          </p>
+        </div>
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs font-medium text-[var(--console-text-muted)]">Failures</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatNumber(queue.failedCount)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            {formatNumber(queue.exhaustedCount)} exhausted attempts
+          </p>
+        </div>
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs font-medium text-[var(--console-text-muted)]">Completed</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatNumber(queue.completedCount)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            Last completion {formatRelative(queue.lastCompletedAt)}
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-xs font-medium text-[var(--console-text-muted)]">Provider usage</p>
+          <p className="mt-2 text-base font-semibold text-white">
+            {queue.providerInstrumented ? "Instrumented" : "Not instrumented"}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            {hasOpenWork
+              ? `Oldest open ${formatRelative(queue.oldestOpenScheduledAt)}`
+              : `${formatNumber(queue.totalJobs)} queue jobs observed`}
+          </p>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
 function AuditActivity({ data }: { data: EntryObservabilityData }) {
   return (
     <Panel>
@@ -606,14 +661,14 @@ function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
         <SummaryCard
           icon={DatabaseZap}
           label="Tracked operations"
-          note="Server-side operational evidence"
+          note={`${formatNumber(data.summary.unclassifiedOperations)} unclassified`}
           tone="border-violet-400/18 bg-violet-500/[0.10] text-violet-200"
           value={formatNumber(data.summary.trackedOperations)}
         />
         <SummaryCard
           icon={AlertTriangle}
           label="Error rate"
-          note={`${formatNumber(data.summary.failedOperations)} recorded failures`}
+          note={`${formatNumber(data.summary.failedOperations)} failed / ${formatNumber(data.summary.knownOutcomeOperations)} known outcomes`}
           tone="border-rose-400/18 bg-rose-500/[0.10] text-rose-200"
           value={formatPercent(data.summary.errorRate)}
         />
@@ -650,6 +705,8 @@ function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
         <CriticalFlows flows={data.criticalFlows} />
         <Incidents incidents={data.incidents} />
       </section>
+
+      <OcrQueue queue={data.ocrQueue} />
 
       <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(520px,0.85fr)]">
         <UsageAndCost data={data} />

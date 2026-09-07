@@ -91,12 +91,27 @@ export type EntryObservabilityAuditItem = {
   target: string;
 };
 
+export type EntryObservabilityOcrQueue = {
+  attemptCount: number;
+  completedCount: number;
+  exhaustedCount: number;
+  failedCount: number;
+  lastCompletedAt: string | null;
+  oldestOpenScheduledAt: string | null;
+  pendingCount: number;
+  processingCount: number;
+  providerInstrumented: boolean;
+  providerUsageStatus: string;
+  totalJobs: number;
+};
+
 export type EntryObservabilityData = {
   auditActivity: EntryObservabilityAuditItem[];
   communities: EntryObservabilityCommunity[];
   criticalFlows: EntryObservabilityFlow[];
   generatedAt: string;
   incidents: EntryObservabilityIncident[];
+  ocrQueue: EntryObservabilityOcrQueue;
   range: {
     communityId: string | null;
     endsAt: string;
@@ -108,11 +123,13 @@ export type EntryObservabilityData = {
     estimatedCost: number | null;
     failedOperations: number;
     imagesProcessed: number;
+    knownOutcomeOperations: number;
     lastObservedAt: string | null;
     p95LatencyMs: number | null;
     successfulOperations: number;
     systemStatus: EntryObservabilityStatus;
     trackedOperations: number;
+    unclassifiedOperations: number;
     unknownCostCount: number;
     usageRecords: number;
   };
@@ -373,6 +390,24 @@ function mapAuditActivity(value: unknown): EntryObservabilityAuditItem[] {
     .filter((item): item is EntryObservabilityAuditItem => item !== null);
 }
 
+function mapOcrQueue(value: unknown): EntryObservabilityOcrQueue {
+  const record = isRecord(value) ? value : {};
+
+  return {
+    attemptCount: asNumber(record.attempt_count),
+    completedCount: asNumber(record.completed_count),
+    exhaustedCount: asNumber(record.exhausted_count),
+    failedCount: asNumber(record.failed_count),
+    lastCompletedAt: asNullableString(record.last_completed_at),
+    oldestOpenScheduledAt: asNullableString(record.oldest_open_scheduled_at),
+    pendingCount: asNumber(record.pending_count),
+    processingCount: asNumber(record.processing_count),
+    providerInstrumented: record.provider_instrumented === true,
+    providerUsageStatus: asString(record.provider_usage_status, "not_instrumented"),
+    totalJobs: asNumber(record.total_jobs),
+  };
+}
+
 function mapDashboardPayload(
   payload: unknown,
   rangeKey: EntryObservabilityTimeRange,
@@ -389,6 +424,7 @@ function mapDashboardPayload(
     criticalFlows: mapFlows(root.critical_flows),
     generatedAt: asString(root.generated_at, new Date().toISOString()),
     incidents: mapIncidents(root.incidents),
+    ocrQueue: mapOcrQueue(root.ocr_queue),
     range: {
       communityId: asNullableString(range.community_id),
       endsAt: asString(range.ends_at),
@@ -400,11 +436,13 @@ function mapDashboardPayload(
       estimatedCost: asNullableNumber(summary.estimated_cost),
       failedOperations: asNumber(summary.failed_operations),
       imagesProcessed: asNumber(summary.images_processed),
+      knownOutcomeOperations: asNumber(summary.known_outcome_operations),
       lastObservedAt: asNullableString(summary.last_observed_at),
       p95LatencyMs: asNullableNumber(summary.p95_latency_ms),
       successfulOperations: asNumber(summary.successful_operations),
       systemStatus: normalizeStatus(summary.system_status),
       trackedOperations: asNumber(summary.tracked_operations),
+      unclassifiedOperations: asNumber(summary.unclassified_operations),
       unknownCostCount: asNumber(summary.unknown_cost_count),
       usageRecords: asNumber(summary.usage_records),
     },

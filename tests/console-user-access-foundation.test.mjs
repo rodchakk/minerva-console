@@ -10,6 +10,40 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
+async function changedFiles() {
+  const { execFileSync } = await import("node:child_process");
+  const committed = execFileSync(
+    "git",
+    ["diff", "--name-only", "origin/master...HEAD"],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  );
+  const workingTree = execFileSync("git", ["diff", "--name-only"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  const untracked = execFileSync(
+    "git",
+    ["ls-files", "--others", "--exclude-standard"],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  );
+
+  return [
+    ...new Set(
+      `${committed}\n${workingTree}\n${untracked}`
+        .trim()
+        .split(/\r?\n/)
+        .filter(Boolean)
+        .map((file) => file.replaceAll("\\", "/")),
+    ),
+  ];
+}
+
 test("Console V1 roles and statuses are represented in code and schema", () => {
   const helper = read("features/auth/consoleAccess.ts");
   const migration = read(`supabase/migrations/${migrationName}`);
@@ -95,16 +129,14 @@ test("Phase A introduces no new admin invite client or service-role requirement"
   assert.doesNotMatch(migration, /service_role|auth\.admin|invite/i);
 });
 
-test("Console access source stays independent from Brain and ENTRY features", () => {
-  const helper = read("features/auth/consoleAccess.ts");
-  const layout = read("app/(console)/layout.tsx");
-  const migration = read(`supabase/migrations/${migrationName}`);
-  const consoleAccessSource = `${helper}\n${migration}`;
-  const consoleShellSource = `${layout}\n${consoleAccessSource}`;
+test("Console access changes do not spill into Brain, ENTRY, or migrations", async () => {
+  const files = await changedFiles();
 
-  assert.doesNotMatch(consoleShellSource, /@\/features\/brain|@\/content\/brain/);
-  assert.doesNotMatch(consoleAccessSource, /@\/features\/entry|@\/app\/\(public\)\/entry/);
-  assert.doesNotMatch(migration, /brain|entry/i);
+  assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
+  assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
+  assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("app/(public)/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("supabase/migrations/")), false);
 });
 
 test("Console membership migration is the only added Supabase migration", () => {

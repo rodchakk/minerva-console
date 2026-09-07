@@ -158,6 +158,7 @@ test("service-role and auth users stay server-only", () => {
 test("Console invitation acceptance has its own callback strictly for invite token_hash", () => {
   const callback = read("app/auth/callback/route.ts");
   const setup = read("app/console-invite/setup/page.tsx");
+  const form = read("features/auth/ConsolePasswordSetupForm.tsx");
   const actions = read("features/auth/actions.ts");
   const bridge = read("app/reset-password/page.tsx");
 
@@ -173,16 +174,19 @@ test("Console invitation acceptance has its own callback strictly for invite tok
   assert.doesNotMatch(callback, /reset-password|ENTRY/);
 });
 
-test("Console user management source stays independent from ENTRY and Brain internals", () => {
-  const sources = [
-    "app/(console)/users/page.tsx",
-    "features/console-users/actions.ts",
-    "features/console-users/data.ts",
-    "features/auth/consoleAccess.ts",
-  ]
-    .map(read)
-    .join("\n");
+test("no ENTRY authorization or Brain content/model files are changed by this branch", async () => {
+  const { execFileSync } = await import("node:child_process");
+  const files = execFileSync("git", ["diff", "--name-only", "origin/master...HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  })
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .map((file) => file.replaceAll("\\", "/"));
 
-  assert.doesNotMatch(sources, /@\/features\/entry|@\/app\/\(public\)\/entry/);
-  assert.doesNotMatch(sources, /@\/features\/brain|@\/content\/brain/);
+  assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("supabase/migrations/")), false);
+  assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
+  assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
 });

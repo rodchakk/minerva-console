@@ -240,32 +240,48 @@ async function processMessage(
 
     let provider = "resend";
     let providerMessageId: string | null = null;
+    let providerStartedAt: number | null = null;
+    let providerUsageRecorded = false;
 
     if (dryRunEffective || !resend) {
       provider = "dry_run";
       providerMessageId = `dry_run_${msg.id}`;
     } else {
-      const providerStartedAt = Date.now();
-      const { data: emailData, error: emailErr } = await resend.emails.send({
-        from: FROM_ADDRESS,
-        to: [msg.recipient_email],
-        subject: "Your ENTRY activation code",
-        html: buildEmailHtml({
-          residentName: msg.resident_name,
-          unitLabel: msg.unit_label,
-          pin: generatedPin,
-          activationLink,
-        }),
-      });
-      providerMessageId = (emailData as { id?: string } | null)?.id ?? null;
-      await recordEntryUsage({
-        durationMs: Date.now() - providerStartedAt,
-        errorCode: emailErr ? "RESEND_SEND_FAILED" : null,
-        message: msg,
-        providerMessageId,
-        status: emailErr ? "failed" : "success",
-      });
-      if (emailErr) throw new Error(emailErr.message ?? "resend_send_failed");
+      providerStartedAt = Date.now();
+      try {
+        const { data: emailData, error: emailErr } = await resend.emails.send({
+          from: FROM_ADDRESS,
+          to: [msg.recipient_email],
+          subject: "Your ENTRY activation code",
+          html: buildEmailHtml({
+            residentName: msg.resident_name,
+            unitLabel: msg.unit_label,
+            pin: generatedPin,
+            activationLink,
+          }),
+        });
+        providerMessageId = (emailData as { id?: string } | null)?.id ?? null;
+        await recordEntryUsage({
+          durationMs: Date.now() - providerStartedAt,
+          errorCode: emailErr ? "RESEND_SEND_FAILED" : null,
+          message: msg,
+          providerMessageId,
+          status: emailErr ? "failed" : "success",
+        });
+        providerUsageRecorded = true;
+        if (emailErr) throw new Error(emailErr.message ?? "resend_send_failed");
+      } catch (providerErr) {
+        if (!providerUsageRecorded) {
+          await recordEntryUsage({
+            durationMs: Date.now() - providerStartedAt,
+            errorCode: "RESEND_SEND_THROWN",
+            message: msg,
+            providerMessageId: null,
+            status: "failed",
+          });
+        }
+        throw providerErr;
+      }
     }
 
     await supabase

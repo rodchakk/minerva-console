@@ -358,6 +358,7 @@ begin
       s.community_id,
       coalesce(nullif(s.source, ''), nullif(s.module, ''), 'system') as source,
       s.event_type,
+      null::text as access_method,
       case
         when lower(coalesce(s.details->>'status', '')) in ('success', 'ok', 'completed', 'sent') then 'success'
         when lower(coalesce(s.details->>'status', '')) in ('failed', 'failure', 'error') then 'failed'
@@ -397,8 +398,23 @@ begin
       camp.community_id,
       'community_registration'::text as source,
       e.event_type,
-      case when e.event_type in ('resident_conversion_blocked', 'conversion_failed') then 'failed' else 'success' end as status,
-      case when e.event_type in ('resident_conversion_blocked', 'conversion_failed') then 'WARNING' else 'INFO' end as severity,
+      null::text as access_method,
+      case
+        when e.event_type in (
+          'household_submitted',
+          'household_resubmitted',
+          'unit_reviewed',
+          'unit_confirmed',
+          'unit_conversion_completed'
+        ) then 'success'
+        when e.event_type in ('resident_conversion_blocked', 'conversion_failed') then 'failed'
+        else 'unknown'
+      end as status,
+      case
+        when e.event_type = 'conversion_failed' then 'ERROR'
+        when e.event_type = 'resident_conversion_blocked' then 'WARNING'
+        else 'INFO'
+      end as severity,
       null::integer as duration_ms,
       case when e.event_type in ('resident_conversion_blocked', 'conversion_failed') then e.event_type else null end as error_code,
       public._entry_observability_normalize_fingerprint_v1(
@@ -431,6 +447,7 @@ begin
       el.community_id,
       'entry_access'::text as source,
       coalesce(el.action::text, 'ENTRY_ACCESS') as event_type,
+      el.method::text as access_method,
       'success'::text as status,
       'INFO'::text as severity,
       null::integer as duration_ms,
@@ -444,12 +461,87 @@ begin
         select 1 from selected_communities sc where sc.id = el.community_id
       )
   ),
+  ocr_queue_attempts as (
+    select
+      coalesce(q.completed_at, q.scheduled_at, q.created_at) as occurred_at,
+      el.community_id,
+      'plate_ocr_queue'::text as source,
+      concat('PLATE_OCR_QUEUE_', q.status)::text as event_type,
+      null::text as access_method,
+      case
+        when q.status = 'DONE' then 'success'
+        when q.status = 'FAILED' then 'failed'
+        when q.max_attempts > 0 and q.attempts >= q.max_attempts then 'failed'
+        when q.status = 'PROCESSING' and q.scheduled_at < v_end - interval '15 minutes' then 'failed'
+        when q.status = 'PENDING' and q.scheduled_at < v_end - interval '30 minutes' then 'failed'
+        else 'unknown'
+      end as status,
+      case
+        when q.status = 'FAILED' or (q.max_attempts > 0 and q.attempts >= q.max_attempts) then 'ERROR'
+        when q.status = 'PROCESSING' and q.scheduled_at < v_end - interval '15 minutes' then 'WARNING'
+        when q.status = 'PENDING' and q.scheduled_at < v_end - interval '30 minutes' then 'WARNING'
+        else 'INFO'
+      end as severity,
+      case
+        when q.completed_at is not null then greatest(
+          0,
+          round(extract(epoch from (q.completed_at - q.created_at)) * 1000)
+        )::integer
+        else null::integer
+      end as duration_ms,
+      case
+        when q.status = 'FAILED' then 'PLATE_OCR_QUEUE_FAILED'
+        when q.max_attempts > 0 and q.attempts >= q.max_attempts then 'PLATE_OCR_QUEUE_EXHAUSTED'
+        when q.status = 'PROCESSING' and q.scheduled_at < v_end - interval '15 minutes' then 'PLATE_OCR_QUEUE_STUCK_PROCESSING'
+        when q.status = 'PENDING' and q.scheduled_at < v_end - interval '30 minutes' then 'PLATE_OCR_QUEUE_STUCK_PENDING'
+        else null
+      end as error_code,
+      case
+        when q.status = 'FAILED'
+          or (q.max_attempts > 0 and q.attempts >= q.max_attempts)
+          or (q.status = 'PROCESSING' and q.scheduled_at < v_end - interval '15 minutes')
+          or (q.status = 'PENDING' and q.scheduled_at < v_end - interval '30 minutes')
+          then public._entry_observability_normalize_fingerprint_v1(
+            'plate_ocr_queue',
+            concat('PLATE_OCR_QUEUE_', q.status),
+            case
+              when q.status = 'FAILED' then 'PLATE_OCR_QUEUE_FAILED'
+              when q.max_attempts > 0 and q.attempts >= q.max_attempts then 'PLATE_OCR_QUEUE_EXHAUSTED'
+              when q.status = 'PROCESSING' and q.scheduled_at < v_end - interval '15 minutes' then 'PLATE_OCR_QUEUE_STUCK_PROCESSING'
+              when q.status = 'PENDING' and q.scheduled_at < v_end - interval '30 minutes' then 'PLATE_OCR_QUEUE_STUCK_PENDING'
+              else null
+            end,
+            coalesce(q.last_error, q.status)
+          )
+        else null
+      end as fingerprint,
+      case
+        when q.status = 'DONE' then 'Plate OCR queue job completed'
+        when q.status = 'FAILED' then 'Plate OCR queue job failed'
+        when q.max_attempts > 0 and q.attempts >= q.max_attempts then 'Plate OCR queue exhausted retry attempts'
+        when q.status = 'PROCESSING' and q.scheduled_at < v_end - interval '15 minutes' then 'Plate OCR queue job appears stuck processing'
+        when q.status = 'PENDING' and q.scheduled_at < v_end - interval '30 minutes' then 'Plate OCR queue job is pending beyond the freshness threshold'
+        else 'Plate OCR queue job recorded'
+      end as explanation
+    from public.plate_ocr_queue q
+    join public.entry_logs el on el.id = q.entry_log_id
+    where coalesce(q.completed_at, q.scheduled_at, q.created_at) < v_end
+      and (
+        q.completed_at is null
+        or q.completed_at >= v_start
+        or q.status in ('PENDING', 'PROCESSING')
+      )
+      and exists (
+        select 1 from selected_communities sc where sc.id = el.community_id
+      )
+  ),
   notification_attempts as (
     select
       coalesce(m.sent_at, m.failed_at, m.last_attempt_at, m.updated_at, m.created_at) as occurred_at,
       m.community_id,
       'onboarding_notifications'::text as source,
       'onboarding_email'::text as event_type,
+      null::text as access_method,
       case
         when m.status = 'sent' then 'success'
         when m.status = 'failed' then 'failed'
@@ -487,6 +579,7 @@ begin
       u.community_id,
       u.provider as source,
       u.operation as event_type,
+      null::text as access_method,
       u.status,
       case when u.status = 'failed' then 'ERROR' else 'INFO' end as severity,
       u.duration_ms,
@@ -518,6 +611,7 @@ begin
     select * from system_attempts
     union all select * from registration_attempts
     union all select * from access_attempts
+    union all select * from ocr_queue_attempts
     union all select * from notification_attempts
     union all select * from usage_attempts
   ),
@@ -549,10 +643,13 @@ begin
     select
       case
         when a.event_type in ('PASS_CREATE', 'PASS_CREATED', 'PASS_CREATE_FAILED', 'CREATE_PASS', 'CREATE_PASS_FAILED', 'ACCESS_PASS_CREATED', 'ACCESS_PASS_CREATE_FAILED') then 'create_pass'
-        when a.source = 'entry_access' or a.event_type in ('QR_VALIDATED', 'QR_VALIDATION_FAILED', 'ACCESS_QR_VALIDATED', 'ACCESS_QR_REJECTED') then 'validate_qr'
+        when (a.source = 'entry_access' and a.access_method = 'QR')
+          or a.event_type in ('QR_VALIDATED', 'QR_VALIDATION_FAILED', 'ACCESS_QR_VALIDATED', 'ACCESS_QR_REJECTED') then 'validate_qr'
         when a.event_type in ('RESIDENT_LOGIN', 'RESIDENT_LOGIN_FAILED', 'AUTH_LOGIN', 'AUTH_LOGIN_FAILED') then 'resident_login'
         when a.source = 'community_registration' then 'registration'
-        when a.event_type in ('IMAGE_OCR', 'IMAGE_OCR_FAILED', 'PLATE_OCR', 'PLATE_OCR_FAILED') or a.event_type = 'image_ocr' then 'image_ocr'
+        when a.source = 'plate_ocr_queue'
+          or a.event_type in ('IMAGE_OCR', 'IMAGE_OCR_FAILED', 'PLATE_OCR', 'PLATE_OCR_FAILED')
+          or a.event_type = 'image_ocr' then 'image_ocr'
         when a.source = 'onboarding_notifications'
           or a.event_type in ('NOTIFICATION_SENT', 'NOTIFICATION_FAILED', 'PUSH_CLAIM_RPC_ERROR', 'SOS_PUSH_NO_GUARD_TOKENS') then 'notifications'
         else null
@@ -703,6 +800,27 @@ begin
         (v_selected_community is null and u.community_id is null)
         or exists (select 1 from selected_communities sc where sc.id = u.community_id)
       )
+  ),
+  ocr_queue_summary as (
+    select
+      count(*)::integer as total_jobs,
+      count(*) filter (where q.status = 'PENDING')::integer as pending_count,
+      count(*) filter (where q.status = 'PROCESSING')::integer as processing_count,
+      count(*) filter (where q.status = 'FAILED')::integer as failed_count,
+      count(*) filter (where q.status = 'DONE')::integer as completed_count,
+      coalesce(sum(q.attempts), 0)::integer as attempt_count,
+      count(*) filter (where q.max_attempts > 0 and q.attempts >= q.max_attempts)::integer as exhausted_count,
+      min(q.scheduled_at) filter (where q.status in ('PENDING', 'PROCESSING')) as oldest_open_scheduled_at,
+      max(q.completed_at) filter (where q.status = 'DONE') as last_completed_at
+    from public.plate_ocr_queue q
+    join public.entry_logs el on el.id = q.entry_log_id
+    where coalesce(q.completed_at, q.scheduled_at, q.created_at) < v_end
+      and (
+        q.completed_at is null
+        or q.completed_at >= v_start
+        or q.status in ('PENDING', 'PROCESSING')
+      )
+      and exists (select 1 from selected_communities sc where sc.id = el.community_id)
   ),
   usage_by_provider as (
     select coalesce(jsonb_agg(
@@ -899,6 +1017,8 @@ begin
       count(*)::integer as tracked_operations,
       count(*) filter (where is_failure)::integer as failed_operations,
       count(*) filter (where is_success)::integer as successful_operations,
+      count(*) filter (where is_success or is_failure)::integer as known_outcome_operations,
+      count(*) filter (where not is_success and not is_failure)::integer as unclassified_operations,
       percentile_cont(0.95) within group (order by duration_ms)
         filter (where duration_ms is not null)::numeric as p95_latency_ms,
       max(occurred_at) as last_observed_at
@@ -916,9 +1036,9 @@ begin
         where public._entry_observability_flow_status_v1(f.success_count, f.failure_count, f.last_success_at, f.evidence_count) = 'degraded'
       ) then 'degraded'
       when (select tracked_operations from summary) = 0 then 'unknown'
-      when not exists (
+      when exists (
         select 1 from flows f
-        where public._entry_observability_flow_status_v1(f.success_count, f.failure_count, f.last_success_at, f.evidence_count) in ('healthy', 'degraded', 'down')
+        where public._entry_observability_flow_status_v1(f.success_count, f.failure_count, f.last_success_at, f.evidence_count) = 'unknown'
       ) then 'unknown'
       else 'healthy'
     end as value
@@ -939,11 +1059,13 @@ begin
       'tracked_operations', coalesce((select tracked_operations from summary), 0),
       'successful_operations', coalesce((select successful_operations from summary), 0),
       'failed_operations', coalesce((select failed_operations from summary), 0),
+      'known_outcome_operations', coalesce((select known_outcome_operations from summary), 0),
+      'unclassified_operations', coalesce((select unclassified_operations from summary), 0),
       'error_rate', case
-        when coalesce((select tracked_operations from summary), 0) = 0 then null
+        when coalesce((select known_outcome_operations from summary), 0) = 0 then null
         else round(
           coalesce((select failed_operations from summary), 0)::numeric
-          / greatest((select tracked_operations from summary), 1)::numeric,
+          / greatest((select known_outcome_operations from summary), 1)::numeric,
           4
         )
       end,
@@ -971,6 +1093,19 @@ begin
       'by_provider', coalesce((select payload from usage_by_provider), '[]'::jsonb),
       'by_community', coalesce((select payload from usage_by_community), '[]'::jsonb),
       'daily', coalesce((select payload from usage_daily), '[]'::jsonb)
+    ),
+    'ocr_queue', jsonb_build_object(
+      'total_jobs', coalesce((select total_jobs from ocr_queue_summary), 0),
+      'pending_count', coalesce((select pending_count from ocr_queue_summary), 0),
+      'processing_count', coalesce((select processing_count from ocr_queue_summary), 0),
+      'failed_count', coalesce((select failed_count from ocr_queue_summary), 0),
+      'completed_count', coalesce((select completed_count from ocr_queue_summary), 0),
+      'attempt_count', coalesce((select attempt_count from ocr_queue_summary), 0),
+      'exhausted_count', coalesce((select exhausted_count from ocr_queue_summary), 0),
+      'oldest_open_scheduled_at', (select oldest_open_scheduled_at from ocr_queue_summary),
+      'last_completed_at', (select last_completed_at from ocr_queue_summary),
+      'provider_instrumented', false,
+      'provider_usage_status', 'not_instrumented'
     ),
     'audit_activity', coalesce((select payload from audit_json), '[]'::jsonb)
   )

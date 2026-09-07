@@ -19,6 +19,7 @@ const queries = read("features/entry/observability/queries.ts");
 const sidebar = read("components/layout/AppSidebar.tsx");
 const worker = read("supabase/functions/send-onboarding-email-batch/index.ts");
 const docs = read("docs/entry-observability.md");
+const ci = read(".github/workflows/ci.yml");
 
 const severityRank = new Map([
   ["INFO", 1],
@@ -64,10 +65,76 @@ function globalStatus({ flows, hasCriticalOrErrorIncident, trackedOperations }) 
   if (hasCriticalOrErrorIncident) return "degraded";
   if (statuses.includes("degraded")) return "degraded";
   if (trackedOperations === 0) return "unknown";
-  if (!statuses.some((status) => ["healthy", "degraded", "down"].includes(status))) {
-    return "unknown";
-  }
+  if (statuses.includes("unknown")) return "unknown";
   return "healthy";
+}
+
+function flowKeyForAttempt({ accessMethod, eventType, source }) {
+  if (
+    [
+      "PASS_CREATE",
+      "PASS_CREATED",
+      "PASS_CREATE_FAILED",
+      "CREATE_PASS",
+      "CREATE_PASS_FAILED",
+      "ACCESS_PASS_CREATED",
+      "ACCESS_PASS_CREATE_FAILED",
+    ].includes(eventType)
+  ) {
+    return "create_pass";
+  }
+
+  if (
+    (source === "entry_access" && accessMethod === "QR") ||
+    [
+      "QR_VALIDATED",
+      "QR_VALIDATION_FAILED",
+      "ACCESS_QR_VALIDATED",
+      "ACCESS_QR_REJECTED",
+    ].includes(eventType)
+  ) {
+    return "validate_qr";
+  }
+
+  if (source === "community_registration") return "registration";
+  if (source === "plate_ocr_queue" || eventType === "image_ocr") return "image_ocr";
+  return null;
+}
+
+function classifyRegistrationEvent(eventType) {
+  if (
+    [
+      "household_submitted",
+      "household_resubmitted",
+      "unit_reviewed",
+      "unit_confirmed",
+      "unit_conversion_completed",
+    ].includes(eventType)
+  ) {
+    return "success";
+  }
+
+  if (["resident_conversion_blocked", "conversion_failed"].includes(eventType)) {
+    return "failed";
+  }
+
+  return "unknown";
+}
+
+function errorRate({ failedOperations, successfulOperations }) {
+  const knownOutcomeOperations = failedOperations + successfulOperations;
+  return knownOutcomeOperations === 0
+    ? null
+    : failedOperations / knownOutcomeOperations;
+}
+
+function classifyOcrQueueJob({ attempts, maxAttempts, scheduledMinutesAgo, status }) {
+  if (status === "DONE") return "success";
+  if (status === "FAILED") return "failed";
+  if (maxAttempts > 0 && attempts >= maxAttempts) return "failed";
+  if (status === "PROCESSING" && scheduledMinutesAgo > 15) return "failed";
+  if (status === "PENDING" && scheduledMinutesAgo > 30) return "failed";
+  return "unknown";
 }
 
 function shouldSurfaceIncident({ occurrenceCount, severity }) {
@@ -121,6 +188,49 @@ test("system event reads use only the deployed schema and derive optional teleme
 test("entry_logs action enum is converted to text before union fallback", () => {
   assert.match(migration, /coalesce\(el\.action::text, 'ENTRY_ACCESS'\)/);
   assert.doesNotMatch(migration, /coalesce\(el\.action, 'ENTRY_ACCESS'\)/);
+});
+
+test("Validate QR health only uses QR access or explicit QR validation events", () => {
+  assert.match(migration, /el\.method::text as access_method/);
+  assert.match(migration, /a\.source = 'entry_access' and a\.access_method = 'QR'/);
+  assert.doesNotMatch(migration, /when a\.source = 'entry_access' or a\.event_type/);
+
+  assert.equal(
+    flowKeyForAttempt({
+      accessMethod: "MANUAL",
+      eventType: "CHECK_IN",
+      source: "entry_access",
+    }),
+    null,
+  );
+  assert.equal(
+    flowKeyForAttempt({
+      accessMethod: "PIN",
+      eventType: "CHECK_IN",
+      source: "entry_access",
+    }),
+    null,
+  );
+  assert.equal(
+    flowKeyForAttempt({
+      accessMethod: "QR",
+      eventType: "CHECK_IN",
+      source: "entry_access",
+    }),
+    "validate_qr",
+  );
+});
+
+test("registration health uses an explicit operational evidence allowlist", () => {
+  assert.match(migration, /'household_submitted'[\s\S]*then 'success'/);
+  assert.match(migration, /'resident_conversion_blocked', 'conversion_failed'\) then 'failed'/);
+  assert.match(migration, /else 'unknown'/);
+
+  assert.equal(classifyRegistrationEvent("campaign_created"), "unknown");
+  assert.equal(classifyRegistrationEvent("units_added"), "unknown");
+  assert.equal(classifyRegistrationEvent("household_submitted"), "success");
+  assert.equal(classifyRegistrationEvent("unit_conversion_completed"), "success");
+  assert.equal(classifyRegistrationEvent("conversion_failed"), "failed");
 });
 
 test("read model is superadmin-only, bounded, and server-side aggregated", () => {
@@ -202,6 +312,63 @@ test("global health evaluates DOWN before degraded incidents", () => {
   );
 });
 
+test("global health stays Unknown when critical flow coverage is partial", () => {
+  assert.match(migration, /where public\._entry_observability_flow_status_v1[\s\S]*= 'unknown'[\s\S]*then 'unknown'/);
+  assert.equal(
+    globalStatus({
+      flows: [
+        {
+          evidenceCount: 0,
+          failureCount: 0,
+          lastSuccessAt: null,
+          successCount: 0,
+        },
+        {
+          evidenceCount: 1,
+          failureCount: 0,
+          lastSuccessAt: "2026-09-07T12:00:00Z",
+          successCount: 1,
+        },
+        {
+          evidenceCount: 0,
+          failureCount: 0,
+          lastSuccessAt: null,
+          successCount: 0,
+        },
+        {
+          evidenceCount: 0,
+          failureCount: 0,
+          lastSuccessAt: null,
+          successCount: 0,
+        },
+        {
+          evidenceCount: 0,
+          failureCount: 0,
+          lastSuccessAt: null,
+          successCount: 0,
+        },
+        {
+          evidenceCount: 0,
+          failureCount: 0,
+          lastSuccessAt: null,
+          successCount: 0,
+        },
+      ],
+      hasCriticalOrErrorIncident: false,
+      trackedOperations: 1,
+    }),
+    "unknown",
+  );
+});
+
+test("error rate ignores unknown operations instead of diluting known failures", () => {
+  assert.match(migration, /known_outcome_operations/);
+  assert.match(migration, /unclassified_operations/);
+  assert.match(migration, /failed_operations[\s\S]*greatest\(\(select known_outcome_operations from summary\), 1\)/);
+  assert.equal(errorRate({ failedOperations: 1, successfulOperations: 0 }), 1);
+  assert.equal(errorRate({ failedOperations: 0, successfulOperations: 0 }), null);
+});
+
 test("selected-community scope excludes unrelated global operational rows", () => {
   assert.match(migration, /\(v_selected_community is null and s\.community_id is null\)/);
   assert.match(migration, /\(v_selected_community is null and u\.community_id is null\)/);
@@ -210,6 +377,43 @@ test("selected-community scope excludes unrelated global operational rows", () =
   assert.equal(includesCommunityScopedRow("community-b", "community-a"), false);
   assert.equal(includesCommunityScopedRow("community-a", "community-a"), true);
   assert.equal(includesCommunityScopedRow(null, null), true);
+});
+
+test("OCR queue visibility uses queue state without claiming provider economics", () => {
+  assert.match(migration, /from public\.plate_ocr_queue q/);
+  assert.match(migration, /join public\.entry_logs el on el\.id = q\.entry_log_id/);
+  assert.match(migration, /provider_usage_status', 'not_instrumented'/);
+  assert.match(page, /OCR queue/);
+  assert.match(page, /Not instrumented/);
+  assert.match(docs, /fresh PENDING row is not degradation/);
+  assert.match(docs, /exhausted attempts can degrade Image OCR health/);
+  assert.equal(
+    classifyOcrQueueJob({
+      attempts: 0,
+      maxAttempts: 3,
+      scheduledMinutesAgo: 2,
+      status: "PENDING",
+    }),
+    "unknown",
+  );
+  assert.equal(
+    classifyOcrQueueJob({
+      attempts: 3,
+      maxAttempts: 3,
+      scheduledMinutesAgo: 2,
+      status: "PENDING",
+    }),
+    "failed",
+  );
+  assert.equal(
+    classifyOcrQueueJob({
+      attempts: 0,
+      maxAttempts: 3,
+      scheduledMinutesAgo: 45,
+      status: "PENDING",
+    }),
+    "failed",
+  );
 });
 
 test("dashboard route, filters, loading state, and sidebar entry are wired", () => {
@@ -224,11 +428,17 @@ test("dashboard route, filters, loading state, and sidebar entry are wired", () 
   assert.match(loading, /EntryObservabilityLoading/);
 });
 
+test("CI executes focused ENTRY Observability regressions", () => {
+  assert.match(ci, /ENTRY Observability regressions/);
+  assert.match(ci, /node --test tests\/entry-observability\.test\.mjs/);
+});
+
 test("usage and cost UI avoids fabricated metrics", () => {
   assert.match(page, /Tracked operations/);
   assert.match(page, /Not available/);
   assert.match(page, /No data/);
   assert.match(page, /unknownCostCount/);
+  assert.match(page, /known outcomes/);
   assert.doesNotMatch(page, /1,284|0\.16%|184 ms|\$2\.71/);
 });
 
@@ -237,6 +447,8 @@ test("onboarding email worker records actual Resend provider calls best-effort w
   assert.match(worker, /record_entry_usage_v1/);
   assert.match(worker, /const \{ error \} = await supabase\.rpc\("record_entry_usage_v1"/);
   assert.match(worker, /if \(error\)/);
+  assert.match(worker, /providerUsageRecorded/);
+  assert.match(worker, /RESEND_SEND_THROWN/);
   assert.match(worker, /p_provider: "resend"/);
   assert.match(worker, /p_operation: "onboarding_email"/);
   assert.match(worker, /Date\.now\(\) - providerStartedAt/);
