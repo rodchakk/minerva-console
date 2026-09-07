@@ -110,6 +110,7 @@ test("public Outrider reuses the resident-registration Minerva footer treatment"
   assert.match(publicPage, /alt="Minerva Technologies"/);
   assert.match(publicPage, /Tus datos están protegidos/);
   assert.match(publicPage, /border-t border-slate-200\/80/);
+  assert.match(publicPage, /bg-slate-50/);
   assert.match(publicPage, /<OutriderPublicForm session=\{session\} token=\{token\} \/>/);
   assert.match(publicPage, /<OutriderBrandFooter \/>/);
 });
