@@ -15,13 +15,13 @@ const migration = [
   read("supabase/migrations/20260907014000_entry_outrider_optional_files.sql"),
   read("supabase/migrations/20260907015000_entry_outrider_export_bucket.sql"),
   read("supabase/migrations/20260907061021_outrider_standalone_intakes.sql"),
-  read("supabase/migrations/20260907070000_outrider_qa_hardening.sql"),
+  read("supabase/migrations/20260907064847_outrider_qa_hardening.sql"),
 ].join("\n");
 const reviewMigration = read(
   "supabase/migrations/20260907013000_entry_outrider_review_fixes.sql",
 );
 const qaMigration = read(
-  "supabase/migrations/20260907070000_outrider_qa_hardening.sql",
+  "supabase/migrations/20260907064847_outrider_qa_hardening.sql",
 );
 const exportBucketMigration = read(
   "supabase/migrations/20260907015000_entry_outrider_export_bucket.sql",
