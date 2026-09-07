@@ -63,18 +63,6 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: corsHeaders });
 }
 
-function safeMessage(error: unknown): string {
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof error.message === "string"
-  ) {
-    return error.message.slice(0, 160);
-  }
-  return "Unexpected error";
-}
-
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
   let binary = "";
@@ -133,10 +121,10 @@ function deriveTokenUsage(metadata: UsageMetadata) {
 
 function estimateStandardListCost(inputTokens: number | null, outputTokens: number | null) {
   if (inputTokens === null || outputTokens === null) return null;
-  return (
+  const raw =
     (inputTokens / 1_000_000) * INPUT_USD_PER_MILLION_TOKENS +
-    (outputTokens / 1_000_000) * OUTPUT_USD_PER_MILLION_TOKENS
-  );
+    (outputTokens / 1_000_000) * OUTPUT_USD_PER_MILLION_TOKENS;
+  return Number(raw.toFixed(8));
 }
 
 function providerRequestId(response: Response): string | null {
@@ -248,7 +236,8 @@ Deno.serve(async (req: Request) => {
       p_currency: "USD",
       p_duration_ms: args.durationMs,
       p_error_code: args.errorCode ?? null,
-      p_error_fingerprint: args.status === "failed" ? "gemini:plate_ocr" : null,
+      p_error_fingerprint:
+        args.status === "failed" ? `gemini:plate_ocr:${args.errorCode ?? "failed"}` : null,
       p_estimated_cost: estimatedCost,
       p_image_count: 1,
       p_input_tokens: usage.inputTokens,
@@ -283,14 +272,15 @@ Deno.serve(async (req: Request) => {
     const exhausted = Number(queue.max_attempts ?? 0) > 0 &&
       Number(queue.attempts ?? 0) >= Number(queue.max_attempts ?? 0);
     const nextRetry = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+    const updatePayload: JsonObject = {
+      status: exhausted ? "FAILED" : "PENDING",
+      last_error: errorCode,
+    };
+    if (!exhausted) updatePayload.scheduled_at = nextRetry;
 
     await serviceClient
       .from("plate_ocr_queue")
-      .update({
-        status: exhausted ? "FAILED" : "PENDING",
-        last_error: errorCode,
-        scheduled_at: exhausted ? undefined : nextRetry,
-      })
+      .update(updatePayload)
       .eq("id", queue.id);
   }
 
@@ -336,9 +326,12 @@ Deno.serve(async (req: Request) => {
   const providerStartedAt = Date.now();
   let geminiResponse: Response;
   try {
-    geminiResponse = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(GEMINI_API_KEY)}`, {
+    geminiResponse = await fetch(GEMINI_ENDPOINT, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY,
+      },
       body: JSON.stringify({
         contents: [{
           parts: [
@@ -349,7 +342,7 @@ Deno.serve(async (req: Request) => {
         generationConfig: { temperature: 0, maxOutputTokens: 200 },
       }),
     });
-  } catch (error) {
+  } catch {
     const durationMs = Date.now() - providerStartedAt;
     await recordProviderUsage({
       status: "failed",
@@ -358,7 +351,7 @@ Deno.serve(async (req: Request) => {
       resultKind: "unknown",
     });
     await markQueueFailure("GEMINI_NETWORK_ERROR");
-    console.error("[extract-plate-text] Gemini network failure", safeMessage(error));
+    console.error("[extract-plate-text] Gemini network failure");
     return json({ ok: false, error: "OCR provider request failed" }, 502);
   }
 
