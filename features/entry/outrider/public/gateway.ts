@@ -203,9 +203,12 @@ export async function submitPublicOutrider(input: { tokenHash: string }) {
   }
 
   const result = asRecord(data);
+  const completedSections = Array.isArray(result.completed_sections)
+    ? asOutriderSections(result.completed_sections)
+    : undefined;
 
   return {
-    completedSections: asOutriderSections(result.completed_sections),
+    completedSections,
     submitted: result.accepted === true,
   };
 }
