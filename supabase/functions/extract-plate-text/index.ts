@@ -134,6 +134,20 @@ function providerRequestId(response: Response): string | null {
   );
 }
 
+function jwtRole(token: string): string | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  try {
+    const normalized = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+    const payload = JSON.parse(atob(padded)) as { role?: unknown };
+    return typeof payload.role === "string" ? payload.role : null;
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
@@ -151,7 +165,11 @@ Deno.serve(async (req: Request) => {
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Not authenticated" }, 401);
 
   const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
-  if (bearerToken !== SUPABASE_SERVICE_ROLE_KEY) {
+  // Supabase's gateway verifies the JWT because this function is deployed with
+  // verify_jwt=true. Require the verified token itself to carry service_role;
+  // do not compare it to the runtime service key because projects can expose
+  // different key formats for internal clients and legacy JWT dispatch.
+  if (jwtRole(bearerToken) !== "service_role") {
     return json({ error: "Internal service role required" }, 403);
   }
 
