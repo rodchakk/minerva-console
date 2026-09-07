@@ -161,8 +161,8 @@ quiet system never fabricates usage.
 Observability continues to use `plate_ocr_queue` for operational visibility:
 pending, processing, failed, completed, retry/exhaustion, oldest-open, and
 latest-completion signals. A fresh PENDING row is not degradation by itself.
-Old/stuck open work, repeated failures, or exhausted attempts can degrade Image
-OCR health independently of provider cost accounting.
+Repeated failures or exhausted attempts can degrade Image OCR health. Old/stuck
+open work can also degrade the flow independently of provider cost accounting.
 
 OCR queue windows separate current state from history. Open `PENDING` and
 `PROCESSING` rows are current operational state and stay visible even when their
