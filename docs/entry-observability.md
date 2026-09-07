@@ -135,30 +135,34 @@ OCR queue state and billable provider calls are separate. A queue row does not
 necessarily equal one provider call. If one image causes an initial call plus two
 billable retries, write three usage ledger rows.
 
-The ledger schema supports OCR provider usage with `operation = 'image_ocr'`,
-`provider = 'google'` or the repository's provider naming convention,
-`service_model` set to the actual Gemini model, `image_count = 1` per provider
-call, returned token counts when the provider response includes usage metadata,
-duration, status, and request/correlation identifiers where available.
+ENTRY-OCR-001 brings the live `extract-plate-text` path under repository control.
+The provider boundary now records Gemini OCR invocations with
+`operation = 'image_ocr'`, `provider = 'google_gemini'`, the actual Gemini model,
+`image_count = 1` per provider call, returned token counts from Google
+`usageMetadata` when available, duration, outcome, request/correlation IDs,
+community attribution, and a versioned standard-list pricing estimate.
+
+Provider success and plate readability are intentionally different concepts. A
+valid Gemini response that concludes `NO_PLATE` still proves the provider flow
+worked and closes the queue job as `DONE`; it does not fabricate extracted plate
+text.
 
 Do not infer token usage from image count. Do not store the image, base64 image
 data, OCR raw/full text, provider API keys, authentication values, or unnecessary
 PII in telemetry. Product/domain tables own extracted content.
 
-Current release dependency: the live `extract-plate-text` Supabase Edge Function
-is deployed in `gate-project-dev`, but its current source is not present under
-`supabase/functions` in this repository branch. This PR therefore provides the
-ledger/read-model foundation for OCR economics, but OCR provider instrumentation
-remains not yet instrumented and must be completed only after the function source
-and its unsafe internal authentication drift are repaired without duplicating or
-preserving hardcoded credentials.
+The OCR provider capability is exposed to the existing Observability screen by
+`20260907182500_entry_ocr_observability_status.sql`. The original v1 read model
+remains the internal base query, while the public superadmin RPC reports the
+repository-controlled OCR provider as instrumented after ENTRY-OCR-001 is
+released. Actual image/token/cost totals still come only from ledger rows; a
+quiet system never fabricates usage.
 
-Until provider instrumentation is repository-controlled, Observability v1 still
-uses `plate_ocr_queue` for safe operational visibility: pending, processing,
-failed, completed, retry/exhaustion, oldest-open, and latest-completion signals.
-A fresh PENDING row is not degradation by itself. Old/stuck open work, repeated
-failures, or exhausted attempts can degrade Image OCR health without implying
-Gemini token or cost accounting is complete.
+Observability continues to use `plate_ocr_queue` for operational visibility:
+pending, processing, failed, completed, retry/exhaustion, oldest-open, and
+latest-completion signals. A fresh PENDING row is not degradation by itself.
+Repeated failures or exhausted attempts can degrade Image OCR health. Old/stuck
+open work can also degrade the flow independently of provider cost accounting.
 
 OCR queue windows separate current state from history. Open `PENDING` and
 `PROCESSING` rows are current operational state and stay visible even when their
@@ -215,10 +219,11 @@ When adding a new ENTRY feature:
 
 - HTTP request volume is not measured globally; the dashboard reports tracked
   operational events instead of fabricated request counts.
-- Image/OCR usage is foundation-ready but not yet instrumented until the
-  repository contains the live `extract-plate-text` source and that provider call
-  writes one ledger row per actual Gemini invocation.
-- Provider costs remain unavailable when pricing is not explicitly configured or
-  returned by the provider.
+- Gemini OCR usage begins accumulating only after ENTRY-OCR-001 is released;
+  historical OCR calls made before provider instrumentation are intentionally
+  not backfilled or estimated.
+- Provider costs are operational estimates from the pricing snapshot stored at
+  invocation time, not invoice reconciliation; actual billing can differ because
+  of provider tiers, credits, or later pricing changes.
 - Critical flow health is conservative and will show Unknown until each flow has
   enough real telemetry.

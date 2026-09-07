@@ -93,6 +93,25 @@ jobs:
       - name: Run ENTRY Observability regression scope
         run: node --test tests/entry-observability.test.mjs
 
+  entry-ocr-hardening-tests:
+    name: ENTRY OCR hardening regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ENTRY OCR hardening regression scope
+        run: node --test tests/entry-ocr-hardening.test.mjs
+
   lint-brain:
     name: Lint (Brain + layout)
     runs-on: ubuntu-latest
