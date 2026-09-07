@@ -21,6 +21,12 @@ test("OCR source is recovered without the legacy hardcoded shared secret", () =>
   assert.match(migration, /'Bearer '\s*\|\|\s*v_service_role_key/);
 });
 
+test("Gemini API key is sent as a header, never embedded in the request URL", () => {
+  assert.match(edge, /"x-goog-api-key": GEMINI_API_KEY/);
+  assert.doesNotMatch(edge, /GEMINI_ENDPOINT\}\?key=/);
+  assert.doesNotMatch(edge, /encodeURIComponent\(GEMINI_API_KEY\)/);
+});
+
 test("OCR requests are scoped to the real entry log and its community", () => {
   assert.match(edge, /entry_log_id required/);
   assert.match(edge, /OCR image does not match entry log/);
