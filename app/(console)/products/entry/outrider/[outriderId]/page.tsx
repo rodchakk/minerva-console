@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { notFound } from "next/navigation";
 import { OutriderDetailWorkspace } from "@/features/entry/outrider/internal/OutriderDetailWorkspace";
+import { OutriderInitialAdminsSummary } from "@/features/entry/outrider/internal/OutriderInitialAdminsSummary";
 import { getOutriderDetail } from "@/features/entry/outrider/queries";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +29,7 @@ export default async function EntryOutriderDetailPage(
         </Link>
       </div>
       <OutriderDetailWorkspace detail={detail} />
+      <OutriderInitialAdminsSummary detail={detail} />
     </div>
   );
 }
