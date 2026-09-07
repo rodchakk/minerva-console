@@ -230,6 +230,10 @@ export function OutriderWorkspace({
       ).length,
     [sessions],
   );
+  const openCount = useMemo(
+    () => sessions.filter((session) => session.status !== "approved").length,
+    [sessions],
+  );
 
   return (
     <div className="space-y-5">
@@ -269,7 +273,7 @@ export function OutriderWorkspace({
 
       <section className="grid overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] md:grid-cols-3">
         {[
-          { label: "Open intakes", value: sessions.length },
+          { label: "Open intakes", value: openCount },
           { label: "Need attention", value: attentionCount },
           {
             label: "Approved handoffs",
