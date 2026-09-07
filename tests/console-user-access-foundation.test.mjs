@@ -24,9 +24,18 @@ async function changedFiles() {
     cwd: root,
     encoding: "utf8",
   });
+  const untracked = execFileSync(
+    "git",
+    ["ls-files", "--others", "--exclude-standard"],
+    {
+      cwd: root,
+      encoding: "utf8",
+    },
+  );
+
   return [
     ...new Set(
-      `${committed}\n${workingTree}`
+      `${committed}\n${workingTree}\n${untracked}`
         .trim()
         .split(/\r?\n/)
         .filter(Boolean)
@@ -120,43 +129,14 @@ test("Phase A introduces no new admin invite client or service-role requirement"
   assert.doesNotMatch(migration, /service_role|auth\.admin|invite/i);
 });
 
-test("Console access changes do not spill into Brain or unrelated ENTRY surfaces", async () => {
+test("Console access changes do not spill into Brain, ENTRY, or migrations", async () => {
   const files = await changedFiles();
-  const allowedEntryOutriderFiles = new Set([
-    "app/(public)/entry/outrider/[token]/page.tsx",
-    "app/(public)/entry/outrider/[token]/save/route.ts",
-    "app/(public)/entry/outrider/[token]/submit/route.ts",
-    "app/(public)/entry/outrider/[token]/upload/complete/route.ts",
-    "app/(public)/entry/outrider/[token]/upload/start/route.ts",
-    "supabase/migrations/20260907010000_entry_outrider_v1.sql",
-  ]);
 
   assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
-  assert.equal(
-    files.some(
-      (file) =>
-        file.startsWith("features/entry/") &&
-        !file.startsWith("features/entry/outrider/"),
-    ),
-    false,
-  );
-  assert.equal(
-    files.some(
-      (file) =>
-        file.startsWith("app/(public)/entry/") &&
-        !allowedEntryOutriderFiles.has(file),
-    ),
-    false,
-  );
-  assert.equal(
-    files.some(
-      (file) =>
-        file.startsWith("supabase/migrations/") &&
-        !allowedEntryOutriderFiles.has(file),
-    ),
-    false,
-  );
+  assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("app/(public)/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("supabase/migrations/")), false);
 });
 
 test("Console membership migration is the only added Supabase migration", () => {
