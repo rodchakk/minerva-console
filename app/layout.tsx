@@ -12,9 +12,34 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const consoleTitle = "Minerva Console";
+const consoleDescription = "Internal global console for Minerva Technologies.";
+const consoleUrl = "https://console.minervatechs.com";
+const consoleBrandImage = "/minerva-logo-transparent.png";
+
 export const metadata: Metadata = {
-  title: "Minerva Console",
-  description: "Internal global console for Minerva Technologies.",
+  metadataBase: new URL(consoleUrl),
+  title: consoleTitle,
+  description: consoleDescription,
+  icons: {
+    icon: consoleBrandImage,
+    shortcut: consoleBrandImage,
+    apple: consoleBrandImage,
+  },
+  openGraph: {
+    type: "website",
+    url: consoleUrl,
+    siteName: consoleTitle,
+    title: consoleTitle,
+    description: consoleDescription,
+    images: [consoleBrandImage],
+  },
+  twitter: {
+    card: "summary",
+    title: consoleTitle,
+    description: consoleDescription,
+    images: [consoleBrandImage],
+  },
 };
 
 export default function RootLayout({

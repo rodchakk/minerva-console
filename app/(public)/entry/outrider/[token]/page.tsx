@@ -6,12 +6,31 @@ import { hashOutriderToken } from "@/features/entry/outrider/token";
 
 export const dynamic = "force-dynamic";
 
+const outriderTitle = "ENTRY Outrider";
+const outriderDescription =
+  "Preparación segura de información para el onboarding de tu comunidad con ENTRY.";
+const outriderBrandImage = "/minerva-logo-transparent.png";
+
 export const metadata: Metadata = {
+  title: outriderTitle,
+  description: outriderDescription,
+  openGraph: {
+    type: "website",
+    siteName: "ENTRY · Minerva Technologies",
+    title: outriderTitle,
+    description: outriderDescription,
+    images: [outriderBrandImage],
+  },
+  twitter: {
+    card: "summary",
+    title: outriderTitle,
+    description: outriderDescription,
+    images: [outriderBrandImage],
+  },
   robots: {
     follow: false,
     index: false,
   },
-  title: "ENTRY Outrider",
 };
 
 function UnavailableOutrider() {
