@@ -160,6 +160,14 @@ A fresh PENDING row is not degradation by itself. Old/stuck open work, repeated
 failures, or exhausted attempts can degrade Image OCR health without implying
 Gemini token or cost accounting is complete.
 
+OCR queue windows separate current state from history. Open `PENDING` and
+`PROCESSING` rows are current operational state and stay visible even when their
+`scheduled_at` retry time is in the future or the row was created before the
+selected reporting window. Terminal `DONE` and `FAILED` rows are historical and
+must fall inside the selected window using `coalesce(completed_at, scheduled_at,
+created_at)`. Open rows use `created_at` capped at `now()` as their observed
+time so future retries do not create future `lastObservedAt` values.
+
 ## Request And Correlation IDs
 
 Reuse the existing `request_id` and `correlation_id` concepts. A request ID

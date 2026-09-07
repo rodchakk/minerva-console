@@ -137,6 +137,24 @@ function classifyOcrQueueJob({ attempts, maxAttempts, scheduledMinutesAgo, statu
   return "unknown";
 }
 
+function includesOcrQueueJob({
+  completedMinutesAgo,
+  createdMinutesAgo,
+  rangeMinutes,
+  scheduledMinutesAgo,
+  status,
+}) {
+  if (status === "PENDING" || status === "PROCESSING") return true;
+
+  const terminalMinutesAgo =
+    completedMinutesAgo ?? scheduledMinutesAgo ?? createdMinutesAgo;
+  return terminalMinutesAgo >= 0 && terminalMinutesAgo < rangeMinutes;
+}
+
+function openOcrObservedMinutesAgo({ createdMinutesAgo }) {
+  return Math.max(createdMinutesAgo, 0);
+}
+
 function shouldSurfaceIncident({ occurrenceCount, severity }) {
   return occurrenceCount >= 2 || normalizeSeverity(severity) === "CRITICAL";
 }
@@ -382,6 +400,8 @@ test("selected-community scope excludes unrelated global operational rows", () =
 test("OCR queue visibility uses queue state without claiming provider economics", () => {
   assert.match(migration, /from public\.plate_ocr_queue q/);
   assert.match(migration, /join public\.entry_logs el on el\.id = q\.entry_log_id/);
+  assert.match(migration, /when q\.status in \('PENDING', 'PROCESSING'\) then least\(q\.created_at, now\(\)\)/);
+  assert.match(migration, /q\.status in \('PENDING', 'PROCESSING'\)[\s\S]*q\.status in \('DONE', 'FAILED'\)[\s\S]*coalesce\(q\.completed_at, q\.scheduled_at, q\.created_at\) >= v_start[\s\S]*coalesce\(q\.completed_at, q\.scheduled_at, q\.created_at\) < v_end/);
   assert.match(migration, /provider_usage_status', 'not_instrumented'/);
   assert.match(page, /OCR queue/);
   assert.match(page, /Not instrumented/);
@@ -414,6 +434,66 @@ test("OCR queue visibility uses queue state without claiming provider economics"
     }),
     "failed",
   );
+  assert.equal(
+    includesOcrQueueJob({
+      createdMinutesAgo: 1,
+      rangeMinutes: 24 * 60,
+      scheduledMinutesAgo: -2,
+      status: "PENDING",
+    }),
+    true,
+  );
+  assert.equal(
+    includesOcrQueueJob({
+      createdMinutesAgo: 3,
+      rangeMinutes: 24 * 60,
+      scheduledMinutesAgo: 2,
+      status: "PROCESSING",
+    }),
+    true,
+  );
+  assert.equal(
+    includesOcrQueueJob({
+      completedMinutesAgo: null,
+      createdMinutesAgo: 60 * 24 * 60,
+      rangeMinutes: 24 * 60,
+      scheduledMinutesAgo: 60 * 24 * 60,
+      status: "FAILED",
+    }),
+    false,
+  );
+  assert.equal(
+    includesOcrQueueJob({
+      completedMinutesAgo: null,
+      createdMinutesAgo: 10,
+      rangeMinutes: 24 * 60,
+      scheduledMinutesAgo: 10,
+      status: "FAILED",
+    }),
+    true,
+  );
+  assert.equal(
+    includesOcrQueueJob({
+      completedMinutesAgo: 10,
+      createdMinutesAgo: 20,
+      rangeMinutes: 24 * 60,
+      scheduledMinutesAgo: 15,
+      status: "DONE",
+    }),
+    true,
+  );
+  assert.equal(
+    includesOcrQueueJob({
+      completedMinutesAgo: 60 * 24 * 60,
+      createdMinutesAgo: 60 * 24 * 60,
+      rangeMinutes: 24 * 60,
+      scheduledMinutesAgo: 60 * 24 * 60,
+      status: "DONE",
+    }),
+    false,
+  );
+  assert.equal(openOcrObservedMinutesAgo({ createdMinutesAgo: 5 }), 5);
+  assert.equal(openOcrObservedMinutesAgo({ createdMinutesAgo: -1 }), 0);
 });
 
 test("dashboard route, filters, loading state, and sidebar entry are wired", () => {

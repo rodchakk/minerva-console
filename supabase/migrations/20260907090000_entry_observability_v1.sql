@@ -463,7 +463,10 @@ begin
   ),
   ocr_queue_attempts as (
     select
-      coalesce(q.completed_at, q.scheduled_at, q.created_at) as occurred_at,
+      case
+        when q.status in ('PENDING', 'PROCESSING') then least(q.created_at, now())
+        else coalesce(q.completed_at, q.scheduled_at, q.created_at)
+      end as occurred_at,
       el.community_id,
       'plate_ocr_queue'::text as source,
       concat('PLATE_OCR_QUEUE_', q.status)::text as event_type,
@@ -525,11 +528,13 @@ begin
       end as explanation
     from public.plate_ocr_queue q
     join public.entry_logs el on el.id = q.entry_log_id
-    where coalesce(q.completed_at, q.scheduled_at, q.created_at) < v_end
-      and (
-        q.completed_at is null
-        or q.completed_at >= v_start
-        or q.status in ('PENDING', 'PROCESSING')
+    where (
+        q.status in ('PENDING', 'PROCESSING')
+        or (
+          q.status in ('DONE', 'FAILED')
+          and coalesce(q.completed_at, q.scheduled_at, q.created_at) >= v_start
+          and coalesce(q.completed_at, q.scheduled_at, q.created_at) < v_end
+        )
       )
       and exists (
         select 1 from selected_communities sc where sc.id = el.community_id
@@ -814,11 +819,13 @@ begin
       max(q.completed_at) filter (where q.status = 'DONE') as last_completed_at
     from public.plate_ocr_queue q
     join public.entry_logs el on el.id = q.entry_log_id
-    where coalesce(q.completed_at, q.scheduled_at, q.created_at) < v_end
-      and (
-        q.completed_at is null
-        or q.completed_at >= v_start
-        or q.status in ('PENDING', 'PROCESSING')
+    where (
+        q.status in ('PENDING', 'PROCESSING')
+        or (
+          q.status in ('DONE', 'FAILED')
+          and coalesce(q.completed_at, q.scheduled_at, q.created_at) >= v_start
+          and coalesce(q.completed_at, q.scheduled_at, q.created_at) < v_end
+        )
       )
       and exists (select 1 from selected_communities sc where sc.id = el.community_id)
   ),
