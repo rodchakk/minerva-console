@@ -17,8 +17,9 @@ This mission makes OCR a repository-owned, observable production subsystem witho
 5. The Edge Function refuses arbitrary storage access: `entry_log_id` is mandatory, the bucket is fixed to `entry-photos`, and `image_path` must exactly match the entry log's `vehicle_photo_path`.
 6. Gemini 2.5 Flash performs the OCR request.
 7. Every actual or potentially billable Gemini invocation records one best-effort `entry_usage_ledger` row with community, model, image count, measured tokens when returned, duration, outcome, request/correlation IDs, pricing version, and an estimated standard-list cost when token counts are available.
-8. A successful provider response closes the queue job as `DONE` even when the image has no readable plate. Provider success and plate readability are different concepts.
-9. Failed calls remain retryable until `max_attempts`. `process_plate_ocr_queue()` is scheduled once per minute, while `scheduled_at` provides a two-minute per-row backoff.
+8. A successful provider response persists the OCR result to `entry_logs`. A database trigger closes the matching queue row as `DONE` in that same database transaction, including a valid `NO_PLATE`/null result.
+9. `DONE` is terminal for the autonomous worker. A late transport error or failure in the Edge Function's redundant queue update cannot reopen completed work and accidentally bill a duplicate Gemini retry.
+10. Failed calls remain retryable until `max_attempts`. `process_plate_ocr_queue()` is scheduled once per minute, while `scheduled_at` provides a two-minute per-row backoff. Legacy rows with an already persisted plate are reconciled before retry dispatch.
 
 ## Cost semantics
 
@@ -33,6 +34,8 @@ The ledger value is an operational estimate at the stored pricing snapshot, not 
 
 Token accounting uses `usageMetadata.promptTokenCount` for input and candidates + thinking tokens for output when available. Raw Gemini payloads, full OCR output, vehicle images, PINs, JWTs, provider keys, and recipient/user secrets are not stored in the usage ledger.
 
+Usage accounting is best-effort by design. A ledger transport failure must not convert a successful provider response into a product retry. Conversely, a provider call is still billable even if later result persistence fails, so provider success/failure and persistence success/failure remain separate operational concepts.
+
 ## Security properties
 
 - Edge deployment must use `verify_jwt=true`.
@@ -43,6 +46,7 @@ Token accounting uses `usageMetadata.promptTokenCount` for input and candidates 
 - The caller cannot select an arbitrary storage object: the requested image must belong to the supplied entry log.
 - The Gemini API key is sent in the `x-goog-api-key` request header, not in the request URL.
 - OCR remains auxiliary: trigger exceptions never fail a real gate check-in.
+- Queue completion is monotonic: once OCR work is `DONE`, autonomous error/retry paths cannot reopen it.
 
 ## Release order
 
@@ -51,7 +55,7 @@ The old DB dispatcher and the hardened Edge Function use different internal auth
 Release in this order:
 
 1. Deploy the repository-owned `extract-plate-text` with `verify_jwt=true`.
-2. Immediately apply `20260907182000_entry_ocr_production_hardening.sql` so DB dispatch switches to the Vault service-role JWT and the retry scheduler becomes active.
+2. Immediately apply `20260907182000_entry_ocr_production_hardening.sql` so DB dispatch switches to the Vault service-role JWT, atomic queue completion becomes active, and the retry scheduler starts.
 3. Apply `20260907182500_entry_ocr_observability_status.sql` so the existing Observability screen reports the repository-controlled provider capability as instrumented.
 4. Confirm the live Edge Function reports `verify_jwt=true` and the OCR cron job is active.
 5. Confirm no queue rows were exhausted during the short rollout window; any temporary pending row should be retried by the scheduler.
@@ -67,6 +71,7 @@ A controlled test is accepted only when all of the following are true:
 - one queue row exists for the entry log;
 - successful OCR becomes `DONE` and does not remain pending;
 - a no-readable-plate result can still become `DONE`;
+- completed queue work does not reopen on a later retry/error update;
 - a real Gemini invocation creates exactly one provider usage record;
 - the usage row is attributed to the correct community;
 - input/output tokens are populated when Google returns `usageMetadata`;
