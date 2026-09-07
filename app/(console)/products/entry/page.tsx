@@ -2,12 +2,10 @@ import Link from "next/link";
 import {
   ArrowRight,
   ArrowUpRight,
-  ClipboardList,
   Clock3,
   Compass,
   MessageSquare,
   Plus,
-  Search,
   Send,
   UserRoundCheck,
   Users,
@@ -17,17 +15,14 @@ import {
 import { listCommunitiesWithProgress } from "@/features/entry/communities/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 import { OperationalActivityFeed } from "@/features/entry/operations/OperationalActivityFeed";
-import { getEntryOperationalActivity } from "@/features/entry/operations/queries";
 import {
-  getOutriderAttentionCount,
+  getEntryOperationalActivity,
+  getEntryPublishedMessagesLast24Hours,
+} from "@/features/entry/operations/queries";
+import {
   listOutriderSessions,
   type OutriderListItem,
 } from "@/features/entry/outrider/queries";
-import {
-  listRecentOutriderActivity,
-  type OutriderRecentActivityItem,
-} from "@/features/entry/outrider/recentActivity";
-import { getOutriderStatusLabel } from "@/features/entry/outrider/model";
 import { cn } from "@/lib/supabase/utils";
 
 function getProgressWidth(completed: number, total: number) {
@@ -68,77 +63,11 @@ function getStatusClass(onboardingStatus: string, isActive: boolean) {
   return "border-white/10 bg-white/[0.04] text-slate-200";
 }
 
-function getOutriderStatusClass(status: string) {
-  switch (status) {
-    case "approved":
-      return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
-    case "ready_for_review":
-      return "border-violet-400/20 bg-violet-500/[0.08] text-violet-200";
-    case "needs_information":
-      return "border-amber-400/20 bg-amber-500/[0.08] text-amber-200";
-    case "in_progress":
-      return "border-cyan-400/20 bg-cyan-500/[0.08] text-cyan-200";
-    default:
-      return "border-white/10 bg-white/[0.04] text-slate-200";
-  }
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString(undefined, {
-    day: "2-digit",
-    hour: "numeric",
-    minute: "2-digit",
-    month: "short",
-  });
-}
-
-function statusCount(sessions: OutriderListItem[], status: OutriderListItem["status"]) {
+function statusCount(
+  sessions: OutriderListItem[],
+  status: OutriderListItem["status"],
+) {
   return sessions.filter((session) => session.status === status).length;
-}
-
-function getMetadataText(metadata: Record<string, unknown>, ...keys: string[]) {
-  for (const key of keys) {
-    const value = metadata[key];
-    if (typeof value === "string" && value.trim()) return value.trim();
-  }
-  return null;
-}
-
-function getOutriderEventLabel(item: OutriderRecentActivityItem) {
-  const filename = getMetadataText(
-    item.metadata,
-    "original_filename",
-    "filename",
-    "file_name",
-  );
-  const section = getMetadataText(item.metadata, "section", "section_name");
-
-  switch (item.eventType) {
-    case "outrider_started":
-    case "session_created":
-      return "Outrider started";
-    case "attachment_uploaded":
-    case "file_uploaded":
-      return filename ? `File uploaded: ${filename}` : "File uploaded";
-    case "submitted_for_review":
-    case "outrider_submitted":
-      return "Sent for review";
-    case "information_requested":
-    case "outrider_information_requested":
-      return "Information requested";
-    case "approved":
-    case "outrider_approved":
-      return "Outrider approved";
-    case "section_completed":
-      return section ? `${section} completed` : "Section completed";
-    default:
-      return item.eventType
-        .replace(/^outrider_/, "")
-        .replace(/_/g, " ")
-        .replace(/^./, (character) => character.toUpperCase());
-  }
 }
 
 const quickActions = [
@@ -150,11 +79,18 @@ const quickActions = [
     tone: "border-violet-400/15 bg-violet-500/[0.10] text-violet-200",
   },
   {
+    label: "Open Activation Queue",
+    href: "/products/entry/activation",
+    note: "Review residents waiting for setup",
+    icon: Clock3,
+    tone: "border-amber-400/15 bg-amber-500/[0.10] text-amber-200",
+  },
+  {
     label: "Open Outrider",
     href: "/products/entry/outrider",
-    note: "Review community setup intake",
+    note: "Open the community intake workspace",
     icon: Compass,
-    tone: "border-amber-400/15 bg-amber-500/[0.10] text-amber-200",
+    tone: "border-violet-400/15 bg-violet-500/[0.10] text-violet-200",
   },
   {
     label: "Review users",
@@ -222,7 +158,6 @@ function MetricItem({
   note,
   dotClassName,
   className,
-  href,
 }: {
   icon: LucideIcon;
   label: string;
@@ -230,36 +165,34 @@ function MetricItem({
   note: string;
   dotClassName: string;
   className?: string;
-  href?: string;
 }) {
-  const content = (
-    <div className="w-full max-w-[250px]">
-      <p className="text-xs font-medium text-[var(--console-text-muted)]">{label}</p>
-      <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] items-center gap-3.5">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--console-border-strong)] bg-white/[0.025] text-slate-300">
-          <Icon className="h-4.5 w-4.5 stroke-[1.75]" />
-        </span>
-        <p className="min-w-0 text-2xl font-semibold tracking-tight text-white">{value}</p>
-      </div>
-      <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] gap-3.5">
-        <span aria-hidden="true" />
-        <p className="flex min-w-0 items-center gap-2 text-xs text-[var(--console-text-muted)]">
-          <span className={cn("h-1.5 w-1.5 rounded-full", dotClassName)} />
-          <span>{note}</span>
-        </p>
-      </div>
-    </div>
-  );
-
   return (
-    <article className={cn("flex h-full items-center justify-center px-5 py-4", className)}>
-      {href ? (
-        <Link href={href} className="w-full max-w-[250px] rounded-md transition-colors hover:bg-white/[0.025]">
-          {content}
-        </Link>
-      ) : (
-        content
+    <article
+      className={cn(
+        "flex h-full items-center justify-center px-5 py-4",
+        className,
       )}
+    >
+      <div className="w-full max-w-[250px]">
+        <p className="text-xs font-medium text-[var(--console-text-muted)]">
+          {label}
+        </p>
+        <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] items-center gap-3.5">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--console-border-strong)] bg-white/[0.025] text-slate-300">
+            <Icon className="h-4.5 w-4.5 stroke-[1.75]" />
+          </span>
+          <p className="min-w-0 text-2xl font-semibold tracking-tight text-white">
+            {value}
+          </p>
+        </div>
+        <div className="mt-2 grid grid-cols-[36px_minmax(0,1fr)] gap-3.5">
+          <span aria-hidden="true" />
+          <p className="flex min-w-0 items-center gap-2 text-xs text-[var(--console-text-muted)]">
+            <span className={cn("h-1.5 w-1.5 rounded-full", dotClassName)} />
+            <span>{note}</span>
+          </p>
+        </div>
+      </div>
     </article>
   );
 }
@@ -279,10 +212,21 @@ function SectionHeading({
     <div className="flex flex-col gap-3 border-b border-[var(--console-border)] px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
       <div>
         {label ? (
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">{label}</p>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+            {label}
+          </p>
         ) : null}
-        <h2 className={cn("font-semibold text-white", label ? "mt-2 text-lg" : "text-lg")}>{title}</h2>
-        <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">{description}</p>
+        <h2
+          className={cn(
+            "font-semibold text-white",
+            label ? "mt-2 text-lg" : "text-lg",
+          )}
+        >
+          {title}
+        </h2>
+        <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
+          {description}
+        </p>
       </div>
       {action}
     </div>
@@ -293,15 +237,13 @@ export default async function DashboardPage() {
   const [
     communities,
     operationalActivity,
+    messagesLast24Hours,
     outriderSessions,
-    outriderAttentionCount,
-    recentOutriderActivity,
   ] = await Promise.all([
     listCommunitiesWithProgress(),
     getEntryOperationalActivity(15),
+    getEntryPublishedMessagesLast24Hours(),
     listOutriderSessions(),
-    getOutriderAttentionCount(),
-    listRecentOutriderActivity(6),
   ]);
 
   const activeCommunities = communities.filter((community) => community.isActive);
@@ -313,9 +255,6 @@ export default async function DashboardPage() {
     0,
   );
   const inactiveCommunities = communities.filter((community) => !community.isActive);
-  const outriderByCommunity = new Map(
-    outriderSessions.map((session) => [session.communityId, session]),
-  );
   const prioritizedCommunities = [...communities]
     .sort((a, b) => {
       const aPending = a.onboardingStatus !== "complete_active" ? 1 : 0;
@@ -326,7 +265,7 @@ export default async function DashboardPage() {
       }
       return a.name.localeCompare(b.name);
     })
-    .slice(0, 6);
+    .slice(0, 5);
 
   const setupOverview = [
     {
@@ -355,7 +294,10 @@ export default async function DashboardPage() {
       color: "#34d399",
     },
   ];
-  const totalOutriderSessions = setupOverview.reduce((sum, item) => sum + item.value, 0);
+  const totalOutriderSessions = setupOverview.reduce(
+    (sum, item) => sum + item.value,
+    0,
+  );
   let cursor = 0;
   const gradientStops = totalOutriderSessions
     ? setupOverview
@@ -374,11 +316,15 @@ export default async function DashboardPage() {
       <section className="px-0.5 pt-5">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
           <div className="min-w-0 max-w-3xl">
-            <h1 className="text-3xl font-semibold tracking-tight text-white lg:text-[2.05rem]">ENTRY Operations</h1>
+            <h1 className="text-3xl font-semibold tracking-tight text-white lg:text-[2.05rem]">
+              ENTRY Operations
+            </h1>
             <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
-              Onboard communities, monitor setup, and keep operational work moving from one workspace.
+              Onboard communities, monitor setup, and keep operational work moving
+              from one workspace.
             </p>
           </div>
+
           <div className="flex flex-wrap gap-2">
             <ActionLink href="/products/entry/communities/new" variant="primary">
               <Plus className="h-4 w-4 stroke-[1.75]" />
@@ -418,12 +364,17 @@ export default async function DashboardPage() {
           className="border-b border-[var(--console-border)] md:border-r md:border-b-0 xl:border-r"
         />
         <MetricItem
-          icon={ClipboardList}
-          label="Outrider"
-          value={outriderAttentionCount ?? "—"}
-          note={outriderAttentionCount === null ? "Outrider count unavailable" : "Community setup records in progress"}
-          dotClassName={outriderAttentionCount === null ? "bg-amber-400" : "bg-violet-400"}
-          href="/products/entry/outrider"
+          icon={MessageSquare}
+          label="Messages (24h)"
+          value={messagesLast24Hours ?? "—"}
+          note={
+            messagesLast24Hours === null
+              ? "Message count unavailable"
+              : "Published community updates"
+          }
+          dotClassName={
+            messagesLast24Hours === null ? "bg-amber-400" : "bg-violet-400"
+          }
         />
       </section>
 
@@ -432,7 +383,7 @@ export default async function DashboardPage() {
           <ConsolePanel className="h-full overflow-hidden">
             <SectionHeading
               title="Setup priorities across ENTRY"
-              description="Community setup status, Outrider progress, units, and activation load in one view."
+              description="Communities sorted by onboarding urgency and activation load."
               action={
                 <ActionLink href="/products/entry/communities">
                   View all communities
@@ -449,7 +400,7 @@ export default async function DashboardPage() {
                       <th className="px-5 py-3 font-medium">Community</th>
                       <th className="px-4 py-3 font-medium">City</th>
                       <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Outrider</th>
+                      <th className="px-4 py-3 font-medium">Onboarding</th>
                       <th className="px-4 py-3 font-medium">Units</th>
                       <th className="px-4 py-3 font-medium leading-4">
                         <span className="block">Pending</span>
@@ -460,8 +411,12 @@ export default async function DashboardPage() {
                   </thead>
                   <tbody>
                     {prioritizedCommunities.map((community) => {
-                      const isComplete = community.onboardingStatus === "complete_active";
-                      const outrider = outriderByCommunity.get(community.id) ?? null;
+                      const isComplete =
+                        community.onboardingStatus === "complete_active";
+                      const progressValue = getProgressValue(
+                        community.completedTasks,
+                        community.totalTasks,
+                      );
 
                       return (
                         <tr
@@ -479,49 +434,58 @@ export default async function DashboardPage() {
                                   .toUpperCase()}
                               </div>
                               <div className="min-w-0">
-                                <p className="font-medium text-white">{community.name}</p>
+                                <p className="font-medium text-white">
+                                  {community.name}
+                                </p>
                                 <p className="mt-1 text-xs text-[var(--console-text-muted)]">
                                   {getOnboardingNextStepLabel(community.nextStepKey)}
                                 </p>
                               </div>
                             </div>
                           </td>
-                          <td className="px-4 py-4 align-top text-slate-300">{community.city}</td>
+                          <td className="px-4 py-4 align-top text-slate-300">
+                            {community.city}
+                          </td>
                           <td className="px-4 py-4 align-top">
-                            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${getStatusClass(community.onboardingStatus, community.isActive)}`}>
-                              {getStatusLabel(community.onboardingStatus, community.isActive)}
+                            <span
+                              className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${getStatusClass(
+                                community.onboardingStatus,
+                                community.isActive,
+                              )}`}
+                            >
+                              {getStatusLabel(
+                                community.onboardingStatus,
+                                community.isActive,
+                              )}
                             </span>
                           </td>
                           <td className="px-4 py-4 align-top">
-                            {outrider ? (
-                              <Link
-                                href={`/products/entry/outrider/${outrider.id}`}
-                                className="block min-w-[170px] rounded-md transition-colors hover:bg-white/[0.025]"
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${getOutriderStatusClass(outrider.status)}`}>
-                                    {getOutriderStatusLabel(outrider.status)}
-                                  </span>
-                                  <span className="text-xs text-[var(--console-text-muted)]">{outrider.progressPercent}%</span>
-                                </div>
-                                <div className="mt-2 h-1 rounded-full bg-white/[0.08]">
-                                  <div className="h-1 rounded-full bg-[var(--console-accent)]" style={{ width: `${outrider.progressPercent}%` }} />
-                                </div>
-                              </Link>
-                            ) : (
-                              <div className="min-w-[170px]">
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="inline-flex items-center rounded-md border border-white/10 bg-white/[0.03] px-2 py-0.5 text-[11px] font-medium text-slate-400">
-                                    Not started
-                                  </span>
-                                  <span className="text-xs text-[var(--console-text-soft)]">0%</span>
-                                </div>
-                                <div className="mt-2 h-1 rounded-full bg-white/[0.08]" />
+                            <div className="min-w-[190px]">
+                              <div className="flex items-center justify-between gap-3 text-xs text-[var(--console-text-muted)]">
+                                <span>
+                                  {community.completedTasks}/{community.totalTasks} complete
+                                </span>
+                                <span>{progressValue}%</span>
                               </div>
-                            )}
+                              <div className="mt-2 h-1 rounded-full bg-white/[0.08]">
+                                <div
+                                  className="h-1 rounded-full bg-[var(--console-accent)]"
+                                  style={{
+                                    width: getProgressWidth(
+                                      community.completedTasks,
+                                      community.totalTasks,
+                                    ),
+                                  }}
+                                />
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-4 py-4 align-top text-slate-300">{community.totalUnits}</td>
-                          <td className="px-4 py-4 align-top text-slate-300">{community.activationPendingCount}</td>
+                          <td className="px-4 py-4 align-top text-slate-300">
+                            {community.totalUnits}
+                          </td>
+                          <td className="px-4 py-4 align-top text-slate-300">
+                            {community.activationPendingCount}
+                          </td>
                           <td className="px-5 py-4 align-top text-right">
                             <Link
                               href={getCommunityHref(community.id)}
@@ -543,7 +507,9 @@ export default async function DashboardPage() {
               </div>
             ) : (
               <div className="px-5 py-10 text-center">
-                <h3 className="text-lg font-semibold text-white">No community records yet</h3>
+                <h3 className="text-lg font-semibold text-white">
+                  No community records yet
+                </h3>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
                   Communities that need operational attention will appear here.
                 </p>
@@ -553,21 +519,33 @@ export default async function DashboardPage() {
         </div>
 
         <div className="flex h-full min-w-0 flex-col gap-3">
-          <ConsolePanel className="flex flex-[1.05] flex-col overflow-hidden">
+          <ConsolePanel className="flex flex-[1.08] flex-col overflow-hidden">
             <div className="border-b border-[var(--console-border)] px-5 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">Quick Actions</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+                Quick Actions
+              </p>
             </div>
             <div className="flex flex-1 flex-col justify-center p-2">
               {quickActions.map((action) => {
                 const Icon = action.icon;
                 return (
-                  <Link key={action.href} href={action.href} className="group flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-white/[0.035]">
-                    <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${action.tone}`}>
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="group flex items-center gap-3 rounded-md px-3 py-3 transition-colors hover:bg-white/[0.035]"
+                  >
+                    <span
+                      className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border ${action.tone}`}
+                    >
                       <Icon className="h-4 w-4 stroke-[1.75]" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-white">{action.label}</p>
-                      <p className="mt-0.5 text-xs leading-5 text-[var(--console-text-muted)]">{action.note}</p>
+                      <p className="text-sm font-medium text-white">
+                        {action.label}
+                      </p>
+                      <p className="mt-0.5 text-xs leading-5 text-[var(--console-text-muted)]">
+                        {action.note}
+                      </p>
                     </div>
                     <ArrowRight className="h-4 w-4 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-slate-300" />
                   </Link>
@@ -578,7 +556,9 @@ export default async function DashboardPage() {
 
           <ConsolePanel className="overflow-hidden">
             <div className="border-b border-[var(--console-border)] px-5 py-4">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">Setup Overview</p>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+                Setup Overview
+              </p>
             </div>
             <div className="p-4">
               <div className="flex items-center gap-4">
@@ -588,16 +568,26 @@ export default async function DashboardPage() {
                 >
                   <div className="absolute inset-[11px] flex items-center justify-center rounded-full bg-[var(--console-surface)]">
                     <div className="text-center">
-                      <p className="text-xl font-semibold text-white">{totalOutriderSessions}</p>
-                      <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--console-text-muted)]">Outriders</p>
+                      <p className="text-xl font-semibold text-white">
+                        {totalOutriderSessions}
+                      </p>
+                      <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+                        Outriders
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="min-w-0 flex-1 space-y-2">
                   {setupOverview.map((item) => (
-                    <div key={item.label} className="flex items-center justify-between gap-3 text-xs">
+                    <div
+                      key={item.label}
+                      className="flex items-center justify-between gap-3 text-xs"
+                    >
                       <span className="flex min-w-0 items-center gap-2 text-[var(--console-text-muted)]">
-                        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: item.color }}
+                        />
                         <span className="truncate">{item.label}</span>
                       </span>
                       <span className="font-semibold text-white">{item.value}</span>
@@ -609,60 +599,21 @@ export default async function DashboardPage() {
               <div className="mt-4 border-t border-[var(--console-border)] pt-3">
                 <div className="flex items-center justify-between text-xs text-[var(--console-text-muted)]">
                   <span>Communities needing setup</span>
-                  <span className="font-semibold text-white">{pendingSetup.length}</span>
+                  <span className="font-semibold text-white">
+                    {pendingSetup.length}
+                  </span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-xs text-[var(--console-text-muted)]">
                   <span>Inactive communities</span>
-                  <span className="font-semibold text-white">{inactiveCommunities.length}</span>
+                  <span className="font-semibold text-white">
+                    {inactiveCommunities.length}
+                  </span>
                 </div>
               </div>
             </div>
           </ConsolePanel>
         </div>
       </section>
-
-      <ConsolePanel className="overflow-hidden">
-        <SectionHeading
-          title="Recent Outrider activity"
-          description="Latest setup handoff events. Open an item for the full Outrider history."
-          action={
-            <ActionLink href="/products/entry/outrider">
-              Open Outrider
-              <ArrowUpRight className="h-4 w-4 stroke-[1.75]" />
-            </ActionLink>
-          }
-        />
-        {recentOutriderActivity.length > 0 ? (
-          <div className="divide-y divide-[var(--console-border)]">
-            {recentOutriderActivity.map((item) => (
-              <Link
-                key={item.id}
-                href={`/products/entry/outrider/${item.outriderId}`}
-                className="group grid gap-3 px-5 py-3.5 transition-colors hover:bg-white/[0.025] md:grid-cols-[minmax(0,1fr)_minmax(240px,0.9fr)_auto] md:items-center"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-violet-400/15 bg-violet-500/[0.08] text-violet-200">
-                    <Compass className="h-4 w-4 stroke-[1.75]" />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-white">{item.communityName}</p>
-                    <p className="mt-0.5 text-xs text-[var(--console-text-muted)]">Outrider</p>
-                  </div>
-                </div>
-                <p className="text-sm text-slate-300">{getOutriderEventLabel(item)}</p>
-                <div className="flex items-center justify-between gap-3 md:justify-end">
-                  <span className="text-xs text-[var(--console-text-muted)]">{formatDateTime(item.createdAt)}</span>
-                  <ArrowRight className="h-4 w-4 text-[var(--console-text-soft)] transition-colors group-hover:text-slate-300" />
-                </div>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <div className="px-5 py-8 text-center">
-            <p className="text-sm text-[var(--console-text-muted)]">No Outrider activity has been recorded yet.</p>
-          </div>
-        )}
-      </ConsolePanel>
 
       <ConsolePanel className="overflow-hidden">
         <SectionHeading
