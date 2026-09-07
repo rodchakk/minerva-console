@@ -29,6 +29,11 @@ function asNullableString(value: unknown) {
   return text || null;
 }
 
+function asNullableInteger(value: unknown) {
+  const numeric = Number(value);
+  return Number.isInteger(numeric) && numeric >= 0 ? numeric : null;
+}
+
 function asStringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
@@ -112,6 +117,8 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
       hasInactiveUnits: asBoolean(outrider.has_inactive_units),
       inactiveUnitNotes: asNullableString(outrider.inactive_units_notes),
       otherUnitType: asNullableString(outrider.unit_type_other),
+      securityStaffCount: asNullableInteger(outrider.security_staff_count),
+      securityStaffNotes: asNullableString(outrider.security_staff_notes),
       unitNamingExample: asNullableString(outrider.unit_naming_example),
       unitTypes: asOutriderUnitTypes(outrider.unit_types),
     },
@@ -137,6 +144,8 @@ function toRpcPayload(payload: OutriderSavePayload) {
       has_destinations: normalized.hasDestinations,
       has_inactive_units: normalized.hasInactiveUnits,
       inactive_units_notes: normalized.inactiveUnitNotes,
+      security_staff_count: normalized.securityStaffCount,
+      security_staff_notes: normalized.securityStaffNotes,
       unit_naming_example: normalized.unitNamingExample,
       unit_type_other: normalized.otherUnitType,
       unit_types: normalized.unitTypes,
