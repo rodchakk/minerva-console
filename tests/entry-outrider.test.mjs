@@ -110,8 +110,8 @@ test("section four uses structured security staffing while files remain optional
   assert.match(model, /draft\.securityStaffCount !== null/);
   assert.match(publicForm, /Cantidad de personal de seguridad/);
   assert.match(publicForm, /Nombres, turnos u otra información \(opcional\)/);
-  assert.match(publicForm, /Los archivos son opcionales/);
-  assert.match(model, /OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = \["units", "residents"\]/);
+  assert.match(publicForm, /El archivo es opcional/);
+  assert.match(model, /OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = \["community_data"\]/);
   assert.match(uploadStartRoute, /isOutriderPublicUploadCategory/);
   assert.match(uploadCompleteRoute, /isOutriderPublicUploadCategory/);
   assert.doesNotMatch(publicForm, /Listado de personal de seguridad/);
