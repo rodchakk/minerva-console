@@ -211,59 +211,70 @@ Deno.serve(async (req: Request) => {
     if (usage.thoughtTokens !== null) metadata.thought_tokens = usage.thoughtTokens;
     if (usage.totalTokens !== null) metadata.total_tokens = usage.totalTokens;
 
-    const { error } = await serviceClient.rpc("record_entry_usage_v1", {
-      p_actor_id: null,
-      p_community_id: entryLog.community_id,
-      p_correlation_id: correlationId,
-      p_currency: "USD",
-      p_duration_ms: args.durationMs,
-      p_error_code: args.errorCode ?? null,
-      p_error_fingerprint:
-        args.status === "failed" ? `gemini:plate_ocr:${args.errorCode ?? "failed"}` : null,
-      p_estimated_cost: estimatedCost,
-      p_image_count: 1,
-      p_input_tokens: usage.inputTokens,
-      p_metadata: metadata,
-      p_operation: "image_ocr",
-      p_output_tokens: usage.outputTokens,
-      p_pricing_version: PRICING_VERSION,
-      p_provider: "google_gemini",
-      p_provider_request_id: args.response ? providerRequestId(args.response) : null,
-      p_quantity: 1,
-      p_request_id: requestId,
-      p_service_model: GEMINI_MODEL,
-      p_status: args.status,
-    });
-
-    if (error) {
-      console.warn("[extract-plate-text] usage ledger write failed", {
-        code: error.code ?? null,
-        message: (error.message ?? "RPC error").slice(0, 160),
+    try {
+      const { error } = await serviceClient.rpc("record_entry_usage_v1", {
+        p_actor_id: null,
+        p_community_id: entryLog.community_id,
+        p_correlation_id: correlationId,
+        p_currency: "USD",
+        p_duration_ms: args.durationMs,
+        p_error_code: args.errorCode ?? null,
+        p_error_fingerprint:
+          args.status === "failed" ? `gemini:plate_ocr:${args.errorCode ?? "failed"}` : null,
+        p_estimated_cost: estimatedCost,
+        p_image_count: 1,
+        p_input_tokens: usage.inputTokens,
+        p_metadata: metadata,
+        p_operation: "image_ocr",
+        p_output_tokens: usage.outputTokens,
+        p_pricing_version: PRICING_VERSION,
+        p_provider: "google_gemini",
+        p_provider_request_id: args.response ? providerRequestId(args.response) : null,
+        p_quantity: 1,
+        p_request_id: requestId,
+        p_service_model: GEMINI_MODEL,
+        p_status: args.status,
       });
+
+      if (error) {
+        console.warn("[extract-plate-text] usage ledger write failed", {
+          code: error.code ?? null,
+          message: (error.message ?? "RPC error").slice(0, 160),
+        });
+      }
+    } catch {
+      // Usage accounting is intentionally best-effort. A telemetry transport
+      // failure must never turn a successful OCR provider call into a retry.
+      console.warn("[extract-plate-text] usage ledger transport failed");
     }
   }
 
   async function markQueueFailure(errorCode: string) {
-    const { data: queue } = await serviceClient
-      .from("plate_ocr_queue")
-      .select("id, attempts, max_attempts")
-      .eq("entry_log_id", entryLogId)
-      .maybeSingle();
+    try {
+      const { data: queue } = await serviceClient
+        .from("plate_ocr_queue")
+        .select("id, attempts, max_attempts")
+        .eq("entry_log_id", entryLogId)
+        .maybeSingle();
 
-    if (!queue) return;
-    const exhausted = Number(queue.max_attempts ?? 0) > 0 &&
-      Number(queue.attempts ?? 0) >= Number(queue.max_attempts ?? 0);
-    const nextRetry = new Date(Date.now() + 2 * 60 * 1000).toISOString();
-    const updatePayload: JsonObject = {
-      status: exhausted ? "FAILED" : "PENDING",
-      last_error: errorCode,
-    };
-    if (!exhausted) updatePayload.scheduled_at = nextRetry;
+      if (!queue) return;
+      const exhausted = Number(queue.max_attempts ?? 0) > 0 &&
+        Number(queue.attempts ?? 0) >= Number(queue.max_attempts ?? 0);
+      const nextRetry = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+      const updatePayload: JsonObject = {
+        status: exhausted ? "FAILED" : "PENDING",
+        last_error: errorCode,
+      };
+      if (!exhausted) updatePayload.scheduled_at = nextRetry;
 
-    await serviceClient
-      .from("plate_ocr_queue")
-      .update(updatePayload)
-      .eq("id", queue.id);
+      await serviceClient
+        .from("plate_ocr_queue")
+        .update(updatePayload)
+        .eq("id", queue.id);
+    } catch {
+      // The durable queue is already present. Scheduler reconciliation can retry.
+      console.warn("[extract-plate-text] queue failure state update failed");
+    }
   }
 
   async function emitPersistenceFailure() {
@@ -287,11 +298,15 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  const { data: fileData, error: downloadError } = await serviceClient.storage
-    .from(OCR_BUCKET)
-    .download(imagePath);
-
-  if (downloadError || !fileData) {
+  let fileData: Blob | null = null;
+  try {
+    const result = await serviceClient.storage.from(OCR_BUCKET).download(imagePath);
+    if (result.error || !result.data) {
+      await markQueueFailure("OCR_IMAGE_DOWNLOAD_FAILED");
+      return json({ ok: false, error: "OCR image download failed" }, 500);
+    }
+    fileData = result.data;
+  } catch {
     await markQueueFailure("OCR_IMAGE_DOWNLOAD_FAILED");
     return json({ ok: false, error: "OCR image download failed" }, 500);
   }
@@ -388,25 +403,43 @@ Deno.serve(async (req: Request) => {
     resultKind: plateText ? "plate" : "no_plate",
   });
 
-  const { error: persistenceError } = await serviceClient
-    .from("entry_logs")
-    .update({ vehicle_plate_text: plateText })
-    .eq("id", entryLogId);
+  try {
+    const { error: persistenceError } = await serviceClient
+      .from("entry_logs")
+      .update({ vehicle_plate_text: plateText })
+      .eq("id", entryLogId);
 
-  if (persistenceError) {
+    if (persistenceError) {
+      await markQueueFailure("OCR_PERSIST_FAILED");
+      await emitPersistenceFailure();
+      return json({ ok: false, error: "OCR result persistence failed" }, 500);
+    }
+  } catch {
     await markQueueFailure("OCR_PERSIST_FAILED");
     await emitPersistenceFailure();
     return json({ ok: false, error: "OCR result persistence failed" }, 500);
   }
 
-  await serviceClient
-    .from("plate_ocr_queue")
-    .update({
-      status: "DONE",
-      completed_at: new Date().toISOString(),
-      last_error: null,
-    })
-    .eq("entry_log_id", entryLogId);
+  try {
+    const { error: queueDoneError } = await serviceClient
+      .from("plate_ocr_queue")
+      .update({
+        status: "DONE",
+        completed_at: new Date().toISOString(),
+        last_error: null,
+      })
+      .eq("entry_log_id", entryLogId);
+
+    if (queueDoneError) {
+      console.warn("[extract-plate-text] queue completion update failed", {
+        code: queueDoneError.code ?? null,
+      });
+    }
+  } catch {
+    // A successful provider call must not become a provider retry because only
+    // the terminal queue write failed. The cron worker reconciles this state.
+    console.warn("[extract-plate-text] queue completion transport failed");
+  }
 
   return json({
     ok: true,
