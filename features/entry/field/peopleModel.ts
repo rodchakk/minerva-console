@@ -100,14 +100,48 @@ export function filterFieldResidents(
   );
 }
 
+function normalizeFieldUnitSearch(value: string) {
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function collapseNumericUnitTokens(value: string) {
+  return normalizeFieldUnitSearch(value)
+    .split(" ")
+    .filter(Boolean)
+    .map((token) => {
+      if (!/^\d+$/.test(token)) {
+        return token;
+      }
+
+      return String(Number.parseInt(token, 10));
+    })
+    .join(" ");
+}
+
 export function filterFieldUnits(units: FieldUnit[], query: string) {
-  const normalized = query.trim().toLowerCase();
+  const normalized = normalizeFieldUnitSearch(query);
 
   if (!normalized) {
     return units;
   }
 
-  return units.filter((unit) => unit.label.toLowerCase().includes(normalized));
+  const collapsedQuery = collapseNumericUnitTokens(query);
+
+  return units.filter((unit) => {
+    const normalizedLabel = normalizeFieldUnitSearch(unit.label);
+    const collapsedLabel = collapseNumericUnitTokens(unit.label);
+
+    return (
+      normalizedLabel.includes(normalized) ||
+      collapsedLabel.includes(collapsedQuery)
+    );
+  });
 }
 
 export function formatFieldUnitResidentCount(unit: FieldUnit) {
