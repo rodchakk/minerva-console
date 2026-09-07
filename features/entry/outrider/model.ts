@@ -30,6 +30,8 @@ export const OUTRIDER_SECTIONS = [
 
 export type OutriderSection = (typeof OUTRIDER_SECTIONS)[number];
 
+// Keep legacy categories readable/exportable, but only units and residents are
+// offered as new public uploads after the first production QA walkthrough.
 export const OUTRIDER_FILE_CATEGORIES = [
   "units",
   "residents",
@@ -38,6 +40,10 @@ export const OUTRIDER_FILE_CATEGORIES = [
 ] as const;
 
 export type OutriderFileCategory = (typeof OUTRIDER_FILE_CATEGORIES)[number];
+
+export const OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = ["units", "residents"] as const;
+export type OutriderPublicUploadCategory =
+  (typeof OUTRIDER_PUBLIC_UPLOAD_CATEGORIES)[number];
 
 export const OUTRIDER_MAX_FILE_BYTES = 20 * 1024 * 1024;
 
@@ -108,6 +114,8 @@ export type OutriderDraft = {
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
   otherUnitType: string | null;
+  securityStaffCount: number | null;
+  securityStaffNotes: string | null;
   unitNamingExample: string | null;
   unitTypes: OutriderUnitType[];
 };
@@ -143,6 +151,8 @@ export type OutriderSavePayload = {
   inactiveUnitNotes?: unknown;
   markSectionsComplete?: unknown;
   otherUnitType?: unknown;
+  securityStaffCount?: unknown;
+  securityStaffNotes?: unknown;
   unitNamingExample?: unknown;
   unitTypes?: unknown;
 };
@@ -160,6 +170,7 @@ export type OutriderExportSummary = {
     storagePath: string;
   }>;
   community: {
+    city: string | null;
     id: string;
     name: string;
   };
@@ -185,6 +196,10 @@ export type OutriderExportSummary = {
     submittedAt: string | null;
   };
   reviewNote: string | null;
+  securityStaff: {
+    count: number | null;
+    notes: string | null;
+  };
   setupBoundary: string;
   unitProfile: {
     otherUnitType: string | null;
@@ -205,6 +220,17 @@ export function isOutriderFileCategory(
   return (
     typeof value === "string" &&
     OUTRIDER_FILE_CATEGORIES.includes(value as OutriderFileCategory)
+  );
+}
+
+export function isOutriderPublicUploadCategory(
+  value: unknown,
+): value is OutriderPublicUploadCategory {
+  return (
+    typeof value === "string" &&
+    OUTRIDER_PUBLIC_UPLOAD_CATEGORIES.includes(
+      value as OutriderPublicUploadCategory,
+    )
   );
 }
 
@@ -231,6 +257,13 @@ export function normalizeOutriderText(value: unknown, maxLength: number) {
 
 function normalizeBoolean(value: unknown) {
   return typeof value === "boolean" ? value : null;
+}
+
+function normalizeInteger(value: unknown, min: number, max: number) {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(numeric) || numeric < min || numeric > max) return null;
+  return numeric;
 }
 
 function normalizeStringArray(value: unknown, maxItems: number, maxLength: number) {
@@ -303,6 +336,11 @@ function normalizeCompletedSections(value: unknown) {
   return Array.from(normalized);
 }
 
+export function isValidOutriderEmail(value: string | null) {
+  if (!value) return false;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
+}
+
 export function normalizeOutriderSavePayload(
   payload: OutriderSavePayload,
 ): NormalizedOutriderSave {
@@ -317,6 +355,8 @@ export function normalizeOutriderSavePayload(
     hasInactiveUnits: normalizeBoolean(payload.hasInactiveUnits),
     inactiveUnitNotes: normalizeOutriderText(payload.inactiveUnitNotes, 1000),
     otherUnitType: normalizeOutriderText(payload.otherUnitType, 120),
+    securityStaffCount: normalizeInteger(payload.securityStaffCount, 0, 500),
+    securityStaffNotes: normalizeOutriderText(payload.securityStaffNotes, 2000),
     unitNamingExample: normalizeOutriderText(payload.unitNamingExample, 160),
     unitTypes: normalizeUnitTypes(payload.unitTypes),
   };
@@ -334,6 +374,8 @@ export function calculateOutriderCompletedSections(
     (!draft.unitTypes.includes("otro") || Boolean(draft.otherUnitType))
   ) {
     completed.add("units");
+  } else {
+    completed.delete("units");
   }
 
   if (
@@ -341,6 +383,8 @@ export function calculateOutriderCompletedSections(
     (draft.hasDestinations === true && draft.destinationNames.length > 0)
   ) {
     completed.add("destinations");
+  } else {
+    completed.delete("destinations");
   }
 
   if (
@@ -348,14 +392,23 @@ export function calculateOutriderCompletedSections(
     (draft.hasInactiveUnits === true && Boolean(draft.inactiveUnitNotes))
   ) {
     completed.add("inactive_units");
+  } else {
+    completed.delete("inactive_units");
   }
 
-  if (draft.availableInformation.length > 0) {
+  if (draft.securityStaffCount !== null) {
     completed.add("available_information");
+  } else {
+    completed.delete("available_information");
   }
 
-  if (draft.contactName && (draft.contactPhone || draft.contactEmail)) {
+  if (
+    draft.contactName &&
+    (draft.contactPhone || isValidOutriderEmail(draft.contactEmail))
+  ) {
     completed.add("contact");
+  } else {
+    completed.delete("contact");
   }
 
   return OUTRIDER_SECTIONS.filter((section) => completed.has(section));
