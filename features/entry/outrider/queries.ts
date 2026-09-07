@@ -13,6 +13,7 @@ import {
   getOutriderProgressPercent,
   isOutriderFileCategory,
   isOutriderStatus,
+  type OutriderAdministrator,
   type OutriderFileRecord,
   type OutriderSection,
   type OutriderStatus,
@@ -60,6 +61,8 @@ export type OutriderDetail = OutriderListItem & {
   hasDestinations: boolean | null;
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
+  initialAdminCount: number | null;
+  initialAdmins: OutriderAdministrator[];
   otherUnitType: string | null;
   securityStaffCount: number | null;
   securityStaffNotes: string | null;
@@ -96,6 +99,23 @@ function stringArray(value: unknown) {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
     : [];
+}
+
+function administratorArray(value: unknown): OutriderAdministrator[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 25).map((item) => {
+    const record =
+      item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Row)
+        : {};
+    return {
+      email: nullableString(record.email),
+      name: nullableString(record.name),
+      phone: nullableString(record.phone),
+      unit: nullableString(record.unit),
+    };
+  });
 }
 
 function sectionArray(value: unknown) {
@@ -210,9 +230,7 @@ async function loadCommunities(ids?: string[]) {
   const supabase = createAdminClient();
   let query = supabase.from("communities").select("id,name,city,is_active");
 
-  if (ids && ids.length > 0) {
-    query = query.in("id", ids);
-  }
+  if (ids && ids.length > 0) query = query.in("id", ids);
 
   const { data } = await query;
 
@@ -282,7 +300,6 @@ export async function getOutriderAttentionCount() {
     ]);
 
   if (error) return null;
-
   return count ?? 0;
 }
 
@@ -384,6 +401,8 @@ export async function getOutriderDetail(
         ? null
         : coerceBoolean(row.has_inactive_units),
     inactiveUnitNotes: nullableString(row.inactive_units_notes),
+    initialAdminCount: nullableInteger(row.initial_admin_count),
+    initialAdmins: administratorArray(row.initial_admins),
     otherUnitType: nullableString(row.unit_type_other),
     securityStaffCount: nullableInteger(row.security_staff_count),
     securityStaffNotes: nullableString(row.security_staff_notes),
