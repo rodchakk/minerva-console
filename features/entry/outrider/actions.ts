@@ -51,10 +51,18 @@ function mapActionError(error: { code?: string | null; message?: string | null }
     };
   }
 
+  if (/INVALID_COMMUNITY|INVALID_PAYLOAD/i.test(text)) {
+    return {
+      code: "invalid_input" as const,
+      error: "Check the community information and try again.",
+      success: false as const,
+    };
+  }
+
   if (error.code === "P0409" || /CONFLICT/.test(text)) {
     return {
       code: "conflict" as const,
-      error: "This community already has an Outrider intake.",
+      error: "This ENTRY community already has an Outrider intake.",
       success: false as const,
     };
   }
@@ -108,10 +116,21 @@ export async function createOutriderSession(
   if (previewError) return previewError;
 
   const communityId = getFormString(formData, "community_id");
-  if (!communityId) {
+  const communityName = getFormString(formData, "community_name");
+  const communityCity = getFormString(formData, "community_city");
+
+  if (!communityId && !communityName) {
     return {
       code: "invalid_input",
-      error: "Select a community before starting Outrider.",
+      error: "Enter the community name before starting Outrider.",
+      success: false,
+    };
+  }
+
+  if (communityName.length > 180 || communityCity.length > 180) {
+    return {
+      code: "invalid_input",
+      error: "Community name and city must be 180 characters or fewer.",
       success: false,
     };
   }
@@ -129,10 +148,12 @@ export async function createOutriderSession(
 
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc(
-    "create_community_outrider_session_v1",
+    "create_community_outrider_session_v2",
     {
       p_actor_user_id: auth.user.id,
-      p_community_id: communityId,
+      p_community_city: communityCity || null,
+      p_community_id: communityId || null,
+      p_community_name: communityName || null,
       p_encrypted_token_payload: tokenPayload.encryptedTokenPayload,
       p_token_hash: tokenPayload.tokenHash,
     },

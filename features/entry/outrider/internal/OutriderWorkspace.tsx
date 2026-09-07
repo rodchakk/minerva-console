@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Copy, ExternalLink, Plus, RefreshCw } from "lucide-react";
+import { Compass, Copy, ExternalLink, Plus, RefreshCw } from "lucide-react";
 import { useActionState, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -71,6 +71,7 @@ function StartOutriderDialog({
   communities: OutriderCommunityOption[];
   onClose: () => void;
 }) {
+  const [linkExisting, setLinkExisting] = useState(false);
   const [state, formAction, pending] = useActionState(
     createOutriderSession,
     initialActionState,
@@ -130,27 +131,74 @@ function StartOutriderDialog({
           Start community intake
         </h3>
         <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-          Choose an active community that does not already have an Outrider
-          intake.
+          Create the Outrider record before the community is configured in ENTRY.
         </p>
 
-        <label className="mt-5 block">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Community
-          </span>
-          <select
-            name="community_id"
-            required
-            className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-          >
-            <option value="">Select community</option>
-            {communities.map((community) => (
-              <option key={community.id} value={community.id}>
-                {community.name} - {community.city}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!linkExisting ? (
+          <>
+            <input type="hidden" name="community_id" value="" />
+            <label className="mt-5 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Community name
+              </span>
+              <input
+                name="community_name"
+                required
+                maxLength={180}
+                placeholder="Residencial Andalucía"
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+              />
+            </label>
+            <label className="mt-4 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                City <span className="font-normal normal-case tracking-normal">(optional)</span>
+              </span>
+              <input
+                name="community_city"
+                maxLength={180}
+                placeholder="San Pedro Sula"
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+              />
+            </label>
+          </>
+        ) : (
+          <>
+            <input type="hidden" name="community_name" value="" />
+            <input type="hidden" name="community_city" value="" />
+            <label className="mt-5 block">
+              <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Existing ENTRY community
+              </span>
+              <select
+                name="community_id"
+                required
+                className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+              >
+                <option value="">Select community</option>
+                {communities.map((community) => (
+                  <option key={community.id} value={community.id}>
+                    {community.name} - {community.city}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {communities.length === 0 ? (
+              <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                Every active ENTRY community already has an Outrider intake.
+              </p>
+            ) : null}
+          </>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setLinkExisting((value) => !value)}
+          className="mt-4 text-left text-sm font-medium text-violet-200 transition-colors hover:text-white"
+        >
+          {linkExisting
+            ? "Create a new community intake instead"
+            : "Already exists in ENTRY? Link existing community"}
+        </button>
 
         {state && !state.success ? (
           <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -158,17 +206,14 @@ function StartOutriderDialog({
           </p>
         ) : null}
 
-        {communities.length === 0 ? (
-          <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            Every active community already has an Outrider intake.
-          </p>
-        ) : null}
-
         <div className="mt-6 flex flex-wrap justify-end gap-3">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending || communities.length === 0}>
+          <Button
+            type="submit"
+            disabled={pending || (linkExisting && communities.length === 0)}
+          >
             {pending ? "Starting..." : "Start Outrider"}
           </Button>
         </div>
@@ -191,19 +236,28 @@ function SessionRow({ session }: { session: OutriderListItem }) {
           <Badge tone={statusTone(session.status)}>
             {getOutriderStatusLabel(session.status)}
           </Badge>
+          {!session.communityId ? <Badge tone="default">Pre-ENTRY</Badge> : null}
         </div>
         <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-          {session.communityCity} · {session.attachmentCount} attachments ·
-          updated {formatDate(session.updatedAt)}
+          {session.communityCity} · {session.attachmentCount} attachments · updated{" "}
+          {formatDate(session.updatedAt)}
         </p>
       </div>
       <div>
         <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
           Progress
         </p>
-        <p className="mt-1 text-sm font-semibold text-white">
-          {getOutriderProgressPercent(session.completedSections)}%
-        </p>
+        <div className="mt-1 flex items-center gap-3">
+          <p className="text-sm font-semibold text-white">
+            {getOutriderProgressPercent(session.completedSections)}%
+          </p>
+          <div className="h-1 min-w-16 flex-1 overflow-hidden rounded-full bg-white/10">
+            <div
+              className="h-full rounded-full bg-violet-400"
+              style={{ width: `${getOutriderProgressPercent(session.completedSections)}%` }}
+            />
+          </div>
+        </div>
       </div>
       <div>
         <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
@@ -234,39 +288,71 @@ export function OutriderWorkspace({
     () => sessions.filter((session) => session.status !== "approved").length,
     [sessions],
   );
+  const approvedCount = useMemo(
+    () => sessions.filter((session) => session.status === "approved").length,
+    [sessions],
+  );
 
   return (
     <div className="space-y-5">
-      <section className="px-0.5 pt-5">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
-          <div className="min-w-0 max-w-3xl">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
-              ENTRY OUTRIDER
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[2.05rem]">
-              Community intelligence intake
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
-              Collect setup facts and files from communities before ENTRY
-              onboarding. Outrider is a handoff workspace, not an importer.
-            </p>
-          </div>
+      <section className="overflow-hidden rounded-xl border border-[var(--console-border)] bg-[var(--console-surface)]">
+        <div className="relative min-h-[270px] overflow-hidden">
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage:
+                "url('/entry/outrider/outrider-mountains.webp')",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,8,12,0.98)_0%,rgba(7,8,12,0.88)_38%,rgba(7,8,12,0.38)_70%,rgba(7,8,12,0.16)_100%)]"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 bg-[linear-gradient(0deg,rgba(7,8,12,0.72)_0%,transparent_48%)]"
+          />
 
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={() => setShowStart(true)}
-              className="gap-2"
-            >
-              <Plus className="h-4 w-4 stroke-[1.75]" />
-              Start Outrider
-            </Button>
-            <Link href="/products/entry">
-              <Button type="button" variant="secondary" className="gap-2">
-                <RefreshCw className="h-4 w-4 stroke-[1.75]" />
-                Operations
-              </Button>
-            </Link>
+          <div className="relative z-10 flex min-h-[270px] flex-col justify-between p-6 sm:p-8 lg:p-9">
+            <div className="flex items-start justify-between gap-4">
+              <div className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-violet-300/20 bg-violet-300/10 text-violet-100 backdrop-blur-sm">
+                <Compass className="h-6 w-6 stroke-[1.6]" />
+              </div>
+              <div className="flex flex-wrap justify-end gap-2">
+                <Button
+                  type="button"
+                  onClick={() => setShowStart(true)}
+                  className="gap-2 shadow-lg shadow-black/20"
+                >
+                  <Plus className="h-4 w-4 stroke-[1.75]" />
+                  Start Outrider
+                </Button>
+                <Link href="/products/entry">
+                  <Button type="button" variant="secondary" className="gap-2 bg-black/30 backdrop-blur-sm">
+                    <RefreshCw className="h-4 w-4 stroke-[1.75]" />
+                    Operations
+                  </Button>
+                </Link>
+              </div>
+            </div>
+
+            <div className="max-w-2xl pt-10">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.26em] text-violet-200/90">
+                ENTRY · Community intelligence
+              </p>
+              <h1 className="mt-3 text-4xl font-semibold tracking-[0.08em] text-white sm:text-5xl">
+                OUTRIDER
+              </h1>
+              <p className="mt-3 text-lg font-medium tracking-wide text-white/90 sm:text-xl">
+                Collect. Structure. Prepare.
+              </p>
+              <p className="mt-3 max-w-xl text-sm leading-6 text-slate-300">
+                Gather community setup information and files, review progress,
+                and prepare a clean handoff for ENTRY without importing live
+                operational records.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -275,10 +361,7 @@ export function OutriderWorkspace({
         {[
           { label: "Open intakes", value: openCount },
           { label: "Need attention", value: attentionCount },
-          {
-            label: "Approved handoffs",
-            value: sessions.filter((session) => session.status === "approved").length,
-          },
+          { label: "Approved handoffs", value: approvedCount },
         ].map((metric, index) => (
           <div
             key={metric.label}
@@ -287,18 +370,24 @@ export function OutriderWorkspace({
             <p className="text-xs font-medium text-[var(--console-text-muted)]">
               {metric.label}
             </p>
-            <p className="mt-2 text-2xl font-semibold text-white">
-              {metric.value}
-            </p>
+            <p className="mt-2 text-2xl font-semibold text-white">{metric.value}</p>
           </div>
         ))}
       </section>
 
       <section className="overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
-        <div className="border-b border-[var(--console-border)] px-5 py-4">
-          <h2 className="text-lg font-semibold text-white">Outrider sessions</h2>
-          <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
-            Review incoming setup data and export approved handoff packages.
+        <div className="flex flex-col gap-3 border-b border-[var(--console-border)] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+              Intake queue
+            </p>
+            <h2 className="mt-2 text-lg font-semibold text-white">Outrider sessions</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
+              Review incoming setup data and export approved handoff packages.
+            </p>
+          </div>
+          <p className="text-xs text-[var(--console-text-muted)]">
+            {sessions.length} total
           </p>
         </div>
 
@@ -306,10 +395,21 @@ export function OutriderWorkspace({
           <div>{sessions.map((session) => <SessionRow key={session.id} session={session} />)}</div>
         ) : (
           <div className="px-5 py-12 text-center">
-            <h3 className="text-lg font-semibold text-white">No Outrider intakes yet</h3>
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl border border-violet-400/15 bg-violet-500/[0.08] text-violet-200">
+              <Compass className="h-5 w-5 stroke-[1.7]" />
+            </div>
+            <h3 className="mt-4 text-lg font-semibold text-white">No Outrider intakes yet</h3>
             <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
-              Start one for an active community and share the secure public link.
+              Start one before ENTRY setup and share the secure public link.
             </p>
+            <Button
+              type="button"
+              onClick={() => setShowStart(true)}
+              className="mt-5 gap-2"
+            >
+              <Plus className="h-4 w-4 stroke-[1.75]" />
+              Start first Outrider
+            </Button>
           </div>
         )}
       </section>

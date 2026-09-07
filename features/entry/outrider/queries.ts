@@ -130,13 +130,7 @@ function communityById(
   communities: Map<string, OutriderCommunityOption>,
   communityId: string,
 ) {
-  return (
-    communities.get(communityId) ?? {
-      city: "Not set",
-      id: communityId,
-      name: "Unknown community",
-    }
-  );
+  return communities.get(communityId) ?? null;
 }
 
 function mapListItem(
@@ -145,21 +139,27 @@ function mapListItem(
   attachmentCount: number,
 ): OutriderListItem | null {
   const id = coerceString(row.id);
-  const communityId = coerceString(row.community_id);
+  const rawCommunityId = nullableString(row.community_id);
   const createdAt = coerceString(row.created_at);
   const updatedAt = coerceString(row.updated_at);
 
-  if (!id || !communityId || !createdAt || !updatedAt) return null;
+  if (!id || !createdAt || !updatedAt) return null;
 
+  const linkedCommunity = rawCommunityId
+    ? communityById(communities, rawCommunityId)
+    : null;
+  const communityName =
+    linkedCommunity?.name ?? nullableString(row.community_name) ?? "Untitled community";
+  const communityCity =
+    linkedCommunity?.city ?? nullableString(row.community_city) ?? "Not set";
   const completedSections = sectionArray(row.completed_sections);
-  const community = communityById(communities, communityId);
 
   return {
     approvedAt: nullableString(row.approved_at),
     attachmentCount,
-    communityCity: community.city,
-    communityId,
-    communityName: community.name,
+    communityCity,
+    communityId: rawCommunityId ?? "",
+    communityName,
     completedSections,
     contactName: nullableString(row.contact_name),
     createdAt,
@@ -228,7 +228,7 @@ export async function listOutriderSessions(): Promise<OutriderListItem[]> {
     supabase
       .from("community_outrider_sessions")
       .select(
-        "id,community_id,status,completed_sections,contact_name,review_note,created_at,updated_at,submitted_at,approved_at",
+        "id,community_id,community_name,community_city,status,completed_sections,contact_name,review_note,created_at,updated_at,submitted_at,approved_at",
       )
       .order("last_activity_at", { ascending: false }),
     supabase.from("community_outrider_files").select("outrider_id"),
@@ -237,10 +237,14 @@ export async function listOutriderSessions(): Promise<OutriderListItem[]> {
   if (error) return [];
 
   const rows = asRows(sessionData);
-  const communities = await loadCommunities(
-    rows.map((row) => coerceString(row.community_id)).filter(Boolean),
-  );
+  const communityIds = rows
+    .map((row) => nullableString(row.community_id))
+    .filter((value): value is string => Boolean(value));
+  const communities = communityIds.length
+    ? await loadCommunities(communityIds)
+    : new Map<string, OutriderCommunityOption>();
   const attachmentCounts = new Map<string, number>();
+
   for (const file of asRows(fileData)) {
     const outriderId = coerceString(file.outrider_id);
     if (!outriderId) continue;
@@ -289,7 +293,9 @@ export async function listCommunitiesAvailableForOutrider(): Promise<
   ]);
 
   const reservedCommunityIds = new Set(
-    asRows(sessionData).map((row) => coerceString(row.community_id)).filter(Boolean),
+    asRows(sessionData)
+      .map((row) => nullableString(row.community_id))
+      .filter((value): value is string => Boolean(value)),
   );
 
   return asRows(communityData)
@@ -331,7 +337,10 @@ export async function getOutriderDetail(
   if (error || !sessionData) return null;
 
   const row = sessionData as Row;
-  const communities = await loadCommunities([coerceString(row.community_id)]);
+  const communityId = nullableString(row.community_id);
+  const communities = communityId
+    ? await loadCommunities([communityId])
+    : new Map<string, OutriderCommunityOption>();
   const files = asRows(fileData)
     .map(mapFile)
     .filter((file): file is OutriderFileRecord => file !== null);

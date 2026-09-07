@@ -29,6 +29,10 @@ export type EntryOperationalActivityResult = {
 const DASHBOARD_HIDDEN_EVENT_KEYS = new Set(["facilities_configured"]);
 
 function shouldHideDashboardActivity(item: EntryOperationalActivityItem) {
+  if (item.source === "outrider") {
+    return true;
+  }
+
   if (DASHBOARD_HIDDEN_EVENT_KEYS.has(item.eventKey)) {
     return true;
   }

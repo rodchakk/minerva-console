@@ -140,7 +140,10 @@ test("Outrider autosave activity is curated rather than keystroke-level", () => 
     reviewMigration,
     /v_previous_completed_sections is distinct from v_completed_sections/,
   );
-  assert.match(reviewMigration, /if v_previous_status = 'not_started'[\s\S]*insert into public\.community_outrider_events/);
+  assert.match(
+    reviewMigration,
+    /if v_previous_status = 'not_started'[\s\S]*insert into public\.community_outrider_events/,
+  );
 });
 
 test("token material is hashed or encrypted and not exported", () => {
@@ -164,8 +167,14 @@ test("ZIP packages are staged in private Storage instead of returned through Ver
   assert.match(exportBucketMigration, /false,\s*104857600/);
   assert.match(exportBucketMigration, /'application\/zip'/);
   assert.match(exportBuilder, /OUTRIDER_EXPORT_MAX_INPUT_BYTES = 95 \* 1024 \* 1024/);
-  assert.match(exportBuilder, /\.from\(OUTRIDER_EXPORT_STORAGE_BUCKET\)[\s\S]*\.upload\(storagePath, zipBytes/);
-  assert.match(exportBuilder, /\.createSignedUrl\(storagePath, OUTRIDER_EXPORT_SIGNED_URL_SECONDS/);
+  assert.match(
+    exportBuilder,
+    /\.from\(OUTRIDER_EXPORT_STORAGE_BUCKET\)[\s\S]*\.upload\(storagePath, zipBytes/,
+  );
+  assert.match(
+    exportBuilder,
+    /\.createSignedUrl\(storagePath, OUTRIDER_EXPORT_SIGNED_URL_SECONDS/,
+  );
   assert.match(packageRoute, /NextResponse\.redirect\(zip\.downloadUrl/);
   assert.doesNotMatch(packageRoute, /new NextResponse\(zip\.bytes/);
   assert.match(packageRoute, /package_too_large/);
@@ -200,13 +209,19 @@ test("upload completion verifies the private Storage object and scoped path", ()
   );
 });
 
-test("Operations page uses Outrider as the fourth KPI and primary panel", () => {
-  assert.match(operationsPage, /label="Outrider"/);
-  assert.match(operationsPage, /getOutriderAttentionCount/);
-  assert.doesNotMatch(operationsPage, /Messages \(24h\)/);
-  assert.match(operationsPage, /title="Outrider operations"/);
-  assert.doesNotMatch(operationsPage, /Recent Outrider Activity/i);
+test("Operations restores the original dashboard and keeps Outrider only as a quick entry plus Setup Overview", () => {
+  assert.match(operationsPage, /label="Messages \(24h\)"/);
+  assert.match(operationsPage, /getEntryPublishedMessagesLast24Hours/);
+  assert.match(operationsPage, /Setup priorities across ENTRY/);
+  assert.match(operationsPage, />Onboarding</);
+  assert.match(operationsPage, /Open Activation Queue/);
+  assert.match(operationsPage, /Open Outrider/);
   assert.match(operationsPage, /Setup Overview/);
+  assert.match(operationsPage, /OperationalActivityFeed/);
+  assert.doesNotMatch(operationsPage, /label="Outrider"/);
+  assert.doesNotMatch(operationsPage, />Outrider<\/th>/);
+  assert.doesNotMatch(operationsPage, /Recent Outrider activity/i);
+  assert.doesNotMatch(operationsPage, /listRecentOutriderActivity/);
 });
 
 test("Outrider queue is ordered by operational priority and open excludes approved", () => {
@@ -238,12 +253,27 @@ test("Outrider events feed the existing global operational activity RPC", () => 
 });
 
 test("migration security posture keeps Outrider narrow and service-role mediated", () => {
-  assert.match(migration, /alter table public\.community_outrider_sessions enable row level security/);
-  assert.match(migration, /alter table public\.community_outrider_files enable row level security/);
-  assert.match(migration, /alter table public\.community_outrider_events enable row level security/);
-  assert.match(migration, /revoke all on table public\.community_outrider_sessions from public, anon, authenticated/);
+  assert.match(
+    migration,
+    /alter table public\.community_outrider_sessions enable row level security/,
+  );
+  assert.match(
+    migration,
+    /alter table public\.community_outrider_files enable row level security/,
+  );
+  assert.match(
+    migration,
+    /alter table public\.community_outrider_events enable row level security/,
+  );
+  assert.match(
+    migration,
+    /revoke all on table public\.community_outrider_sessions from public, anon, authenticated/,
+  );
   assert.match(migration, /create or replace function public\._outrider_service_role_only_v1/);
-  assert.match(migration, /grant execute on function public\.resolve_community_outrider_v1\(text\) to service_role/);
+  assert.match(
+    migration,
+    /grant execute on function public\.resolve_community_outrider_v1\(text\) to service_role/,
+  );
   assert.match(
     migration,
     /grant execute on function public\.complete_community_outrider_available_information_v1\(text\)[\s\S]*to service_role/,
