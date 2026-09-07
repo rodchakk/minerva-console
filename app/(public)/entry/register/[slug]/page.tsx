@@ -24,8 +24,27 @@ import { UnitLookupForm } from "@/features/entry/communityRegistration/public/Un
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
+const registrationTitle = "Registro de residentes | ENTRY";
+const registrationDescription =
+  "Registro oficial de residentes de ENTRY para tu comunidad.";
+const registrationBrandImage = "/minerva-logo-transparent.png";
+
 export const metadata: Metadata = {
-  title: "Registro de residentes | ENTRY",
+  title: registrationTitle,
+  description: registrationDescription,
+  openGraph: {
+    type: "website",
+    siteName: "ENTRY · Minerva Technologies",
+    title: registrationTitle,
+    description: registrationDescription,
+    images: [registrationBrandImage],
+  },
+  twitter: {
+    card: "summary",
+    title: registrationTitle,
+    description: registrationDescription,
+    images: [registrationBrandImage],
+  },
   robots: {
     follow: false,
     index: false,
