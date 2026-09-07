@@ -18,6 +18,7 @@ import {
   getOutriderProgressPercent,
   getOutriderUnitTypeLabel,
   isOutriderEditable,
+  type OutriderAdministrator,
   type OutriderDraft,
   type OutriderFileRecord,
   type OutriderPublicUploadCategory,
@@ -36,10 +37,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 
 const CATEGORY_COPY: Record<
   OutriderPublicUploadCategory,
-  {
-    label: string;
-    note: string;
-  }
+  { label: string; note: string }
 > = {
   residents: {
     label: "Listado actual de residentes por unidad",
@@ -49,6 +47,13 @@ const CATEGORY_COPY: Record<
     label: "Listado de unidades o numeración de la residencial",
     note: "Casas, apartamentos, oficinas u otra numeración.",
   },
+};
+
+const EMPTY_ADMIN: OutriderAdministrator = {
+  email: null,
+  name: null,
+  phone: null,
+  unit: null,
 };
 
 function uniqueStrings(values: string[]) {
@@ -89,19 +94,14 @@ function Section({
         >
           {complete ? <Check className="h-4 w-4" /> : index}
         </span>
-        <div className="min-w-0">
-          <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
-        </div>
+        <h2 className="text-lg font-semibold text-slate-950">{title}</h2>
       </div>
       <div className="mt-4 space-y-4">{children}</div>
     </section>
   );
 }
 
-export function OutriderPublicForm({
-  session,
-  token,
-}: OutriderPublicFormProps) {
+export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) {
   const [draft, setDraft] = useState<OutriderDraft>(session.draft);
   const [completedSections, setCompletedSections] = useState<OutriderSection[]>(
     session.completedSections,
@@ -133,10 +133,7 @@ export function OutriderPublicForm({
 
       try {
         const response = await fetch(`/entry/outrider/${encodeURIComponent(token)}/save`, {
-          body: JSON.stringify({
-            ...draft,
-            markSectionsComplete,
-          }),
+          body: JSON.stringify({ ...draft, markSectionsComplete }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
         });
@@ -170,10 +167,7 @@ export function OutriderPublicForm({
 
   useEffect(() => {
     if (!editable || !dirty.current) return;
-
-    if (saveTimer.current) {
-      window.clearTimeout(saveTimer.current);
-    }
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
 
     saveTimer.current = window.setTimeout(() => {
       void save();
@@ -192,11 +186,7 @@ export function OutriderPublicForm({
 
   function toggleUnitType(unitType: OutriderUnitType) {
     const current = new Set(draft.unitTypes);
-    if (current.has(unitType)) {
-      current.delete(unitType);
-    } else {
-      current.add(unitType);
-    }
+    current.has(unitType) ? current.delete(unitType) : current.add(unitType);
     updateDraft({ unitTypes: Array.from(current) });
   }
 
@@ -204,6 +194,36 @@ export function OutriderPublicForm({
     const next = [...draft.destinationNames];
     next[index] = value;
     updateDraft({ destinationNames: next });
+  }
+
+  function setInitialAdminCount(raw: string) {
+    if (raw === "") {
+      updateDraft({ initialAdminCount: null, initialAdmins: [] });
+      return;
+    }
+
+    const count = Math.min(25, Math.max(0, Number(raw)));
+    if (!Number.isInteger(count)) return;
+
+    const initialAdmins = Array.from({ length: count }, (_, index) =>
+      draft.initialAdmins[index]
+        ? { ...draft.initialAdmins[index] }
+        : { ...EMPTY_ADMIN },
+    );
+    updateDraft({ initialAdminCount: count, initialAdmins });
+  }
+
+  function updateAdministrator(
+    index: number,
+    field: keyof OutriderAdministrator,
+    value: string,
+  ) {
+    const initialAdmins = draft.initialAdmins.map((administrator, currentIndex) =>
+      currentIndex === index
+        ? { ...administrator, [field]: value }
+        : administrator,
+    );
+    updateDraft({ initialAdmins });
   }
 
   async function submitForReview() {
@@ -277,9 +297,7 @@ export function OutriderPublicForm({
           contentType: file.type,
         });
 
-      if (uploadResult.error) {
-        throw new Error(uploadResult.error.message);
-      }
+      if (uploadResult.error) throw new Error(uploadResult.error.message);
 
       const completeResponse = await fetch(
         `/entry/outrider/${encodeURIComponent(token)}/upload/complete`,
@@ -340,8 +358,7 @@ export function OutriderPublicForm({
           </h1>
           <p className="mt-3 text-sm leading-6 text-slate-600">
             Esta información nos ayudará a preparar ENTRY para su comunidad.
-            Puede completarla poco a poco. Sus cambios se guardarán
-            automáticamente.
+            Puede completarla poco a poco. Sus cambios se guardarán automáticamente.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <div className="h-2 min-w-40 flex-1 overflow-hidden rounded-full bg-slate-100">
@@ -466,13 +483,17 @@ export function OutriderPublicForm({
         <Section
           complete={completedSections.includes("destinations")}
           index={2}
-          title="Áreas y destinos"
+          title="Destinos dentro de la comunidad"
         >
           <fieldset disabled={!editable} className="space-y-3">
             <legend className="text-sm font-semibold text-slate-800">
-              ¿Existen áreas comunes, recreativas u otros lugares que deban
-              aparecer como destinos en ENTRY?
+              ¿Existen comercios, talleres, pulperías, oficinas u otros lugares
+              dentro de la comunidad que deban aparecer como destinos en ENTRY?
             </legend>
+            <p className="text-sm leading-6 text-slate-600">
+              Ejemplos: Taller El Trancazo, Pulpería Don Juan, farmacia, oficina
+              administrativa u otro punto al que puedan dirigirse las visitas.
+            </p>
             <div className="flex gap-2">
               {[true, false].map((value) => (
                 <button
@@ -495,22 +516,26 @@ export function OutriderPublicForm({
               ))}
             </div>
           </fieldset>
+
           {draft.hasDestinations ? (
             <div className="space-y-2">
-              {(draft.destinationNames.length > 0
-                ? draft.destinationNames
-                : [""]
-              ).map((destination, index) => (
-                <input
-                  key={index}
-                  disabled={!editable}
-                  value={destination}
-                  onBlur={() => void save()}
-                  onChange={(event) => updateDestination(index, event.currentTarget.value)}
-                  placeholder={index === 0 ? "Piscina" : "Casa Club"}
-                  className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                />
-              ))}
+              {(draft.destinationNames.length > 0 ? draft.destinationNames : [""]).map(
+                (destination, index) => (
+                  <input
+                    key={index}
+                    disabled={!editable}
+                    value={destination}
+                    onBlur={() => void save()}
+                    onChange={(event) =>
+                      updateDestination(index, event.currentTarget.value)
+                    }
+                    placeholder={
+                      index === 0 ? "Taller El Trancazo" : "Pulpería Don Juan"
+                    }
+                    className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                  />
+                ),
+              )}
               <button
                 type="button"
                 disabled={!editable}
@@ -535,8 +560,7 @@ export function OutriderPublicForm({
         >
           <fieldset disabled={!editable} className="space-y-3">
             <legend className="text-sm font-semibold text-slate-800">
-              ¿Hay unidades que no deben comenzar activas al momento de iniciar
-              ENTRY?
+              ¿Hay unidades que no deben comenzar activas al momento de iniciar ENTRY?
             </legend>
             <div className="flex gap-2">
               {[true, false].map((value) => (
@@ -581,9 +605,7 @@ export function OutriderPublicForm({
           title="Información disponible"
         >
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-            <p className="text-sm font-semibold text-slate-900">
-              Personal de seguridad
-            </p>
+            <p className="text-sm font-semibold text-slate-900">Personal de seguridad</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">
               Indíquenos cuántas personas forman parte actualmente del personal
               de seguridad. Si desea, agregue nombres, turnos u otra información.
@@ -668,7 +690,6 @@ export function OutriderPublicForm({
                     />
                   </label>
                 </div>
-
                 <div className="mt-3 space-y-1">
                   {files
                     .filter((file) => file.category === category)
@@ -686,52 +707,173 @@ export function OutriderPublicForm({
         <Section
           complete={completedSections.includes("contact")}
           index={5}
-          title="Contacto"
+          title="Contacto y administradores"
         >
-          <p className="text-sm leading-6 text-slate-600">
-            Esta será la persona con quien confirmaremos cualquier duda durante
-            la configuración.
-          </p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block sm:col-span-2">
-              <span className="text-sm font-semibold text-slate-800">Nombre</span>
-              <input
-                disabled={!editable}
-                value={draft.contactName ?? ""}
-                onBlur={() => void save()}
-                onChange={(event) =>
-                  updateDraft({ contactName: event.currentTarget.value })
-                }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-800">Teléfono</span>
-              <input
-                disabled={!editable}
-                value={draft.contactPhone ?? ""}
-                onBlur={() => void save()}
-                onChange={(event) =>
-                  updateDraft({ contactPhone: event.currentTarget.value })
-                }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-              />
-            </label>
-            <label className="block">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Contacto principal</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Esta será la persona con quien confirmaremos cualquier duda durante
+              la configuración.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="text-sm font-semibold text-slate-800">Nombre</span>
+                <input
+                  disabled={!editable}
+                  value={draft.contactName ?? ""}
+                  onBlur={() => void save()}
+                  onChange={(event) =>
+                    updateDraft({ contactName: event.currentTarget.value })
+                  }
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800">Teléfono</span>
+                <input
+                  disabled={!editable}
+                  value={draft.contactPhone ?? ""}
+                  onBlur={() => void save()}
+                  onChange={(event) =>
+                    updateDraft({ contactPhone: event.currentTarget.value })
+                  }
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800">
+                  Correo electrónico
+                </span>
+                <input
+                  disabled={!editable}
+                  type="email"
+                  value={draft.contactEmail ?? ""}
+                  onBlur={() => void save()}
+                  onChange={(event) =>
+                    updateDraft({ contactEmail: event.currentTarget.value })
+                  }
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-200 pt-4">
+            <p className="text-sm font-semibold text-slate-900">
+              Administradores iniciales de ENTRY
+            </p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Queremos preparar primero las activaciones de las personas que
+              administrarán la comunidad. Puede repetir al contacto principal si
+              también será administrador.
+            </p>
+            <label className="mt-3 block max-w-xs">
               <span className="text-sm font-semibold text-slate-800">
-                Correo electrónico
+                ¿Cuántos administradores habrá al iniciar?
               </span>
               <input
                 disabled={!editable}
-                type="email"
-                value={draft.contactEmail ?? ""}
+                type="number"
+                min={0}
+                max={25}
+                inputMode="numeric"
+                value={draft.initialAdminCount ?? ""}
                 onBlur={() => void save()}
-                onChange={(event) =>
-                  updateDraft({ contactEmail: event.currentTarget.value })
-                }
+                onChange={(event) => setInitialAdminCount(event.currentTarget.value)}
                 className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
               />
             </label>
+
+            {draft.initialAdminCount !== null && draft.initialAdminCount > 0 ? (
+              <div className="mt-4 space-y-3">
+                {draft.initialAdmins.map((administrator, index) => (
+                  <div
+                    key={index}
+                    className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                  >
+                    <p className="text-sm font-semibold text-slate-900">
+                      Administrador {index + 1}
+                    </p>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      <label className="block sm:col-span-2">
+                        <span className="text-sm font-semibold text-slate-800">
+                          Nombre completo
+                        </span>
+                        <input
+                          disabled={!editable}
+                          value={administrator.name ?? ""}
+                          onBlur={() => void save()}
+                          onChange={(event) =>
+                            updateAdministrator(
+                              index,
+                              "name",
+                              event.currentTarget.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                        />
+                      </label>
+                      <label className="block sm:col-span-2">
+                        <span className="text-sm font-semibold text-slate-800">
+                          Casa o unidad
+                        </span>
+                        <input
+                          disabled={!editable}
+                          value={administrator.unit ?? ""}
+                          placeholder="Casa 01"
+                          onBlur={() => void save()}
+                          onChange={(event) =>
+                            updateAdministrator(
+                              index,
+                              "unit",
+                              event.currentTarget.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-sm font-semibold text-slate-800">
+                          Teléfono
+                        </span>
+                        <input
+                          disabled={!editable}
+                          value={administrator.phone ?? ""}
+                          onBlur={() => void save()}
+                          onChange={(event) =>
+                            updateAdministrator(
+                              index,
+                              "phone",
+                              event.currentTarget.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="text-sm font-semibold text-slate-800">
+                          Correo electrónico
+                        </span>
+                        <input
+                          disabled={!editable}
+                          type="email"
+                          value={administrator.email ?? ""}
+                          onBlur={() => void save()}
+                          onChange={(event) =>
+                            updateAdministrator(
+                              index,
+                              "email",
+                              event.currentTarget.value,
+                            )
+                          }
+                          className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </Section>
 
