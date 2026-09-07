@@ -18,7 +18,6 @@ type UsageMetadata = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 
 const OCR_BUCKET = "entry-photos";
@@ -139,7 +138,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_ANON_KEY) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
     console.error("[extract-plate-text] missing Supabase runtime configuration");
     return json({ ok: false, error: "OCR service unavailable" }, 500);
   }
@@ -152,6 +151,10 @@ Deno.serve(async (req: Request) => {
   if (!authHeader.startsWith("Bearer ")) return json({ error: "Not authenticated" }, 401);
 
   const bearerToken = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (bearerToken !== SUPABASE_SERVICE_ROLE_KEY) {
+    return json({ error: "Internal service role required" }, 403);
+  }
+
   const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
@@ -185,27 +188,6 @@ Deno.serve(async (req: Request) => {
   if (!entryLog.community_id) return json({ error: "Entry log community missing" }, 409);
   if (!entryLog.vehicle_photo_path || entryLog.vehicle_photo_path !== imagePath) {
     return json({ error: "OCR image does not match entry log" }, 400);
-  }
-
-  const isInternalCall = bearerToken === SUPABASE_SERVICE_ROLE_KEY;
-  if (!isInternalCall) {
-    const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) return json({ error: "Not authenticated" }, 401);
-
-    const { data: membership, error: membershipError } = await serviceClient
-      .from("community_members")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("community_id", entryLog.community_id)
-      .eq("is_active", true)
-      .in("role", ["GUARD", "ADMIN"])
-      .maybeSingle();
-
-    if (membershipError || !membership) return json({ error: "Not authorized" }, 403);
   }
 
   const requestId = crypto.randomUUID();
