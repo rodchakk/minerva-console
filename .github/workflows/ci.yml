@@ -91,7 +91,10 @@ jobs:
         run: npm ci
 
       - name: Run ENTRY Observability regression scope
-        run: node --test tests/entry-observability.test.mjs
+        run: |
+          node --test \
+            tests/entry-observability.test.mjs \
+            tests/entry-critical-flow-instrumentation.test.mjs
 
   entry-ocr-hardening-tests:
     name: ENTRY OCR hardening regressions
