@@ -197,6 +197,10 @@ export function buildOutriderSummary(
   detail: OutriderDetail,
 ): PortableOutriderExportSummary {
   return {
+    administrators: {
+      count: detail.initialAdminCount,
+      people: detail.initialAdmins,
+    },
     attachments: detail.files.map((file) => ({
       byteSize: file.byteSize,
       category: file.category,
@@ -252,6 +256,15 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
     summary.destinations.names.length > 0
       ? summary.destinations.names.map((name) => `- ${name}`).join("\n")
       : "- None provided";
+  const administrators =
+    summary.administrators.people.length > 0
+      ? summary.administrators.people
+          .map(
+            (administrator, index) =>
+              `- ${index + 1}. ${administrator.name ?? "Name not provided"} | Unit: ${administrator.unit ?? "Not provided"} | Phone: ${administrator.phone ?? "Not provided"} | Email: ${administrator.email ?? "Not provided"}`,
+          )
+          .join("\n")
+      : "- No initial administrators";
   const attachments =
     summary.attachments.length > 0
       ? summary.attachments
@@ -282,7 +295,7 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
     `- Naming example: ${summary.unitProfile.namingExample ?? "Not provided"}`,
     `- Other: ${summary.unitProfile.otherUnitType ?? "None"}`,
     "",
-    "## Destinations",
+    "## Community Destinations",
     `- Has destinations: ${String(summary.destinations.hasDestinations)}`,
     destinations,
     "",
@@ -298,6 +311,10 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
     `- Name: ${summary.contact.name ?? "Not provided"}`,
     `- Phone: ${summary.contact.phone ?? "Not provided"}`,
     `- Email: ${summary.contact.email ?? "Not provided"}`,
+    "",
+    "## Initial Administrators",
+    `- Count: ${summary.administrators.count ?? "Not provided"}`,
+    administrators,
     "",
     "## Attachments",
     attachments,
