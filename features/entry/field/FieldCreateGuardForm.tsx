@@ -26,8 +26,10 @@ function CreateGuardButton() {
 
 export function FieldCreateGuardForm({
   communities,
+  defaultCommunityId = "",
 }: {
   communities: FieldGuardCommunityOption[];
+  defaultCommunityId?: string;
 }) {
   const [state, action] = useActionState<StaffActionState, FormData>(
     createFieldGuardAction,
@@ -46,7 +48,7 @@ export function FieldCreateGuardForm({
         </span>
         <select
           name="communityId"
-          defaultValue=""
+          defaultValue={defaultCommunityId}
           required
           className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent-border)]"
         >

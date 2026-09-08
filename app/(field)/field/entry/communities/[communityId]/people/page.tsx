@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserPlus } from "lucide-react";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldPeopleOverview } from "@/features/entry/field/FieldPeopleOverview";
 import { getFieldPeoplePageData } from "@/features/entry/field/peopleData";
@@ -27,13 +27,24 @@ export default async function FieldPeoplePage({ params }: FieldPeoplePageProps) 
         Community overview
       </Link>
 
-      <section className="space-y-2">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
-          People and units
-        </p>
-        <h1 className="break-words text-3xl font-semibold leading-9 text-[var(--console-text)]">
-          {data.community.name}
-        </h1>
+      <section className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
+              People and units
+            </p>
+            <h1 className="break-words text-3xl font-semibold leading-9 text-[var(--console-text)]">
+              {data.community.name}
+            </h1>
+          </div>
+          <Link
+            href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/new`}
+            className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-4 text-sm font-bold text-white transition-colors hover:brightness-110 active:brightness-95"
+          >
+            <UserPlus aria-hidden="true" className="h-4 w-4" />
+            Create user
+          </Link>
+        </div>
         <p className="text-sm leading-6 text-[var(--console-text-muted)]">
           Find residents, admins, guards, units, and activation rows for onsite
           ENTRY support.
