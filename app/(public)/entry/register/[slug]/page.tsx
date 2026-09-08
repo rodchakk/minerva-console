@@ -27,7 +27,8 @@ export const fetchCache = "force-no-store";
 const registrationTitle = "Registro de residentes | ENTRY";
 const registrationDescription =
   "Registro oficial de residentes de ENTRY para tu comunidad.";
-const registrationBrandImage = "/brand/minerva-entry-og-v3-1200x630.png";
+const registrationBrandImage =
+  "https://console.minervatechs.com/brand/minerva-entry-og-v5-baseline-1200x630.jpg";
 
 export const metadata: Metadata = {
   title: registrationTitle,
@@ -40,9 +41,10 @@ export const metadata: Metadata = {
     images: [
       {
         url: registrationBrandImage,
+        secureUrl: registrationBrandImage,
         width: 1200,
         height: 630,
-        type: "image/png",
+        type: "image/jpeg",
         alt: "Minerva Technologies · ENTRY",
       },
     ],

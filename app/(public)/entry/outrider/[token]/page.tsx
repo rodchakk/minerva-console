@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 const outriderTitle = "ENTRY Outrider";
 const outriderDescription =
   "Preparación segura de información para el onboarding de tu comunidad con ENTRY.";
-const outriderBrandImage = "/brand/minerva-entry-og-v3-1200x630.png";
+const outriderBrandImage =
+  "https://console.minervatechs.com/brand/minerva-entry-og-v5-baseline-1200x630.jpg";
 
 export const metadata: Metadata = {
   title: outriderTitle,
@@ -22,9 +23,10 @@ export const metadata: Metadata = {
     images: [
       {
         url: outriderBrandImage,
+        secureUrl: outriderBrandImage,
         width: 1200,
         height: 630,
-        type: "image/png",
+        type: "image/jpeg",
         alt: "Minerva Technologies · ENTRY",
       },
     ],
