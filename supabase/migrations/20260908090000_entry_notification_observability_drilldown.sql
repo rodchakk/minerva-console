@@ -290,6 +290,18 @@ begin
     ) target_profile on true
     where coalesce(q.completed_at, q.processed_at, q.claimed_at, q.created_at) >= v_start
       and coalesce(q.completed_at, q.processed_at, q.claimed_at, q.created_at) < v_end
+      and not (
+        lower(q.status) in ('sent', 'failed')
+        and exists (
+          select 1
+          from public.system_event_log explicit_push
+          where explicit_push.entity_type in ('community_message_push', 'community_message_push_queue')
+            and explicit_push.entity_id = q.id
+            and explicit_push.event_type in ('NOTIFICATION_SENT', 'NOTIFICATION_FAILED')
+            and explicit_push.created_at >= v_start
+            and explicit_push.created_at < v_end
+        )
+      )
   ),
   system_events as (
     select
@@ -594,6 +606,7 @@ begin
       count(*) filter (where status = 'skipped')::integer as skipped_count,
       count(*) filter (where status = 'success')::integer as success_count,
       max(occurred_at) as last_observed_at,
+      max(occurred_at) filter (where status = 'success') as last_success_at,
       max(occurred_at) filter (where status = 'failed') as last_failure_at
     from events_with_recovery
   )
@@ -610,13 +623,12 @@ begin
       from active_communities ac
     ), '[]'::jsonb),
     'summary', jsonb_build_object(
-      'status', case
-        when coalesce((select event_count from summary), 0) = 0 then 'unknown'
-        when coalesce((select failed_count from summary), 0) >= 5 then 'down'
-        when coalesce((select failed_count from summary), 0) > 0 then 'degraded'
-        when coalesce((select skipped_count from summary), 0) > 0 then 'degraded'
-        else 'observed'
-      end,
+      'status', public._entry_observability_flow_status_v1(
+        coalesce((select success_count from summary), 0),
+        coalesce((select failed_count from summary), 0),
+        (select last_success_at from summary),
+        coalesce((select success_count + failed_count from summary), 0)
+      ),
       'event_count', coalesce((select event_count from summary), 0),
       'failed_count', coalesce((select failed_count from summary), 0),
       'skipped_count', coalesce((select skipped_count from summary), 0),

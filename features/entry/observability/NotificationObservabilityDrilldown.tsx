@@ -53,7 +53,7 @@ const summaryStatusCopy: Record<
     className: "text-rose-300",
     label: "Failing",
   },
-  observed: {
+  healthy: {
     className: "text-emerald-300",
     label: "Observed",
   },

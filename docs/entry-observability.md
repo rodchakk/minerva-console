@@ -223,6 +223,22 @@ so the drill-down must not describe failed queue rows as automatically retried.
 "No active push tokens" is displayed as a non-provider deliverability condition,
 not as an Expo outage.
 
+Terminal push evidence has one canonical owner. When explicit
+`NOTIFICATION_SENT` or `NOTIFICATION_FAILED` system telemetry exists for a
+`community_message_push_queue` row through `entity_type` of
+`community_message_push` or `community_message_push_queue` and
+`entity_id = queue.id`, that explicit telemetry is the normalized operational
+event. The queue row remains the fallback for historical deliveries that
+predate the instrumentation, so one real queue delivery attempt produces one
+drill-down event instead of a queue row plus duplicate telemetry.
+
+The notification drill-down summary uses the same health semantics as the
+parent Critical Flow helper `_entry_observability_flow_status_v1`. Failures can
+drive Degraded or Down only under that shared failure-count and failure-rate
+logic. Skipped rows, including `PUSH_NO_ACTIVE_TOKENS`, stay visible as
+deliverability context but do not count as operational failures, so skipped-only
+evidence remains Unknown and success plus skipped evidence remains Healthy.
+
 ## Dashboard Filters
 
 The dashboard defaults to all active ENTRY communities. Operators can filter by

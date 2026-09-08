@@ -23,6 +23,83 @@ const drilldown = read(
 const docs = read("docs/entry-observability.md");
 const ci = read(".github/workflows/ci.yml");
 
+function normalizeQueueStatus(row) {
+  if (row.status === "sent") return "success";
+  if (row.status === "failed" && row.lastError?.startsWith("no active push tokens")) {
+    return "skipped";
+  }
+  if (row.status === "failed") return "failed";
+  return "unknown";
+}
+
+function normalizeSystemStatus(row) {
+  if (row.eventType === "NOTIFICATION_SENT") return "success";
+  if (row.eventType === "NOTIFICATION_FAILED") return "failed";
+  return "unknown";
+}
+
+function normalizePushEvidence({ queueRows = [], systemRows = [] }) {
+  const explicitTerminalTelemetryQueueIds = new Set(
+    systemRows
+      .filter((row) =>
+        ["NOTIFICATION_SENT", "NOTIFICATION_FAILED"].includes(row.eventType) &&
+        ["community_message_push", "community_message_push_queue"].includes(
+          row.entityType,
+        ),
+      )
+      .map((row) => row.entityId),
+  );
+
+  return [
+    ...queueRows
+      .filter(
+        (row) =>
+          !(
+            ["sent", "failed"].includes(row.status) &&
+            explicitTerminalTelemetryQueueIds.has(row.id)
+          ),
+      )
+      .map((row) => ({
+        id: `queue:${row.id}`,
+        source: "community_message_push_queue",
+        status: normalizeQueueStatus(row),
+      })),
+    ...systemRows
+      .filter((row) =>
+        ["NOTIFICATION_SENT", "NOTIFICATION_FAILED"].includes(row.eventType),
+      )
+      .map((row) => ({
+        id: `system:${row.id}`,
+        source: "system_event_log",
+        status: normalizeSystemStatus(row),
+      })),
+  ];
+}
+
+function summarizeNotificationEvents(events) {
+  return {
+    failedCount: events.filter((event) => event.status === "failed").length,
+    skippedCount: events.filter((event) => event.status === "skipped").length,
+    successCount: events.filter((event) => event.status === "success").length,
+  };
+}
+
+function flowStatus({
+  evidenceCount,
+  failureCount,
+  lastSuccessAt,
+  successCount,
+}) {
+  if (evidenceCount === 0) return "unknown";
+  if (successCount === 0 && failureCount >= 5) return "down";
+  if (successCount === 0 && failureCount > 0) return "degraded";
+  if (failureCount >= 3 && failureCount / Math.max(successCount + failureCount, 1) >= 0.2) {
+    return "degraded";
+  }
+  if (lastSuccessAt) return "healthy";
+  return "unknown";
+}
+
 test("Notifications drill-down RPC is superadmin-only, bounded, and limit-clamped", () => {
   assert.match(
     migration,
@@ -48,6 +125,123 @@ test("RPC aggregates existing notification evidence without exposing raw tables 
   assert.doesNotMatch(notificationsPage, /\.from\("system_event_log"\)/);
   assert.doesNotMatch(notificationsPage, /\.from\("community_message_push_queue"\)/);
   assert.doesNotMatch(notificationsPage, /\.from\("onboarding_campaign_messages"\)/);
+});
+
+test("terminal push telemetry is canonical over correlated terminal queue fallback", () => {
+  assert.match(migration, /from public\.system_event_log explicit_push/);
+  assert.match(
+    migration,
+    /explicit_push\.entity_type in \('community_message_push', 'community_message_push_queue'\)/,
+  );
+  assert.match(migration, /explicit_push\.entity_id = q\.id/);
+  assert.match(
+    migration,
+    /explicit_push\.event_type in \('NOTIFICATION_SENT', 'NOTIFICATION_FAILED'\)/,
+  );
+
+  const failedEvents = normalizePushEvidence({
+    queueRows: [{ id: "push-queue-1", status: "failed" }],
+    systemRows: [
+      {
+        entityId: "push-queue-1",
+        entityType: "community_message_push_queue",
+        eventType: "NOTIFICATION_FAILED",
+        id: "event-1",
+      },
+    ],
+  });
+  const failedSummary = summarizeNotificationEvents(failedEvents);
+
+  assert.equal(failedEvents.length, 1);
+  assert.equal(failedEvents[0].source, "system_event_log");
+  assert.equal(failedSummary.failedCount, 1);
+
+  const sentEvents = normalizePushEvidence({
+    queueRows: [{ id: "push-queue-2", status: "sent" }],
+    systemRows: [
+      {
+        entityId: "push-queue-2",
+        entityType: "community_message_push",
+        eventType: "NOTIFICATION_SENT",
+        id: "event-2",
+      },
+    ],
+  });
+  const sentSummary = summarizeNotificationEvents(sentEvents);
+
+  assert.equal(sentEvents.length, 1);
+  assert.equal(sentEvents[0].source, "system_event_log");
+  assert.equal(sentSummary.successCount, 1);
+});
+
+test("terminal push queue rows remain fallback evidence without explicit telemetry", () => {
+  const fallbackEvents = normalizePushEvidence({
+    queueRows: [{ id: "legacy-push-queue-1", status: "failed" }],
+    systemRows: [],
+  });
+  const summary = summarizeNotificationEvents(fallbackEvents);
+
+  assert.equal(fallbackEvents.length, 1);
+  assert.equal(fallbackEvents[0].source, "community_message_push_queue");
+  assert.equal(summary.failedCount, 1);
+});
+
+test("notification summary health mirrors existing critical-flow semantics", () => {
+  assert.match(
+    migration,
+    /'status', public\._entry_observability_flow_status_v1\(/,
+  );
+  assert.match(
+    migration,
+    /coalesce\(\(select success_count \+ failed_count from summary\), 0\)/,
+  );
+  assert.doesNotMatch(migration, /skipped_count[\s\S]{0,160}then 'degraded'/);
+  assert.doesNotMatch(migration, /else 'observed'/);
+  assert.match(queries, /value === "healthy"/);
+  assert.match(drilldown, /healthy: \{/);
+
+  const cases = [
+    {
+      expected: "down",
+      input: { failureCount: 5, lastSuccessAt: null, successCount: 0 },
+      name: "0 success / 5 failure",
+    },
+    {
+      expected: "healthy",
+      input: { failureCount: 1, lastSuccessAt: "2026-09-08T00:00:00Z", successCount: 99 },
+      name: "many successes / 1 failure",
+    },
+    {
+      expected: "healthy",
+      input: { failureCount: 5, lastSuccessAt: "2026-09-08T00:00:00Z", successCount: 96 },
+      name: "many successes / 5 failures below degradation threshold",
+    },
+    {
+      expected: "degraded",
+      input: { failureCount: 3, lastSuccessAt: "2026-09-08T00:00:00Z", successCount: 12 },
+      name: "mixed traffic crossing degradation threshold",
+    },
+    {
+      expected: "unknown",
+      input: { failureCount: 0, lastSuccessAt: null, skippedCount: 5, successCount: 0 },
+      name: "skipped-only",
+    },
+    {
+      expected: "healthy",
+      input: { failureCount: 0, lastSuccessAt: "2026-09-08T00:00:00Z", skippedCount: 5, successCount: 1 },
+      name: "success + skipped",
+    },
+    {
+      expected: "unknown",
+      input: { failureCount: 0, lastSuccessAt: null, successCount: 0 },
+      name: "no evidence",
+    },
+  ];
+
+  for (const { expected, input, name } of cases) {
+    const evidenceCount = input.successCount + input.failureCount;
+    assert.equal(flowStatus({ ...input, evidenceCount }), expected, name);
+  }
 });
 
 test("PUSH_CLAIM_RPC_ERROR does not fabricate impact and reports scheduled retry semantics", () => {

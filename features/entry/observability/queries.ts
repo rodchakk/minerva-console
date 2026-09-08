@@ -154,7 +154,7 @@ export type EntryObservabilityData = {
 export type EntryNotificationObservabilityStatus =
   | "degraded"
   | "down"
-  | "observed"
+  | "healthy"
   | "unknown";
 
 export type EntryNotificationObservabilityEventStatus =
@@ -305,7 +305,7 @@ function normalizeNotificationStatus(
   if (
     value === "degraded" ||
     value === "down" ||
-    value === "observed" ||
+    value === "healthy" ||
     value === "unknown"
   ) {
     return value;
