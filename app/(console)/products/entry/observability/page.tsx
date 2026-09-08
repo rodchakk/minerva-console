@@ -271,7 +271,13 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
-function CriticalFlows({ flows }: { flows: EntryObservabilityFlow[] }) {
+function CriticalFlows({
+  flows,
+  notificationsHref,
+}: {
+  flows: EntryObservabilityFlow[];
+  notificationsHref: string;
+}) {
   return (
     <Panel className="min-h-[360px]">
       <PanelHeader
@@ -293,7 +299,19 @@ function CriticalFlows({ flows }: { flows: EntryObservabilityFlow[] }) {
           <tbody className="divide-y divide-[var(--console-border)]">
             {flows.map((flow) => (
               <tr key={flow.key} className="transition-colors hover:bg-white/[0.02]">
-                <td className="px-5 py-3 font-medium text-slate-100">{flow.label}</td>
+                <td className="px-5 py-3 font-medium text-slate-100">
+                  {flow.key === "notifications" ? (
+                    <Link
+                      href={notificationsHref}
+                      className="inline-flex items-center gap-2 text-slate-100 transition-colors hover:text-white"
+                    >
+                      {flow.label}
+                      <ArrowRight className="h-4 w-4 stroke-[1.75]" />
+                    </Link>
+                  ) : (
+                    flow.label
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span
                     className={cn(
@@ -643,6 +661,19 @@ function AuditActivity({ data }: { data: EntryObservabilityData }) {
 function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
   const status = statusCopy[data.summary.systemStatus];
   const hasUsageRecords = data.usage.summary.recordCount > 0;
+  const notificationsParams = new URLSearchParams();
+
+  if (data.range.key !== "24h") {
+    notificationsParams.set("range", data.range.key);
+  }
+
+  if (data.range.communityId) {
+    notificationsParams.set("community", data.range.communityId);
+  }
+
+  const notificationsHref = notificationsParams.toString()
+    ? `/products/entry/observability/notifications?${notificationsParams.toString()}`
+    : "/products/entry/observability/notifications";
 
   return (
     <div className="space-y-4">
@@ -702,7 +733,10 @@ function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
       </section>
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.88fr)]">
-        <CriticalFlows flows={data.criticalFlows} />
+        <CriticalFlows
+          flows={data.criticalFlows}
+          notificationsHref={notificationsHref}
+        />
         <Incidents incidents={data.incidents} />
       </section>
 

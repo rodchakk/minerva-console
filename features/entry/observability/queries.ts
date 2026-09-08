@@ -151,9 +151,87 @@ export type EntryObservabilityData = {
   };
 };
 
+export type EntryNotificationObservabilityStatus =
+  | "degraded"
+  | "down"
+  | "observed"
+  | "unknown";
+
+export type EntryNotificationObservabilityEventStatus =
+  | "success"
+  | "failed"
+  | "skipped"
+  | "unknown";
+
+export type EntryNotificationObservabilityEvent = {
+  attempts: number | null;
+  audienceLabel: string | null;
+  audienceType: "community" | "unknown" | "user";
+  channel: "onboarding_email" | "push" | "system";
+  claimedAt: string | null;
+  communityId: string | null;
+  communityName: string | null;
+  completedAt: string | null;
+  correlationId: string | null;
+  createdAt: string | null;
+  durationMs: number | null;
+  enqueueSource: string | null;
+  errorCode: string | null;
+  errorSummary: string | null;
+  id: string;
+  impactSummary: string;
+  layer: string;
+  messageId: string | null;
+  messageLabel: string | null;
+  occurredAt: string;
+  operation: string;
+  providerReached: boolean;
+  queueId: string | null;
+  recoveredAt: string | null;
+  recoverySummary: string | null;
+  retryMode: string;
+  retrySummary: string;
+  severity: EntryObservabilityIncident["severity"];
+  source: string;
+  sourceType: string | null;
+  status: EntryNotificationObservabilityEventStatus;
+};
+
+export type EntryNotificationObservabilityData = {
+  communities: EntryObservabilityCommunity[];
+  events: EntryNotificationObservabilityEvent[];
+  generatedAt: string;
+  limit: number;
+  range: {
+    communityId: string | null;
+    endsAt: string;
+    key: EntryObservabilityTimeRange;
+    startsAt: string;
+  };
+  summary: {
+    eventCount: number;
+    failedCount: number;
+    lastFailureAt: string | null;
+    lastObservedAt: string | null;
+    skippedCount: number;
+    status: EntryNotificationObservabilityStatus;
+    successCount: number;
+  };
+};
+
 export type EntryObservabilityResult =
   | {
       data: EntryObservabilityData;
+      state: "ready";
+    }
+  | {
+      error: string;
+      state: "unavailable";
+    };
+
+export type EntryNotificationObservabilityResult =
+  | {
+      data: EntryNotificationObservabilityData;
       state: "ready";
     }
   | {
@@ -197,6 +275,17 @@ function asNullableNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function asBoolean(value: unknown, fallback = false) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "true") return true;
+    if (normalized === "false") return false;
+  }
+
+  return fallback;
+}
+
 function normalizeStatus(value: unknown): EntryObservabilityStatus {
   if (
     value === "healthy" ||
@@ -208,6 +297,56 @@ function normalizeStatus(value: unknown): EntryObservabilityStatus {
   }
 
   return "unknown";
+}
+
+function normalizeNotificationStatus(
+  value: unknown,
+): EntryNotificationObservabilityStatus {
+  if (
+    value === "degraded" ||
+    value === "down" ||
+    value === "observed" ||
+    value === "unknown"
+  ) {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function normalizeNotificationEventStatus(
+  value: unknown,
+): EntryNotificationObservabilityEventStatus {
+  if (
+    value === "success" ||
+    value === "failed" ||
+    value === "skipped" ||
+    value === "unknown"
+  ) {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function normalizeAudienceType(
+  value: unknown,
+): EntryNotificationObservabilityEvent["audienceType"] {
+  if (value === "community" || value === "user" || value === "unknown") {
+    return value;
+  }
+
+  return "unknown";
+}
+
+function normalizeNotificationChannel(
+  value: unknown,
+): EntryNotificationObservabilityEvent["channel"] {
+  if (value === "push" || value === "onboarding_email" || value === "system") {
+    return value;
+  }
+
+  return "system";
 }
 
 function normalizeSeverity(
@@ -465,6 +604,93 @@ function mapDashboardPayload(
   };
 }
 
+function mapNotificationEvents(
+  value: unknown,
+): EntryNotificationObservabilityEvent[] {
+  return toArray(value)
+    .map((item) => {
+      const record = isRecord(item) ? item : {};
+      const id = asString(record.id);
+      const occurredAt = asString(record.occurred_at);
+
+      if (!id || !occurredAt) {
+        return null;
+      }
+
+      return {
+        attempts: asNullableNumber(record.attempts),
+        audienceLabel: asNullableString(record.audience_label),
+        audienceType: normalizeAudienceType(record.audience_type),
+        channel: normalizeNotificationChannel(record.channel),
+        claimedAt: asNullableString(record.claimed_at),
+        communityId: asNullableString(record.community_id),
+        communityName: asNullableString(record.community_name),
+        completedAt: asNullableString(record.completed_at),
+        correlationId: asNullableString(record.correlation_id),
+        createdAt: asNullableString(record.created_at),
+        durationMs: asNullableNumber(record.duration_ms),
+        enqueueSource: asNullableString(record.enqueue_source),
+        errorCode: asNullableString(record.error_code),
+        errorSummary: asNullableString(record.error_summary),
+        id,
+        impactSummary: asString(
+          record.impact_summary,
+          "Operational impact is not proven from this evidence.",
+        ),
+        layer: asString(record.layer, "unknown"),
+        messageId: asNullableString(record.message_id),
+        messageLabel: asNullableString(record.message_label),
+        occurredAt,
+        operation: asString(record.operation, "Notification event"),
+        providerReached: asBoolean(record.provider_reached),
+        queueId: asNullableString(record.queue_id),
+        recoveredAt: asNullableString(record.recovered_at),
+        recoverySummary: asNullableString(record.recovery_summary),
+        retryMode: asString(record.retry_mode, "unknown"),
+        retrySummary: asString(
+          record.retry_summary,
+          "No retry conclusion available from this evidence.",
+        ),
+        severity: normalizeSeverity(record.severity),
+        source: asString(record.source, "system"),
+        sourceType: asNullableString(record.source_type),
+        status: normalizeNotificationEventStatus(record.status),
+      };
+    })
+    .filter((item): item is EntryNotificationObservabilityEvent => item !== null);
+}
+
+function mapNotificationPayload(
+  payload: unknown,
+  rangeKey: EntryObservabilityTimeRange,
+): EntryNotificationObservabilityData {
+  const root = isRecord(payload) ? payload : {};
+  const summary = isRecord(root.summary) ? root.summary : {};
+  const range = isRecord(root.range) ? root.range : {};
+
+  return {
+    communities: mapCommunities(root.communities),
+    events: mapNotificationEvents(root.events),
+    generatedAt: asString(root.generated_at, new Date().toISOString()),
+    limit: asNumber(root.limit, 100),
+    range: {
+      communityId: asNullableString(range.community_id),
+      endsAt: asString(range.ends_at),
+      key: rangeKey,
+      startsAt: asString(range.starts_at),
+    },
+    summary: {
+      eventCount: asNumber(summary.event_count),
+      failedCount: asNumber(summary.failed_count),
+      lastFailureAt: asNullableString(summary.last_failure_at),
+      lastObservedAt: asNullableString(summary.last_observed_at),
+      skippedCount: asNumber(summary.skipped_count),
+      status: normalizeNotificationStatus(summary.status),
+      successCount: asNumber(summary.success_count),
+    },
+  };
+}
+
 export async function getEntryObservability(input: {
   communityId?: string | null;
   range: EntryObservabilityTimeRange;
@@ -491,6 +717,42 @@ export async function getEntryObservability(input: {
 
   return {
     data: mapDashboardPayload(data, input.range),
+    state: "ready",
+  };
+}
+
+export async function getEntryNotificationObservability(input: {
+  communityId?: string | null;
+  limit?: number;
+  range: EntryObservabilityTimeRange;
+}): Promise<EntryNotificationObservabilityResult> {
+  await requireSuperadmin();
+
+  const supabase = await createClient();
+  const startsAt = startsAtForRange(input.range);
+  const endsAt = new Date().toISOString();
+  const communityId = input.communityId?.trim() || null;
+  const limit = Math.max(1, Math.min(Math.trunc(input.limit ?? 100), 200));
+
+  const { data, error } = await supabase.rpc(
+    "sa_get_entry_notification_observability_v1",
+    {
+      p_community_id: communityId,
+      p_ends_at: endsAt,
+      p_limit: limit,
+      p_starts_at: startsAt,
+    },
+  );
+
+  if (error) {
+    return {
+      error: error.message,
+      state: "unavailable",
+    };
+  }
+
+  return {
+    data: mapNotificationPayload(data, input.range),
     state: "ready",
   };
 }

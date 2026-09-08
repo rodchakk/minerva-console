@@ -8,12 +8,14 @@ import type {
 } from "@/features/entry/observability/queries";
 
 type ObservabilityFiltersProps = {
+  basePath?: string;
   communities: EntryObservabilityCommunity[];
   communityId: string | null;
   range: EntryObservabilityTimeRange;
 };
 
 export function ObservabilityFilters({
+  basePath = "/products/entry/observability",
   communities,
   communityId,
   range,
@@ -38,7 +40,7 @@ export function ObservabilityFilters({
     }
 
     const query = params.toString();
-    router.push(query ? `/products/entry/observability?${query}` : "/products/entry/observability");
+    router.push(query ? `${basePath}?${query}` : basePath);
   }
 
   return (
