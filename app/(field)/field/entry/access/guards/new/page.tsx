@@ -3,20 +3,36 @@ import { ArrowLeft } from "lucide-react";
 import { getCommunitiesWithProgressResult } from "@/features/entry/communities/queries";
 import { FieldCreateGuardForm } from "@/features/entry/field/FieldCreateGuardForm";
 
-export default async function FieldCreateGuardPage() {
+type FieldCreateGuardPageProps = {
+  searchParams: Promise<{ communityId?: string }>;
+};
+
+export default async function FieldCreateGuardPage({
+  searchParams,
+}: FieldCreateGuardPageProps) {
+  const { communityId = "" } = await searchParams;
   const result = await getCommunitiesWithProgressResult();
   const communities = result.items
     .filter((community) => community.isActive)
     .map((community) => ({ id: community.id, name: community.name }));
+  const defaultCommunityId = communities.some(
+    (community) => community.id === communityId,
+  )
+    ? communityId
+    : "";
+  const backHref = defaultCommunityId
+    ? `/field/entry/communities/${encodeURIComponent(defaultCommunityId)}/people/new`
+    : "/field/entry/access";
+  const backLabel = defaultCommunityId ? "Create user" : "Access";
 
   return (
     <div className="space-y-4">
       <Link
-        href="/field/entry/access"
+        href={backHref}
         className="inline-flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]"
       >
         <ArrowLeft aria-hidden="true" className="h-4 w-4" />
-        Access
+        {backLabel}
       </Link>
 
       <section>
@@ -41,7 +57,10 @@ export default async function FieldCreateGuardPage() {
         </p>
       ) : (
         <section className="rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-4">
-          <FieldCreateGuardForm communities={communities} />
+          <FieldCreateGuardForm
+            communities={communities}
+            defaultCommunityId={defaultCommunityId}
+          />
         </section>
       )}
     </div>
