@@ -41,6 +41,7 @@ export const metadata: Metadata = {
     images: [
       {
         url: registrationBrandImage,
+        secureUrl: registrationBrandImage,
         width: 1200,
         height: 630,
         type: "image/jpeg",
