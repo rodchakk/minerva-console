@@ -23,6 +23,12 @@ The dashboard uses `sa_get_entry_observability_v1(starts_at, ends_at,
 community_id)` as its server-side read model. The RPC is superadmin-only,
 bounded to 31 days, and returns summarized JSON for the browser.
 
+The Notifications drill-down uses
+`sa_get_entry_notification_observability_v1(starts_at, ends_at, community_id,
+limit)` as a separate superadmin-only read model. It is also bounded to 31 days,
+clamps `limit` to 200 rows, and returns normalized notification events rather
+than raw log rows.
+
 ## Signal Ownership
 
 Use the canonical system for the question being answered:
@@ -57,6 +63,11 @@ Health states are:
 
 No telemetry must stay Unknown. Low-volume communities are not marked Down only
 because no one used a feature recently.
+
+The Notifications row links to `/products/entry/observability/notifications`
+with the current range and community filter preserved. The drill-down is the
+operational surface for queue, worker, provider, and onboarding-email evidence;
+the overview remains a summary.
 
 Global system health is intentionally conservative:
 
@@ -193,6 +204,49 @@ Never log:
 
 Metadata should be allowlisted, short, and operational.
 
+Notifications drill-down never returns push tokens, recipient emails, message
+bodies, image paths, image URLs, authorization headers, credentials, or raw
+provider payloads. Error reasons are sanitized before leaving the RPC. Message
+titles and profile display names may be used only as compact superadmin
+diagnostic labels; bodies and recipient addresses remain excluded.
+
+`PUSH_CLAIM_RPC_ERROR` has special semantics in the drill-down: it means the
+worker failed before a queue row was selected. The event must not fabricate a
+community, message, recipient, or lost notification. It reports
+`provider_reached=false` and explains that the scheduled worker will invoke
+again because no queue row was terminally failed.
+
+A `community_message_push_queue` row already marked `failed` is different: it
+is terminal queue evidence. The current claim RPC only selects `pending` rows,
+so the drill-down must not describe failed queue rows as automatically retried.
+
+"No active push tokens" is displayed as a non-provider deliverability condition,
+not as an Expo outage.
+
+Notification provider reachability is tri-state. `provider_reached=true` means
+durable evidence proves provider contact, such as `NOTIFICATION_SENT` or a
+persisted provider response/reference. `provider_reached=false` is reserved for
+known pre-provider conditions such as `PUSH_CLAIM_RPC_ERROR`,
+`PUSH_NO_ACTIVE_TOKENS`, and `SOS_PUSH_NO_GUARD_TOKENS`. Ambiguous delivery
+failures remain `provider_reached=null`; the read model must not infer provider
+non-reachability solely because `provider_response` is null.
+
+Terminal push evidence has one canonical owner. When explicit
+`NOTIFICATION_SENT` or `NOTIFICATION_FAILED` system telemetry exists for a
+`community_message_push_queue` row through `entity_type` of
+`community_message_push` or `community_message_push_queue` and
+`entity_id = queue.id`, that explicit telemetry is the normalized operational
+event. The queue row remains the fallback for historical deliveries that
+predate the instrumentation, so one real queue delivery attempt produces one
+drill-down event instead of a queue row plus duplicate telemetry.
+
+The notification drill-down summary uses the same health semantics as the
+parent Critical Flow helper `_entry_observability_flow_status_v1`. Failures can
+drive Degraded or Down only under that shared failure-count and failure-rate
+logic. Skipped rows, including `PUSH_NO_ACTIVE_TOKENS`, stay visible as
+deliverability context but do not count as operational failures, so skipped-only
+evidence remains Unknown and success plus skipped evidence remains Healthy.
+
 ## Dashboard Filters
 
 The dashboard defaults to all active ENTRY communities. Operators can filter by
@@ -227,3 +281,18 @@ When adding a new ENTRY feature:
   of provider tiers, credits, or later pricing changes.
 - Critical flow health is conservative and will show Unknown until each flow has
   enough real telemetry.
+- Some notification worker failures happen before a queue row is known. Those
+  events can prove worker/claim failure and provider non-reachability, but they
+  cannot prove which community, message, or recipient was affected.
+- Recovery is inferred only from later success evidence in the same selected
+  channel/window. It is not a full incident lifecycle or delivery trace.
+
+## Follow-up Telemetry Opportunities
+
+- Move the database-side worker invocation credential to Supabase Vault or an
+  equivalent secret-managed mechanism.
+- Bring the deployed `smart-service` Edge Function under repository source
+  control before future runtime changes.
+- Add non-sensitive worker invocation identifiers to queue-claim failures so
+  future incidents can correlate scheduler, worker, and queue state without
+  exposing provider payloads or credentials.
