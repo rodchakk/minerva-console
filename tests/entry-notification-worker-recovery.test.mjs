@@ -102,3 +102,8 @@ test("console fetches and renders worker recovery separately from notification e
   assert.match(panel, /Recovery/);
   assert.match(panel, /Recovered/);
 });
+
+test("worker health absolute timestamps render in the browser locale instead of the server timezone", () => {
+  assert.match(panel, /^"use client";/);
+  assert.match(panel, /new Intl\.DateTimeFormat\("en-US"/);
+});
