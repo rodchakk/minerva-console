@@ -1,3 +1,5 @@
+"use client";
+
 import { AlertTriangle, CheckCircle2, Clock3, RefreshCw, ShieldAlert } from "lucide-react";
 import type { EntryNotificationWorkerHealthResult } from "@/features/entry/observability/notificationWorkerHealth";
 import { cn } from "@/lib/supabase/utils";
