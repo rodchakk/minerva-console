@@ -4,6 +4,7 @@ import {
   MapPinHouse,
   MessageSquareText,
   ShieldCheck,
+  Timer,
   UserRoundSearch,
 } from "lucide-react";
 
@@ -28,6 +29,21 @@ export default async function FieldEntryPage() {
       </section>
 
       <section className="grid gap-2.5" aria-label="ENTRY task choices">
+        <Link href="/field/entry/time" className={taskCardClass}>
+          <span className={iconClass}>
+            <Timer aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold text-[var(--console-text)]">
+              Tiempo
+            </span>
+            <span className="mt-0.5 block break-words text-sm leading-5 text-[var(--console-text-muted)]">
+              Cronometro de trabajo, historial y resumen mensual
+            </span>
+          </span>
+          <ArrowRight aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-[var(--console-text)]" />
+        </Link>
+
         <Link href="/field/entry/tickets" className={taskCardClass}>
           <span className={iconClass}>
             <MessageSquareText aria-hidden="true" className="h-5 w-5" />

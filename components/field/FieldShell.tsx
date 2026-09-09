@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { Home, ShieldCheck, UserCircle } from "lucide-react";
+import { ActiveWorkTimerBanner } from "@/features/entry/field/ActiveWorkTimerBanner";
 import { FieldNav } from "@/components/field/FieldNav";
 import { ENTRY_PREVIEW_READ_ONLY_MESSAGE } from "@/features/entry/deploymentBoundary";
+import type { FieldWorkSession } from "@/features/entry/field/workTimerModel";
 
 type FieldShellProps = {
+  activeWorkSession?: FieldWorkSession | null;
   children: React.ReactNode;
   email: string | null;
+  generatedAtIso?: string;
   previewReadOnly?: boolean;
 };
 
@@ -16,8 +20,10 @@ const desktopNavItems = [
 ];
 
 export function FieldShell({
+  activeWorkSession = null,
   children,
   email,
+  generatedAtIso = new Date().toISOString(),
   previewReadOnly = false,
 }: FieldShellProps) {
   return (
@@ -61,6 +67,13 @@ export function FieldShell({
         <div className="border-b border-amber-300/50 bg-amber-300 px-4 py-2 text-center text-xs font-black uppercase text-slate-950">
           {ENTRY_PREVIEW_READ_ONLY_MESSAGE}
         </div>
+      ) : null}
+
+      {activeWorkSession ? (
+        <ActiveWorkTimerBanner
+          generatedAtIso={generatedAtIso}
+          session={activeWorkSession}
+        />
       ) : null}
 
       <main className="mx-auto min-h-[calc(100vh-4rem)] w-full max-w-4xl px-4 pb-28 pt-5 md:px-6 md:pb-8 md:pt-7">
