@@ -3,6 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
 const EXPO_CHUNK_SIZE = 100
 
+type ServiceClient = ReturnType<typeof createClient>
+
 interface ExpoMessage {
   to: string
   title: string
@@ -33,6 +35,10 @@ interface QueueRow {
   push_body: string
   attempts: number
   target_user_id: string | null
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 function normalizeRow(raw: QueueRowRaw): QueueRow | null {
@@ -67,7 +73,7 @@ function isValidExpoPushToken(token: string): boolean {
 }
 
 async function getRecipientTokens(
-  serviceClient: any,
+  serviceClient: ServiceClient,
   communityId: string,
   targetUserId: string | null,
 ): Promise<string[]> {
@@ -141,16 +147,19 @@ async function sendExpoChunk(messages: ExpoMessage[]): Promise<{
       return { sent: 0, failed: messages.length, providerResponseStatus: expoRes.status, providerResponseBody: raw }
     }
 
-    let expoJson: any
+    let expoJson: unknown
     try { expoJson = await expoRes.json() } catch {
       return { sent: 0, failed: messages.length, providerResponseStatus: expoRes.status, providerResponseBody: 'Invalid JSON' }
     }
 
-    const results = Array.isArray(expoJson?.data) ? expoJson.data : null
+    const results = isRecord(expoJson) && Array.isArray(expoJson.data) ? expoJson.data : null
     if (!results) return { sent: 0, failed: messages.length, providerResponseStatus: expoRes.status, providerResponseBody: JSON.stringify(expoJson) }
 
     let sent = 0, failed = 0
-    for (const ticket of results) { if (ticket?.status === 'ok') sent++; else failed++ }
+    for (const ticket of results) {
+      if (isRecord(ticket) && ticket.status === 'ok') sent++
+      else failed++
+    }
     if (results.length < messages.length) failed += (messages.length - results.length)
 
     return { sent, failed, providerResponseStatus: expoRes.status, providerResponseBody: JSON.stringify(expoJson) }
@@ -161,7 +170,7 @@ async function sendExpoChunk(messages: ExpoMessage[]): Promise<{
 
 // Best-effort logger to system_event_log. Never throws.
 async function logEvent(
-  serviceClient: any,
+  serviceClient: ServiceClient,
   severity: 'INFO' | 'WARN' | 'ERROR',
   eventType: string,
   message: string,
@@ -176,7 +185,7 @@ async function logEvent(
       details,
       source: 'smart-service',
     })
-  } catch (_e) {
+  } catch {
     // swallow — logging must never block the worker
   }
 }
@@ -185,7 +194,7 @@ async function logEvent(
 // success/failure. A successful cycle only proves that the worker could claim
 // and complete its loop; it does not prove Expo delivery health.
 async function recordWorkerCycle(
-  serviceClient: any,
+  serviceClient: ServiceClient,
   input: {
     success: boolean
     claimed: number
@@ -204,14 +213,14 @@ async function recordWorkerCycle(
       p_error_summary: input.errorSummary ?? null,
       p_invocation_id: input.invocationId,
     })
-  } catch (_e) {
+  } catch {
     // fail-open — observability must never block notification processing
   }
 }
 
 Deno.serve(async (req: Request) => {
   const invocationId = crypto.randomUUID()
-  let serviceClient: any = null
+  let serviceClient: ServiceClient | null = null
 
   try {
     if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405)
