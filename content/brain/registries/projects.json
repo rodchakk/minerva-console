@@ -154,5 +154,17 @@
     "tags": ["minerva-console", "entry", "integration", "pilot", "add-product", "connector", "manual-setup", "ai-handoff", "zero-cost"],
     "related": ["PRJ-0001", "MINERVA-CONSOLE-001", "DEC-0008"],
     "path": "content/brain/projects/minerva-console-entry-first-integration-pilot.md"
+  },
+  {
+    "id": "ENTRY-DATA-001",
+    "type": "project",
+    "status": "approved",
+    "title": "ENTRY Data Cleanup Closeout",
+    "summary": "Completed September 3, 2026 cleanup of accumulated non-production ENTRY test tenants and users. Residencial Paradis remains the canonical stable demo/test community, protected Console/Superadmin access remains intact, retained Paradis data passed integrity checks, and a temporary database-side recovery snapshot remains available.",
+    "created": "2026-09-03",
+    "updated": "2026-09-03",
+    "tags": ["entry", "operations", "data-cleanup", "supabase", "demo", "qa", "closeout", "backup"],
+    "related": ["PRJ-0001", "ENTRY-CONSOLE-OPS-001", "MINERVA-FIELD-001"],
+    "path": "content/brain/projects/entry-data-cleanup-closeout-2026-09-03.md"
   }
 ]
