@@ -6,12 +6,14 @@ import {
   ArrowLeft,
   Clipboard,
   Loader2,
-  PauseCircle,
   PlayCircle,
+  Square,
   TimerReset,
+  XCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import {
+  cancelFieldWorkSession,
   startFieldWorkSession,
   stopFieldWorkSession,
   type FieldWorkTimerActionResult,
@@ -19,12 +21,17 @@ import {
 import {
   FIELD_WORK_CLASSIFICATIONS,
   FIELD_WORK_LOCATIONS,
+  FIELD_WORK_TARGET_SCOPES,
+  formatFieldWorkClock,
   formatFieldWorkDuration,
   getFieldWorkClassificationLabel,
   getFieldWorkElapsedSeconds,
   getFieldWorkLocationLabel,
+  getFieldWorkTargetLabel,
   type FieldWorkClassification,
   type FieldWorkLocation,
+  type FieldWorkTargetScope,
+  type FieldWorkTargetSummary,
 } from "@/features/entry/field/workTimerModel";
 import type { FieldWorkTimerPageData } from "@/features/entry/field/workTimerData";
 
@@ -117,33 +124,84 @@ function SummaryGroup({
   );
 }
 
+function TargetSummaryGroup({ items }: { items: FieldWorkTargetSummary[] }) {
+  return (
+    <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+      <h2 className="text-sm font-black uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
+        Seshat grouping
+      </h2>
+      <div className="mt-3 space-y-4">
+        {items.length > 0 ? (
+          items.map((target) => (
+            <article key={target.id} className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="min-w-0 truncate text-sm font-bold text-[var(--console-text)]">
+                  {target.label}
+                </h3>
+                <span className="shrink-0 text-sm font-black text-[var(--console-text)]">
+                  {formatFieldWorkDuration(target.seconds)}
+                </span>
+              </div>
+              <div className="space-y-1">
+                {target.lines.map((line) => (
+                  <div
+                    key={`${target.id}-${line.id}`}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <span className="min-w-0 truncate text-[var(--console-text-muted)]">
+                      {line.label}
+                    </span>
+                    <span className="shrink-0 font-semibold text-[var(--console-text-muted)]">
+                      {formatFieldWorkDuration(line.seconds)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </article>
+          ))
+        ) : (
+          <p className="text-sm text-[var(--console-text-muted)]">
+            No completed sessions.
+          </p>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export function FieldWorkTimerWorkspace({
   data,
   isReadOnlyPreview,
 }: FieldWorkTimerWorkspaceProps) {
   const router = useRouter();
+  const [targetScope, setTargetScope] =
+    useState<FieldWorkTargetScope>("PRODUCT");
   const [classification, setClassification] =
-    useState<FieldWorkClassification>("onboarding");
+    useState<FieldWorkClassification>("ONBOARDING");
   const [workLocation, setWorkLocation] = useState<FieldWorkLocation>("onsite");
   const [communityId, setCommunityId] = useState("");
   const [notes, setNotes] = useState("");
   const [notice, setNotice] = useState<string | null>(data.error);
   const [copied, setCopied] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
   const [isPending, startTransition] = useTransition();
   const activeElapsedSeconds = useElapsedSeconds(
     data.activeSession?.startedAt ?? null,
   );
   const activeDuration = data.activeSession ? activeElapsedSeconds : 0;
-  const controlsDisabled = isPending || isReadOnlyPreview || !!data.activeSession;
+  const hasClientTargetGap = targetScope === "CLIENT" && !communityId;
+  const formDisabled = isPending || isReadOnlyPreview || !!data.activeSession;
+  const startDisabled = formDisabled || hasClientTargetGap;
 
   function handleStart() {
-    if (controlsDisabled) return;
+    if (startDisabled) return;
     setNotice(null);
     startTransition(async () => {
       const result = await startFieldWorkSession({
         classification,
-        communityId: communityId || null,
+        communityId: targetScope === "CLIENT" ? communityId : null,
         notes,
+        targetScope,
         workLocation,
       });
       setNotice(getResultMessage(result, "Timer started."));
@@ -163,6 +221,28 @@ export function FieldWorkTimerWorkspace({
         sessionId: activeSession.id,
       });
       setNotice(getResultMessage(result, "Timer stopped."));
+      setConfirmingCancel(false);
+      if (result.success) router.refresh();
+    });
+  }
+
+  function handleCancel() {
+    const activeSession = data.activeSession;
+    if (isPending || isReadOnlyPreview || !activeSession) return;
+
+    if (!confirmingCancel) {
+      setConfirmingCancel(true);
+      setNotice("Press Confirm cancel to cancel this active session.");
+      return;
+    }
+
+    setNotice(null);
+    startTransition(async () => {
+      const result = await cancelFieldWorkSession({
+        sessionId: activeSession.id,
+      });
+      setNotice(getResultMessage(result, "Timer cancelled."));
+      setConfirmingCancel(false);
       if (result.success) router.refresh();
     });
   }
@@ -198,7 +278,7 @@ export function FieldWorkTimerWorkspace({
               Work timer
             </h1>
             <p className="mt-1 text-sm leading-5 text-[var(--console-text-muted)]">
-              Capture staff work time for ENTRY communities.
+              Capture staff work time for ENTRY labor.
             </p>
           </div>
           <span className="rounded-full border border-[var(--console-border)] bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-[var(--console-text-muted)]">
@@ -225,8 +305,8 @@ export function FieldWorkTimerWorkspace({
             <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
               Current session
             </p>
-            <p className="mt-2 text-4xl font-semibold text-[var(--console-text)]">
-              {formatFieldWorkDuration(activeDuration)}
+            <p className="mt-2 text-4xl font-semibold text-[var(--console-text)] tabular-nums">
+              {formatFieldWorkClock(activeDuration)}
             </p>
           </div>
           <TimerReset
@@ -238,35 +318,51 @@ export function FieldWorkTimerWorkspace({
         {data.activeSession ? (
           <div className="mt-4 rounded-lg border border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] p-3">
             <p className="text-sm font-bold text-[var(--console-text)]">
-              {getFieldWorkClassificationLabel(data.activeSession.classification)} ·{" "}
-              {getFieldWorkLocationLabel(data.activeSession.workLocation)}
+              {getFieldWorkTargetLabel(data.activeSession)}
             </p>
             <p className="mt-1 text-sm text-[var(--console-text-muted)]">
-              {data.activeSession.communityName}
+              {getFieldWorkClassificationLabel(data.activeSession.classification)} -{" "}
+              {getFieldWorkLocationLabel(data.activeSession.workLocation)}
             </p>
-            {data.activeSession.notes ? (
-              <p className="mt-2 text-sm leading-5 text-[var(--console-text-muted)]">
-                {data.activeSession.notes}
-              </p>
-            ) : null}
           </div>
         ) : (
           <div className="mt-4 space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-[var(--console-text)]">
+                Target
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {FIELD_WORK_TARGET_SCOPES.map((item) => (
+                  <ChoiceButton
+                    key={item.id}
+                    active={targetScope === item.id}
+                    disabled={formDisabled}
+                    onClick={() => {
+                      setTargetScope(item.id);
+                      if (item.id === "PRODUCT") setCommunityId("");
+                    }}
+                  >
+                    {item.label}
+                  </ChoiceButton>
+                ))}
+              </div>
+            </div>
+
             <div>
               <label
                 htmlFor="field-work-community"
                 className="text-sm font-semibold text-[var(--console-text)]"
               >
-                Community
+                Client community
               </label>
               <select
                 id="field-work-community"
                 value={communityId}
-                disabled={controlsDisabled}
+                disabled={formDisabled || targetScope === "PRODUCT"}
                 onChange={(event) => setCommunityId(event.target.value)}
                 className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent-border)] disabled:opacity-50"
               >
-                <option value="">ENTRY general</option>
+                <option value="">Choose community</option>
                 {data.communities.map((community) => (
                   <option key={community.id} value={community.id}>
                     {community.name}
@@ -284,7 +380,7 @@ export function FieldWorkTimerWorkspace({
                   <ChoiceButton
                     key={item.id}
                     active={classification === item.id}
-                    disabled={controlsDisabled}
+                    disabled={formDisabled}
                     onClick={() => setClassification(item.id)}
                   >
                     {item.label}
@@ -302,7 +398,7 @@ export function FieldWorkTimerWorkspace({
                   <ChoiceButton
                     key={item.id}
                     active={workLocation === item.id}
-                    disabled={controlsDisabled}
+                    disabled={formDisabled}
                     onClick={() => setWorkLocation(item.id)}
                   >
                     {item.label}
@@ -320,7 +416,7 @@ export function FieldWorkTimerWorkspace({
                 value={notes}
                 maxLength={2000}
                 rows={3}
-                disabled={controlsDisabled}
+                disabled={formDisabled}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Optional context for the work session"
                 className="mt-2 min-h-24 w-full resize-y rounded-lg border border-[var(--console-border)] bg-black/20 px-3 py-3 text-base leading-6 text-[var(--console-text)] outline-none placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)] disabled:opacity-50"
@@ -332,22 +428,30 @@ export function FieldWorkTimerWorkspace({
         <button
           type="button"
           onClick={data.activeSession ? handleStop : handleStart}
-          disabled={
-            isPending ||
-            isReadOnlyPreview ||
-            (!data.activeSession && controlsDisabled)
-          }
+          disabled={isPending || isReadOnlyPreview || (!data.activeSession && startDisabled)}
           className="mt-4 flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-4 text-sm font-black text-white transition-opacity disabled:opacity-50"
         >
           {isPending ? (
             <Loader2 aria-hidden="true" className="h-5 w-5 animate-spin" />
           ) : data.activeSession ? (
-            <PauseCircle aria-hidden="true" className="h-5 w-5" />
+            <Square aria-hidden="true" className="h-5 w-5" />
           ) : (
             <PlayCircle aria-hidden="true" className="h-5 w-5" />
           )}
           {data.activeSession ? "Stop timer" : "Start timer"}
         </button>
+
+        {data.activeSession ? (
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={isPending || isReadOnlyPreview}
+            className="mt-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-4 text-sm font-black text-[var(--console-text-muted)] transition-colors hover:bg-white/[0.06] disabled:opacity-50"
+          >
+            <XCircle aria-hidden="true" className="h-5 w-5" />
+            {confirmingCancel ? "Confirm cancel" : "Cancel session"}
+          </button>
+        ) : null}
       </section>
 
       <section className="grid grid-cols-2 gap-3">
@@ -384,7 +488,9 @@ export function FieldWorkTimerWorkspace({
         </Link>
       </nav>
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <TargetSummaryGroup items={data.summary.byTarget} />
+
+      <div className="grid gap-3 md:grid-cols-2">
         <SummaryGroup
           title="Classification"
           items={data.summary.byClassification}
@@ -394,11 +500,6 @@ export function FieldWorkTimerWorkspace({
           title="Location"
           items={data.summary.byLocation}
           emptyLabel="No location totals."
-        />
-        <SummaryGroup
-          title="Community"
-          items={data.summary.byCommunity}
-          emptyLabel="No community totals."
         />
       </div>
 
@@ -427,37 +528,56 @@ export function FieldWorkTimerWorkspace({
       </section>
 
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
-        <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
-          History
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
+            History
+          </p>
+          <span className="text-xs font-semibold text-[var(--console-text-muted)]">
+            {data.summarySessionCount} loaded
+          </span>
+        </div>
+        {data.historyTruncated ? (
+          <p className="mt-2 text-xs text-[var(--console-text-muted)]">
+            Showing latest {data.historyLimit}; summary includes all loaded month sessions.
+          </p>
+        ) : null}
         <div className="mt-3 space-y-2">
           {data.sessions.length > 0 ? (
-            data.sessions.map((session) => (
-              <article
-                key={session.id}
-                className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] p-3"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-[var(--console-text)]">
-                      {getFieldWorkClassificationLabel(session.classification)} ·{" "}
-                      {getFieldWorkLocationLabel(session.workLocation)}
-                    </p>
-                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">
-                      {session.communityName}
-                    </p>
+            data.sessions.map((session) => {
+              const durationLabel =
+                session.status === "CANCELLED"
+                  ? "Cancelled"
+                  : session.status === "ACTIVE"
+                    ? "Active"
+                    : formatFieldWorkDuration(getFieldWorkElapsedSeconds(session));
+
+              return (
+                <article
+                  key={session.id}
+                  className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] p-3"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-[var(--console-text)]">
+                        {getFieldWorkTargetLabel(session)}
+                      </p>
+                      <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                        {getFieldWorkClassificationLabel(session.classification)} -{" "}
+                        {getFieldWorkLocationLabel(session.workLocation)}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-sm font-black text-[var(--console-text)]">
+                      {durationLabel}
+                    </span>
                   </div>
-                  <span className="shrink-0 text-sm font-black text-[var(--console-text)]">
-                    {formatFieldWorkDuration(getFieldWorkElapsedSeconds(session))}
-                  </span>
-                </div>
-                {session.notes ? (
-                  <p className="mt-2 text-sm leading-5 text-[var(--console-text-muted)]">
-                    {session.notes}
-                  </p>
-                ) : null}
-              </article>
-            ))
+                  {session.notes ? (
+                    <p className="mt-2 text-sm leading-5 text-[var(--console-text-muted)]">
+                      {session.notes}
+                    </p>
+                  ) : null}
+                </article>
+              );
+            })
           ) : (
             <p className="text-sm text-[var(--console-text-muted)]">
               No sessions recorded for this month.

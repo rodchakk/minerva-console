@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Home, ShieldCheck, UserCircle } from "lucide-react";
 import { FieldNav } from "@/components/field/FieldNav";
 import { ENTRY_PREVIEW_READ_ONLY_MESSAGE } from "@/features/entry/deploymentBoundary";
+import { FieldActiveWorkTimerIndicator } from "@/features/entry/field/FieldActiveWorkTimerIndicator";
+import type { FieldActiveWorkTimer } from "@/features/entry/field/workTimerModel";
 
 type FieldShellProps = {
+  activeWorkTimer?: FieldActiveWorkTimer | null;
   children: React.ReactNode;
   email: string | null;
   previewReadOnly?: boolean;
@@ -16,6 +19,7 @@ const desktopNavItems = [
 ];
 
 export function FieldShell({
+  activeWorkTimer = null,
   children,
   email,
   previewReadOnly = false,
@@ -60,6 +64,14 @@ export function FieldShell({
       {previewReadOnly ? (
         <div className="border-b border-amber-300/50 bg-amber-300 px-4 py-2 text-center text-xs font-black uppercase text-slate-950">
           {ENTRY_PREVIEW_READ_ONLY_MESSAGE}
+        </div>
+      ) : null}
+
+      {activeWorkTimer ? (
+        <div className="border-b border-[var(--console-border)] bg-[rgba(20,20,20,0.88)] px-4 py-2">
+          <div className="mx-auto flex max-w-4xl justify-end">
+            <FieldActiveWorkTimerIndicator session={activeWorkTimer} />
+          </div>
         </div>
       ) : null}
 

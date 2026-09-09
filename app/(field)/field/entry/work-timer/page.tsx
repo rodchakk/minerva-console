@@ -1,6 +1,7 @@
 import { FieldWorkTimerWorkspace } from "@/features/entry/field/FieldWorkTimerWorkspace";
 import { getFieldWorkTimerPageData } from "@/features/entry/field/workTimerData";
 import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
+import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 
 type FieldEntryWorkTimerPageProps = {
   searchParams: Promise<{
@@ -16,7 +17,8 @@ export default async function FieldEntryWorkTimerPage({
   searchParams,
 }: FieldEntryWorkTimerPageProps) {
   const params = await searchParams;
-  const data = await getFieldWorkTimerPageData(getSearchParam(params.month));
+  const { user } = await requireSuperadmin();
+  const data = await getFieldWorkTimerPageData(user, getSearchParam(params.month));
 
   return (
     <FieldWorkTimerWorkspace

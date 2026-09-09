@@ -5,10 +5,13 @@ import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getCommunitiesWithProgressResult } from "@/features/entry/communities/queries";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import {
+  FIELD_WORK_PRODUCT_KEY,
   isFieldWorkClassification,
   isFieldWorkLocation,
+  isFieldWorkTargetScope,
   type FieldWorkClassification,
   type FieldWorkLocation,
+  type FieldWorkTargetScope,
 } from "@/features/entry/field/workTimerModel";
 import { createClient } from "@/lib/supabase/server";
 
@@ -18,6 +21,7 @@ export type FieldWorkTimerActionResult = {
 };
 
 function revalidateWorkTimer() {
+  revalidatePath("/field");
   revalidatePath("/field/entry");
   revalidatePath("/field/entry/work-timer");
 }
@@ -26,17 +30,25 @@ function cleanNotes(value: string) {
   return value.trim().replace(/\s+/g, " ").slice(0, 2000);
 }
 
-async function resolveCommunity(communityId: string | null) {
-  if (!communityId) {
+async function resolveTarget(input: {
+  communityId: string | null;
+  targetScope: FieldWorkTargetScope;
+}) {
+  if (input.targetScope === "PRODUCT") {
     return {
       communityId: null,
+      communityIdSnapshot: null,
       communityName: null,
     };
   }
 
+  if (!input.communityId) {
+    throw new Error("Choose a community for client work.");
+  }
+
   const communities = await getCommunitiesWithProgressResult();
   const community =
-    communities.items.find((item) => item.id === communityId) ?? null;
+    communities.items.find((item) => item.id === input.communityId) ?? null;
 
   if (!community) {
     throw new Error("Selected community is not available to Field.");
@@ -44,6 +56,7 @@ async function resolveCommunity(communityId: string | null) {
 
   return {
     communityId: community.id,
+    communityIdSnapshot: community.id,
     communityName: community.name,
   };
 }
@@ -52,12 +65,17 @@ export async function startFieldWorkSession(input: {
   classification: FieldWorkClassification;
   communityId: string | null;
   notes: string;
+  targetScope: FieldWorkTargetScope;
   workLocation: FieldWorkLocation;
 }): Promise<FieldWorkTimerActionResult> {
   const { user } = await requireSuperadmin();
   const previewReadOnlyError = getEntryPreviewReadOnlyError();
   if (previewReadOnlyError) {
     return { error: previewReadOnlyError, success: false };
+  }
+
+  if (!isFieldWorkTargetScope(input.targetScope)) {
+    return { error: "Choose ENTRY general or client work.", success: false };
   }
 
   if (!isFieldWorkClassification(input.classification)) {
@@ -68,12 +86,15 @@ export async function startFieldWorkSession(input: {
     return { error: "Choose onsite or remote work.", success: false };
   }
 
-  let community;
+  let target;
   try {
-    community = await resolveCommunity(input.communityId?.trim() || null);
+    target = await resolveTarget({
+      communityId: input.communityId?.trim() || null,
+      targetScope: input.targetScope,
+    });
   } catch (error) {
     return {
-      error: error instanceof Error ? error.message : "Invalid community.",
+      error: error instanceof Error ? error.message : "Invalid work target.",
       success: false,
     };
   }
@@ -83,7 +104,7 @@ export async function startFieldWorkSession(input: {
     .from("entry_field_work_sessions")
     .select("id")
     .eq("staff_user_id", user.id)
-    .is("stopped_at", null)
+    .eq("status", "ACTIVE")
     .limit(1)
     .maybeSingle();
 
@@ -97,13 +118,15 @@ export async function startFieldWorkSession(input: {
 
   const { error } = await supabase.from("entry_field_work_sessions").insert({
     classification: input.classification,
-    community_id: community.communityId,
-    community_name_snapshot: community.communityName,
+    community_id: target.communityId,
+    community_id_snapshot: target.communityIdSnapshot,
+    community_name_snapshot: target.communityName,
     notes: cleanNotes(input.notes),
-    product_area: "entry",
+    product_key: FIELD_WORK_PRODUCT_KEY,
     staff_email_snapshot: user.email,
     staff_user_id: user.id,
-    started_at: new Date().toISOString(),
+    status: "ACTIVE",
+    target_scope: input.targetScope,
     work_location: input.workLocation,
   });
 
@@ -135,7 +158,7 @@ export async function stopFieldWorkSession(input: {
     .select("id,started_at")
     .eq("id", sessionId)
     .eq("staff_user_id", user.id)
-    .is("stopped_at", null)
+    .eq("status", "ACTIVE")
     .maybeSingle();
 
   if (readError || !session) {
@@ -151,18 +174,64 @@ export async function stopFieldWorkSession(input: {
     ? 0
     : Math.max(0, Math.floor((stoppedAt.getTime() - startedAt.getTime()) / 1000));
 
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from("entry_field_work_sessions")
     .update({
       duration_seconds: durationSeconds,
+      status: "COMPLETED",
       stopped_at: stoppedAt.toISOString(),
     })
     .eq("id", sessionId)
     .eq("staff_user_id", user.id)
-    .is("stopped_at", null);
+    .eq("status", "ACTIVE")
+    .select("id")
+    .maybeSingle();
 
-  if (error) {
-    return { error: error.message, success: false };
+  if (error || !updated) {
+    return {
+      error: error?.message ?? "Active timer was already stopped.",
+      success: false,
+    };
+  }
+
+  revalidateWorkTimer();
+  return { success: true };
+}
+
+export async function cancelFieldWorkSession(input: {
+  sessionId: string;
+}): Promise<FieldWorkTimerActionResult> {
+  const { user } = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const sessionId = input.sessionId.trim();
+  if (!sessionId) {
+    return { error: "Active session is required.", success: false };
+  }
+
+  const supabase = await createClient();
+  const stoppedAt = new Date();
+  const { data: updated, error } = await supabase
+    .from("entry_field_work_sessions")
+    .update({
+      duration_seconds: null,
+      status: "CANCELLED",
+      stopped_at: stoppedAt.toISOString(),
+    })
+    .eq("id", sessionId)
+    .eq("staff_user_id", user.id)
+    .eq("status", "ACTIVE")
+    .select("id")
+    .maybeSingle();
+
+  if (error || !updated) {
+    return {
+      error: error?.message ?? "Active timer was not found.",
+      success: false,
+    };
   }
 
   revalidateWorkTimer();
