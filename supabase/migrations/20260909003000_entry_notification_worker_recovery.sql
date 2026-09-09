@@ -27,6 +27,51 @@ revoke all on table public.entry_notification_worker_health from service_role;
 comment on table public.entry_notification_worker_health is
   'Single-row-per-worker durable heartbeat state for ENTRY notification worker observability. No push content, recipient identifiers, provider payloads, tokens, or credentials.';
 
+-- Preserve the incident that motivated this instrumentation. If a claim-level
+-- worker failure already exists before heartbeat tracking is deployed, seed it
+-- as the unresolved baseline. The first later successful cycle will then prove
+-- recovery instead of erasing the historical failure.
+with latest_claim_failure as (
+  select
+    s.created_at,
+    public._entry_notification_observability_sanitize_text_v1(
+      coalesce(s.details->>'error', s.details->>'error_message', s.message),
+      'Worker claim failed without a sanitized reason'
+    ) as error_summary
+  from public.system_event_log s
+  where s.event_type = 'PUSH_CLAIM_RPC_ERROR'
+    and coalesce(s.source, '') = 'smart-service'
+  order by s.created_at desc
+  limit 1
+)
+insert into public.entry_notification_worker_health (
+  worker_name,
+  last_cycle_at,
+  last_success_at,
+  last_failure_at,
+  last_status,
+  consecutive_failures,
+  last_claimed,
+  last_processed,
+  last_error_code,
+  last_error_summary,
+  updated_at
+)
+select
+  'community_message_push',
+  f.created_at,
+  null,
+  f.created_at,
+  'failure',
+  1,
+  0,
+  0,
+  'PUSH_CLAIM_RPC_ERROR',
+  f.error_summary,
+  now()
+from latest_claim_failure f
+on conflict (worker_name) do nothing;
+
 create or replace function public.record_entry_notification_worker_cycle_v1(
   p_success boolean,
   p_claimed integer default 0,
