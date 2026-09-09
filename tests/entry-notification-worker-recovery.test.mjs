@@ -30,6 +30,14 @@ test("worker health model is durable, single-row, and service-write-only", () =>
   assert.doesNotMatch(migration, /grant execute on function public\.record_entry_notification_worker_cycle_v1[\s\S]*to authenticated/);
 });
 
+test("existing claim failure is backfilled so the motivating incident can later prove recovery", () => {
+  assert.match(migration, /with latest_claim_failure as/);
+  assert.match(migration, /s\.event_type = 'PUSH_CLAIM_RPC_ERROR'/);
+  assert.match(migration, /coalesce\(s\.source, ''\) = 'smart-service'/);
+  assert.match(migration, /'PUSH_CLAIM_RPC_ERROR'/);
+  assert.match(migration, /on conflict \(worker_name\) do nothing/);
+});
+
 test("worker success and failure cycles preserve recovery semantics", () => {
   assert.match(migration, /last_success_at = case[\s\S]*when p_success then excluded\.last_cycle_at/);
   assert.match(migration, /last_failure_at = case[\s\S]*when p_success then public\.entry_notification_worker_health\.last_failure_at/);
