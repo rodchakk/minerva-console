@@ -4,6 +4,7 @@ import {
   MapPinHouse,
   MessageSquareText,
   ShieldCheck,
+  TimerReset,
   UserRoundSearch,
 } from "lucide-react";
 
@@ -53,6 +54,21 @@ export default async function FieldEntryPage() {
             </span>
             <span className="mt-0.5 block break-words text-sm leading-5 text-[var(--console-text-muted)]">
               Registration, units, setup and community work
+            </span>
+          </span>
+          <ArrowRight aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-[var(--console-text)]" />
+        </Link>
+
+        <Link href="/field/entry/work-timer" className={taskCardClass}>
+          <span className={iconClass}>
+            <TimerReset aria-hidden="true" className="h-5 w-5" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg font-semibold text-[var(--console-text)]">
+              Work timer
+            </span>
+            <span className="mt-0.5 block break-words text-sm leading-5 text-[var(--console-text-muted)]">
+              Capture Field work time by community and task type
             </span>
           </span>
           <ArrowRight aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-[var(--console-text)]" />
