@@ -2,7 +2,9 @@ import Link from "next/link";
 import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { NotificationObservabilityDrilldown } from "@/features/entry/observability/NotificationObservabilityDrilldown";
+import { NotificationWorkerHealthPanel } from "@/features/entry/observability/NotificationWorkerHealthPanel";
 import { ObservabilityFilters } from "@/features/entry/observability/ObservabilityFilters";
+import { getEntryNotificationWorkerHealth } from "@/features/entry/observability/notificationWorkerHealth";
 import {
   getEntryNotificationObservability,
   normalizeEntryObservabilityRange,
@@ -70,10 +72,14 @@ export default async function EntryNotificationObservabilityPage(props: {
   const communityId = Array.isArray(searchParams.community)
     ? searchParams.community[0]
     : searchParams.community;
-  const result = await getEntryNotificationObservability({
-    communityId: communityId ?? null,
-    range,
-  });
+
+  const [result, workerHealth] = await Promise.all([
+    getEntryNotificationObservability({
+      communityId: communityId ?? null,
+      range,
+    }),
+    getEntryNotificationWorkerHealth(),
+  ]);
 
   const communities = result.state === "ready" ? result.data.communities : [];
   const selectedCommunity =
@@ -105,6 +111,8 @@ export default async function EntryNotificationObservabilityPage(props: {
         }
       />
 
+      <NotificationWorkerHealthPanel result={workerHealth} />
+
       {result.state === "unavailable" ? (
         <UnavailableState error={result.error} />
       ) : (
@@ -113,4 +121,3 @@ export default async function EntryNotificationObservabilityPage(props: {
     </div>
   );
 }
-

@@ -441,10 +441,9 @@ export function NotificationObservabilityDrilldown({
       </section>
 
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-5 py-4 text-sm leading-6 text-[var(--console-text-muted)]">
-        Follow-up: move the database-side worker invocation credential to
-        Supabase Vault or a managed secret path, and bring the deployed
-        smart-service Edge Function under repository source control before
-        future runtime changes.
+        Worker recovery telemetry now uses the repository-controlled smart-service
+        source. Remaining hardening: move the database-side worker invocation
+        credential to Supabase Vault or another managed secret path.
       </section>
     </div>
   );

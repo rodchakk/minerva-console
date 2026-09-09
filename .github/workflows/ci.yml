@@ -96,6 +96,7 @@ jobs:
           node --test tests/entry-critical-flow-instrumentation.test.mjs
           node --test tests/entry-observability-signal-dedup.test.mjs
           node --test tests/entry-notification-observability.test.mjs
+          node --test tests/entry-notification-worker-recovery.test.mjs
 
   entry-ocr-hardening-tests:
     name: ENTRY OCR hardening regressions
