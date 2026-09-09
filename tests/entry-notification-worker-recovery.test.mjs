@@ -20,14 +20,29 @@ const panel = read(
   "features/entry/observability/NotificationWorkerHealthPanel.tsx",
 );
 
+function between(source, start, end) {
+  const startIndex = source.indexOf(start);
+  const endIndex = source.indexOf(end, startIndex + start.length);
+  assert.notEqual(startIndex, -1, `missing start marker: ${start}`);
+  assert.notEqual(endIndex, -1, `missing end marker: ${end}`);
+  return source.slice(startIndex, endIndex);
+}
+
 test("worker health model is durable, single-row, and service-write-only", () => {
   assert.match(migration, /create table if not exists public\.entry_notification_worker_health/);
   assert.match(migration, /worker_name text primary key/);
   assert.match(migration, /alter table public\.entry_notification_worker_health enable row level security/);
   assert.match(migration, /revoke all on table public\.entry_notification_worker_health from public, anon, authenticated/);
   assert.match(migration, /record_entry_notification_worker_cycle_v1/);
-  assert.match(migration, /grant execute on function public\.record_entry_notification_worker_cycle_v1[\s\S]*to service_role/);
-  assert.doesNotMatch(migration, /grant execute on function public\.record_entry_notification_worker_cycle_v1[\s\S]*to authenticated/);
+
+  const writerPermissions = between(
+    migration,
+    "revoke all on function public.record_entry_notification_worker_cycle_v1(",
+    "comment on function public.record_entry_notification_worker_cycle_v1(",
+  );
+  assert.match(writerPermissions, /from public, anon, authenticated/);
+  assert.match(writerPermissions, /to service_role/);
+  assert.doesNotMatch(writerPermissions, /to authenticated/);
 });
 
 test("existing claim failure is backfilled so the motivating incident can later prove recovery", () => {
