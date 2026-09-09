@@ -1,6 +1,6 @@
 create table if not exists public.entry_field_work_sessions (
   id uuid primary key default gen_random_uuid(),
-  staff_user_id uuid not null references auth.users(id) on delete cascade,
+  staff_user_id uuid not null references auth.users(id) on delete restrict,
   staff_email_snapshot text,
   product_key text not null default 'ENTRY',
   target_scope text not null,

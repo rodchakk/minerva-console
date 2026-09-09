@@ -73,7 +73,11 @@ test("ENTRY Field exposes a dedicated work timer without reopening onboarding", 
 
 test("work timer schema has explicit target, status, ENTRY product, and RLS", () => {
   assert.match(migration, /create table if not exists public\.entry_field_work_sessions/);
-  assert.match(migration, /staff_user_id uuid not null references auth\.users/);
+  assert.match(migration, /staff_user_id uuid not null references auth\.users\(id\) on delete restrict/);
+  assert.doesNotMatch(
+    migration,
+    /staff_user_id uuid not null references auth\.users\(id\) on delete cascade/i,
+  );
   assert.match(migration, /product_key text not null default 'ENTRY'/);
   assert.match(migration, /target_scope text not null/);
   assert.match(migration, /community_id uuid references public\.communities\(id\) on delete set null/);
