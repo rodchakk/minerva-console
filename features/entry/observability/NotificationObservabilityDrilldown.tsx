@@ -107,6 +107,12 @@ function sentenceLabel(value: string | null) {
     .replace(/^\w/, (letter) => letter.toUpperCase());
 }
 
+function formatProviderReached(value: boolean | null) {
+  if (value === true) return "Yes";
+  if (value === false) return "No";
+  return "Unknown";
+}
+
 function SummaryCard({
   icon: Icon,
   label,
@@ -234,7 +240,7 @@ function EventDetail({ event }: { event: EntryNotificationObservabilityEvent }) 
           <DetailRow label="Attempts" value={formatNumber(event.attempts)} />
           <DetailRow
             label="Provider reached"
-            value={event.providerReached ? "Yes" : "No"}
+            value={formatProviderReached(event.providerReached)}
           />
           <DetailRow
             label="Duration"

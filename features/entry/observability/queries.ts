@@ -185,7 +185,7 @@ export type EntryNotificationObservabilityEvent = {
   messageLabel: string | null;
   occurredAt: string;
   operation: string;
-  providerReached: boolean;
+  providerReached: boolean | null;
   queueId: string | null;
   recoveredAt: string | null;
   recoverySummary: string | null;
@@ -284,6 +284,11 @@ function asBoolean(value: unknown, fallback = false) {
   }
 
   return fallback;
+}
+
+function asNullableBoolean(value: unknown) {
+  if (value === null || value === undefined || value === "") return null;
+  return asBoolean(value, false);
 }
 
 function normalizeStatus(value: unknown): EntryObservabilityStatus {
@@ -642,7 +647,7 @@ function mapNotificationEvents(
         messageLabel: asNullableString(record.message_label),
         occurredAt,
         operation: asString(record.operation, "Notification event"),
-        providerReached: asBoolean(record.provider_reached),
+        providerReached: asNullableBoolean(record.provider_reached),
         queueId: asNullableString(record.queue_id),
         recoveredAt: asNullableString(record.recovered_at),
         recoverySummary: asNullableString(record.recovery_summary),

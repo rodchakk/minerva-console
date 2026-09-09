@@ -32,10 +32,32 @@ function normalizeQueueStatus(row) {
   return "unknown";
 }
 
+function normalizeQueueProviderReached(row) {
+  if (row.lastError?.startsWith("no active push tokens")) return false;
+  if (row.status === "sent") return true;
+  if (row.providerResponse !== null && row.providerResponse !== undefined) return true;
+  return null;
+}
+
 function normalizeSystemStatus(row) {
   if (row.eventType === "NOTIFICATION_SENT") return "success";
   if (row.eventType === "NOTIFICATION_FAILED") return "failed";
+  if (row.eventType === "SOS_PUSH_NO_GUARD_TOKENS") return "skipped";
   return "unknown";
+}
+
+function normalizeSystemProviderReached(row) {
+  if (["PUSH_CLAIM_RPC_ERROR", "SOS_PUSH_NO_GUARD_TOKENS"].includes(row.eventType)) {
+    return false;
+  }
+  if (row.eventType === "NOTIFICATION_SENT") return true;
+  if (row.queueProviderResponse !== null && row.queueProviderResponse !== undefined) {
+    return true;
+  }
+  if (row.providerProof !== null && row.providerProof !== undefined && row.providerProof !== "") {
+    return true;
+  }
+  return null;
 }
 
 function normalizePushEvidence({ queueRows = [], systemRows = [] }) {
@@ -61,15 +83,22 @@ function normalizePushEvidence({ queueRows = [], systemRows = [] }) {
       )
       .map((row) => ({
         id: `queue:${row.id}`,
+        providerReached: normalizeQueueProviderReached(row),
         source: "community_message_push_queue",
         status: normalizeQueueStatus(row),
       })),
     ...systemRows
       .filter((row) =>
-        ["NOTIFICATION_SENT", "NOTIFICATION_FAILED"].includes(row.eventType),
+        [
+          "NOTIFICATION_SENT",
+          "NOTIFICATION_FAILED",
+          "PUSH_CLAIM_RPC_ERROR",
+          "SOS_PUSH_NO_GUARD_TOKENS",
+        ].includes(row.eventType),
       )
       .map((row) => ({
         id: `system:${row.id}`,
+        providerReached: normalizeSystemProviderReached(row),
         source: "system_event_log",
         status: normalizeSystemStatus(row),
       })),
@@ -184,6 +213,69 @@ test("terminal push queue rows remain fallback evidence without explicit telemet
   assert.equal(fallbackEvents.length, 1);
   assert.equal(fallbackEvents[0].source, "community_message_push_queue");
   assert.equal(summary.failedCount, 1);
+});
+
+test("provider reachability remains tri-state and evidence-based", () => {
+  assert.match(
+    migration,
+    /when s\.event_type in \('PUSH_CLAIM_RPC_ERROR', 'SOS_PUSH_NO_GUARD_TOKENS'\) then false/,
+  );
+  assert.match(migration, /when lower\(coalesce\(q\.last_error, ''\)\) like 'no active push tokens%' then false/);
+  assert.match(migration, /when s\.event_type = 'NOTIFICATION_SENT' then true/);
+  assert.match(migration, /else null::boolean/);
+  assert.doesNotMatch(migration, /q\.provider_response is not null then true\s+else false/);
+
+  const events = normalizePushEvidence({
+    queueRows: [
+      {
+        id: "no-token-queue",
+        lastError: "no active push tokens for message",
+        status: "failed",
+      },
+      {
+        id: "historical-failed-queue",
+        providerResponse: null,
+        status: "failed",
+      },
+    ],
+    systemRows: [
+      {
+        entityId: null,
+        entityType: null,
+        eventType: "PUSH_CLAIM_RPC_ERROR",
+        id: "claim-error",
+      },
+      {
+        entityId: "sent-queue",
+        entityType: "community_message_push_queue",
+        eventType: "NOTIFICATION_SENT",
+        id: "sent-event",
+      },
+      {
+        entityId: "failed-queue",
+        entityType: "community_message_push_queue",
+        eventType: "NOTIFICATION_FAILED",
+        id: "failed-event",
+      },
+    ],
+  });
+  const byId = new Map(events.map((event) => [event.id, event]));
+
+  assert.equal(byId.get("system:claim-error")?.providerReached, false);
+  assert.equal(byId.get("queue:no-token-queue")?.providerReached, false);
+  assert.equal(byId.get("system:sent-event")?.providerReached, true);
+  assert.equal(byId.get("system:failed-event")?.providerReached, null);
+  assert.equal(byId.get("queue:historical-failed-queue")?.providerReached, null);
+});
+
+test("provider reachability contract preserves null through TypeScript and UI", () => {
+  assert.match(queries, /providerReached: boolean \| null/);
+  assert.match(queries, /function asNullableBoolean\(value: unknown\)/);
+  assert.match(queries, /providerReached: asNullableBoolean\(record\.provider_reached\)/);
+  assert.doesNotMatch(queries, /providerReached: asBoolean\(record\.provider_reached\)/);
+  assert.match(drilldown, /function formatProviderReached\(value: boolean \| null\)/);
+  assert.match(drilldown, /return "Unknown"/);
+  assert.match(drilldown, /value=\{formatProviderReached\(event\.providerReached\)\}/);
 });
 
 test("notification summary health mirrors existing critical-flow semantics", () => {

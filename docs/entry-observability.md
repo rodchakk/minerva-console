@@ -223,6 +223,14 @@ so the drill-down must not describe failed queue rows as automatically retried.
 "No active push tokens" is displayed as a non-provider deliverability condition,
 not as an Expo outage.
 
+Notification provider reachability is tri-state. `provider_reached=true` means
+durable evidence proves provider contact, such as `NOTIFICATION_SENT` or a
+persisted provider response/reference. `provider_reached=false` is reserved for
+known pre-provider conditions such as `PUSH_CLAIM_RPC_ERROR`,
+`PUSH_NO_ACTIVE_TOKENS`, and `SOS_PUSH_NO_GUARD_TOKENS`. Ambiguous delivery
+failures remain `provider_reached=null`; the read model must not infer provider
+non-reachability solely because `provider_response` is null.
+
 Terminal push evidence has one canonical owner. When explicit
 `NOTIFICATION_SENT` or `NOTIFICATION_FAILED` system telemetry exists for a
 `community_message_push_queue` row through `entity_type` of

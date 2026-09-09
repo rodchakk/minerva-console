@@ -251,7 +251,7 @@ begin
         when lower(coalesce(q.last_error, '')) like 'no active push tokens%' then false
         when lower(q.status) = 'sent' then true
         when q.provider_response is not null then true
-        else false
+        else null::boolean
       end as provider_reached,
       case
         when lower(coalesce(q.last_error, '')) like 'no active push tokens%' then 'no_provider_retry'
@@ -391,9 +391,22 @@ begin
       end as error_summary,
       case
         when s.event_type in ('PUSH_CLAIM_RPC_ERROR', 'SOS_PUSH_NO_GUARD_TOKENS') then false
-        when q.provider_response is not null then true
         when s.event_type = 'NOTIFICATION_SENT' then true
-        else false
+        when q.provider_response is not null then true
+        when nullif(
+          coalesce(
+            s.details->>'provider_response',
+            s.details->>'provider_status',
+            s.details->>'provider_status_code',
+            s.details->>'provider_message_id',
+            s.details->>'provider_ticket_id',
+            s.details->>'provider_request_id',
+            s.details->>'expo_ticket_id',
+            s.details->>'expo_ticket'
+          ),
+          ''
+        ) is not null then true
+        else null::boolean
       end as provider_reached,
       case
         when s.event_type = 'PUSH_CLAIM_RPC_ERROR' then 'scheduled_worker_retry'
@@ -528,8 +541,8 @@ begin
       end as error_summary,
       case
         when m.status = 'sent' and nullif(m.provider_message_id, '') is not null then true
-        when m.status = 'failed' and nullif(m.provider, '') is not null then true
-        else false
+        when m.status in ('skipped', 'cancelled') then false
+        else null::boolean
       end as provider_reached,
       case
         when m.status = 'failed' then 'campaign_worker_dependent'
