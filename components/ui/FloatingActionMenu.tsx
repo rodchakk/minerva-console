@@ -120,7 +120,7 @@ export function FloatingActionMenu({
       ref={menuRef}
       role="menu"
       className={cn(
-        "fixed z-[1000] max-h-[min(70vh,520px)] overflow-y-auto rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] shadow-[0_18px_48px_rgba(0,0,0,0.5)]",
+        "fixed z-[1300] max-h-[min(70vh,520px)] overflow-y-auto rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] shadow-[0_18px_48px_rgba(0,0,0,0.5)]",
         className,
       )}
       style={

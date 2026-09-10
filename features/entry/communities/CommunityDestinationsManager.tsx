@@ -20,6 +20,7 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { Badge } from "@/components/ui/Badge";
+import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
   createCommunityDestinationAction,
   renameCommunityDestinationAction,
@@ -318,9 +319,12 @@ function DestinationActions({
   onRename: () => void;
   onToggleMenu: () => void;
 }) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="relative">
+    <div>
       <button
+        ref={triggerRef}
         type="button"
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -330,43 +334,43 @@ function DestinationActions({
       >
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
       </button>
-      {isOpen ? (
-        <div
-          role="menu"
-          className="absolute right-0 top-10 z-20 w-44 rounded-lg border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[0_18px_50px_rgba(2,6,23,0.35)]"
+      <FloatingActionMenu
+        anchorRef={triggerRef}
+        className="w-44 p-1"
+        onClose={onToggleMenu}
+        open={isOpen}
+      >
+        <button
+          type="button"
+          role="menuitem"
+          onClick={onRename}
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/6 focus:outline-none focus:ring-2 focus:ring-violet-300/35"
         >
-          <button
-            type="button"
-            role="menuitem"
-            onClick={onRename}
-            className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/6 focus:outline-none focus:ring-2 focus:ring-violet-300/35"
+          <Pencil aria-hidden="true" className="h-4 w-4" />
+          Rename
+        </button>
+        <form action={setCommunityDestinationActiveAction}>
+          <input type="hidden" name="community_id" value={communityId} />
+          <input type="hidden" name="destination_id" value={destination.id} />
+          <input
+            type="hidden"
+            name="is_active"
+            value={destination.isActive ? "false" : "true"}
+          />
+          <MenuSubmitButton
+            icon={
+              destination.isActive ? (
+                <Power aria-hidden="true" className="h-4 w-4" />
+              ) : (
+                <RotateCcw aria-hidden="true" className="h-4 w-4" />
+              )
+            }
+            tone={destination.isActive ? "danger" : "default"}
           >
-            <Pencil aria-hidden="true" className="h-4 w-4" />
-            Rename
-          </button>
-          <form action={setCommunityDestinationActiveAction}>
-            <input type="hidden" name="community_id" value={communityId} />
-            <input type="hidden" name="destination_id" value={destination.id} />
-            <input
-              type="hidden"
-              name="is_active"
-              value={destination.isActive ? "false" : "true"}
-            />
-            <MenuSubmitButton
-              icon={
-                destination.isActive ? (
-                  <Power aria-hidden="true" className="h-4 w-4" />
-                ) : (
-                  <RotateCcw aria-hidden="true" className="h-4 w-4" />
-                )
-              }
-              tone={destination.isActive ? "danger" : "default"}
-            >
-              {destination.isActive ? "Deactivate" : "Activate"}
-            </MenuSubmitButton>
-          </form>
-        </div>
-      ) : null}
+            {destination.isActive ? "Deactivate" : "Activate"}
+          </MenuSubmitButton>
+        </form>
+      </FloatingActionMenu>
     </div>
   );
 }
