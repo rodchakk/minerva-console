@@ -4,6 +4,8 @@
  */
 
 const ENTRY_TICKET_PATH = /^\/(?:products\/entry\/tickets|field\/entry\/tickets)\/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const FIELD_NOTIFICATION_ICON = "/icons/minerva-field-192.png";
+const FIELD_NOTIFICATION_BADGE = "/icons/minerva-field-notification-badge.png";
 
 function safeTicketPath(value) {
   if (typeof value !== "string" || value.length > 180) return null;
@@ -62,8 +64,11 @@ self.addEventListener("push", (event) => {
         body,
         tag,
         renotify: true,
-        icon: "/icons/minerva-field-192.png",
-        badge: "/icons/minerva-field-192.png",
+        icon: FIELD_NOTIFICATION_ICON,
+        // Android Chrome uses a small monochrome badge for notification origin
+        // identity. Keep this separate from the full-color launcher icon so it
+        // does not fall back to the generic browser mark when masking the asset.
+        badge: FIELD_NOTIFICATION_BADGE,
       };
 
       // Invalid/missing URLs still get a generic notification, but never gain a
