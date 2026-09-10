@@ -59,13 +59,15 @@ function session(overrides = {}) {
   };
 }
 
-test("ENTRY Field exposes a dedicated work timer without reopening onboarding", () => {
+test("ENTRY Field keeps work timer as an operator utility, not a primary task", () => {
   const page = read("app/(field)/field/entry/page.tsx");
+  const shell = read("components/field/FieldShell.tsx");
   const timerPage = read("app/(field)/field/entry/work-timer/page.tsx");
 
-  assert.match(page, /href="\/field\/entry\/work-timer"/);
-  assert.match(page, />\s*Work timer\s*</);
-  assert.match(page, /Capture Field work time/);
+  assert.doesNotMatch(page, /href="\/field\/entry\/work-timer"/);
+  assert.doesNotMatch(page, />\s*Work timer\s*</);
+  assert.doesNotMatch(page, /Capture Field work time/);
+  assert.match(shell, /FieldActiveWorkTimerIndicator/);
   assert.match(timerPage, /FieldWorkTimerWorkspace/);
   assert.match(timerPage, /requireSuperadmin/);
   assert.doesNotMatch(`${page}\n${timerPage}`, /registration\/start|FieldRegistrationCard/);
@@ -146,18 +148,20 @@ test("work timer UI captures target, categories, cancellation, history, and copy
   assert.doesNotMatch(workspace, /Deactivate unit|Reactivate unit|Registration Link/);
 });
 
-test("active Field indicator links back to the durable timer without local storage", () => {
+test("Field header timer utility links to durable timer without local storage", () => {
   const layout = read("app/(field)/field/layout.tsx");
   const shell = read("components/field/FieldShell.tsx");
   const indicator = read("features/entry/field/FieldActiveWorkTimerIndicator.tsx");
 
   assert.match(layout, /getFieldActiveWorkTimer\(user\.id\)/);
   assert.match(layout, /activeWorkTimer=\{activeWorkTimer\}/);
-  assert.match(shell, /FieldActiveWorkTimerIndicator/);
-  assert.match(shell, /activeWorkTimer/);
+  assert.match(shell, /FieldActiveWorkTimerIndicator session=\{activeWorkTimer\}/);
+  assert.doesNotMatch(shell, /\{activeWorkTimer \? \(/);
+  assert.match(indicator, /FieldActiveWorkTimer \| null/);
   assert.match(indicator, /href="\/field\/entry\/work-timer"/);
   assert.match(indicator, /formatFieldWorkClock/);
-  assert.match(indicator, /session\.startedAt/);
+  assert.match(indicator, /session\?\.startedAt/);
+  assert.match(indicator, /"Timer"/);
   assert.doesNotMatch(indicator, /localStorage|sessionStorage|supabase|poll/i);
 });
 
