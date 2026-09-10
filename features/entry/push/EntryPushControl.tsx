@@ -55,10 +55,33 @@ async function deactivateSubscription(endpoint: string) {
   if (!response.ok) throw new Error("subscription-deactivate-failed");
 }
 
-async function getRootRegistration() {
+async function refreshRegistration(registration: ServiceWorkerRegistration) {
+  // Installed PWAs can remain alive across deployments. Ask the browser to
+  // check the root push worker explicitly so Android does not keep an older
+  // handler indefinitely. A transient update failure must not disable alerts.
+  try {
+    await registration.update();
+  } catch {
+    // The existing active worker remains usable; synchronization can continue.
+  }
+
+  return registration;
+}
+
+async function getExistingRootRegistration() {
   const existing = await navigator.serviceWorker.getRegistration("/");
+  return existing ? refreshRegistration(existing) : undefined;
+}
+
+async function getRootRegistration() {
+  const existing = await getExistingRootRegistration();
   if (existing) return existing;
-  return navigator.serviceWorker.register("/minerva-entry-push-sw.js", { scope: "/" });
+
+  const registration = await navigator.serviceWorker.register("/minerva-entry-push-sw.js", {
+    scope: "/",
+  });
+  await navigator.serviceWorker.ready;
+  return registration;
 }
 
 export function EntryPushControl({ surface }: EntryPushControlProps) {
@@ -77,7 +100,7 @@ export function EntryPushControl({ surface }: EntryPushControlProps) {
     }
 
     try {
-      const registration = await navigator.serviceWorker.getRegistration("/");
+      const registration = await getExistingRootRegistration();
       const subscription = await registration?.pushManager.getSubscription();
 
       if (!subscription) {
