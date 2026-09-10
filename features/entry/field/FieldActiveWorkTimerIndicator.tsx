@@ -5,23 +5,24 @@ import { Timer } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   formatFieldWorkClock,
-  getFieldWorkClassificationLabel,
   type FieldActiveWorkTimer,
 } from "@/features/entry/field/workTimerModel";
 
 type FieldActiveWorkTimerIndicatorProps = {
-  session: FieldActiveWorkTimer;
+  session: FieldActiveWorkTimer | null;
 };
 
-function useElapsedSeconds(startedAt: string) {
+function useElapsedSeconds(startedAt: string | null) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
+    if (!startedAt) return;
     const interval = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(interval);
-  }, []);
+  }, [startedAt]);
 
   return useMemo(() => {
+    if (!startedAt) return 0;
     const started = new Date(startedAt).getTime();
     if (!Number.isFinite(started)) return 0;
     return Math.max(0, Math.floor((now - started) / 1000));
@@ -31,27 +32,30 @@ function useElapsedSeconds(startedAt: string) {
 export function FieldActiveWorkTimerIndicator({
   session,
 }: FieldActiveWorkTimerIndicatorProps) {
-  const elapsedSeconds = useElapsedSeconds(session.startedAt);
+  const elapsedSeconds = useElapsedSeconds(session?.startedAt ?? null);
+  const active = Boolean(session);
 
   return (
     <Link
       href="/field/entry/work-timer"
-      aria-label="Open active ENTRY work timer"
-      className="inline-flex min-h-9 max-w-full items-center gap-2 rounded-lg border border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] px-3 text-xs font-bold text-[var(--console-text)] transition-colors hover:bg-white/10"
+      aria-label={active ? "Open active ENTRY work timer" : "Open ENTRY work timer"}
+      title={active && session ? `Work timer · ${session.communityName}` : "Work timer"}
+      className={[
+        "inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-bold transition-colors",
+        active
+          ? "border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] text-[var(--console-text)] hover:bg-white/10"
+          : "border-[var(--console-border)] bg-white/[0.03] text-[var(--console-text-muted)] hover:border-[var(--console-accent-border)] hover:text-[var(--console-text)]",
+      ].join(" ")}
     >
-      <span className="relative flex h-3 w-3 shrink-0 items-center justify-center">
-        <span className="absolute h-3 w-3 rounded-full bg-[var(--console-accent)] opacity-30" />
-        <span className="h-1.5 w-1.5 rounded-full bg-[var(--console-accent)]" />
-      </span>
+      {active ? (
+        <span className="relative flex h-2.5 w-2.5 shrink-0 items-center justify-center">
+          <span className="absolute h-2.5 w-2.5 rounded-full bg-[var(--console-accent)] opacity-30" />
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--console-accent)]" />
+        </span>
+      ) : null}
       <Timer aria-hidden="true" className="h-4 w-4 shrink-0" />
       <span className="shrink-0 tabular-nums">
-        {formatFieldWorkClock(elapsedSeconds)}
-      </span>
-      <span aria-hidden="true" className="text-[var(--console-text-soft)]">
-        |
-      </span>
-      <span className="min-w-0 truncate">
-        {session.communityName} - {getFieldWorkClassificationLabel(session.classification)}
+        {active ? formatFieldWorkClock(elapsedSeconds) : "Timer"}
       </span>
     </Link>
   );
