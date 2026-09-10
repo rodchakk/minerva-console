@@ -105,6 +105,15 @@ test("service worker always displays a privacy-safe notification when Android pu
   assert.match(worker, /await self\.registration\.showNotification\(title, options\)/);
 });
 
+test("service worker script stays publicly fetchable without a Supabase session", () => {
+  assert.match(middleware, /pathname === "\/minerva-entry-push-sw\.js"/);
+  assert.match(
+    middleware,
+    /pathname === "\/minerva-entry-push-sw\.js"[\s\S]*return NextResponse\.next\(\{ request \}\)/,
+  );
+  assert.doesNotMatch(middleware, /pathname\.startsWith\("\/minerva-entry-push"\)/);
+});
+
 test("push payload stays minimal and ticket authorization remains on existing protected routes", () => {
   assert.match(server, /title: `ENTRY · \$\{delivery\.ticketNumber\}`/);
   assert.match(server, /New support ticket received\./);

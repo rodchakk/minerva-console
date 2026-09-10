@@ -37,6 +37,16 @@ export async function updateSession(request: NextRequest) {
     return protectPublicRegistrationResponse(NextResponse.next({ request }));
   }
 
+  // Service-worker scripts must remain fetchable without an application session.
+  // Browsers can update a worker while the PWA is closed or before Supabase auth
+  // cookies are available to the navigation context. Returning /login HTML here
+  // makes the worker update fail and can leave an installed Android PWA unable to
+  // execute the current push handler. The worker is static public code and contains
+  // no credentials; keep this bypass exact rather than opening arbitrary .js paths.
+  if (pathname === "/minerva-entry-push-sw.js") {
+    return NextResponse.next({ request });
+  }
+
   // The automatic ENTRY Web Push dispatcher is machine-authenticated with its
   // own Bearer secret in the route handler. Supabase session middleware must
   // not redirect pg_cron/pg_net requests to /login before that check runs.
