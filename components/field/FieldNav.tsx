@@ -40,7 +40,7 @@ export function FieldNav() {
     <nav
       data-field-nav
       aria-label="Field navigation"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--console-border)] bg-[rgba(20,20,20,0.94)] px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur md:hidden"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--console-border)] bg-[rgba(20,20,20,0.94)] px-3 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-2 backdrop-blur-xl md:hidden"
     >
       <div className="mx-auto grid max-w-md grid-cols-3 gap-1">
         {items.map((item) => {
@@ -53,10 +53,10 @@ export function FieldNav() {
               href={item.href}
               aria-current={active ? "page" : undefined}
               className={[
-                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-2 text-xs font-semibold transition-colors",
+                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg border px-2 text-xs font-semibold transition-colors",
                 active
-                  ? "bg-[var(--console-accent-subtle)] text-[var(--console-text)]"
-                  : "text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]",
+                  ? "border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] text-[var(--console-accent)]"
+                  : "border-transparent text-[var(--console-text-muted)] hover:bg-white/5 hover:text-[var(--console-text)]",
               ].join(" ")}
             >
               <Icon aria-hidden="true" className="h-5 w-5" />

@@ -25,11 +25,11 @@ export function FieldShell({
   previewReadOnly = false,
 }: FieldShellProps) {
   return (
-    <div className="min-h-screen bg-[var(--console-bg)] text-[var(--console-text)]">
-      <header className="sticky top-0 z-30 border-b border-[var(--console-border)] bg-[rgba(20,20,20,0.94)] px-4 py-3 backdrop-blur">
+    <div className="minerva-field-theme min-h-screen bg-[var(--console-bg)] text-[var(--console-text)]">
+      <header className="sticky top-0 z-30 border-b border-[var(--console-border)] bg-[rgba(20,20,20,0.92)] px-4 py-3 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
           <Link href="/field" className="flex min-w-0 items-center gap-3">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--console-accent)] text-sm font-black text-white">
+            <span className="field-brand-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-black text-white">
               MF
             </span>
             <span className="min-w-0">
@@ -53,7 +53,7 @@ export function FieldShell({
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--console-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--console-text)]"
+                    className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--console-text-muted)] transition-colors hover:bg-[var(--console-accent-subtle)] hover:text-[var(--console-accent)]"
                   >
                     <Icon aria-hidden="true" className="h-4 w-4" />
                     {item.label}
