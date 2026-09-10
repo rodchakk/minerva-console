@@ -17,6 +17,14 @@ function protectPublicRegistrationResponse(response: NextResponse) {
   return response;
 }
 
+function protectMachineAuthenticatedResponse(response: NextResponse) {
+  response.headers.set("Cache-Control", "private, no-store, max-age=0");
+  response.headers.set("Pragma", "no-cache");
+  response.headers.set("Referrer-Policy", "no-referrer");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isPublicEntryIntakeRoute =
@@ -27,6 +35,15 @@ export async function updateSession(request: NextRequest) {
 
   if (isPublicEntryIntakeRoute) {
     return protectPublicRegistrationResponse(NextResponse.next({ request }));
+  }
+
+  // The automatic ENTRY Web Push dispatcher is machine-authenticated with its
+  // own Bearer secret in the route handler. Supabase session middleware must
+  // not redirect pg_cron/pg_net requests to /login before that check runs.
+  // This bypass applies to this exact path only; the route remains closed by
+  // ENTRY_WEB_PUSH_DISPATCH_SECRET and does not become a browser-public API.
+  if (pathname === "/api/entry/push/dispatch") {
+    return protectMachineAuthenticatedResponse(NextResponse.next({ request }));
   }
 
   let response = NextResponse.next({
