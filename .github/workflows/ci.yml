@@ -98,6 +98,25 @@ jobs:
           node --test tests/entry-notification-observability.test.mjs
           node --test tests/entry-notification-worker-recovery.test.mjs
 
+  entry-web-push-tests:
+    name: ENTRY Web Push regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ENTRY Web Push regression scope
+        run: node --test tests/entry-push-notifications.test.mjs
+
   entry-ocr-hardening-tests:
     name: ENTRY OCR hardening regressions
     runs-on: ubuntu-latest
