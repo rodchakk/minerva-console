@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, MessageSquareText } from "lucide-react";
 import { EntryPushControl } from "@/features/entry/push/EntryPushControl";
+import { EntryPushLocalDiagnostic } from "@/features/entry/push/EntryPushLocalDiagnostic";
 import { getFieldTickets, type FieldTicketStatus } from "@/features/entry/field/ticketData";
 
 type TicketFilter = "active" | "all" | FieldTicketStatus;
@@ -81,8 +82,9 @@ export default async function FieldEntryTicketsPage({
               Support conversations from ENTRY.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-start gap-2">
             <EntryPushControl surface="field" />
+            <EntryPushLocalDiagnostic />
             <span className="rounded-full border border-[var(--console-border)] bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-[var(--console-text-muted)]">
               {tickets.length}
             </span>
