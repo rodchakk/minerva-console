@@ -23,6 +23,10 @@ const statusCopy = {
     className: "border-amber-400/20 bg-amber-500/10 text-amber-200",
     label: "In progress",
   },
+  waiting_user: {
+    className: "border-violet-400/20 bg-violet-500/10 text-violet-200",
+    label: "Waiting on user",
+  },
   resolved: {
     className: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200",
     label: "Resolved",
@@ -145,7 +149,7 @@ export default async function EntrySupportTicketPage({
 
   if (!ticket) notFound();
 
-  const status = statusCopy[ticket.status];
+  const status = statusCopy[ticket.workflowState];
   const category = formatCategory(ticket.category);
   const source = formatSource(ticket.source);
   const requesterRole = requester?.role || metadataString(ticket.metadata, ["role"]);
@@ -273,11 +277,12 @@ export default async function EntrySupportTicketPage({
             <select
               id="ticket-status"
               name="status"
-              defaultValue={ticket.status}
+              defaultValue={ticket.workflowState}
               className="h-9 min-w-36 rounded-md border border-[var(--console-border-strong)] bg-white/[0.025] px-3 text-sm font-semibold text-white outline-none transition hover:border-white/20 hover:bg-white/[0.05] focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
             >
               <option value="open">Received</option>
               <option value="in_progress">In progress</option>
+              <option value="waiting_user">Waiting on user</option>
               <option value="resolved">Resolved</option>
             </select>
             <button
