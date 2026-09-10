@@ -1,0 +1,1 @@
+MERGE APPROVED -> apply migration -> configure Vercel VAPID/dispatch secrets -> configure matching Supabase Vault URL/secret -> install cron -> run E2E -> declare live
