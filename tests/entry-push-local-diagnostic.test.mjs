@@ -9,11 +9,16 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "u
 
 const diagnostic = read("features/entry/push/EntryPushLocalDiagnostic.tsx");
 const fieldTickets = read("app/(field)/field/entry/tickets/page.tsx");
+const badgePath = path.join(root, "public/icons/minerva-field-notification-badge.png");
 
 test("Field exposes a local notification diagnostic that bypasses the push provider", () => {
   assert.match(fieldTickets, /EntryPushLocalDiagnostic/);
   assert.match(diagnostic, /navigator\.serviceWorker\.getRegistration\("\/"\)/);
   assert.match(diagnostic, /Notification\.permission !== "granted"/);
   assert.match(diagnostic, /registration\.showNotification\("Minerva Field test"/);
+  assert.match(diagnostic, /icon: FIELD_NOTIFICATION_ICON/);
+  assert.match(diagnostic, /badge: FIELD_NOTIFICATION_BADGE/);
+  assert.ok(fs.existsSync(badgePath));
+  assert.ok(fs.statSync(badgePath).size > 0);
   assert.doesNotMatch(diagnostic, /fetch\("\/api\/entry\/push/);
 });
