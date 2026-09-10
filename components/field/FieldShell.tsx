@@ -8,7 +8,6 @@ import type { FieldActiveWorkTimer } from "@/features/entry/field/workTimerModel
 type FieldShellProps = {
   activeWorkTimer?: FieldActiveWorkTimer | null;
   children: React.ReactNode;
-  email: string | null;
   previewReadOnly?: boolean;
 };
 
@@ -21,7 +20,6 @@ const desktopNavItems = [
 export function FieldShell({
   activeWorkTimer = null,
   children,
-  email,
   previewReadOnly = false,
 }: FieldShellProps) {
   return (
@@ -32,13 +30,8 @@ export function FieldShell({
             <span className="field-brand-badge flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-black text-white">
               MF
             </span>
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-[var(--console-text)]">
-                Minerva Field
-              </span>
-              <span className="block truncate text-xs text-[var(--console-text-muted)]">
-                {email ?? "Authenticated"}
-              </span>
+            <span className="block text-sm font-semibold text-[var(--console-text)]">
+              Minerva Field
             </span>
           </Link>
 
