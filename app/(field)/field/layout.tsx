@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { FieldShell } from "@/components/field/FieldShell";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryDeploymentBoundary } from "@/features/entry/deploymentBoundary";
+import { getFieldActiveWorkTimer } from "@/features/entry/field/workTimerData";
 
 export const metadata: Metadata = {
   title: "Minerva Field",
@@ -25,9 +26,14 @@ export default async function FieldLayout({
 }) {
   const { user } = await requireSuperadmin();
   const boundary = getEntryDeploymentBoundary();
+  const activeWorkTimer = await getFieldActiveWorkTimer(user.id);
 
   return (
-    <FieldShell email={user.email} previewReadOnly={boundary.previewReadOnly}>
+    <FieldShell
+      activeWorkTimer={activeWorkTimer}
+      email={user.email}
+      previewReadOnly={boundary.previewReadOnly}
+    >
       {children}
     </FieldShell>
   );
