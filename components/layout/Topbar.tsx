@@ -1,9 +1,8 @@
 "use client";
 
-import { LogOut, Menu } from "lucide-react";
+import { Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Button } from "@/components/ui/Button";
-import { signOutAction } from "@/features/auth/actions";
+import { EntryPushSignOutForm } from "@/features/entry/push/EntryPushSignOutForm";
 
 type TopbarProps = {
   email: string | null;
@@ -46,12 +45,7 @@ export function Topbar({ email, onOpenSidebar }: TopbarProps) {
         </div>
       </div>
 
-      <form action={signOutAction} className="shrink-0">
-        <Button variant="secondary" type="submit" className="min-w-24 gap-2">
-          Sign out
-          <LogOut className="h-4 w-4 stroke-[1.75]" />
-        </Button>
-      </form>
+      <EntryPushSignOutForm />
     </header>
   );
 }
