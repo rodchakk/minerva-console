@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LifeBuoy } from "lucide-react";
+import { EntryPushControl } from "@/features/entry/push/EntryPushControl";
 import {
   getEntrySupportTickets,
   type SupportStatus,
@@ -59,8 +60,11 @@ export default async function EntrySupportTicketsPage({
               Revisa, responde y resuelve solicitudes enviadas desde ENTRY.
             </p>
           </div>
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-violet-400/15 bg-violet-500/10 text-violet-200">
-            <LifeBuoy className="h-5 w-5 stroke-[1.75]" />
+          <div className="flex flex-wrap items-center gap-2">
+            <EntryPushControl surface="console" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-violet-400/15 bg-violet-500/10 text-violet-200">
+              <LifeBuoy className="h-5 w-5 stroke-[1.75]" />
+            </div>
           </div>
         </div>
       </section>
