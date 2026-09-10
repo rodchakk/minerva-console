@@ -136,6 +136,25 @@ jobs:
       - name: Run ENTRY Field work timer regression scope
         run: node --test tests/minerva-field-work-timer.test.mjs
 
+  entry-field-closeout-tests:
+    name: ENTRY Field closeout regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ENTRY Field closeout regression scope
+        run: node --test tests/minerva-field-closeout.test.mjs
+
   lint-brain:
     name: Lint (Brain + layout)
     runs-on: ubuntu-latest
