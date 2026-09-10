@@ -21,6 +21,7 @@ const fieldTickets = read("app/(field)/field/entry/tickets/page.tsx");
 const nextConfig = read("next.config.ts");
 const packageJson = JSON.parse(read("package.json"));
 const packageLock = read("package-lock.json");
+const fieldBadgePath = path.join(root, "public/icons/minerva-field-notification-badge.png");
 
 test("Web Push uses one active browser endpoint owner and current authorization", () => {
   assert.match(migration, /unique index[\s\S]*entry_web_push_subscriptions_active_endpoint_uidx[\s\S]*where is_active = true/i);
@@ -103,6 +104,15 @@ test("service worker always displays a privacy-safe notification when Android pu
   assert.match(worker, /A support ticket needs attention\./);
   assert.match(worker, /if \(url\) options\.data = \{ url \}/);
   assert.match(worker, /await self\.registration\.showNotification\(title, options\)/);
+});
+
+test("Android notifications use Field branding with a dedicated monochrome badge", () => {
+  assert.match(worker, /const FIELD_NOTIFICATION_ICON = "\/icons\/minerva-field-192\.png"/);
+  assert.match(worker, /const FIELD_NOTIFICATION_BADGE = "\/icons\/minerva-field-notification-badge\.png"/);
+  assert.match(worker, /icon: FIELD_NOTIFICATION_ICON/);
+  assert.match(worker, /badge: FIELD_NOTIFICATION_BADGE/);
+  assert.ok(fs.existsSync(fieldBadgePath));
+  assert.ok(fs.statSync(fieldBadgePath).size > 0);
 });
 
 test("service worker script stays publicly fetchable without a Supabase session", () => {
