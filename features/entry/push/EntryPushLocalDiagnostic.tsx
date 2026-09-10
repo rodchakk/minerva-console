@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { BellRing, LoaderCircle } from "lucide-react";
 
+const FIELD_NOTIFICATION_ICON = "/icons/minerva-field-192.png";
+const FIELD_NOTIFICATION_BADGE = "/icons/minerva-field-notification-badge.png";
+
 type DiagnosticState = "idle" | "running" | "success" | "error";
 
 export function EntryPushLocalDiagnostic() {
@@ -36,6 +39,8 @@ export function EntryPushLocalDiagnostic() {
       await registration.showNotification("Minerva Field test", {
         body: "Local notification test from this device.",
         tag: `minerva-field-local-test-${Date.now()}`,
+        icon: FIELD_NOTIFICATION_ICON,
+        badge: FIELD_NOTIFICATION_BADGE,
       });
 
       setState("success");
