@@ -1,7 +1,6 @@
-import { LogOut, ShieldCheck, UserCircle } from "lucide-react";
-import { Button } from "@/components/ui/Button";
-import { signOutAction } from "@/features/auth/actions";
+import { ShieldCheck, UserCircle } from "lucide-react";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { EntryPushSignOutForm } from "@/features/entry/push/EntryPushSignOutForm";
 
 export default async function FieldAccountPage() {
   const { user } = await requireSuperadmin();
@@ -34,16 +33,7 @@ export default async function FieldAccountPage() {
         </div>
       </section>
 
-      <form action={signOutAction}>
-        <Button
-          type="submit"
-          variant="secondary"
-          className="min-h-12 w-full gap-2 border-[var(--console-border-strong)] bg-[var(--console-surface)] text-[var(--console-text)] hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)]"
-        >
-          <LogOut aria-hidden="true" className="h-4 w-4" />
-          Sign out
-        </Button>
-      </form>
+      <EntryPushSignOutForm field />
     </div>
   );
 }
