@@ -47,3 +47,12 @@ test("production Field branding does not add marketing slogans", () => {
 
   assert.doesNotMatch(surfaces, /people places safer together|brighter tomorrow/);
 });
+
+test("Field header does not receive or render the authenticated email", () => {
+  const shell = read("components/field/FieldShell.tsx");
+  const layout = read("app/(field)/field/layout.tsx");
+
+  assert.doesNotMatch(shell, /\bemail\b/i);
+  assert.doesNotMatch(layout, /email=\{user\.email\}/);
+  assert.match(layout, /getFieldActiveWorkTimer\(user\.id\)/);
+});
