@@ -49,8 +49,8 @@ self.addEventListener("push", (event) => {
       tag,
       renotify: true,
       data: { url },
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
+      icon: "/icons/minerva-field-192.png",
+      badge: "/icons/minerva-field-192.png",
     }),
   );
 });
