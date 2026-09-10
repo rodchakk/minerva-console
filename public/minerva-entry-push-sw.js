@@ -25,33 +25,53 @@ function text(value, fallback, maxLength) {
   return (normalized || fallback).slice(0, maxLength);
 }
 
+// Activate service-worker fixes promptly in installed PWAs. The registration
+// itself remains the same, so existing PushSubscriptions stay attached.
+self.addEventListener("install", (event) => {
+  event.waitUntil(self.skipWaiting());
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", (event) => {
-  if (!event.data) return;
-
-  let payload;
-  try {
-    payload = event.data.json();
-  } catch {
-    return;
-  }
-
-  if (!payload || typeof payload !== "object") return;
-  const url = safeTicketPath(payload.url);
-  if (!url) return;
-
-  const title = text(payload.title, "ENTRY support", 90);
-  const body = text(payload.body, "A support ticket needs attention.", 140);
-  const tag = text(payload.tag, "entry-support", 80);
-
+  // A userVisibleOnly PushSubscription must result in a visible notification.
+  // Some Chromium/Android delivery paths can surface a push event without a
+  // readable payload even when the push service accepted the request. Never
+  // silently drop that event: fall back to privacy-safe generic copy instead.
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body,
-      tag,
-      renotify: true,
-      data: { url },
-      icon: "/icons/minerva-field-192.png",
-      badge: "/icons/minerva-field-192.png",
-    }),
+    (async () => {
+      let payload = {};
+
+      if (event.data) {
+        try {
+          const parsed = event.data.json();
+          if (parsed && typeof parsed === "object") payload = parsed;
+        } catch {
+          // Keep the generic fallback. Do not let malformed/missing payload data
+          // suppress the user-visible notification on an installed PWA.
+        }
+      }
+
+      const url = safeTicketPath(payload.url);
+      const title = text(payload.title, "ENTRY support", 90);
+      const body = text(payload.body, "A support ticket needs attention.", 140);
+      const tag = text(payload.tag, "entry-support", 80);
+      const options = {
+        body,
+        tag,
+        renotify: true,
+        icon: "/icons/minerva-field-192.png",
+        badge: "/icons/minerva-field-192.png",
+      };
+
+      // Invalid/missing URLs still get a generic notification, but never gain a
+      // click-through target. Valid payloads retain the exact protected route.
+      if (url) options.data = { url };
+
+      await self.registration.showNotification(title, options);
+    })(),
   );
 });
 
