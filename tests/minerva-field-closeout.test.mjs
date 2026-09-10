@@ -47,11 +47,11 @@ test("global People mirrors Access hierarchy and reuses community-scoped creatio
 test("resident detail is person-first and follows approved visual hierarchy", () => {
   assert.match(residentPage, /<FieldResidentActions/);
   assert.match(residentPage, /Household/);
-  assert.match(residentPage, /Account/);
+  assert.match(residentPage, /<AccountRow label="Role"/);
   assert.match(residentPage, /<FieldUserStatusAction/);
   occursBefore(residentPage, "<FieldResidentActions", "Household");
-  occursBefore(residentPage, "Household", "Account");
-  occursBefore(residentPage, "Account", "<FieldUserStatusAction");
+  occursBefore(residentPage, "Household", '<AccountRow label="Role"');
+  occursBefore(residentPage, '<AccountRow label="Role"', "<FieldUserStatusAction");
   assert.doesNotMatch(residentPage, /FieldResidentProfileEditor/);
 });
 
