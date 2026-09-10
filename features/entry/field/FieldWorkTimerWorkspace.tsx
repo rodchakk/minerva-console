@@ -371,23 +371,26 @@ export function FieldWorkTimerWorkspace({
               </select>
             </div>
 
-            <div>
-              <p className="text-sm font-semibold text-[var(--console-text)]">
+            <label className="block" htmlFor="field-work-classification">
+              <span className="text-sm font-semibold text-[var(--console-text)]">
                 Classification
-              </p>
-              <div className="mt-2 grid grid-cols-2 gap-2">
+              </span>
+              <select
+                id="field-work-classification"
+                value={classification}
+                disabled={formDisabled}
+                onChange={(event) =>
+                  setClassification(event.target.value as FieldWorkClassification)
+                }
+                className="mt-2 min-h-11 w-full rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-3 text-base font-semibold text-[var(--console-text)] outline-none focus:border-[var(--console-accent-border)] disabled:opacity-50"
+              >
                 {FIELD_WORK_CLASSIFICATIONS.map((item) => (
-                  <ChoiceButton
-                    key={item.id}
-                    active={classification === item.id}
-                    disabled={formDisabled}
-                    onClick={() => setClassification(item.id)}
-                  >
+                  <option key={item.id} value={item.id}>
                     {item.label}
-                  </ChoiceButton>
+                  </option>
                 ))}
-              </div>
-            </div>
+              </select>
+            </label>
 
             <div>
               <p className="text-sm font-semibold text-[var(--console-text)]">
