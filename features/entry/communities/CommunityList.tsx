@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { MapPin, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import { setCommunityActiveStatusAction } from "@/features/entry/communities/statusActions";
 import type { CommunityListItem } from "@/features/entry/communities/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
@@ -154,6 +155,77 @@ function FeatureChip({ children }: { children: React.ReactNode }) {
   );
 }
 
+function CommunityActionsMenu({
+  community,
+  cta,
+  isOpen,
+  onClose,
+  onOpenStatusModal,
+  onToggle,
+}: {
+  community: CommunityListItem;
+  cta: ReturnType<typeof getCta>;
+  isOpen: boolean;
+  onClose: () => void;
+  onOpenStatusModal: (community: CommunityListItem, nextIsActive: boolean) => void;
+  onToggle: () => void;
+}) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  return (
+    <div>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+        aria-label={`More options for ${community.name}`}
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] text-slate-200 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
+        onClick={onToggle}
+      >
+        <MoreVertical className="h-4 w-4 stroke-[1.75]" />
+      </button>
+
+      <FloatingActionMenu
+        anchorRef={triggerRef}
+        className="w-64 p-2"
+        onClose={onClose}
+        open={isOpen}
+      >
+        <Link
+          href={cta.href}
+          role="menuitem"
+          className="block rounded-md px-3 py-2.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] hover:text-white"
+          onClick={onClose}
+        >
+          Open community
+        </Link>
+        <Link
+          href={`/products/entry/communities/${community.id}/users`}
+          role="menuitem"
+          className="block rounded-md px-3 py-2.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] hover:text-white"
+          onClick={onClose}
+        >
+          Manage users
+        </Link>
+        <button
+          type="button"
+          role="menuitem"
+          className={cn(
+            "w-full rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-white/[0.05]",
+            community.isActive
+              ? "text-rose-300 hover:text-rose-200"
+              : "text-emerald-300 hover:text-emerald-200",
+          )}
+          onClick={() => onOpenStatusModal(community, !community.isActive)}
+        >
+          {community.isActive ? "Deactivate community" : "Reactivate community"}
+        </button>
+      </FloatingActionMenu>
+    </div>
+  );
+}
+
 export function CommunityList({ communities }: CommunityListProps) {
   const router = useRouter();
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
@@ -212,15 +284,6 @@ export function CommunityList({ communities }: CommunityListProps) {
 
   return (
     <>
-      {openMenuId ? (
-        <button
-          type="button"
-          aria-label="Close community menu"
-          className="fixed inset-0 z-30 cursor-default bg-black/30"
-          onClick={() => setOpenMenuId(null)}
-        />
-      ) : null}
-
       <section className="overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
         <div className="overflow-x-auto">
           <div className="min-w-[1240px]">
@@ -386,54 +449,18 @@ export function CommunityList({ communities }: CommunityListProps) {
                         {cta.label}
                       </Link>
 
-                      <div className="relative">
-                        <button
-                          type="button"
-                          aria-expanded={openMenuId === community.id}
-                          aria-label={`More options for ${community.name}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] text-slate-200 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
-                          onClick={() =>
-                            setOpenMenuId((current) =>
-                              current === community.id ? null : community.id,
-                            )
-                          }
-                        >
-                          <MoreVertical className="h-4 w-4 stroke-[1.75]" />
-                        </button>
-
-                        {openMenuId === community.id ? (
-                          <div className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-2 shadow-[0_18px_40px_rgba(0,0,0,0.4)]">
-                            <Link
-                              href={cta.href}
-                              className="block rounded-md px-3 py-2.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] hover:text-white"
-                              onClick={() => setOpenMenuId(null)}
-                            >
-                              Open community
-                            </Link>
-                            <Link
-                              href={`/products/entry/communities/${community.id}/users`}
-                              className="block rounded-md px-3 py-2.5 text-sm font-semibold text-slate-200 transition-colors hover:bg-white/[0.05] hover:text-white"
-                              onClick={() => setOpenMenuId(null)}
-                            >
-                              Manage users
-                            </Link>
-                            <button
-                              type="button"
-                              className={cn(
-                                "w-full rounded-md px-3 py-2.5 text-left text-sm font-semibold transition-colors hover:bg-white/[0.05]",
-                                community.isActive
-                                  ? "text-rose-300 hover:text-rose-200"
-                                  : "text-emerald-300 hover:text-emerald-200",
-                              )}
-                              onClick={() => openStatusModal(community, !community.isActive)}
-                            >
-                              {community.isActive
-                                ? "Deactivate community"
-                                : "Reactivate community"}
-                            </button>
-                          </div>
-                        ) : null}
-                      </div>
+                      <CommunityActionsMenu
+                        community={community}
+                        cta={cta}
+                        isOpen={openMenuId === community.id}
+                        onClose={() => setOpenMenuId(null)}
+                        onOpenStatusModal={openStatusModal}
+                        onToggle={() =>
+                          setOpenMenuId((current) =>
+                            current === community.id ? null : community.id,
+                          )
+                        }
+                      />
                     </div>
                   </article>
                 );
