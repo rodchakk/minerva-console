@@ -35,6 +35,8 @@ type NormalizedDelivery = {
   attempts: number;
 };
 
+type AuthorizationCheck = "authorized" | "revoked" | "unavailable";
+
 export type EntryPushDispatchSummary = {
   ok: boolean;
   claimed: number;
@@ -106,7 +108,7 @@ function getVapidConfig() {
   const publicKey = requiredEnv("ENTRY_WEB_PUSH_VAPID_PUBLIC_KEY");
   const privateKey = requiredEnv("ENTRY_WEB_PUSH_VAPID_PRIVATE_KEY");
 
-  if (!/^mailto:|^https:\/\//.test(subject)) {
+  if (!/^(mailto:|https:\/\/)/.test(subject)) {
     throw new Error("ENTRY_WEB_PUSH_VAPID_SUBJECT must be a mailto: or https:// URI.");
   }
 
@@ -332,6 +334,30 @@ async function completeDelivery(input: {
   }
 }
 
+async function checkSubscriptionAuthorization(
+  subscriptionId: string,
+): Promise<AuthorizationCheck> {
+  const admin = createAdminClient();
+  const { data: subscription, error: subscriptionError } = await admin
+    .from("entry_web_push_subscriptions")
+    .select("user_id,is_active")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+
+  if (subscriptionError || !subscription) return "unavailable";
+  if (subscription.is_active !== true || typeof subscription.user_id !== "string") {
+    return "revoked";
+  }
+
+  const { data: authorized, error: authorizationError } = await admin.rpc(
+    "is_superadmin",
+    { p_user_id: subscription.user_id },
+  );
+
+  if (authorizationError) return "unavailable";
+  return authorized === true ? "authorized" : "revoked";
+}
+
 export async function dispatchPendingEntryPushes(limit = 50): Promise<EntryPushDispatchSummary> {
   const vapid = getVapidConfig();
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
@@ -366,6 +392,28 @@ export async function dispatchPendingEntryPushes(limit = 50): Promise<EntryPushD
   };
 
   for (const delivery of deliveries) {
+    // Re-check authorization immediately before contacting the push provider.
+    // The SQL claim already checks current authorization; this second gate
+    // closes the small race where a role could be revoked after claim return.
+    const authorization = await checkSubscriptionAuthorization(delivery.subscriptionId);
+    if (authorization !== "authorized") {
+      const outcome = authorization === "revoked" ? "pruned" : "retry";
+      await completeDelivery({
+        deliveryId: delivery.deliveryId,
+        outcome,
+        providerStatus: null,
+        error:
+          authorization === "revoked"
+            ? "Operator authorization revoked before Web Push send"
+            : "Could not verify operator authorization before Web Push send",
+        retryAfterSeconds: retryDelaySeconds(delivery.attempts),
+      });
+
+      if (outcome === "pruned") summary.pruned += 1;
+      else summary.retried += 1;
+      continue;
+    }
+
     try {
       const response = await webpush.sendNotification(
         {
