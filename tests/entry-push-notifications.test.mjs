@@ -15,6 +15,7 @@ const authActions = read("features/auth/actions.ts");
 const worker = read("public/minerva-entry-push-sw.js");
 const dispatchRoute = read("app/api/entry/push/dispatch/route.ts");
 const subscriptionsRoute = read("app/api/entry/push/subscriptions/route.ts");
+const middleware = read("lib/supabase/middleware.ts");
 const consoleTickets = read("app/(console)/products/entry/tickets/page.tsx");
 const fieldTickets = read("app/(field)/field/entry/tickets/page.tsx");
 const nextConfig = read("next.config.ts");
@@ -97,6 +98,17 @@ test("push payload stays minimal and ticket authorization remains on existing pr
   assert.doesNotMatch(server, /requester(Name|Email)|resident.*email|description.*buildPayload|phone.*buildPayload/i);
   assert.match(consoleTickets, /EntryPushControl surface="console"/);
   assert.match(fieldTickets, /EntryPushControl surface="field"/);
+});
+
+test("machine dispatcher reaches its own Bearer-secret boundary without becoming session-public", () => {
+  assert.match(
+    middleware,
+    /pathname === "\/api\/entry\/push\/dispatch"[\s\S]*protectMachineAuthenticatedResponse\(NextResponse\.next\(\{ request \}\)\)/,
+  );
+  assert.match(dispatchRoute, /ENTRY_WEB_PUSH_DISPATCH_SECRET/);
+  assert.match(dispatchRoute, /dispatchSecretMatches\(request\)/);
+  assert.match(dispatchRoute, /return json\(\{ error: "Unauthorized" \}, 401\)/);
+  assert.doesNotMatch(middleware, /pathname\.startsWith\("\/api\/entry\/push\/"\)/);
 });
 
 test("dispatcher is secret-protected and scheduling is opt-in through pg_cron + pg_net + Vault", () => {
