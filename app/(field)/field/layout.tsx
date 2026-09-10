@@ -31,7 +31,6 @@ export default async function FieldLayout({
   return (
     <FieldShell
       activeWorkTimer={activeWorkTimer}
-      email={user.email}
       previewReadOnly={boundary.previewReadOnly}
     >
       {children}
