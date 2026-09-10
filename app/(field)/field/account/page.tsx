@@ -19,7 +19,7 @@ export default async function FieldAccountPage() {
 
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-white/5 text-[var(--console-text)]">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
             <UserCircle aria-hidden="true" className="h-6 w-6" />
           </div>
           <div className="min-w-0">
@@ -27,7 +27,7 @@ export default async function FieldAccountPage() {
               {user.email ?? "Minerva operator"}
             </p>
             <p className="mt-1 flex items-center gap-1.5 text-sm text-[var(--console-text-muted)]">
-              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+              <ShieldCheck aria-hidden="true" className="h-4 w-4 text-[var(--console-accent)]" />
               Superadmin
             </p>
           </div>
@@ -38,7 +38,7 @@ export default async function FieldAccountPage() {
         <Button
           type="submit"
           variant="secondary"
-          className="min-h-12 w-full gap-2 border-[var(--console-border-strong)] bg-[var(--console-surface)] text-[var(--console-text)] hover:bg-[var(--console-surface-hover)]"
+          className="min-h-12 w-full gap-2 border-[var(--console-border-strong)] bg-[var(--console-surface)] text-[var(--console-text)] hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)]"
         >
           <LogOut aria-hidden="true" className="h-4 w-4" />
           Sign out

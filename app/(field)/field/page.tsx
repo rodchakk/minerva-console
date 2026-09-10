@@ -23,7 +23,7 @@ export default function FieldHomePage() {
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 gap-3">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
                   <ShieldCheck aria-hidden="true" className="h-5 w-5" />
                 </div>
                 <div className="min-w-0">
@@ -37,7 +37,7 @@ export default function FieldHomePage() {
               </div>
               <ArrowRight
                 aria-hidden="true"
-                className="mt-1 h-5 w-5 shrink-0 text-[var(--console-text-soft)] transition-colors group-hover:text-[var(--console-text)]"
+                className="mt-1 h-5 w-5 shrink-0 text-[var(--console-accent)] opacity-70 transition-opacity group-hover:opacity-100"
               />
             </div>
           </Link>
