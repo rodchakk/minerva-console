@@ -6,12 +6,11 @@ export function FieldDestinationsCard({
 }: {
   destinations: CommunityDetailPreviews["destinations"];
 }) {
-  const visibleDestinations =
-    destinations.state === "ready" ? destinations.items.slice(0, 5) : [];
-  const remaining =
-    destinations.state === "ready"
-      ? Math.max(0, destinations.items.length - visibleDestinations.length)
-      : 0;
+  const isAvailable = destinations.state !== "unavailable";
+  const visibleDestinations = isAvailable ? destinations.items.slice(0, 5) : [];
+  const remaining = isAvailable
+    ? Math.max(0, destinations.items.length - visibleDestinations.length)
+    : 0;
 
   return (
     <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
@@ -27,7 +26,7 @@ export function FieldDestinationsCard({
             </h2>
           </div>
         </div>
-        {destinations.state === "ready" ? (
+        {isAvailable ? (
           <span className="shrink-0 text-xs font-semibold text-[var(--console-text-soft)]">
             {destinations.items.length} configured
           </span>
