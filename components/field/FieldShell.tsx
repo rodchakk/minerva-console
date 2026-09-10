@@ -42,36 +42,32 @@ export function FieldShell({
             </span>
           </Link>
 
-          <nav aria-label="Field sections" className="hidden items-center gap-1 md:flex">
-            {desktopNavItems.map((item) => {
-              const Icon = item.icon;
+          <div className="flex shrink-0 items-center gap-1">
+            <FieldActiveWorkTimerIndicator session={activeWorkTimer} />
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--console-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--console-text)]"
-                >
-                  <Icon aria-hidden="true" className="h-4 w-4" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+            <nav aria-label="Field sections" className="hidden items-center gap-1 md:flex">
+              {desktopNavItems.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[var(--console-text-muted)] transition-colors hover:bg-white/5 hover:text-[var(--console-text)]"
+                  >
+                    <Icon aria-hidden="true" className="h-4 w-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
         </div>
       </header>
 
       {previewReadOnly ? (
         <div className="border-b border-amber-300/50 bg-amber-300 px-4 py-2 text-center text-xs font-black uppercase text-slate-950">
           {ENTRY_PREVIEW_READ_ONLY_MESSAGE}
-        </div>
-      ) : null}
-
-      {activeWorkTimer ? (
-        <div className="border-b border-[var(--console-border)] bg-[rgba(20,20,20,0.88)] px-4 py-2">
-          <div className="mx-auto flex max-w-4xl justify-end">
-            <FieldActiveWorkTimerIndicator session={activeWorkTimer} />
-          </div>
         </div>
       ) : null}
 
