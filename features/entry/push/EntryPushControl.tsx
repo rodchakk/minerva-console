@@ -97,7 +97,13 @@ export function EntryPushControl({ surface }: EntryPushControlProps) {
   }, [surface]);
 
   useEffect(() => {
-    void refresh();
+    // Defer the external-system synchronization to a timer callback so the
+    // effect body itself never synchronously cascades React state updates.
+    const timer = window.setTimeout(() => {
+      void refresh();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [refresh]);
 
   const enable = async () => {
