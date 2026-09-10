@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, MessageSquareText } from "lucide-react";
+import { EntryPushControl } from "@/features/entry/push/EntryPushControl";
 import { getFieldTickets, type FieldTicketStatus } from "@/features/entry/field/ticketData";
 
 type TicketFilter = "active" | "all" | FieldTicketStatus;
@@ -73,16 +74,19 @@ export default async function FieldEntryTicketsPage({
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--console-accent)]">
           ENTRY Field
         </p>
-        <div className="mt-2 flex items-end justify-between gap-3">
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h1 className="text-3xl font-semibold text-[var(--console-text)]">Tickets</h1>
             <p className="mt-1 text-sm leading-5 text-[var(--console-text-muted)]">
               Support conversations from ENTRY.
             </p>
           </div>
-          <span className="rounded-full border border-[var(--console-border)] bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-[var(--console-text-muted)]">
-            {tickets.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <EntryPushControl surface="field" />
+            <span className="rounded-full border border-[var(--console-border)] bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-[var(--console-text-muted)]">
+              {tickets.length}
+            </span>
+          </div>
         </div>
       </section>
 

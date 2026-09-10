@@ -4,6 +4,7 @@ import { FieldNav } from "@/components/field/FieldNav";
 import { ENTRY_PREVIEW_READ_ONLY_MESSAGE } from "@/features/entry/deploymentBoundary";
 import { FieldActiveWorkTimerIndicator } from "@/features/entry/field/FieldActiveWorkTimerIndicator";
 import type { FieldActiveWorkTimer } from "@/features/entry/field/workTimerModel";
+import { EntryPushSessionSync } from "@/features/entry/push/EntryPushSessionSync";
 
 type FieldShellProps = {
   activeWorkTimer?: FieldActiveWorkTimer | null;
@@ -24,6 +25,7 @@ export function FieldShell({
 }: FieldShellProps) {
   return (
     <div className="minerva-field-theme min-h-screen bg-[var(--console-bg)] text-[var(--console-text)]">
+      <EntryPushSessionSync surface="field" />
       <header className="sticky top-0 z-30 border-b border-[var(--console-border)] bg-[rgba(20,20,20,0.92)] px-4 py-3 backdrop-blur-xl">
         <div className="mx-auto flex max-w-4xl items-center justify-between gap-3">
           <Link href="/field" className="flex min-w-0 items-center gap-3">

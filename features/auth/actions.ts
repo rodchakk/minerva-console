@@ -5,6 +5,7 @@ import {
   getConsolePostLoginDestination,
 } from "@/features/auth/postLoginDestination";
 import { getConsoleAccessContext, requireConsoleMember } from "@/features/auth/consoleAccess";
+import { bestEffortDeactivateEntryPushSubscription } from "@/features/entry/push/server";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthActionState = {
@@ -42,8 +43,23 @@ export async function loginAction(
   redirect(getConsolePostLoginDestination(context.role, formData.get("next")));
 }
 
-export async function signOutAction() {
+export async function signOutAction(formData?: FormData) {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const pushEndpoint = String(formData?.get("entryPushEndpoint") ?? "").trim();
+  if (user && pushEndpoint) {
+    // Security cleanup is deliberately best-effort and bounded. A Push/API
+    // failure must never hold the authentication session open.
+    await bestEffortDeactivateEntryPushSubscription({
+      userId: user.id,
+      endpoint: pushEndpoint,
+      timeoutMs: 650,
+    });
+  }
+
   const { error } = await supabase.auth.signOut({ scope: "local" });
 
   if (error) {
