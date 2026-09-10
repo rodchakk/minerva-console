@@ -72,6 +72,8 @@ test("enable, disable and sign-out lifecycle cannot leak a browser subscription 
   assert.match(control, /Promise\.allSettled\(\[/);
   assert.match(control, /subscription\.unsubscribe\(\)/);
   assert.match(control, /method: "DELETE"/);
+  assert.match(control, /registration\.update\(\)/);
+  assert.match(control, /navigator\.serviceWorker\.ready/);
 
   assert.match(signOut, /keepalive: true/);
   assert.match(signOut, /Promise\.race\(\[/);
@@ -89,6 +91,18 @@ test("service worker only opens same-origin ENTRY ticket UUID routes", () => {
   assert.match(worker, /clients\.matchAll/);
   assert.match(worker, /clients\.openWindow\(targetPath\)/);
   assert.doesNotMatch(worker, /openWindow\(payload\.url\)/);
+});
+
+test("service worker always displays a privacy-safe notification when Android push data is missing", () => {
+  assert.match(worker, /self\.skipWaiting\(\)/);
+  assert.match(worker, /self\.clients\.claim\(\)/);
+  assert.match(worker, /A userVisibleOnly PushSubscription must result in a visible notification/);
+  assert.doesNotMatch(worker, /if \(!event\.data\) return/);
+  assert.doesNotMatch(worker, /if \(!url\) return/);
+  assert.match(worker, /ENTRY support/);
+  assert.match(worker, /A support ticket needs attention\./);
+  assert.match(worker, /if \(url\) options\.data = \{ url \}/);
+  assert.match(worker, /await self\.registration\.showNotification\(title, options\)/);
 });
 
 test("push payload stays minimal and ticket authorization remains on existing protected routes", () => {
