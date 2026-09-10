@@ -82,7 +82,7 @@ test("enable, disable and sign-out lifecycle cannot leak a browser subscription 
 
 test("service worker only opens same-origin ENTRY ticket UUID routes", () => {
   assert.match(worker, /ENTRY_TICKET_PATH/);
-  assert.match(worker, /products\\\/entry\\\/tickets\|field\\\/entry\\\/tickets/);
+  assert.ok(worker.includes("products\\/entry\\/tickets|field\\/entry\\/tickets"));
   assert.match(worker, /url\.origin !== self\.location\.origin/);
   assert.match(worker, /if \(url\.search \|\| url\.hash\) return null/);
   assert.match(worker, /clients\.matchAll/);
@@ -110,9 +110,11 @@ test("dispatcher is secret-protected and scheduling is opt-in through pg_cron + 
   assert.match(migration, /cron\.schedule/);
   assert.match(migration, /install_entry_web_push_dispatch_schedule_v1/);
 
-  // The migration defines the install helper but must not invoke it at top level.
-  const installs = migration.match(/install_entry_web_push_dispatch_schedule_v1\(\)/g) ?? [];
-  assert.equal(installs.length, 3, "only definition/grant/revoke references are expected before release-time invocation");
+  // The migration defines the installer but never executes it at top level.
+  assert.doesNotMatch(
+    migration,
+    /^\s*(?:select|perform)\s+(?:public\.)?install_entry_web_push_dispatch_schedule_v1\s*\(/im,
+  );
 });
 
 test("worker cache headers and dependency lock are production reproducible", () => {
