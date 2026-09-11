@@ -19,6 +19,7 @@ import {
   getOutriderUnitTypeLabel,
   isOutriderEditable,
   type OutriderAdministrator,
+  type OutriderContact,
   type OutriderDraft,
   type OutriderFileRecord,
   type OutriderPublicUploadCategory,
@@ -234,6 +235,63 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
     updateDraft({ initialAdmins });
   }
 
+  const contactsList: OutriderContact[] = useMemo(() => {
+    if (draft.contacts && draft.contacts.length > 0) {
+      return draft.contacts;
+    }
+    if (draft.contactName || draft.contactPhone || draft.contactEmail) {
+      return [
+        {
+          email: draft.contactEmail,
+          name: draft.contactName,
+          phone: draft.contactPhone,
+        },
+      ];
+    }
+    return [{ email: null, name: null, phone: null }];
+  }, [draft.contacts, draft.contactName, draft.contactPhone, draft.contactEmail]);
+
+  function updateContact(
+    index: number,
+    field: keyof OutriderContact,
+    value: string,
+  ) {
+    const nextContacts = contactsList.map((c, i) =>
+      i === index ? { ...c, [field]: value || null } : c,
+    );
+    const primary = nextContacts[0] ?? { email: null, name: null, phone: null };
+    updateDraft({
+      contactEmail: primary.email,
+      contactName: primary.name,
+      contactPhone: primary.phone,
+      contacts: nextContacts,
+    });
+  }
+
+  function addContact() {
+    if (contactsList.length >= 3) return;
+    const nextContacts = [...contactsList, { email: null, name: null, phone: null }];
+    const primary = nextContacts[0] ?? { email: null, name: null, phone: null };
+    updateDraft({
+      contactEmail: primary.email,
+      contactName: primary.name,
+      contactPhone: primary.phone,
+      contacts: nextContacts,
+    });
+  }
+
+  function removeContact(index: number) {
+    if (contactsList.length <= 1) return;
+    const nextContacts = contactsList.filter((_, i) => i !== index);
+    const primary = nextContacts[0] ?? { email: null, name: null, phone: null };
+    updateDraft({
+      contactEmail: primary.email,
+      contactName: primary.name,
+      contactPhone: primary.phone,
+      contacts: nextContacts,
+    });
+  }
+
   async function submitForReview() {
     const saved = await save(computedSections);
     if (!saved) return;
@@ -447,105 +505,23 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
               )}
             </div>
           </fieldset>
-
-          <div>
-            <p className="text-sm font-semibold text-slate-800">
-              ¿Cómo desean que aparezcan las unidades dentro de ENTRY?
-            </p>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              Ejemplos: Casa 01, Apartamento 201, Condominio A-03, Oficina 4
-            </p>
-            <label className="mt-3 block">
-              <span className="text-sm text-slate-700">
-                Ejemplo de cómo identifican actualmente sus unidades
-              </span>
-              <input
-                disabled={!editable}
-                value={draft.unitNamingExample ?? ""}
-                onBlur={() => void save()}
-                onChange={(event) =>
-                  updateDraft({ unitNamingExample: event.currentTarget.value })
-                }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-              />
-            </label>
-          </div>
         </Section>
 
         <Section
           complete={completedSections.includes("destinations")}
           index={2}
-          title="Áreas, destinos y establecimientos"
+          title="Establecimientos y áreas comunes"
         >
           <div className="space-y-5">
-            <fieldset disabled={!editable} className="space-y-3">
-              <legend className="text-sm font-semibold text-slate-800">
-                ¿Existen áreas comunes o recreativas como destinos en ENTRY?
-              </legend>
-              <div className="flex gap-2">
-                {[true, false].map((value) => (
-                  <button
-                    key={String(value)}
-                    type="button"
-                    onClick={() =>
-                      updateDraft({
-                        destinationNames: value ? draft.destinationNames : [],
-                        hasDestinations: value,
-                      })
-                    }
-                    className={`h-10 rounded-md border px-4 text-sm font-semibold ${
-                      draft.hasDestinations === value
-                        ? "border-violet-700 bg-violet-700 text-white"
-                        : "border-slate-300 bg-white text-slate-700"
-                    }`}
-                  >
-                    {value ? "Sí" : "No"}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-
-            {draft.hasDestinations ? (
-              <div className="space-y-2">
-                {(draft.destinationNames.length > 0 ? draft.destinationNames : [""]).map(
-                  (destination, index) => (
-                    <input
-                      key={index}
-                      disabled={!editable}
-                      value={destination}
-                      onBlur={() => void save()}
-                      onChange={(event) =>
-                        updateDestination(index, event.currentTarget.value)
-                      }
-                      placeholder={
-                        index === 0 ? "Piscina" : "Casa Club"
-                      }
-                      className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                    />
-                  ),
-                )}
-                <button
-                  type="button"
-                  disabled={!editable}
-                  onClick={() =>
-                    updateDraft({
-                      destinationNames: [...draft.destinationNames, ""],
-                    })
-                  }
-                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  Agregar otro destino
-                </button>
-              </div>
-            ) : null}
-
-            <div className="border-t border-slate-200 pt-4">
-              <fieldset disabled={!editable} className="space-y-3">
+            <div>
+              <fieldset disabled={!editable} className="space-y-2">
                 <legend className="text-sm font-semibold text-slate-800">
                   ¿Existen establecimientos comerciales o empresas dentro de la residencial?
                 </legend>
-                <div className="flex gap-2">
+                <p className="text-sm leading-6 text-slate-600">
+                  Por ejemplo: tiendas, oficinas comerciales, restaurantes, bodegas o empresas operando dentro de la comunidad.
+                </p>
+                <div className="mt-2 flex gap-2">
                   {[true, false].map((value) => (
                     <button
                       key={String(value)}
@@ -596,6 +572,73 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
                   >
                     <Plus className="h-4 w-4" />
                     Agregar otro establecimiento
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="border-t border-slate-200 pt-4">
+              <fieldset disabled={!editable} className="space-y-2">
+                <legend className="text-sm font-semibold text-slate-800">
+                  ¿Existen áreas comunes o recreativas como destinos en ENTRY?
+                </legend>
+                <p className="text-sm leading-6 text-slate-600">
+                  Áreas que los vecinos o la administración puedan reservar dentro de la comunidad, como canchas de fútbol, casa club, área de piscina, parque o salones de eventos.
+                </p>
+                <div className="mt-2 flex gap-2">
+                  {[true, false].map((value) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() =>
+                        updateDraft({
+                          destinationNames: value ? draft.destinationNames : [],
+                          hasDestinations: value,
+                        })
+                      }
+                      className={`h-10 rounded-md border px-4 text-sm font-semibold ${
+                        draft.hasDestinations === value
+                          ? "border-violet-700 bg-violet-700 text-white"
+                          : "border-slate-300 bg-white text-slate-700"
+                      }`}
+                    >
+                      {value ? "Sí" : "No"}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              {draft.hasDestinations ? (
+                <div className="mt-3 space-y-2">
+                  {(draft.destinationNames.length > 0 ? draft.destinationNames : [""]).map(
+                    (destination, index) => (
+                      <input
+                        key={index}
+                        disabled={!editable}
+                        value={destination}
+                        onBlur={() => void save()}
+                        onChange={(event) =>
+                          updateDestination(index, event.currentTarget.value)
+                        }
+                        placeholder={
+                          index === 0 ? "Cancha de fútbol" : "Casa Club"
+                        }
+                        className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                      />
+                    ),
+                  )}
+                  <button
+                    type="button"
+                    disabled={!editable}
+                    onClick={() =>
+                      updateDraft({
+                        destinationNames: [...draft.destinationNames, ""],
+                      })
+                    }
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar otro área / destino
                   </button>
                 </div>
               ) : null}
@@ -799,49 +842,82 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
           <div>
             <p className="text-sm font-semibold text-slate-900">Contacto principal</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              Esta será la persona con quien confirmaremos cualquier duda durante
-              la configuración.
+              Personas con quienes confirmaremos cualquier duda durante la configuración (máximo 3).
             </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="block sm:col-span-2">
-                <span className="text-sm font-semibold text-slate-800">Nombre</span>
-                <input
-                  disabled={!editable}
-                  value={draft.contactName ?? ""}
-                  onBlur={() => void save()}
-                  onChange={(event) =>
-                    updateDraft({ contactName: event.currentTarget.value })
-                  }
-                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-semibold text-slate-800">Teléfono</span>
-                <input
-                  disabled={!editable}
-                  value={draft.contactPhone ?? ""}
-                  onBlur={() => void save()}
-                  onChange={(event) =>
-                    updateDraft({ contactPhone: event.currentTarget.value })
-                  }
-                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                />
-              </label>
-              <label className="block">
-                <span className="text-sm font-semibold text-slate-800">
-                  Correo electrónico
-                </span>
-                <input
-                  disabled={!editable}
-                  type="email"
-                  value={draft.contactEmail ?? ""}
-                  onBlur={() => void save()}
-                  onChange={(event) =>
-                    updateDraft({ contactEmail: event.currentTarget.value })
-                  }
-                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                />
-              </label>
+            <div className="mt-3 space-y-4">
+              {contactsList.map((contact, index) => (
+                <div
+                  key={index}
+                  className="rounded-md border border-slate-200 bg-slate-50 p-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Contacto {index + 1} {index === 0 ? "(Principal)" : ""}
+                    </p>
+                    {contactsList.length > 1 && editable ? (
+                      <button
+                        type="button"
+                        onClick={() => removeContact(index)}
+                        className="text-xs text-rose-600 hover:underline font-medium"
+                      >
+                        Eliminar
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label className="block sm:col-span-2">
+                      <span className="text-sm font-semibold text-slate-800">Nombre completo</span>
+                      <input
+                        disabled={!editable}
+                        value={contact.name ?? ""}
+                        onBlur={() => void save()}
+                        onChange={(event) =>
+                          updateContact(index, "name", event.currentTarget.value)
+                        }
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-semibold text-slate-800">Teléfono</span>
+                      <input
+                        disabled={!editable}
+                        value={contact.phone ?? ""}
+                        onBlur={() => void save()}
+                        onChange={(event) =>
+                          updateContact(index, "phone", event.currentTarget.value)
+                        }
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                      />
+                    </label>
+                    <label className="block">
+                      <span className="text-sm font-semibold text-slate-800">
+                        Correo electrónico
+                      </span>
+                      <input
+                        disabled={!editable}
+                        type="email"
+                        value={contact.email ?? ""}
+                        onBlur={() => void save()}
+                        onChange={(event) =>
+                          updateContact(index, "email", event.currentTarget.value)
+                        }
+                        className="mt-2 h-11 w-full rounded-md border border-slate-300 bg-white px-3 text-sm outline-none focus:border-violet-600"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ))}
+
+              {contactsList.length < 3 && editable ? (
+                <button
+                  type="button"
+                  onClick={addContact}
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar contacto
+                </button>
+              ) : null}
             </div>
           </div>
 
@@ -858,17 +934,22 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
               <span className="text-sm font-semibold text-slate-800">
                 ¿Cuántos administradores habrá al iniciar?
               </span>
-              <input
+              <select
                 disabled={!editable}
-                type="number"
-                min={0}
-                max={25}
-                inputMode="numeric"
                 value={draft.initialAdminCount ?? ""}
-                onBlur={() => void save()}
-                onChange={(event) => setInitialAdminCount(event.currentTarget.value)}
+                onChange={(event) => {
+                  setInitialAdminCount(event.currentTarget.value);
+                  void save();
+                }}
                 className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-              />
+              >
+                <option value="">Seleccionar cantidad</option>
+                {Array.from({ length: 11 }, (_, i) => (
+                  <option key={i} value={i}>
+                    {i} {i === 1 ? "administrador" : "administradores"}
+                  </option>
+                ))}
+              </select>
             </label>
 
             {draft.initialAdminCount !== null && draft.initialAdminCount > 0 ? (

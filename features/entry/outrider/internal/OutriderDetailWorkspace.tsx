@@ -545,14 +545,26 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
             <DataCard
               label={getOutriderSectionLabel("contact")}
               value={
-                <div className="space-y-1">
-                  <p>{detail.contactName ?? "No contact name"}</p>
-                  <p className="text-[var(--text-muted)]">
-                    {detail.contactPhone ?? "No phone"}
-                  </p>
-                  <p className="text-[var(--text-muted)]">
-                    {detail.contactEmail ?? "No email"}
-                  </p>
+                <div className="space-y-2">
+                  {detail.contacts && detail.contacts.length > 0 ? (
+                    detail.contacts.map((c, idx) => (
+                      <div key={idx} className="border-b border-[var(--border)] pb-2 last:border-0 last:pb-0">
+                        <p className="font-semibold text-white">{c.name ?? "No contact name"}</p>
+                        <p className="text-[var(--text-muted)]">{c.phone ?? "No phone"}</p>
+                        <p className="text-[var(--text-muted)]">{c.email ?? "No email"}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <>
+                      <p>{detail.contactName ?? "No contact name"}</p>
+                      <p className="text-[var(--text-muted)]">
+                        {detail.contactPhone ?? "No phone"}
+                      </p>
+                      <p className="text-[var(--text-muted)]">
+                        {detail.contactEmail ?? "No email"}
+                      </p>
+                    </>
+                  )}
                 </div>
               }
             />

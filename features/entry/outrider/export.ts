@@ -217,6 +217,7 @@ export function buildOutriderSummary(
       name: detail.contactName,
       phone: detail.contactPhone,
     },
+    contacts: detail.contacts,
     destinations: {
       hasDestinations: detail.hasDestinations,
       names: detail.destinationNames,
@@ -280,6 +281,16 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
           .join("\n")
       : "- No attachments";
 
+  const contactsList =
+    summary.contacts.length > 0
+      ? summary.contacts
+          .map(
+            (c, i) =>
+              `- ${i + 1}. ${c.name ?? "Name not provided"} | Phone: ${c.phone ?? "Not provided"} | Email: ${c.email ?? "Not provided"}`,
+          )
+          .join("\n")
+      : `- Name: ${summary.contact.name ?? "Not provided"}\n- Phone: ${summary.contact.phone ?? "Not provided"}\n- Email: ${summary.contact.email ?? "Not provided"}`;
+
   return [
     `# ENTRY Outrider Handoff - ${summary.community.name}`,
     "",
@@ -312,10 +323,8 @@ export function buildOutriderMarkdown(summary: PortableOutriderExportSummary) {
     `- Count: ${summary.securityStaff.count ?? "Not provided"}`,
     `- Notes: ${summary.securityStaff.notes ?? "None"}`,
     "",
-    "## Contact",
-    `- Name: ${summary.contact.name ?? "Not provided"}`,
-    `- Phone: ${summary.contact.phone ?? "Not provided"}`,
-    `- Email: ${summary.contact.email ?? "Not provided"}`,
+    "## Contacts",
+    contactsList,
     "",
     "## Initial Administrators",
     `- Count: ${summary.administrators.count ?? "Not provided"}`,

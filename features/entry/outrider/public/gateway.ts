@@ -128,6 +128,26 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
       contactEmail: asNullableString(outrider.contact_email),
       contactName: asNullableString(outrider.contact_name),
       contactPhone: asNullableString(outrider.contact_phone),
+      contacts: (function () {
+        const raw = Array.isArray(outrider.contacts)
+          ? outrider.contacts.slice(0, 3).map((item) => {
+              const record = asRecord(item);
+              return {
+                email: asNullableString(record.email),
+                name: asNullableString(record.name),
+                phone: asNullableString(record.phone),
+              };
+            })
+          : [];
+        if (raw.length > 0) return raw;
+        const name = asNullableString(outrider.contact_name);
+        const phone = asNullableString(outrider.contact_phone);
+        const email = asNullableString(outrider.contact_email);
+        if (name || phone || email) {
+          return [{ email, name, phone }];
+        }
+        return [];
+      })(),
       destinationNames: asStringArray(outrider.destinations),
       establishmentNames: asStringArray(outrider.establishments),
       hasDestinations: asBoolean(outrider.has_destinations),
@@ -161,6 +181,7 @@ function toRpcPayload(payload: OutriderSavePayload) {
       contact_email: normalized.contactEmail,
       contact_name: normalized.contactName,
       contact_phone: normalized.contactPhone,
+      contacts: normalized.contacts,
       destinations: normalized.destinationNames,
       establishments: normalized.establishmentNames,
       has_destinations: normalized.hasDestinations,

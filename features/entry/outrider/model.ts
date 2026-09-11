@@ -113,11 +113,18 @@ export type OutriderAdministrator = {
   unit: string | null;
 };
 
+export type OutriderContact = {
+  email: string | null;
+  name: string | null;
+  phone: string | null;
+};
+
 export type OutriderDraft = {
   availableInformation: OutriderFileCategory[];
   contactEmail: string | null;
   contactName: string | null;
   contactPhone: string | null;
+  contacts: OutriderContact[];
   destinationNames: string[];
   establishmentNames: string[];
   hasDestinations: boolean | null;
@@ -159,6 +166,7 @@ export type OutriderSavePayload = {
   contactEmail?: unknown;
   contactName?: unknown;
   contactPhone?: unknown;
+  contacts?: unknown;
   destinationNames?: unknown;
   establishmentNames?: unknown;
   hasDestinations?: unknown;
@@ -202,6 +210,7 @@ export type OutriderExportSummary = {
     name: string | null;
     phone: string | null;
   };
+  contacts: OutriderContact[];
   destinations: {
     hasDestinations: boolean | null;
     names: string[];
@@ -382,6 +391,23 @@ function normalizeAdministrators(value: unknown): OutriderAdministrator[] {
   });
 }
 
+function normalizeContacts(value: unknown): OutriderContact[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.slice(0, 3).map((item) => {
+    const record =
+      item && typeof item === "object" && !Array.isArray(item)
+        ? (item as Record<string, unknown>)
+        : {};
+
+    return {
+      email: normalizeOutriderText(record.email, 254),
+      name: normalizeOutriderText(record.name, 180),
+      phone: normalizeOutriderText(record.phone, 80),
+    };
+  });
+}
+
 export function isValidOutriderEmail(value: string | null) {
   if (!value) return false;
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value);
@@ -403,12 +429,27 @@ function isAdministratorComplete(administrator: OutriderAdministrator) {
 export function normalizeOutriderSavePayload(
   payload: OutriderSavePayload,
 ): NormalizedOutriderSave {
+  const contacts = normalizeContacts(payload.contacts);
+  const primaryContact = contacts[0] ?? {
+    email: normalizeOutriderText(payload.contactEmail, 254),
+    name: normalizeOutriderText(payload.contactName, 180),
+    phone: normalizeOutriderText(payload.contactPhone, 80),
+  };
+
+  const finalContacts =
+    contacts.length > 0
+      ? contacts
+      : primaryContact.name || primaryContact.phone || primaryContact.email
+        ? [primaryContact]
+        : [];
+
   return {
     availableInformation: normalizeFileCategories(payload.availableInformation),
     completedSections: normalizeCompletedSections(payload.markSectionsComplete),
-    contactEmail: normalizeOutriderText(payload.contactEmail, 254),
-    contactName: normalizeOutriderText(payload.contactName, 180),
-    contactPhone: normalizeOutriderText(payload.contactPhone, 80),
+    contactEmail: primaryContact.email,
+    contactName: primaryContact.name,
+    contactPhone: primaryContact.phone,
+    contacts: finalContacts,
     destinationNames: normalizeStringArray(payload.destinationNames, 75, 180),
     establishmentNames: normalizeStringArray(payload.establishmentNames, 50, 120),
     hasDestinations: normalizeBoolean(payload.hasDestinations),
@@ -432,7 +473,7 @@ export function calculateOutriderCompletedSections(
 ) {
   const completed = new Set<OutriderSection>(markSectionsComplete);
 
-  if (draft.unitTypes.length > 0 && Boolean(draft.unitNamingExample)) {
+  if (draft.unitTypes.length > 0) {
     completed.add("units");
   } else {
     completed.delete("units");
@@ -465,9 +506,15 @@ export function calculateOutriderCompletedSections(
     completed.delete("available_information");
   }
 
+  const firstContact = draft.contacts[0] ?? {
+    email: draft.contactEmail,
+    name: draft.contactName,
+    phone: draft.contactPhone,
+  };
+
   const contactComplete = Boolean(
-    draft.contactName &&
-      (draft.contactPhone || isValidOutriderEmail(draft.contactEmail)),
+    (draft.contacts.length > 0 || firstContact.name) &&
+      (firstContact.phone || isValidOutriderEmail(firstContact.email)),
   );
   const administratorsComplete = Boolean(
     draft.initialAdminCount !== null &&

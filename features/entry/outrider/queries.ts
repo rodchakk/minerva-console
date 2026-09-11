@@ -14,6 +14,7 @@ import {
   isOutriderFileCategory,
   isOutriderStatus,
   type OutriderAdministrator,
+  type OutriderContact,
   type OutriderFileRecord,
   type OutriderSection,
   type OutriderStatus,
@@ -55,6 +56,7 @@ export type OutriderDetail = OutriderListItem & {
   availableInformation: string[];
   contactEmail: string | null;
   contactPhone: string | null;
+  contacts: OutriderContact[];
   destinationNames: string[];
   establishmentNames: string[];
   events: OutriderEvent[];
@@ -376,13 +378,36 @@ export async function getOutriderDetail(
 
   if (!listItem) return null;
 
+  const rawContacts = Array.isArray(row.contacts)
+    ? row.contacts.slice(0, 3).map((item) => {
+        const r = item && typeof item === "object" ? (item as Row) : {};
+        return {
+          email: nullableString(r.email),
+          name: nullableString(r.name),
+          phone: nullableString(r.phone),
+        };
+      })
+    : [];
+
+  const contactEmail = nullableString(row.contact_email);
+  const contactPhone = nullableString(row.contact_phone);
+  const contactName = listItem.contactName;
+
+  const contacts: OutriderContact[] =
+    rawContacts.length > 0
+      ? rawContacts
+      : contactName || contactPhone || contactEmail
+        ? [{ email: contactEmail, name: contactName, phone: contactPhone }]
+        : [];
+
   return {
     ...listItem,
     availableInformation: OUTRIDER_FILE_CATEGORIES.filter((category) =>
       files.some((file) => file.category === category),
     ),
-    contactEmail: nullableString(row.contact_email),
-    contactPhone: nullableString(row.contact_phone),
+    contactEmail,
+    contactPhone,
+    contacts,
     destinationNames: stringArray(row.destinations),
     establishmentNames: stringArray(row.establishments),
     events: asRows(eventData).map((event) => ({
