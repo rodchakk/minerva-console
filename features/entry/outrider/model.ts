@@ -119,13 +119,16 @@ export type OutriderDraft = {
   contactName: string | null;
   contactPhone: string | null;
   destinationNames: string[];
+  establishmentNames: string[];
   hasDestinations: boolean | null;
+  hasEstablishments: boolean | null;
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
   initialAdminCount: number | null;
   initialAdmins: OutriderAdministrator[];
   otherUnitType: string | null;
   securityStaffCount: number | null;
+  securityStaffNames: string[];
   securityStaffNotes: string | null;
   unitNamingExample: string | null;
   unitTypes: OutriderUnitType[];
@@ -157,7 +160,9 @@ export type OutriderSavePayload = {
   contactName?: unknown;
   contactPhone?: unknown;
   destinationNames?: unknown;
+  establishmentNames?: unknown;
   hasDestinations?: unknown;
+  hasEstablishments?: unknown;
   hasInactiveUnits?: unknown;
   inactiveUnitNotes?: unknown;
   initialAdminCount?: unknown;
@@ -165,6 +170,7 @@ export type OutriderSavePayload = {
   markSectionsComplete?: unknown;
   otherUnitType?: unknown;
   securityStaffCount?: unknown;
+  securityStaffNames?: unknown;
   securityStaffNotes?: unknown;
   unitNamingExample?: unknown;
   unitTypes?: unknown;
@@ -200,6 +206,10 @@ export type OutriderExportSummary = {
     hasDestinations: boolean | null;
     names: string[];
   };
+  establishments: {
+    hasEstablishments: boolean | null;
+    names: string[];
+  };
   inactiveUnits: {
     hasInactiveUnits: boolean | null;
     notes: string | null;
@@ -215,6 +225,7 @@ export type OutriderExportSummary = {
   reviewNote: string | null;
   securityStaff: {
     count: number | null;
+    names: string[];
     notes: string | null;
   };
   setupBoundary: string;
@@ -399,13 +410,16 @@ export function normalizeOutriderSavePayload(
     contactName: normalizeOutriderText(payload.contactName, 180),
     contactPhone: normalizeOutriderText(payload.contactPhone, 80),
     destinationNames: normalizeStringArray(payload.destinationNames, 75, 180),
+    establishmentNames: normalizeStringArray(payload.establishmentNames, 50, 120),
     hasDestinations: normalizeBoolean(payload.hasDestinations),
+    hasEstablishments: normalizeBoolean(payload.hasEstablishments),
     hasInactiveUnits: normalizeBoolean(payload.hasInactiveUnits),
     inactiveUnitNotes: normalizeOutriderText(payload.inactiveUnitNotes, 1000),
     initialAdminCount: normalizeInteger(payload.initialAdminCount, 0, 25),
     initialAdmins: normalizeAdministrators(payload.initialAdmins),
     otherUnitType: normalizeOutriderText(payload.otherUnitType, 120),
     securityStaffCount: normalizeInteger(payload.securityStaffCount, 0, 500),
+    securityStaffNames: normalizeStringArray(payload.securityStaffNames, 20, 120),
     securityStaffNotes: normalizeOutriderText(payload.securityStaffNotes, 2000),
     unitNamingExample: normalizeOutriderText(payload.unitNamingExample, 160),
     unitTypes: normalizeUnitTypes(payload.unitTypes),
@@ -418,19 +432,18 @@ export function calculateOutriderCompletedSections(
 ) {
   const completed = new Set<OutriderSection>(markSectionsComplete);
 
-  if (
-    draft.unitTypes.length > 0 &&
-    Boolean(draft.unitNamingExample) &&
-    (!draft.unitTypes.includes("otro") || Boolean(draft.otherUnitType))
-  ) {
+  if (draft.unitTypes.length > 0 && Boolean(draft.unitNamingExample)) {
     completed.add("units");
   } else {
     completed.delete("units");
   }
 
   if (
-    draft.hasDestinations === false ||
-    (draft.hasDestinations === true && draft.destinationNames.length > 0)
+    (draft.hasDestinations === false ||
+      (draft.hasDestinations === true && draft.destinationNames.length > 0)) &&
+    (draft.hasEstablishments == null ||
+      draft.hasEstablishments === false ||
+      (draft.hasEstablishments === true && draft.establishmentNames.length > 0))
   ) {
     completed.add("destinations");
   } else {

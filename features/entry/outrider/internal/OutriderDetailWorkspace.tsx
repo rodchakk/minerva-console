@@ -501,6 +501,17 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
               }
             />
             <DataCard
+              label="Establecimientos"
+              value={
+                <div>
+                  <p>{yesNo(detail.hasEstablishments)}</p>
+                  <p className="mt-1 text-[var(--text-muted)]">
+                    {detail.establishmentNames.join(", ") || "No establishment names"}
+                  </p>
+                </div>
+              }
+            />
+            <DataCard
               label={getOutriderSectionLabel("inactive_units")}
               value={
                 <div>
@@ -521,8 +532,13 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
                       : `${detail.securityStaffCount} personas`}
                   </p>
                   <p className="text-[var(--text-muted)]">
-                    {detail.securityStaffNotes ?? "No notes"}
+                    {detail.securityStaffNames.join(", ") || "No guard names"}
                   </p>
+                  {detail.securityStaffNotes ? (
+                    <p className="text-[var(--text-muted)]">
+                      Notes: {detail.securityStaffNotes}
+                    </p>
+                  ) : null}
                 </div>
               }
             />

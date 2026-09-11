@@ -221,6 +221,10 @@ export function buildOutriderSummary(
       hasDestinations: detail.hasDestinations,
       names: detail.destinationNames,
     },
+    establishments: {
+      hasEstablishments: detail.hasEstablishments,
+      names: detail.establishmentNames,
+    },
     inactiveUnits: {
       hasInactiveUnits: detail.hasInactiveUnits,
       notes: detail.inactiveUnitNotes,
@@ -236,6 +240,7 @@ export function buildOutriderSummary(
     reviewNote: detail.reviewNote,
     securityStaff: {
       count: detail.securityStaffCount,
+      names: detail.securityStaffNames,
       notes: detail.securityStaffNotes,
     },
     setupBoundary:

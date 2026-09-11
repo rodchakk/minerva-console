@@ -192,6 +192,18 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
     updateDraft({ destinationNames: next });
   }
 
+  function updateEstablishment(index: number, value: string) {
+    const next = [...(draft.establishmentNames ?? [])];
+    next[index] = value;
+    updateDraft({ establishmentNames: next });
+  }
+
+  function updateSecurityStaffName(index: number, value: string) {
+    const next = [...(draft.securityStaffNames ?? [])];
+    next[index] = value;
+    updateDraft({ securityStaffNames: next });
+  }
+
   function setInitialAdminCount(raw: string) {
     if (raw === "") {
       updateDraft({ initialAdminCount: null, initialAdmins: [] });
@@ -418,7 +430,7 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
               ¿Qué tipos de unidades existen en la comunidad?
             </legend>
             <div className="grid gap-2 sm:grid-cols-2">
-              {(["casas", "apartamentos", "condominios", "oficinas", "otro"] as const).map(
+              {(["casas", "apartamentos", "condominios", "oficinas"] as const).map(
                 (unitType) => (
                   <label
                     key={unitType}
@@ -436,28 +448,12 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
             </div>
           </fieldset>
 
-          {draft.unitTypes.includes("otro") ? (
-            <label className="block">
-              <span className="text-sm font-semibold text-slate-800">Otro</span>
-              <input
-                disabled={!editable}
-                value={draft.otherUnitType ?? ""}
-                onBlur={() => void save()}
-                onChange={(event) =>
-                  updateDraft({ otherUnitType: event.currentTarget.value })
-                }
-                className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-              />
-            </label>
-          ) : null}
-
           <div>
             <p className="text-sm font-semibold text-slate-800">
               ¿Cómo desean que aparezcan las unidades dentro de ENTRY?
             </p>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              Ejemplos: Casa 01, Apartamento 201, Condominio A-03, Oficina 4,
-              Taller El Trancazo
+              Ejemplos: Casa 01, Apartamento 201, Condominio A-03, Oficina 4
             </p>
             <label className="mt-3 block">
               <span className="text-sm text-slate-700">
@@ -479,74 +475,132 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
         <Section
           complete={completedSections.includes("destinations")}
           index={2}
-          title="Destinos dentro de la comunidad"
+          title="Áreas, destinos y establecimientos"
         >
-          <fieldset disabled={!editable} className="space-y-3">
-            <legend className="text-sm font-semibold text-slate-800">
-              ¿Existen comercios, talleres, pulperías, oficinas u otros lugares
-              dentro de la comunidad que deban aparecer como destinos en ENTRY?
-            </legend>
-            <p className="text-sm leading-6 text-slate-600">
-              Ejemplos: Taller El Trancazo, Pulpería Don Juan, farmacia, oficina
-              administrativa u otro punto al que puedan dirigirse las visitas.
-            </p>
-            <div className="flex gap-2">
-              {[true, false].map((value) => (
+          <div className="space-y-5">
+            <fieldset disabled={!editable} className="space-y-3">
+              <legend className="text-sm font-semibold text-slate-800">
+                ¿Existen áreas comunes o recreativas como destinos en ENTRY?
+              </legend>
+              <div className="flex gap-2">
+                {[true, false].map((value) => (
+                  <button
+                    key={String(value)}
+                    type="button"
+                    onClick={() =>
+                      updateDraft({
+                        destinationNames: value ? draft.destinationNames : [],
+                        hasDestinations: value,
+                      })
+                    }
+                    className={`h-10 rounded-md border px-4 text-sm font-semibold ${
+                      draft.hasDestinations === value
+                        ? "border-violet-700 bg-violet-700 text-white"
+                        : "border-slate-300 bg-white text-slate-700"
+                    }`}
+                  >
+                    {value ? "Sí" : "No"}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            {draft.hasDestinations ? (
+              <div className="space-y-2">
+                {(draft.destinationNames.length > 0 ? draft.destinationNames : [""]).map(
+                  (destination, index) => (
+                    <input
+                      key={index}
+                      disabled={!editable}
+                      value={destination}
+                      onBlur={() => void save()}
+                      onChange={(event) =>
+                        updateDestination(index, event.currentTarget.value)
+                      }
+                      placeholder={
+                        index === 0 ? "Piscina" : "Casa Club"
+                      }
+                      className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                    />
+                  ),
+                )}
                 <button
-                  key={String(value)}
                   type="button"
+                  disabled={!editable}
                   onClick={() =>
                     updateDraft({
-                      destinationNames: value ? draft.destinationNames : [],
-                      hasDestinations: value,
+                      destinationNames: [...draft.destinationNames, ""],
                     })
                   }
-                  className={`h-10 rounded-md border px-4 text-sm font-semibold ${
-                    draft.hasDestinations === value
-                      ? "border-violet-700 bg-violet-700 text-white"
-                      : "border-slate-300 bg-white text-slate-700"
-                  }`}
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
                 >
-                  {value ? "Sí" : "No"}
+                  <Plus className="h-4 w-4" />
+                  Agregar otro destino
                 </button>
-              ))}
-            </div>
-          </fieldset>
+              </div>
+            ) : null}
 
-          {draft.hasDestinations ? (
-            <div className="space-y-2">
-              {(draft.destinationNames.length > 0 ? draft.destinationNames : [""]).map(
-                (destination, index) => (
-                  <input
-                    key={index}
+            <div className="border-t border-slate-200 pt-4">
+              <fieldset disabled={!editable} className="space-y-3">
+                <legend className="text-sm font-semibold text-slate-800">
+                  ¿Existen establecimientos comerciales o empresas dentro de la residencial?
+                </legend>
+                <div className="flex gap-2">
+                  {[true, false].map((value) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() =>
+                        updateDraft({
+                          establishmentNames: value ? (draft.establishmentNames ?? []) : [],
+                          hasEstablishments: value,
+                        })
+                      }
+                      className={`h-10 rounded-md border px-4 text-sm font-semibold ${
+                        draft.hasEstablishments === value
+                          ? "border-violet-700 bg-violet-700 text-white"
+                          : "border-slate-300 bg-white text-slate-700"
+                      }`}
+                    >
+                      {value ? "Sí" : "No"}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              {draft.hasEstablishments ? (
+                <div className="mt-3 space-y-2">
+                  {((draft.establishmentNames ?? []).length > 0
+                    ? draft.establishmentNames
+                    : [""]
+                  ).map((establishment, index) => (
+                    <input
+                      key={index}
+                      disabled={!editable}
+                      value={establishment}
+                      onBlur={() => void save()}
+                      onChange={(event) => updateEstablishment(index, event.currentTarget.value)}
+                      placeholder={index === 0 ? "Industria Eugenes" : "Oficina Comercial"}
+                      className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                    />
+                  ))}
+                  <button
+                    type="button"
                     disabled={!editable}
-                    value={destination}
-                    onBlur={() => void save()}
-                    onChange={(event) =>
-                      updateDestination(index, event.currentTarget.value)
+                    onClick={() =>
+                      updateDraft({
+                        establishmentNames: [...(draft.establishmentNames ?? []), ""],
+                      })
                     }
-                    placeholder={
-                      index === 0 ? "Taller El Trancazo" : "Pulpería Don Juan"
-                    }
-                    className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                  />
-                ),
-              )}
-              <button
-                type="button"
-                disabled={!editable}
-                onClick={() =>
-                  updateDraft({
-                    destinationNames: [...draft.destinationNames, ""],
-                  })
-                }
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar otro destino
-              </button>
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Agregar otro establecimiento
+                  </button>
+                </div>
+              ) : null}
             </div>
-          ) : null}
+          </div>
         </Section>
 
         <Section
@@ -603,34 +657,65 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
             <p className="text-sm font-semibold text-slate-900">Personal de seguridad</p>
             <p className="mt-1 text-sm leading-6 text-slate-600">
-              Indíquenos cuántas personas forman parte actualmente del personal
-              de seguridad. Si desea, agregue nombres, turnos u otra información.
+              Indíquenos cuántas personas forman parte del personal de seguridad (1–8) y opcionalmente sus nombres.
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className="text-sm font-semibold text-slate-800">
                   Cantidad de personal de seguridad
                 </span>
-                <input
+                <select
                   disabled={!editable}
-                  type="number"
-                  min={0}
-                  max={500}
-                  inputMode="numeric"
                   value={draft.securityStaffCount ?? ""}
-                  onBlur={() => void save()}
                   onChange={(event) => {
-                    const value = event.currentTarget.value;
-                    updateDraft({
-                      securityStaffCount: value === "" ? null : Number(value),
-                    });
+                    const val = event.currentTarget.value ? Number(event.currentTarget.value) : null;
+                    updateDraft({ securityStaffCount: val });
                   }}
                   className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                />
+                >
+                  <option value="">Seleccionar (1 - 8)</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? "persona" : "personas"}
+                    </option>
+                  ))}
+                </select>
               </label>
+
+              <div className="sm:col-span-2 space-y-2">
+                <span className="text-sm font-medium text-slate-700">Nombres del personal (opcional)</span>
+                {((draft.securityStaffNames ?? []).length > 0
+                  ? draft.securityStaffNames
+                  : [""]
+                ).map((name, index) => (
+                  <input
+                    key={index}
+                    disabled={!editable}
+                    value={name}
+                    onBlur={() => void save()}
+                    onChange={(event) => updateSecurityStaffName(index, event.currentTarget.value)}
+                    placeholder={`Guardia ${index + 1}`}
+                    className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                  />
+                ))}
+                <button
+                  type="button"
+                  disabled={!editable}
+                  onClick={() =>
+                    updateDraft({
+                      securityStaffNames: [...(draft.securityStaffNames ?? []), ""],
+                    })
+                  }
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar personal
+                </button>
+              </div>
+
               <label className="block sm:col-span-2">
                 <span className="text-sm font-semibold text-slate-800">
-                  Nombres, turnos u otra información (opcional)
+                  Turnos u otra información (opcional)
                 </span>
                 <textarea
                   disabled={!editable}

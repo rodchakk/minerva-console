@@ -56,15 +56,18 @@ export type OutriderDetail = OutriderListItem & {
   contactEmail: string | null;
   contactPhone: string | null;
   destinationNames: string[];
+  establishmentNames: string[];
   events: OutriderEvent[];
   files: OutriderFileRecord[];
   hasDestinations: boolean | null;
+  hasEstablishments: boolean | null;
   hasInactiveUnits: boolean | null;
   inactiveUnitNotes: string | null;
   initialAdminCount: number | null;
   initialAdmins: OutriderAdministrator[];
   otherUnitType: string | null;
   securityStaffCount: number | null;
+  securityStaffNames: string[];
   securityStaffNotes: string | null;
   unitNamingExample: string | null;
   unitTypes: OutriderUnitType[];
@@ -381,6 +384,7 @@ export async function getOutriderDetail(
     contactEmail: nullableString(row.contact_email),
     contactPhone: nullableString(row.contact_phone),
     destinationNames: stringArray(row.destinations),
+    establishmentNames: stringArray(row.establishments),
     events: asRows(eventData).map((event) => ({
       actorType: coerceString(event.actor_type, "system"),
       createdAt: coerceString(event.created_at),
@@ -396,6 +400,10 @@ export async function getOutriderDetail(
       row.has_destinations === null || row.has_destinations === undefined
         ? null
         : coerceBoolean(row.has_destinations),
+    hasEstablishments:
+      row.has_establishments === null || row.has_establishments === undefined
+        ? null
+        : coerceBoolean(row.has_establishments),
     hasInactiveUnits:
       row.has_inactive_units === null || row.has_inactive_units === undefined
         ? null
@@ -405,6 +413,7 @@ export async function getOutriderDetail(
     initialAdmins: administratorArray(row.initial_admins),
     otherUnitType: nullableString(row.unit_type_other),
     securityStaffCount: nullableInteger(row.security_staff_count),
+    securityStaffNames: stringArray(row.security_staff_names),
     securityStaffNotes: nullableString(row.security_staff_notes),
     unitNamingExample: nullableString(row.unit_naming_example),
     unitTypes: unitTypeArray(row.unit_types),
