@@ -686,207 +686,8 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
         </Section>
 
         <Section
-          complete={completedSections.includes("available_information")}
-          index={3}
-          title="Información disponible"
-        >
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-            <p className="text-sm font-semibold text-slate-900">Personal de seguridad</p>
-            <p className="mt-1 text-sm leading-6 text-slate-600">
-              Indíquenos cuántas personas forman parte del personal de seguridad (1–8) y opcionalmente sus nombres.
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="text-sm font-semibold text-slate-800">
-                  Cantidad de personal de seguridad
-                </span>
-                <select
-                  disabled={!editable}
-                  value={draft.securityStaffCount ?? ""}
-                  onChange={(event) => {
-                    const val = event.currentTarget.value ? Number(event.currentTarget.value) : null;
-                    updateDraft({ securityStaffCount: val });
-                  }}
-                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                >
-                  <option value="">Seleccionar (1 - 8)</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
-                    <option key={num} value={num}>
-                      {num} {num === 1 ? "persona" : "personas"}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <div className="sm:col-span-2 space-y-2">
-                <span className="text-sm font-medium text-slate-700">Nombres del personal (opcional)</span>
-                {((draft.securityStaffNames ?? []).length > 0
-                  ? draft.securityStaffNames
-                  : [""]
-                ).map((name, index) => (
-                  <input
-                    key={index}
-                    disabled={!editable}
-                    value={name}
-                    onBlur={() => void save()}
-                    onChange={(event) => updateSecurityStaffName(index, event.currentTarget.value)}
-                    placeholder={`Guardia ${index + 1}`}
-                    className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                  />
-                ))}
-                <button
-                  type="button"
-                  disabled={!editable}
-                  onClick={() =>
-                    updateDraft({
-                      securityStaffNames: [...(draft.securityStaffNames ?? []), ""],
-                    })
-                  }
-                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
-                >
-                  <Plus className="h-4 w-4" />
-                  Agregar personal
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm leading-6 text-emerald-900">
-            No necesita reorganizar la información para nosotros. Si ya tiene un
-            archivo con unidades, residentes o ambos, envíelo tal como lo utiliza
-            y Minerva se encargará de prepararlo para ENTRY. El archivo es opcional.
-          </p>
-          <div className="space-y-3">
-            {OUTRIDER_PUBLIC_UPLOAD_CATEGORIES.map((category) => (
-              <div
-                key={category}
-                className="rounded-md border border-slate-200 px-3 py-3"
-              >
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {CATEGORY_COPY[category].label}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {CATEGORY_COPY[category].note}
-                    </p>
-                  </div>
-                  {files.length === 0 ? (
-                    <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
-                      {uploadingCategory === category ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <FileUp className="h-4 w-4" />
-                      )}
-                      Cargar archivo
-                      <input
-                        type="file"
-                        disabled={!editable || uploadingCategory !== null}
-                        accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg"
-                        className="sr-only"
-                        onChange={(event) => {
-                          const file = event.currentTarget.files?.[0];
-                          event.currentTarget.value = "";
-                          if (file) void uploadFile(category, file);
-                        }}
-                      />
-                    </label>
-                  ) : (
-                    <span className="inline-flex h-9 items-center rounded-md bg-emerald-50 px-3 text-xs font-semibold text-emerald-800">
-                      Archivo recibido
-                    </span>
-                  )}
-                </div>
-                {files.length > 0 ? (
-                  <div className="mt-3 space-y-1">
-                    {files.map((file) => (
-                      <p key={file.id} className="text-xs text-slate-600">
-                        {file.originalFilename} · {fileSizeLabel(file.byteSize)}
-                      </p>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section
-          complete={completedSections.includes("inactive_units")}
-          index={4}
-          title="Unidades desactivadas"
-        >
-          <fieldset disabled={!editable} className="space-y-3">
-            <legend className="text-sm font-semibold text-slate-800">
-              ¿Hay unidades que no deben comenzar activas al momento de iniciar ENTRY?
-            </legend>
-            <div className="flex gap-2">
-              {[true, false].map((value) => (
-                <button
-                  key={String(value)}
-                  type="button"
-                  onClick={() =>
-                    updateDraft({
-                      hasInactiveUnits: value,
-                      inactiveUnitNotes: value ? draft.inactiveUnitNotes : null,
-                    })
-                  }
-                  className={`h-10 rounded-md border px-4 text-sm font-semibold ${
-                    draft.hasInactiveUnits === value
-                      ? "border-violet-700 bg-violet-700 text-white"
-                      : "border-slate-300 bg-white text-slate-700"
-                  }`}
-                >
-                  {value ? "Sí" : "No"}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-
-          {draft.hasInactiveUnits ? (
-            <div className="mt-3 space-y-2">
-              {(
-                draft.inactiveUnitNotes
-                  ? draft.inactiveUnitNotes.split(/,\s*/).length > 0
-                    ? draft.inactiveUnitNotes.split(/,\s*/)
-                    : [""]
-                  : [""]
-              ).map((unitName, index) => (
-                <input
-                  key={index}
-                  disabled={!editable}
-                  value={unitName}
-                  onBlur={() => void save()}
-                  onChange={(event) =>
-                    updateInactiveUnit(index, event.currentTarget.value)
-                  }
-                  placeholder={index === 0 ? "Casa 14" : "Apartamento 203"}
-                  className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
-                />
-              ))}
-              <button
-                type="button"
-                disabled={!editable}
-                onClick={() => {
-                  const current = draft.inactiveUnitNotes
-                    ? draft.inactiveUnitNotes.split(/,\s*/)
-                    : [""];
-                  updateDraft({
-                    inactiveUnitNotes: [...current, ""].join(", "),
-                  });
-                }}
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar otra unidad desactivada
-              </button>
-            </div>
-          ) : null}
-        </Section>
-
-        <Section
           complete={completedSections.includes("contact")}
-          index={5}
+          index={3}
           title="Contacto y administradores"
         >
           <div>
@@ -908,7 +709,7 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
                       <button
                         type="button"
                         onClick={() => removeContact(index)}
-                        className="text-xs text-rose-600 hover:underline font-medium"
+                        className="text-xs font-medium text-rose-600 hover:underline"
                       >
                         Eliminar
                       </button>
@@ -1093,6 +894,205 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
               </div>
             ) : null}
           </div>
+        </Section>
+
+        <Section
+          complete={completedSections.includes("available_information")}
+          index={4}
+          title="Información disponible"
+        >
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
+            <p className="text-sm font-semibold text-slate-900">Personal de seguridad</p>
+            <p className="mt-1 text-sm leading-6 text-slate-600">
+              Indíquenos cuántas personas forman parte del personal de seguridad (1–8) y opcionalmente sus nombres.
+            </p>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-800">
+                  Cantidad de personal de seguridad
+                </span>
+                <select
+                  disabled={!editable}
+                  value={draft.securityStaffCount ?? ""}
+                  onChange={(event) => {
+                    const val = event.currentTarget.value ? Number(event.currentTarget.value) : null;
+                    updateDraft({ securityStaffCount: val });
+                  }}
+                  className="mt-2 h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                >
+                  <option value="">Seleccionar (1 - 8)</option>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((num) => (
+                    <option key={num} value={num}>
+                      {num} {num === 1 ? "persona" : "personas"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div className="space-y-2 sm:col-span-2">
+                <span className="text-sm font-medium text-slate-700">Nombres del personal (opcional)</span>
+                {((draft.securityStaffNames ?? []).length > 0
+                  ? draft.securityStaffNames
+                  : [""]
+                ).map((name, index) => (
+                  <input
+                    key={index}
+                    disabled={!editable}
+                    value={name}
+                    onBlur={() => void save()}
+                    onChange={(event) => updateSecurityStaffName(index, event.currentTarget.value)}
+                    placeholder={`Guardia ${index + 1}`}
+                    className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                  />
+                ))}
+                <button
+                  type="button"
+                  disabled={!editable}
+                  onClick={() =>
+                    updateDraft({
+                      securityStaffNames: [...(draft.securityStaffNames ?? []), ""],
+                    })
+                  }
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar personal
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm leading-6 text-emerald-900">
+            No necesita reorganizar la información para nosotros. Si ya tiene un
+            archivo con unidades, residentes o ambos, envíelo tal como lo utiliza
+            y Minerva se encargará de prepararlo para ENTRY. El archivo es opcional.
+          </p>
+          <div className="space-y-3">
+            {OUTRIDER_PUBLIC_UPLOAD_CATEGORIES.map((category) => (
+              <div
+                key={category}
+                className="rounded-md border border-slate-200 px-3 py-3"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">
+                      {CATEGORY_COPY[category].label}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {CATEGORY_COPY[category].note}
+                    </p>
+                  </div>
+                  {files.length === 0 ? (
+                    <label className="inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
+                      {uploadingCategory === category ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <FileUp className="h-4 w-4" />
+                      )}
+                      Cargar archivo
+                      <input
+                        type="file"
+                        disabled={!editable || uploadingCategory !== null}
+                        accept=".xlsx,.xls,.csv,.pdf,.doc,.docx,.png,.jpg,.jpeg"
+                        className="sr-only"
+                        onChange={(event) => {
+                          const file = event.currentTarget.files?.[0];
+                          event.currentTarget.value = "";
+                          if (file) void uploadFile(category, file);
+                        }}
+                      />
+                    </label>
+                  ) : (
+                    <span className="inline-flex h-9 items-center rounded-md bg-emerald-50 px-3 text-xs font-semibold text-emerald-800">
+                      Archivo recibido
+                    </span>
+                  )}
+                </div>
+                {files.length > 0 ? (
+                  <div className="mt-3 space-y-1">
+                    {files.map((file) => (
+                      <p key={file.id} className="text-xs text-slate-600">
+                        {file.originalFilename} · {fileSizeLabel(file.byteSize)}
+                      </p>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          complete={completedSections.includes("inactive_units")}
+          index={5}
+          title="Unidades desactivadas"
+        >
+          <fieldset disabled={!editable} className="space-y-3">
+            <legend className="text-sm font-semibold text-slate-800">
+              ¿Hay unidades que no deben comenzar activas al momento de iniciar ENTRY?
+            </legend>
+            <div className="flex gap-2">
+              {[true, false].map((value) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  onClick={() =>
+                    updateDraft({
+                      hasInactiveUnits: value,
+                      inactiveUnitNotes: value ? draft.inactiveUnitNotes : null,
+                    })
+                  }
+                  className={`h-10 rounded-md border px-4 text-sm font-semibold ${
+                    draft.hasInactiveUnits === value
+                      ? "border-violet-700 bg-violet-700 text-white"
+                      : "border-slate-300 bg-white text-slate-700"
+                  }`}
+                >
+                  {value ? "Sí" : "No"}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {draft.hasInactiveUnits ? (
+            <div className="mt-3 space-y-2">
+              {(
+                draft.inactiveUnitNotes
+                  ? draft.inactiveUnitNotes.split(/,\s*/).length > 0
+                    ? draft.inactiveUnitNotes.split(/,\s*/)
+                    : [""]
+                  : [""]
+              ).map((unitName, index) => (
+                <input
+                  key={index}
+                  disabled={!editable}
+                  value={unitName}
+                  onBlur={() => void save()}
+                  onChange={(event) =>
+                    updateInactiveUnit(index, event.currentTarget.value)
+                  }
+                  placeholder={index === 0 ? "Casa 14" : "Apartamento 203"}
+                  className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                />
+              ))}
+              <button
+                type="button"
+                disabled={!editable}
+                onClick={() => {
+                  const current = draft.inactiveUnitNotes
+                    ? draft.inactiveUnitNotes.split(/,\s*/)
+                    : [""];
+                  updateDraft({
+                    inactiveUnitNotes: [...current, ""].join(", "),
+                  });
+                }}
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar otra unidad desactivada
+              </button>
+            </div>
+          ) : null}
         </Section>
 
         <footer className="sticky bottom-0 rounded-lg border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">

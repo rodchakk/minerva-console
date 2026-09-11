@@ -516,32 +516,6 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
               }
             />
             <DataCard
-              label="Personal de seguridad"
-              value={
-                <div className="space-y-1">
-                  <p>
-                    {detail.securityStaffCount === null
-                      ? "Not answered"
-                      : `${detail.securityStaffCount} personas`}
-                  </p>
-                  <p className="text-[var(--text-muted)]">
-                    {detail.securityStaffNames.join(", ") || "No guard names"}
-                  </p>
-                </div>
-              }
-            />
-            <DataCard
-              label={getOutriderSectionLabel("inactive_units")}
-              value={
-                <div>
-                  <p>{yesNo(detail.hasInactiveUnits)}</p>
-                  <p className="mt-1 text-[var(--text-muted)]">
-                    {detail.inactiveUnitNotes ?? "No notes"}
-                  </p>
-                </div>
-              }
-            />
-            <DataCard
               label="Contactos principales"
               value={
                 <div className="space-y-2">
@@ -564,6 +538,32 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
                       </p>
                     </>
                   )}
+                </div>
+              }
+            />
+            <DataCard
+              label="Personal de seguridad"
+              value={
+                <div className="space-y-1">
+                  <p>
+                    {detail.securityStaffCount === null
+                      ? "Not answered"
+                      : `${detail.securityStaffCount} personas`}
+                  </p>
+                  <p className="text-[var(--text-muted)]">
+                    {detail.securityStaffNames.join(", ") || "No guard names"}
+                  </p>
+                </div>
+              }
+            />
+            <DataCard
+              label={getOutriderSectionLabel("inactive_units")}
+              value={
+                <div>
+                  <p>{yesNo(detail.hasInactiveUnits)}</p>
+                  <p className="mt-1 text-[var(--text-muted)]">
+                    {detail.inactiveUnitNotes ?? "No notes"}
+                  </p>
                 </div>
               }
             />
