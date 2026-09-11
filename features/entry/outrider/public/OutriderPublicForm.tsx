@@ -205,6 +205,15 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
     updateDraft({ securityStaffNames: next });
   }
 
+  function updateInactiveUnit(index: number, value: string) {
+    const raw = draft.inactiveUnitNotes
+      ? draft.inactiveUnitNotes.split(/,\s*/)
+      : [""];
+    const list = raw.length > 0 ? raw : [""];
+    list[index] = value;
+    updateDraft({ inactiveUnitNotes: list.join(", ") });
+  }
+
   function setInitialAdminCount(raw: string) {
     if (raw === "") {
       updateDraft({ initialAdminCount: null, initialAdmins: [] });
@@ -556,7 +565,7 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
                       value={establishment}
                       onBlur={() => void save()}
                       onChange={(event) => updateEstablishment(index, event.currentTarget.value)}
-                      placeholder={index === 0 ? "Industria Eugenes" : "Oficina Comercial"}
+                      placeholder={index === 0 ? "Empresa Horizontes" : "Oficina Comercial"}
                       className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
                     />
                   ))}
@@ -647,54 +656,8 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
         </Section>
 
         <Section
-          complete={completedSections.includes("inactive_units")}
-          index={3}
-          title="Unidades desactivadas"
-        >
-          <fieldset disabled={!editable} className="space-y-3">
-            <legend className="text-sm font-semibold text-slate-800">
-              ¿Hay unidades que no deben comenzar activas al momento de iniciar ENTRY?
-            </legend>
-            <div className="flex gap-2">
-              {[true, false].map((value) => (
-                <button
-                  key={String(value)}
-                  type="button"
-                  onClick={() =>
-                    updateDraft({
-                      hasInactiveUnits: value,
-                      inactiveUnitNotes: value ? draft.inactiveUnitNotes : null,
-                    })
-                  }
-                  className={`h-10 rounded-md border px-4 text-sm font-semibold ${
-                    draft.hasInactiveUnits === value
-                      ? "border-violet-700 bg-violet-700 text-white"
-                      : "border-slate-300 bg-white text-slate-700"
-                  }`}
-                >
-                  {value ? "Sí" : "No"}
-                </button>
-              ))}
-            </div>
-          </fieldset>
-          {draft.hasInactiveUnits ? (
-            <textarea
-              disabled={!editable}
-              value={draft.inactiveUnitNotes ?? ""}
-              onBlur={() => void save()}
-              onChange={(event) =>
-                updateDraft({ inactiveUnitNotes: event.currentTarget.value })
-              }
-              placeholder="Casa 14, Casa 28, Apartamento 203"
-              rows={4}
-              className="w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none focus:border-violet-600"
-            />
-          ) : null}
-        </Section>
-
-        <Section
           complete={completedSections.includes("available_information")}
-          index={4}
+          index={3}
           title="Información disponible"
         >
           <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
@@ -755,22 +718,6 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
                   Agregar personal
                 </button>
               </div>
-
-              <label className="block sm:col-span-2">
-                <span className="text-sm font-semibold text-slate-800">
-                  Turnos u otra información (opcional)
-                </span>
-                <textarea
-                  disabled={!editable}
-                  value={draft.securityStaffNotes ?? ""}
-                  onBlur={() => void save()}
-                  onChange={(event) =>
-                    updateDraft({ securityStaffNotes: event.currentTarget.value })
-                  }
-                  rows={3}
-                  className="mt-2 w-full resize-y rounded-md border border-slate-300 px-3 py-3 text-sm outline-none focus:border-violet-600"
-                />
-              </label>
             </div>
           </div>
 
@@ -832,6 +779,79 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
               </div>
             ))}
           </div>
+        </Section>
+
+        <Section
+          complete={completedSections.includes("inactive_units")}
+          index={4}
+          title="Unidades desactivadas"
+        >
+          <fieldset disabled={!editable} className="space-y-3">
+            <legend className="text-sm font-semibold text-slate-800">
+              ¿Hay unidades que no deben comenzar activas al momento de iniciar ENTRY?
+            </legend>
+            <div className="flex gap-2">
+              {[true, false].map((value) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  onClick={() =>
+                    updateDraft({
+                      hasInactiveUnits: value,
+                      inactiveUnitNotes: value ? draft.inactiveUnitNotes : null,
+                    })
+                  }
+                  className={`h-10 rounded-md border px-4 text-sm font-semibold ${
+                    draft.hasInactiveUnits === value
+                      ? "border-violet-700 bg-violet-700 text-white"
+                      : "border-slate-300 bg-white text-slate-700"
+                  }`}
+                >
+                  {value ? "Sí" : "No"}
+                </button>
+              ))}
+            </div>
+          </fieldset>
+
+          {draft.hasInactiveUnits ? (
+            <div className="mt-3 space-y-2">
+              {(
+                draft.inactiveUnitNotes
+                  ? draft.inactiveUnitNotes.split(/,\s*/).length > 0
+                    ? draft.inactiveUnitNotes.split(/,\s*/)
+                    : [""]
+                  : [""]
+              ).map((unitName, index) => (
+                <input
+                  key={index}
+                  disabled={!editable}
+                  value={unitName}
+                  onBlur={() => void save()}
+                  onChange={(event) =>
+                    updateInactiveUnit(index, event.currentTarget.value)
+                  }
+                  placeholder={index === 0 ? "Casa 14" : "Apartamento 203"}
+                  className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-violet-600"
+                />
+              ))}
+              <button
+                type="button"
+                disabled={!editable}
+                onClick={() => {
+                  const current = draft.inactiveUnitNotes
+                    ? draft.inactiveUnitNotes.split(/,\s*/)
+                    : [""];
+                  updateDraft({
+                    inactiveUnitNotes: [...current, ""].join(", "),
+                  });
+                }}
+                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar otra unidad desactivada
+              </button>
+            </div>
+          ) : null}
         </Section>
 
         <Section
