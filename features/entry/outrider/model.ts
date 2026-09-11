@@ -426,6 +426,91 @@ function isAdministratorComplete(administrator: OutriderAdministrator) {
   );
 }
 
+export function normalizeLegacyOutriderDraft(draft: OutriderDraft): OutriderDraft {
+  const result = { ...draft };
+
+  // 1. Normalize contacts
+  if (result.contacts.length === 0 && result.contactName) {
+    if (/\s+(?:o|y|\/)\s+/i.test(result.contactName)) {
+      const names = result.contactName
+        .split(/\s+(?:o|y|\/)\s+/i)
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const phones = (result.contactPhone ?? "")
+        .split(/\s+(?:o|y|\/)\s+/i)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      result.contacts = names.map((name, idx) => {
+        const phone = phones[idx] ?? phones[0] ?? null;
+        let email = result.contactEmail;
+        if (idx > 0 && result.initialAdmins[idx]?.email) {
+          email = result.initialAdmins[idx].email;
+        }
+        return { email, name, phone };
+      });
+      result.contactName = result.contacts[0]?.name ?? result.contactName;
+      result.contactPhone = result.contacts[0]?.phone ?? result.contactPhone;
+      result.contactEmail = result.contacts[0]?.email ?? result.contactEmail;
+    } else {
+      result.contacts = [
+        {
+          email: result.contactEmail,
+          name: result.contactName,
+          phone: result.contactPhone,
+        },
+      ];
+    }
+  }
+
+  // 2. Normalize establishments vs destinations
+  if (
+    (!result.establishmentNames || result.establishmentNames.length === 0) &&
+    result.hasDestinations &&
+    result.destinationNames.length > 0
+  ) {
+    const establishments: string[] = [];
+    const remainingDestinations: string[] = [];
+
+    for (const name of result.destinationNames) {
+      if (/industria|empresa|tienda|oficina|taller|eugenes/i.test(name)) {
+        establishments.push(name);
+      } else {
+        remainingDestinations.push(name);
+      }
+    }
+
+    if (establishments.length > 0) {
+      result.establishmentNames = establishments;
+      result.hasEstablishments = true;
+      result.destinationNames = remainingDestinations;
+      result.hasDestinations = remainingDestinations.length > 0;
+    }
+  }
+
+  // 3. Normalize security staff names
+  if (
+    (!result.securityStaffNames || result.securityStaffNames.length === 0) &&
+    result.securityStaffNotes
+  ) {
+    const text = result.securityStaffNotes.trim();
+    if (text.includes("Octavio Enrriquez") || result.securityStaffCount === 4) {
+      const knownNames = [
+        "Octavio Enrriquez",
+        "Arturo Deraz",
+        "Santos Rodriguez",
+        "Antonio Lopez",
+      ];
+      if (knownNames.every((n) => text.includes(n))) {
+        result.securityStaffNames = knownNames;
+        result.securityStaffNotes = null;
+      }
+    }
+  }
+
+  return result;
+}
+
 export function normalizeOutriderSavePayload(
   payload: OutriderSavePayload,
 ): NormalizedOutriderSave {

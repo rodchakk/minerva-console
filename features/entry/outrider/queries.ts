@@ -13,6 +13,7 @@ import {
   getOutriderProgressPercent,
   isOutriderFileCategory,
   isOutriderStatus,
+  normalizeLegacyOutriderDraft,
   type OutriderAdministrator,
   type OutriderContact,
   type OutriderFileRecord,
@@ -393,34 +394,21 @@ export async function getOutriderDetail(
   const contactPhone = nullableString(row.contact_phone);
   const contactName = listItem.contactName;
 
-  const contacts: OutriderContact[] =
-    rawContacts.length > 0
-      ? rawContacts
-      : contactName || contactPhone || contactEmail
-        ? [{ email: contactEmail, name: contactName, phone: contactPhone }]
-        : [];
-
-  return {
-    ...listItem,
+  const rawDraft = {
     availableInformation: OUTRIDER_FILE_CATEGORIES.filter((category) =>
       files.some((file) => file.category === category),
     ),
     contactEmail,
+    contactName,
     contactPhone,
-    contacts,
+    contacts:
+      rawContacts.length > 0
+        ? rawContacts
+        : contactName || contactPhone || contactEmail
+          ? [{ email: contactEmail, name: contactName, phone: contactPhone }]
+          : [],
     destinationNames: stringArray(row.destinations),
     establishmentNames: stringArray(row.establishments),
-    events: asRows(eventData).map((event) => ({
-      actorType: coerceString(event.actor_type, "system"),
-      createdAt: coerceString(event.created_at),
-      eventType: coerceString(event.event_type, "operational_update"),
-      id: coerceString(event.id),
-      metadata:
-        event.metadata && typeof event.metadata === "object"
-          ? (event.metadata as Record<string, unknown>)
-          : {},
-    })),
-    files,
     hasDestinations:
       row.has_destinations === null || row.has_destinations === undefined
         ? null
@@ -442,5 +430,41 @@ export async function getOutriderDetail(
     securityStaffNotes: nullableString(row.security_staff_notes),
     unitNamingExample: nullableString(row.unit_naming_example),
     unitTypes: unitTypeArray(row.unit_types),
+  };
+
+  const normalizedDraft = normalizeLegacyOutriderDraft(rawDraft);
+
+  return {
+    ...listItem,
+    availableInformation: normalizedDraft.availableInformation,
+    contactEmail: normalizedDraft.contactEmail,
+    contactName: normalizedDraft.contactName,
+    contactPhone: normalizedDraft.contactPhone,
+    contacts: normalizedDraft.contacts,
+    destinationNames: normalizedDraft.destinationNames,
+    establishmentNames: normalizedDraft.establishmentNames,
+    events: asRows(eventData).map((event) => ({
+      actorType: coerceString(event.actor_type, "system"),
+      createdAt: coerceString(event.created_at),
+      eventType: coerceString(event.event_type, "operational_update"),
+      id: coerceString(event.id),
+      metadata:
+        event.metadata && typeof event.metadata === "object"
+          ? (event.metadata as Record<string, unknown>)
+          : {},
+    })),
+    files,
+    hasDestinations: normalizedDraft.hasDestinations,
+    hasEstablishments: normalizedDraft.hasEstablishments,
+    hasInactiveUnits: normalizedDraft.hasInactiveUnits,
+    inactiveUnitNotes: normalizedDraft.inactiveUnitNotes,
+    initialAdminCount: normalizedDraft.initialAdminCount,
+    initialAdmins: normalizedDraft.initialAdmins,
+    otherUnitType: normalizedDraft.otherUnitType,
+    securityStaffCount: normalizedDraft.securityStaffCount,
+    securityStaffNames: normalizedDraft.securityStaffNames,
+    securityStaffNotes: normalizedDraft.securityStaffNotes,
+    unitNamingExample: normalizedDraft.unitNamingExample,
+    unitTypes: normalizedDraft.unitTypes,
   };
 }

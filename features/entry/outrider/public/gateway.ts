@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import {
   isOutriderFileCategory,
   isOutriderStatus,
+  normalizeLegacyOutriderDraft,
   normalizeOutriderSavePayload,
   type OutriderAdministrator,
   type OutriderFileCategory,
@@ -121,7 +122,7 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
     communityId,
     communityName,
     completedSections: asOutriderSections(outrider.completed_sections),
-    draft: {
+    draft: normalizeLegacyOutriderDraft({
       availableInformation: Array.from(
         new Set(mappedFiles.map((file) => file.category)),
       ),
@@ -162,7 +163,7 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
       securityStaffNotes: asNullableString(outrider.security_staff_notes),
       unitNamingExample: asNullableString(outrider.unit_naming_example),
       unitTypes: asOutriderUnitTypes(outrider.unit_types),
-    },
+    }),
     files: mappedFiles,
     id,
     reviewNote: asNullableString(outrider.review_note),
