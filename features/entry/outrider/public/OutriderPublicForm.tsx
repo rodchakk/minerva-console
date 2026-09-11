@@ -183,7 +183,15 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
 
   function toggleUnitType(unitType: OutriderUnitType) {
     const current = new Set(draft.unitTypes);
-    current.has(unitType) ? current.delete(unitType) : current.add(unitType);
+    if (current.has(unitType)) {
+      current.delete(unitType);
+      if (unitType === "otro") {
+        updateDraft({ otherUnitType: null, unitTypes: Array.from(current) });
+        return;
+      }
+    } else {
+      current.add(unitType);
+    }
     updateDraft({ unitTypes: Array.from(current) });
   }
 
@@ -497,22 +505,44 @@ export function OutriderPublicForm({ session, token }: OutriderPublicFormProps) 
               ¿Qué tipos de unidades existen en la comunidad?
             </legend>
             <div className="grid gap-2 sm:grid-cols-2">
-              {(["casas", "apartamentos", "condominios", "oficinas"] as const).map(
-                (unitType) => (
-                  <label
-                    key={unitType}
-                    className="flex items-center gap-3 rounded-md border border-slate-200 px-3 py-2 text-sm"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={draft.unitTypes.includes(unitType)}
-                      onChange={() => toggleUnitType(unitType)}
-                    />
-                    <span>{getOutriderUnitTypeLabel(unitType)}</span>
-                  </label>
-                ),
-              )}
+              {(
+                [
+                  "casas",
+                  "apartamentos",
+                  "condominios",
+                  "oficinas",
+                  "otro",
+                ] as const
+              ).map((unitType) => (
+                <label
+                  key={unitType}
+                  className="flex items-center gap-3 rounded-md border border-slate-200 px-3 py-2 text-sm"
+                >
+                  <input
+                    type="checkbox"
+                    checked={draft.unitTypes.includes(unitType)}
+                    onChange={() => toggleUnitType(unitType)}
+                  />
+                  <span>{getOutriderUnitTypeLabel(unitType)}</span>
+                </label>
+              ))}
             </div>
+
+            {draft.unitTypes.includes("otro") ? (
+              <div className="pt-2">
+                <label className="text-xs font-semibold text-slate-700">
+                  Especifica el otro tipo de unidad
+                </label>
+                <input
+                  type="text"
+                  disabled={!editable}
+                  value={draft.otherUnitType ?? ""}
+                  onChange={(e) => updateDraft({ otherUnitType: e.target.value })}
+                  placeholder="Ej. Locales comerciales, Lotes, Bodegas..."
+                  className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                />
+              </div>
+            ) : null}
           </fieldset>
         </Section>
 
