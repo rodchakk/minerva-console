@@ -480,33 +480,37 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
                     {detail.unitTypes.map(getOutriderUnitTypeLabel).join(", ") ||
                       "Not answered"}
                   </p>
-                  <p className="text-[var(--text-muted)]">
-                    Other: {detail.otherUnitType ?? "None"}
-                  </p>
-                  <p className="text-[var(--text-muted)]">
-                    Naming: {detail.unitNamingExample ?? "Not provided"}
-                  </p>
+                  {detail.otherUnitType ? (
+                    <p className="text-[var(--text-muted)]">
+                      Other: {detail.otherUnitType}
+                    </p>
+                  ) : null}
+                  {detail.unitNamingExample ? (
+                    <p className="text-[var(--text-muted)]">
+                      Naming: {detail.unitNamingExample}
+                    </p>
+                  ) : null}
                 </div>
               }
             />
             <DataCard
-              label={getOutriderSectionLabel("destinations")}
-              value={
-                <div>
-                  <p>{yesNo(detail.hasDestinations)}</p>
-                  <p className="mt-1 text-[var(--text-muted)]">
-                    {detail.destinationNames.join(", ") || "No destination names"}
-                  </p>
-                </div>
-              }
-            />
-            <DataCard
-              label="Establecimientos"
+              label="Establecimientos comerciales"
               value={
                 <div>
                   <p>{yesNo(detail.hasEstablishments)}</p>
                   <p className="mt-1 text-[var(--text-muted)]">
                     {detail.establishmentNames.join(", ") || "No establishment names"}
+                  </p>
+                </div>
+              }
+            />
+            <DataCard
+              label="Áreas comunes y destinos"
+              value={
+                <div>
+                  <p>{yesNo(detail.hasDestinations)}</p>
+                  <p className="mt-1 text-[var(--text-muted)]">
+                    {detail.destinationNames.join(", ") || "No destination names"}
                   </p>
                 </div>
               }
@@ -543,7 +547,7 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
               }
             />
             <DataCard
-              label={getOutriderSectionLabel("contact")}
+              label="Contactos principales"
               value={
                 <div className="space-y-2">
                   {detail.contacts && detail.contacts.length > 0 ? (
@@ -556,7 +560,7 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
                     ))
                   ) : (
                     <>
-                      <p>{detail.contactName ?? "No contact name"}</p>
+                      <p className="font-semibold text-white">{detail.contactName ?? "No contact name"}</p>
                       <p className="text-[var(--text-muted)]">
                         {detail.contactPhone ?? "No phone"}
                       </p>
@@ -613,6 +617,56 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
           </section>
         </div>
       </div>
+
+      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+          Initial access
+        </p>
+        <h2 className="mt-2 text-xl font-semibold text-white">
+          Administradores iniciales
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+          Personas que deben prepararse primero para activación administrativa en ENTRY.
+        </p>
+
+        <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            Cantidad declarada
+          </p>
+          <p className="mt-2 text-sm font-semibold text-white">
+            {detail.initialAdminCount === null
+              ? "Not answered"
+              : `${detail.initialAdminCount} administradores`}
+          </p>
+        </div>
+
+        <div className="mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          {detail.initialAdmins.length > 0 ? (
+            detail.initialAdmins.map((administrator, index) => (
+              <div
+                key={`${administrator.name ?? "admin"}-${index}`}
+                className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3"
+              >
+                <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  Administrador {index + 1}
+                </p>
+                <p className="mt-2 text-sm font-semibold text-white">
+                  {administrator.name ?? "Name not provided"}
+                </p>
+                <div className="mt-2 space-y-1 text-sm text-[var(--text-muted)]">
+                  <p>Unidad: {administrator.unit ?? "Not provided"}</p>
+                  <p>Teléfono: {administrator.phone ?? "Not provided"}</p>
+                  <p>Correo: {administrator.email ?? "Not provided"}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="md:col-span-2 lg:col-span-3 rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-center text-sm text-[var(--text-muted)]">
+              No initial administrators provided.
+            </p>
+          )}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
