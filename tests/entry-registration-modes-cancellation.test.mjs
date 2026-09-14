@@ -73,7 +73,7 @@ test("internal campaign creation exposes both registration modes", () => {
   assert.match(actions, /launch_community_registration_campaign_v3/);
 });
 
-test("unknown totals are shown for resident-provided campaign progress", () => {
+test("unknown totals render truthful metrics without a percentage progress bar", () => {
   const adminCard = read("features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx");
   const fieldCard = read("features/entry/field/FieldRegistrationCard.tsx");
   const progressPage = read("app/(field)/field/entry/communities/[communityId]/registration/page.tsx");
@@ -81,7 +81,26 @@ test("unknown totals are shown for resident-provided campaign progress", () => {
 
   assert.match(query, /hasKnownTotal/);
   assert.match(query, /campaign\.registrationMode === "existing_units"/);
-  assert.match(adminCard, /Unknown/);
-  assert.match(fieldCard, /Total participating units unknown/);
+
+  assert.match(
+    adminCard,
+    /if \(!progress\.hasKnownTotal\)[\s\S]*Residents received[\s\S]*Total units unknown/,
+  );
+  const adminUnknownBranch = adminCard.match(
+    /if \(!progress\.hasKnownTotal\) \{([\s\S]*?)\n  \}\n\n  return/,
+  )?.[1];
+  assert.ok(adminUnknownBranch);
+  assert.doesNotMatch(adminUnknownBranch, /progressbar|progress\.percent|%/);
+
+  assert.match(
+    fieldCard,
+    /if \(!hasKnownTotal\)[\s\S]*Units submitted[\s\S]*Total participating units[\s\S]*Unknown/,
+  );
+  const fieldUnknownBranch = fieldCard.match(
+    /if \(!hasKnownTotal\) \{([\s\S]*?)\n  \}\n\n  const percentage/,
+  )?.[1];
+  assert.ok(fieldUnknownBranch);
+  assert.doesNotMatch(fieldUnknownBranch, /progressbar|percentage|%/);
+
   assert.match(progressPage, /Total participating units/);
 });
