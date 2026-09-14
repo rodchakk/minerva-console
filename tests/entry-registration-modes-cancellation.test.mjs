@@ -102,5 +102,6 @@ test("unknown totals render truthful metrics without a percentage progress bar",
   assert.ok(fieldUnknownBranch);
   assert.doesNotMatch(fieldUnknownBranch, /progressbar|percentage|%/);
 
+  assert.match(fieldCard, /Copy link/);
   assert.match(progressPage, /Total participating units/);
 });
