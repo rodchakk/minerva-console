@@ -74,27 +74,51 @@ function RegistrationProgress({
   submitted: number;
   total: number;
 }) {
+  if (!hasKnownTotal) {
+    return (
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-3">
+          <p className="text-xs text-[var(--console-text-muted)]">Units submitted</p>
+          <p className="mt-1 text-2xl font-semibold text-[var(--console-text)]">
+            {formatFieldCount(submitted)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-3">
+          <p className="text-xs text-[var(--console-text-muted)]">
+            Total participating units
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--console-text)]">
+            Unknown
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const percentage =
-    hasKnownTotal && total > 0
-      ? Math.min(100, Math.round((submitted / total) * 100))
-      : 0;
+    total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
 
   return (
     <div className="mt-4">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-2xl font-semibold text-[var(--console-text)]">
-            {hasKnownTotal
-              ? `${formatFieldCount(submitted)} of ${formatFieldCount(total)}`
-              : formatFieldCount(submitted)}
+            {`${formatFieldCount(submitted)} of ${formatFieldCount(total)}`}
           </p>
           <p className="mt-1 text-xs text-[var(--console-text-muted)]">units completed</p>
         </div>
         <span className="text-xs font-semibold text-[var(--console-text-soft)]">
-          {hasKnownTotal ? `${percentage}%` : "Total unknown"}
+          {percentage}%
         </span>
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+      <div
+        aria-label="Registration progress"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={percentage}
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]"
+        role="progressbar"
+      >
         <div
           className="h-full rounded-full bg-[var(--console-accent)]"
           style={{ width: `${percentage}%` }}
@@ -290,11 +314,11 @@ export function FieldRegistrationCard({
         submitted={submittedUnitCount}
         total={totalCampaignUnitCount}
       />
-      <p className="mt-2 text-xs text-[var(--console-text-soft)]">
-        {hasKnownCampaignTotal
-          ? `${formatFieldCount(totalCampaignUnitCount)} participating units`
-          : "Total participating units unknown"}
-      </p>
+      {hasKnownCampaignTotal ? (
+        <p className="mt-2 text-xs text-[var(--console-text-soft)]">
+          {`${formatFieldCount(totalCampaignUnitCount)} participating units`}
+        </p>
+      ) : null}
 
       {message ? (
         <p className="mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 p-3 text-sm leading-5 text-rose-100">{message}</p>
