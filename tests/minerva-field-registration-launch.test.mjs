@@ -49,14 +49,14 @@ test("isRegistrationLaunchEligible enforces exact launch eligibility rules", () 
     false,
   );
 
-  // 4. Zero units => ineligible
+  // 4. Zero preloaded units => eligible because resident-provided unit mode can launch
   assert.equal(
     isRegistrationLaunchEligible({
       hasOperationalCampaign: false,
       isReadOnlyPreview: false,
       unitCount: 0,
     }),
-    false,
+    true,
   );
 
   // 5. Preview read-only => ineligible
@@ -76,6 +76,10 @@ test("Field launch flow component selects all units by default and requires at l
   assert.match(flow, /new Set\(units\.map\(\(u\) => u\.id\)\)/);
   assert.match(flow, /selectedUnitCount > 0/);
   assert.match(flow, /Select at least one unit/);
+  assert.match(flow, /registration_mode/);
+  assert.match(flow, /existing_units/);
+  assert.match(flow, /resident_provided_units/);
+  assert.match(flow, /Residents provide units/);
 });
 
 test("Configure to Confirm transition in launch flow DOES NOT invoke launch action", () => {

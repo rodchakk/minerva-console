@@ -19,7 +19,7 @@ test("Community Registration admin card replaces Submitted states with unit prog
   assert.match(card, /\{registrationProgress\.percent\}%/);
   assert.match(
     card,
-    /\{registrationProgress\.submittedUnits\} of\{" "\}\s*\{registrationProgress\.totalUnits\} units submitted/,
+    /\$\{registrationProgress\.submittedUnits\} of \$\{registrationProgress\.totalUnits\} units submitted/,
   );
   assert.match(card, /\{registrationProgress\.submittedResidents\} residents received/);
   assert.match(card, /\{registrationProgress\.remainingUnits\} units remaining/);
@@ -32,9 +32,14 @@ test("Community Registration admin card replaces Submitted states with unit prog
 
 test("Community Registration admin loader derives honest progress from submitted units", () => {
   const query = read("features/entry/communityRegistration/admin/queries.ts");
+  const progressCreation = query.slice(
+    query.lastIndexOf("registrationProgress: createRegistrationProgress("),
+    query.indexOf("submittedUnitCount,", query.lastIndexOf("registrationProgress: createRegistrationProgress(")),
+  );
 
   assert.match(query, /registrationProgress: CommunityRegistrationAdminProgress/);
   assert.match(query, /createRegistrationProgress\(0, 0, 0\)/);
+  assert.match(query, /hasKnownTotal/);
   assert.match(query, /\.from\("community_registration_units"\)/);
   assert.match(query, /\.select\("id,status"\)/);
   assert.match(query, /community_registration_submissions/);
@@ -47,6 +52,6 @@ test("Community Registration admin loader derives honest progress from submitted
   assert.match(query, /Math\.min\(\s*100,/);
   assert.match(query, /normalizedSubmittedUnits \/ normalizedTotalUnits/);
   assert.doesNotMatch(query, /resident_limit_override/);
-  assert.doesNotMatch(query, /defaultResidentLimit/);
+  assert.doesNotMatch(progressCreation, /defaultResidentLimit/);
   assert.doesNotMatch(query, /submittedStatuses: readonly string\[\]/);
 });

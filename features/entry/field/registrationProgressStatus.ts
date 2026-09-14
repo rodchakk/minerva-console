@@ -19,6 +19,7 @@ export type FieldRegistrationProgressUnit = {
 export type FieldRegistrationProgressCampaign = {
   id: string;
   publicTitle: string;
+  registrationMode: "existing_units" | "resident_provided_units";
   status: string;
 };
 

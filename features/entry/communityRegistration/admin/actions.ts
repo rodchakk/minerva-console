@@ -27,6 +27,7 @@ export type LaunchCommunityRegistrationCampaignResult =
         mode: "launch";
         publicSlug: string;
         registrationUrl: string;
+        registrationMode: RegistrationMode;
         selectedUnitCount: number;
         status: string;
         submittedUnitCount: number;
@@ -42,6 +43,8 @@ export type LaunchCommunityRegistrationCampaignResult =
       success: false;
     };
 
+export type RegistrationMode = "existing_units" | "resident_provided_units";
+
 export type ReplaceCommunityRegistrationLinkResult =
   | {
       success: true;
@@ -51,6 +54,26 @@ export type ReplaceCommunityRegistrationLinkResult =
         publicSlug: string;
         registrationUrl: string;
         revokedPreviousCount: number;
+      };
+    }
+  | {
+      code:
+        | "invalid_input"
+        | "invalid_state"
+        | "unauthorized"
+        | "unknown";
+      error: string;
+      success: false;
+    };
+
+export type CancelCommunityRegistrationCampaignResult =
+  | {
+      success: true;
+      data: {
+        campaignId: string;
+        preservedSubmissionCount: number;
+        preservedUnitCount: number;
+        status: "cancelled";
       };
     }
   | {
@@ -91,6 +114,11 @@ function getSelectedUnitIds(formData: FormData) {
     .getAll("unit_id")
     .map((value) => String(value ?? "").trim())
     .filter(Boolean);
+}
+
+function getRegistrationMode(formData: FormData): RegistrationMode {
+  const mode = getFormString(formData, "registration_mode");
+  return mode === "resident_provided_units" ? mode : "existing_units";
 }
 
 function makeCampaignToken() {
@@ -163,6 +191,38 @@ function mapReplacementError(error: {
   };
 }
 
+function mapCancellationError(error: {
+  code?: string | null;
+  message?: string | null;
+}): CancelCommunityRegistrationCampaignResult {
+  const message = error.message ?? "";
+
+  if (error.code === "42501" || /ENTRY_CR_UNAUTHORIZED|unauthorized/i.test(message)) {
+    return {
+      code: "unauthorized",
+      error: "Access denied. Superadmin permission required.",
+      success: false,
+    };
+  }
+
+  if (
+    error.code === "P0409" ||
+    /ENTRY_CR_INVALID_STATE|ENTRY_CR_CAMPAIGN_UNAVAILABLE/.test(message)
+  ) {
+    return {
+      code: "invalid_state",
+      error: "This registration campaign cannot be cancelled right now.",
+      success: false,
+    };
+  }
+
+  return {
+    code: "unknown",
+    error: "Could not cancel the registration campaign. Please try again.",
+    success: false,
+  };
+}
+
 function mapRecoverError(): RecoverCommunityRegistrationLinkResult {
   return {
     code: "unknown",
@@ -197,12 +257,21 @@ export async function launchCommunityRegistrationCampaign(
       Math.floor(Number(getFormString(formData, "default_resident_limit")) || 3),
     ),
   );
+  const registrationMode = getRegistrationMode(formData);
   const selectedUnitIds = getSelectedUnitIds(formData);
 
-  if (!communityId || !publicTitle || selectedUnitIds.length === 0) {
+  if (
+    !communityId ||
+    !publicTitle ||
+    (registrationMode === "existing_units" && selectedUnitIds.length === 0) ||
+    (registrationMode === "resident_provided_units" && selectedUnitIds.length > 0)
+  ) {
     return {
       code: "invalid_input",
-      error: "Select at least one unit and provide a public title.",
+      error:
+        registrationMode === "existing_units"
+          ? "Select at least one unit and provide a public title."
+          : "Resident-provided unit campaigns should start without selected units.",
       success: false,
     };
   }
@@ -223,7 +292,7 @@ export async function launchCommunityRegistrationCampaign(
   const supabase = createAdminClient();
 
   const { data: campaignData, error: campaignError } = await supabase.rpc(
-    "launch_community_registration_campaign_v2",
+    "launch_community_registration_campaign_v3",
     {
       p_actor_user_id: auth.user.id,
       p_campaign_token_hash: campaignTokenHash,
@@ -236,6 +305,7 @@ export async function launchCommunityRegistrationCampaign(
       p_public_instructions: publicInstructions || null,
       p_public_slug: publicSlug,
       p_public_title: publicTitle,
+      p_registration_mode: registrationMode,
       p_house_ids: selectedUnitIds,
       p_unit_overrides: {},
     },
@@ -270,10 +340,68 @@ export async function launchCommunityRegistrationCampaign(
       campaignId,
       mode: "launch",
       publicSlug: returnedSlug,
+      registrationMode,
       registrationUrl: `${baseUrl}${path}`,
       selectedUnitCount: selectedUnitIds.length,
       status: "open",
       submittedUnitCount: 0,
+    },
+    success: true,
+  };
+}
+
+export async function cancelCommunityRegistrationCampaign(
+  _previousState: CancelCommunityRegistrationCampaignResult | null,
+  formData: FormData,
+): Promise<CancelCommunityRegistrationCampaignResult> {
+  const auth = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return {
+      code: "unknown",
+      error: previewReadOnlyError,
+      success: false,
+    };
+  }
+
+  const campaignId = getFormString(formData, "campaign_id");
+  const communityId = getFormString(formData, "community_id");
+
+  if (!campaignId || !communityId) {
+    return {
+      code: "invalid_input",
+      error: "Campaign information is missing.",
+      success: false,
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "cancel_community_registration_campaign_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_id: campaignId,
+    },
+  );
+
+  if (error) {
+    return mapCancellationError(error);
+  }
+
+  const result = (data ?? {}) as Record<string, unknown>;
+  const returnedCampaignId = coerceString(result.campaign_id) || campaignId;
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/field/entry/communities/${communityId}`);
+  revalidatePath(`/field/entry/communities/${communityId}/registration`);
+
+  return {
+    data: {
+      campaignId: returnedCampaignId,
+      preservedSubmissionCount: Number(result.preserved_submission_count ?? 0),
+      preservedUnitCount: Number(result.preserved_unit_count ?? 0),
+      status: "cancelled",
     },
     success: true,
   };

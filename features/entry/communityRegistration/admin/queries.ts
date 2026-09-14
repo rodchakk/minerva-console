@@ -31,6 +31,10 @@ const OPERATIONAL_CAMPAIGN_STATUSES = [
   "confirmed",
 ] as const;
 
+export type CommunityRegistrationMode =
+  | "existing_units"
+  | "resident_provided_units";
+
 export type CommunityRegistrationAdminUnit = {
   id: string;
   label: string;
@@ -42,12 +46,14 @@ export type CommunityRegistrationAdminCampaign = {
   id: string;
   publicSlug: string;
   publicTitle: string;
+  registrationMode: CommunityRegistrationMode;
   status: string;
 };
 
 export type CommunityRegistrationAdminProgress = {
+  hasKnownTotal: boolean;
   percent: number;
-  remainingUnits: number;
+  remainingUnits: number | null;
   submittedResidents: number;
   submittedUnits: number;
   totalUnits: number;
@@ -82,6 +88,10 @@ function normalizeCampaign(value: unknown): CommunityRegistrationAdminCampaign |
     publicSlug,
     publicTitle:
       coerceString(record.public_title).trim() || "Registro de residentes",
+    registrationMode:
+      coerceString(record.registration_mode) === "resident_provided_units"
+        ? "resident_provided_units"
+        : "existing_units",
     status: coerceString(record.status, "open"),
   };
 }
@@ -112,6 +122,7 @@ function createRegistrationProgress(
   submittedUnits: number,
   totalUnits: number,
   submittedResidents: number,
+  hasKnownTotal = true,
 ): CommunityRegistrationAdminProgress {
   const normalizedSubmittedUnits = Math.max(0, Math.floor(submittedUnits));
   const normalizedTotalUnits = Math.max(0, Math.floor(totalUnits));
@@ -121,17 +132,17 @@ function createRegistrationProgress(
   );
 
   return {
+    hasKnownTotal,
     percent:
-      normalizedTotalUnits === 0
+      !hasKnownTotal || normalizedTotalUnits === 0
         ? 0
         : Math.min(
             100,
             Math.round((normalizedSubmittedUnits / normalizedTotalUnits) * 100),
           ),
-    remainingUnits: Math.max(
-      normalizedTotalUnits - normalizedSubmittedUnits,
-      0,
-    ),
+    remainingUnits: hasKnownTotal
+      ? Math.max(normalizedTotalUnits - normalizedSubmittedUnits, 0)
+      : null,
     submittedResidents: normalizedSubmittedResidents,
     submittedUnits: normalizedSubmittedUnits,
     totalUnits: normalizedTotalUnits,
@@ -150,7 +161,7 @@ export async function getCommunityRegistrationAdminState(
   ] = await Promise.all([
     supabase
       .from("community_registration_campaigns")
-      .select("id,public_title,public_slug,status,default_resident_limit,created_at")
+      .select("id,public_title,public_slug,status,registration_mode,default_resident_limit,created_at")
       .eq("community_id", communityId)
       .order("created_at", { ascending: false })
       .limit(10),
@@ -246,6 +257,7 @@ export async function getCommunityRegistrationAdminState(
     submittedStatuses.has(coerceString((unit as Record<string, unknown>).status)),
   ).length;
   const totalCampaignUnitCount = campaignUnits.length;
+  const hasKnownTotal = campaign.registrationMode === "existing_units";
 
   return {
     campaign: {
@@ -257,6 +269,7 @@ export async function getCommunityRegistrationAdminState(
       submittedUnitCount,
       totalCampaignUnitCount,
       submittedResidentCount ?? 0,
+      hasKnownTotal,
     ),
     submittedUnitCount,
     totalCampaignUnitCount,

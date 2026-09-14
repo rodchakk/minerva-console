@@ -437,6 +437,7 @@ export function HouseholdDraftForm({
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<
     | "access_unavailable"
+    | "already_registered"
     | "rate_limited"
     | "service_unavailable"
     | "try_again"
@@ -660,6 +661,7 @@ export function HouseholdDraftForm({
         | {
             error?:
               | "access_unavailable"
+              | "already_registered"
               | "rate_limited"
               | "service_unavailable"
               | "try_again"
@@ -682,6 +684,8 @@ export function HouseholdDraftForm({
 
       if (result?.error === "access_unavailable") {
         setSubmitError("access_unavailable");
+      } else if (result?.error === "already_registered") {
+        setSubmitError("already_registered");
       } else if (result?.error === "rate_limited") {
         setSubmitError("rate_limited");
       } else if (result?.error === "service_unavailable") {
@@ -866,6 +870,8 @@ export function HouseholdDraftForm({
                       ? "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente."
                       : submitError === "service_unavailable"
                         ? "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente."
+                        : submitError === "already_registered"
+                          ? "This unit has already been registered. If you believe this is a mistake, please contact your community administration."
                         : submitError === "unavailable"
                           ? "No pudimos completar el registro. Verifica el enlace o comunícate con la administración."
                           : isCorrectionSubmit

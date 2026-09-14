@@ -36,6 +36,10 @@ function normalizeProgressCampaign(
     id,
     publicTitle:
       coerceString(record.public_title).trim() || "Registro de residentes",
+    registrationMode:
+      coerceString(record.registration_mode) === "resident_provided_units"
+        ? "resident_provided_units"
+        : "existing_units",
     status: coerceString(record.status, "open"),
   };
 }
@@ -68,7 +72,7 @@ export async function getFieldRegistrationProgressState(
   const supabase = createAdminClient();
   const { data: campaignsData, error: campaignsError } = await supabase
     .from("community_registration_campaigns")
-    .select("id,public_title,status,created_at")
+    .select("id,public_title,status,registration_mode,created_at")
     .eq("community_id", communityId)
     .order("created_at", { ascending: false })
     .limit(10);

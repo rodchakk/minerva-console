@@ -12,9 +12,11 @@ import { RegistrationStepper } from "./PublicRegistrationShell";
 type LookupResult =
   | {
       available: false;
+      error?: "already_registered" | "unavailable";
     }
   | {
       available: true;
+      registrationMode?: "existing_units" | "resident_provided_units";
       residentLimit: number;
       unitLabel: string;
     };
@@ -32,6 +34,7 @@ type LookupState =
     }
   | {
       status: "unavailable";
+      reason?: "already_registered" | "unavailable";
     }
   | {
       status: "rate_limited" | "service_unavailable";
@@ -41,11 +44,13 @@ type LookupState =
     };
 
 const NEUTRAL_UNAVAILABLE_MESSAGE =
-  "No pudimos habilitar esta vivienda para el registro. Verifica el número ingresado o comunícate con la administración de tu residencial.";
+  "We could not enable this unit for registration. Check the unit number or contact your community administration.";
+const ALREADY_REGISTERED_MESSAGE =
+  "This unit has already been registered. If you believe this is a mistake, please contact your community administration.";
 const RATE_LIMITED_MESSAGE =
-  "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente.";
+  "You have made too many attempts. Wait a moment and try again.";
 const SERVICE_UNAVAILABLE_MESSAGE =
-  "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente.";
+  "We could not process the request right now. Please try again.";
 
 function scrollFocusedControlIntoView(
   event: FocusEvent<HTMLInputElement>,
@@ -91,7 +96,7 @@ export function UnitLookupForm({
 
     const submittedUnitSuffix = unitSuffix.trim();
     if (!submittedUnitSuffix) {
-      setState({ status: "unavailable" });
+      setState({ reason: "unavailable", status: "unavailable" });
       return;
     }
 
@@ -128,7 +133,16 @@ export function UnitLookupForm({
       }
 
       if (!response.ok) {
-        setState({ status: "unavailable" });
+        const result = (await response.json().catch(() => null)) as
+          | Extract<LookupResult, { available: false }>
+          | null;
+        setState({
+          reason:
+            result?.error === "already_registered"
+              ? "already_registered"
+              : "unavailable",
+          status: "unavailable",
+        });
         return;
       }
 
@@ -144,7 +158,13 @@ export function UnitLookupForm({
         return;
       }
 
-      setState({ status: "unavailable" });
+      setState({
+        reason:
+          result.available === false && result.error === "already_registered"
+            ? "already_registered"
+            : "unavailable",
+        status: "unavailable",
+      });
     } catch {
       setState({ status: "error" });
     }
@@ -190,10 +210,10 @@ export function UnitLookupForm({
             </span>
             <div>
               <h2 className="text-xl font-bold text-slate-950 sm:text-2xl">
-                Identifica tu vivienda
+                Identify your unit
               </h2>
               <p className="mt-1 text-base leading-6 text-slate-600 sm:mt-2 sm:leading-7">
-                Ingresa el código de tu vivienda.
+                Enter your unit or house number.
               </p>
             </div>
           </div>
@@ -205,7 +225,7 @@ export function UnitLookupForm({
         >
           <label className="block" htmlFor="unit-label">
             <span className="text-base font-bold text-slate-950">
-              Número de vivienda
+              Unit or house number
             </span>
             <span className="mt-2 flex min-h-14 items-center rounded-2xl border border-[#5b21b6] bg-white px-4 shadow-[0_0_0_3px_rgba(91,33,182,0.08)] focus-within:border-[#4c1d95]">
               <span className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center text-[#5b21b6]">
@@ -231,7 +251,7 @@ export function UnitLookupForm({
                 name="unitLabel"
                 onChange={(event) => setUnitSuffix(event.target.value)}
                 onFocus={scrollFocusedControlIntoView}
-                placeholder="Ej. 1 o 5B"
+                placeholder="e.g. 1 or 5B"
                 required
                 type="text"
                 value={unitSuffix}
@@ -255,7 +275,7 @@ export function UnitLookupForm({
               />
             </svg>
             <p>
-              Ejemplos:{" "}
+              Examples:{" "}
               <span className="font-bold text-[#5b21b6]">1, 2, 3, 5B, 6A</span>
             </p>
           </div>
@@ -265,7 +285,7 @@ export function UnitLookupForm({
             disabled={isChecking}
             type="submit"
           >
-            {isChecking ? "Verificando..." : "Continuar"}
+            {isChecking ? "Checking..." : "Continue"}
           </button>
         </form>
       </section>
@@ -274,10 +294,12 @@ export function UnitLookupForm({
         {state.status === "unavailable" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
             <p className="text-sm font-semibold text-amber-950">
-              Vivienda no habilitada
+              Unit unavailable
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-900">
-              {NEUTRAL_UNAVAILABLE_MESSAGE}
+              {state.reason === "already_registered"
+                ? ALREADY_REGISTERED_MESSAGE
+                : NEUTRAL_UNAVAILABLE_MESSAGE}
             </p>
           </div>
         ) : null}
@@ -286,7 +308,7 @@ export function UnitLookupForm({
         state.status === "service_unavailable" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
             <p className="text-sm font-semibold text-amber-950">
-              No pudimos verificar la vivienda
+              We could not verify the unit
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-900">
               {state.status === "rate_limited"
@@ -299,7 +321,7 @@ export function UnitLookupForm({
         {state.status === "error" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
             <p className="text-sm font-semibold text-amber-950">
-              No pudimos verificar la vivienda
+              We could not verify the unit
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-900">
               {NEUTRAL_UNAVAILABLE_MESSAGE}

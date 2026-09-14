@@ -21,6 +21,7 @@ function campaignStatusLabel(status: string) {
   if (normalized === "confirmed") return "Confirmed";
   if (normalized === "processed") return "Processed";
   if (normalized === "closed") return "Closed";
+  if (normalized === "cancelled") return "Cancelled";
   return status || "Campaign";
 }
 
@@ -34,6 +35,9 @@ function campaignStatusToneClass(status: string) {
   }
   if (normalized === "review" || normalized === "confirmed") {
     return "border-sky-300/30 bg-sky-300/10 text-sky-100";
+  }
+  if (normalized === "cancelled") {
+    return "border-rose-300/30 bg-rose-300/10 text-rose-100";
   }
   return "border-white/12 bg-white/[0.03] text-[var(--console-text-muted)]";
 }
@@ -106,6 +110,8 @@ export default async function FieldRegistrationProgressPage({
   }
 
   const counts = getRegistrationProgressCounts(progressState.units);
+  const hasKnownTotal =
+    progressState.campaign.registrationMode !== "resident_provided_units";
 
   return (
     <div className="space-y-5">
@@ -147,14 +153,24 @@ export default async function FieldRegistrationProgressPage({
           <div className="flex items-baseline justify-between gap-4">
             <span>Submitted</span>
             <strong className="text-lg text-[var(--console-text)]">
-              {formatFieldCount(counts.submitted)} / {formatFieldCount(counts.total)}
+              {hasKnownTotal
+                ? `${formatFieldCount(counts.submitted)} / ${formatFieldCount(counts.total)}`
+                : formatFieldCount(counts.submitted)}
             </strong>
           </div>
-          {counts.notRegistered > 0 ? (
+          {hasKnownTotal && counts.notRegistered > 0 ? (
             <div className="flex items-baseline justify-between gap-4">
               <span>Not yet submitted</span>
               <strong className="text-base text-[var(--console-text)]">
                 {formatFieldCount(counts.notRegistered)}
+              </strong>
+            </div>
+          ) : null}
+          {!hasKnownTotal ? (
+            <div className="flex items-baseline justify-between gap-4">
+              <span>Total participating units</span>
+              <strong className="text-base text-[var(--console-text)]">
+                Unknown
               </strong>
             </div>
           ) : null}

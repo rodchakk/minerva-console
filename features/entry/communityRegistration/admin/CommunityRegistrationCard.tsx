@@ -1,14 +1,19 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useActionState, useState, useTransition } from "react";
+import { Check } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
+  cancelCommunityRegistrationCampaign,
   launchCommunityRegistrationCampaign,
   recoverCommunityRegistrationLink,
   replaceCommunityRegistrationLink,
+  type CancelCommunityRegistrationCampaignResult,
   type LaunchCommunityRegistrationCampaignResult,
+  type RegistrationMode,
   type ReplaceCommunityRegistrationLinkResult,
 } from "@/features/entry/communityRegistration/admin/actions";
 import type {
@@ -31,6 +36,7 @@ type CommunityRegistrationCardProps = {
 
 const initialState: LaunchCommunityRegistrationCampaignResult | null = null;
 const initialReplaceState: ReplaceCommunityRegistrationLinkResult | null = null;
+const initialCancelState: CancelCommunityRegistrationCampaignResult | null = null;
 
 function statusLabel(status: string) {
   const normalized = status.trim().toLowerCase();
@@ -40,6 +46,7 @@ function statusLabel(status: string) {
   if (normalized === "confirmed") return "Confirmed";
   if (normalized === "processed") return "Processed";
   if (normalized === "closed") return "Closed";
+  if (normalized === "cancelled") return "Cancelled";
   return status || "Campaign";
 }
 
@@ -48,6 +55,7 @@ function statusTone(status: string): "default" | "success" | "warning" | "info" 
   if (normalized === "open") return "success";
   if (normalized === "paused") return "warning";
   if (normalized === "review" || normalized === "confirmed") return "info";
+  if (normalized === "cancelled") return "warning";
   return "default";
 }
 
@@ -90,12 +98,15 @@ function LaunchDialog({
     launchCommunityRegistrationCampaign,
     initialState,
   );
+  const [registrationMode, setRegistrationMode] =
+    useState<RegistrationMode>("existing_units");
   const [selectedUnitIds, setSelectedUnitIds] = useState(
     () => new Set(units.map((unit) => unit.id)),
   );
-  const defaultTitle = `Registro de residentes - ${communityName}`;
+  const defaultTitle = `Resident registration - ${communityName}`;
   const selectedUnitCount = selectedUnitIds.size;
-  const canSubmit = selectedUnitCount > 0 && !pending;
+  const isExistingUnitsMode = registrationMode === "existing_units";
+  const canSubmit = (!isExistingUnitsMode || selectedUnitCount > 0) && !pending;
 
   function toggleUnit(unitId: string) {
     setSelectedUnitIds((current) => {
@@ -130,7 +141,9 @@ function LaunchDialog({
               Units submitted
             </p>
             <p className="mt-2 text-2xl font-semibold text-white">
-              {state.data.submittedUnitCount} / {state.data.selectedUnitCount}
+              {state.data.registrationMode === "existing_units"
+                ? `${state.data.submittedUnitCount} / ${state.data.selectedUnitCount}`
+                : state.data.submittedUnitCount}
             </p>
           </div>
 
@@ -185,14 +198,74 @@ function LaunchDialog({
               Start registration campaign
             </h3>
           </div>
-          <Badge tone="info">{selectedUnitCount} selected</Badge>
+          <Badge tone="info">
+            {isExistingUnitsMode
+              ? `${selectedUnitCount} selected`
+              : "Residents provide units"}
+          </Badge>
         </div>
 
         <input type="hidden" name="community_id" value={communityId} />
         <input type="hidden" name="community_name" value={communityName} />
-        {Array.from(selectedUnitIds).map((unitId) => (
-          <input key={unitId} type="hidden" name="unit_id" value={unitId} />
-        ))}
+        <input type="hidden" name="registration_mode" value={registrationMode} />
+        {isExistingUnitsMode
+          ? Array.from(selectedUnitIds).map((unitId) => (
+              <input key={unitId} type="hidden" name="unit_id" value={unitId} />
+            ))
+          : null}
+
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            How will residents identify their unit?
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {[
+              {
+                description:
+                  "Residents register against units that already exist in ENTRY.",
+                label: "Existing units",
+                mode: "existing_units" as const,
+              },
+              {
+                description:
+                  "Residents enter their unit number with their household information.",
+                label: "Residents provide their unit",
+                mode: "resident_provided_units" as const,
+              },
+            ].map((option) => {
+              const selected = registrationMode === option.mode;
+              return (
+                <button
+                  key={option.mode}
+                  type="button"
+                  onClick={() => setRegistrationMode(option.mode)}
+                  className={[
+                    "min-h-28 rounded-xl border px-4 py-3 text-left transition-colors",
+                    selected
+                      ? "border-violet-400/50 bg-violet-500/10"
+                      : "border-[var(--border)] bg-[var(--surface-strong)] hover:bg-[var(--surface-muted)]",
+                  ].join(" ")}
+                >
+                  <span className="flex items-start justify-between gap-3">
+                    <span>
+                      <span className="block text-sm font-semibold text-white">
+                        {option.label}
+                      </span>
+                      <span className="mt-2 block text-xs leading-5 text-[var(--text-muted)]">
+                        {option.description}
+                      </span>
+                    </span>
+                    {selected ? (
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-violet-400/20 text-violet-100">
+                        <Check aria-hidden="true" className="h-3.5 w-3.5" />
+                      </span>
+                    ) : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_150px]">
           <label className="block">
@@ -234,6 +307,7 @@ function LaunchDialog({
           />
         </label>
 
+        {isExistingUnitsMode ? (
         <div>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
@@ -274,6 +348,11 @@ function LaunchDialog({
             ))}
           </div>
         </div>
+        ) : (
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm leading-6 text-[var(--text-muted)]">
+            Use this when the community does not have a complete or reliable unit list yet. Resident submissions remain pending registration data for later review.
+          </div>
+        )}
 
         {state && !state.success ? (
           <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
@@ -281,7 +360,7 @@ function LaunchDialog({
           </p>
         ) : null}
 
-        {selectedUnitCount === 0 ? (
+        {isExistingUnitsMode && selectedUnitCount === 0 ? (
           <p className="text-sm text-amber-200">
             Select at least one unit before creating a campaign.
           </p>
@@ -413,13 +492,121 @@ function ReplaceLinkDialog({
   );
 }
 
+function CancelRegistrationDialog({
+  campaign,
+  communityId,
+  onCancelled,
+  onClose,
+}: {
+  campaign: CommunityRegistrationAdminCampaign;
+  communityId: string;
+  onCancelled: () => void;
+  onClose: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(
+    cancelCommunityRegistrationCampaign,
+    initialCancelState,
+  );
+
+  if (state?.success) {
+    return (
+      <Overlay>
+        <div className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+              Resident registration
+            </p>
+            <h3 className="mt-2 text-xl font-semibold text-white">
+              Registration cancelled
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              Previously received registrations were preserved.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Units preserved
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {state.data.preservedUnitCount}
+              </p>
+            </div>
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Submissions preserved
+              </p>
+              <p className="mt-2 text-2xl font-semibold text-white">
+                {state.data.preservedSubmissionCount}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button type="button" onClick={onCancelled}>
+              Done
+            </Button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay>
+      <form
+        action={formAction}
+        className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+      >
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+            Resident registration
+          </p>
+          <h3 className="mt-2 text-xl font-semibold text-white">
+            Cancel registration campaign?
+          </h3>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+            {campaign.publicTitle}
+          </p>
+        </div>
+
+        <input type="hidden" name="campaign_id" value={campaign.id} />
+        <input type="hidden" name="community_id" value={communityId} />
+
+        <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          The registration link will stop accepting new submissions. Previously
+          received registrations will be preserved.
+        </p>
+
+        {state && !state.success ? (
+          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+            {state.error}
+          </p>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Keep campaign
+          </Button>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Cancelling..." : "Cancel registration"}
+          </Button>
+        </div>
+      </form>
+    </Overlay>
+  );
+}
+
 function ActiveRegistrationLinkControls({
   campaign,
   communityId,
+  onCancel,
   onReplace,
 }: {
   campaign: CommunityRegistrationAdminCampaign;
   communityId: string;
+  onCancel: () => void;
   onReplace: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -495,6 +682,9 @@ function ActiveRegistrationLinkControls({
           <Button type="button" variant="secondary" onClick={onReplace}>
             Replace registration link
           </Button>
+          <Button type="button" variant="secondary" onClick={onCancel}>
+            Cancel registration
+          </Button>
         </div>
       </div>
     );
@@ -511,6 +701,9 @@ function ActiveRegistrationLinkControls({
         </Button>
         <Button type="button" variant="secondary" onClick={onReplace}>
           Replace registration link
+        </Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
+          Cancel registration
         </Button>
       </div>
       {message ? (
@@ -533,12 +726,22 @@ export function CommunityRegistrationCard({
   totalUnits,
   units,
 }: CommunityRegistrationCardProps) {
+  const router = useRouter();
   const [showLaunchDialog, setShowLaunchDialog] = useState(false);
   const [showReplaceDialog, setShowReplaceDialog] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const progressTotal = campaign ? totalCampaignUnitCount : totalUnits;
-  const canStart = !hasOperationalCampaign && units.length > 0;
+  const hasKnownCampaignTotal = registrationProgress.hasKnownTotal;
+  const canStart = !hasOperationalCampaign;
   const campaignOpen = campaign?.status.trim().toLowerCase() === "open";
+  const canCancelCampaign = ["open", "paused"].includes(
+    campaign?.status.trim().toLowerCase() ?? "",
+  );
   const canOpenReview = Boolean(campaign && submittedUnitCount > 0);
+  const unitSubmittedText =
+    campaign && !hasKnownCampaignTotal
+      ? String(submittedUnitCount)
+      : `${submittedUnitCount} / ${progressTotal}`;
 
   return (
     <section
@@ -572,7 +775,7 @@ export function CommunityRegistrationCard({
             Units submitted
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {submittedUnitCount} / {progressTotal}
+            {unitSubmittedText}
           </p>
         </div>
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
@@ -580,7 +783,11 @@ export function CommunityRegistrationCard({
             Participating units
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
-            {campaign ? totalCampaignUnitCount : totalUnits}
+            {campaign && !hasKnownCampaignTotal
+              ? "Unknown"
+              : campaign
+                ? totalCampaignUnitCount
+                : totalUnits}
           </p>
         </div>
         <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
@@ -591,8 +798,9 @@ export function CommunityRegistrationCard({
             {registrationProgress.percent}%
           </p>
           <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            {registrationProgress.submittedUnits} of{" "}
-            {registrationProgress.totalUnits} units submitted
+            {hasKnownCampaignTotal
+              ? `${registrationProgress.submittedUnits} of ${registrationProgress.totalUnits} units submitted`
+              : `${registrationProgress.submittedUnits} units submitted`}
           </p>
           <div
             aria-label="Registration progress"
@@ -609,7 +817,11 @@ export function CommunityRegistrationCard({
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-violet-100">
             <span>{registrationProgress.submittedResidents} residents received</span>
-            <span>{registrationProgress.remainingUnits} units remaining</span>
+            <span>
+              {hasKnownCampaignTotal
+                ? `${registrationProgress.remainingUnits} units remaining`
+                : "Total units unknown"}
+            </span>
           </div>
         </div>
       </div>
@@ -620,7 +832,7 @@ export function CommunityRegistrationCard({
             ? campaignOpen
               ? "Open campaign link sharing is available without rotating access when the current link is recoverable."
               : "Registration sharing is available only while the campaign is open."
-            : "Launch a secure public registration link for selected existing units."}
+            : "Launch a secure public registration link for resident registration."}
         </p>
 
         {!hasOperationalCampaign ? (
@@ -629,9 +841,9 @@ export function CommunityRegistrationCard({
             onClick={() => setShowLaunchDialog(true)}
             disabled={!canStart}
             title={
-              units.length === 0
-                ? "Create units before launching registration."
-                : "Start a resident registration campaign."
+              canStart
+                ? "Start a resident registration campaign."
+                : "An operational registration campaign already exists."
             }
           >
             Start registration campaign
@@ -649,8 +861,18 @@ export function CommunityRegistrationCard({
               <ActiveRegistrationLinkControls
                 campaign={campaign}
                 communityId={communityId}
+                onCancel={() => setShowCancelDialog(true)}
                 onReplace={() => setShowReplaceDialog(true)}
               />
+            ) : null}
+            {!campaignOpen && canCancelCampaign ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowCancelDialog(true)}
+              >
+                Cancel registration
+              </Button>
             ) : null}
           </div>
         ) : null}
@@ -670,6 +892,18 @@ export function CommunityRegistrationCard({
           campaign={campaign}
           communityId={communityId}
           onClose={() => setShowReplaceDialog(false)}
+        />
+      ) : null}
+
+      {showCancelDialog && campaign ? (
+        <CancelRegistrationDialog
+          campaign={campaign}
+          communityId={communityId}
+          onCancelled={() => {
+            setShowCancelDialog(false);
+            router.refresh();
+          }}
+          onClose={() => setShowCancelDialog(false)}
         />
       ) : null}
     </section>

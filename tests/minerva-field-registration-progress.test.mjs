@@ -94,6 +94,7 @@ test("registration progress state keeps legitimate empty states distinct", () =>
     {
       id: "campaign-1",
       publicTitle: "Registro de residentes",
+      registrationMode: "existing_units",
       status: "open",
     },
     [],
@@ -113,6 +114,7 @@ test("registration progress state keeps legitimate empty states distinct", () =>
     campaign: {
       id: "campaign-1",
       publicTitle: "Registro de residentes",
+      registrationMode: "existing_units",
       status: "open",
     },
     state: "ready",
