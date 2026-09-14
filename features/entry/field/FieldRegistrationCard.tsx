@@ -347,7 +347,7 @@ export function FieldRegistrationCard({
           className={`${canShare ? "" : "bg-[var(--console-accent)] text-white"} flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] px-3 text-sm font-semibold text-[var(--console-text)] disabled:opacity-50`}
         >
           <Copy aria-hidden="true" className="h-4 w-4" />
-          {copied ? "Copied" : "Copy registration link"}
+          {copied ? "Copied" : "Copy link"}
         </button>
         <button
           type="button"
