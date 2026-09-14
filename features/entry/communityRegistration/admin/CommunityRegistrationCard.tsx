@@ -83,6 +83,59 @@ function CopyLinkButton({ url }: { url: string }) {
   );
 }
 
+function RegistrationProgressSummary({
+  progress,
+}: {
+  progress: CommunityRegistrationAdminProgress;
+}) {
+  if (!progress.hasKnownTotal) {
+    return (
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          Residents received
+        </p>
+        <p className="mt-2 text-2xl font-semibold text-white">
+          {progress.submittedResidents}
+        </p>
+        <p className="mt-2 text-xs font-semibold text-violet-100">
+          Total units unknown
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        Registration progress
+      </p>
+      <p className="mt-2 text-3xl font-semibold text-white">
+        {progress.percent}%
+      </p>
+      <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+        {progress.submittedUnits} of {progress.totalUnits} units submitted
+      </p>
+      <div
+        aria-label="Registration progress"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={progress.percent}
+        className="mt-3 h-2 overflow-hidden rounded-full bg-slate-950"
+        role="progressbar"
+      >
+        <div
+          className="h-full rounded-full bg-violet-400"
+          style={{ width: `${progress.percent}%` }}
+        />
+      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-violet-100">
+        <span>{progress.submittedResidents} residents received</span>
+        <span>{progress.remainingUnits} units remaining</span>
+      </div>
+    </div>
+  );
+}
+
 function LaunchDialog({
   communityId,
   communityName,
@@ -308,46 +361,46 @@ function LaunchDialog({
         </label>
 
         {isExistingUnitsMode ? (
-        <div>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-              Participating units
-            </p>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setSelectedUnitIds(new Set(units.map((unit) => unit.id)))}
-              >
-                Select all
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setSelectedUnitIds(new Set())}
-              >
-                Clear
-              </Button>
+          <div>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Participating units
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setSelectedUnitIds(new Set(units.map((unit) => unit.id)))}
+                >
+                  Select all
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setSelectedUnitIds(new Set())}
+                >
+                  Clear
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
+              {units.map((unit) => (
+                <label
+                  key={unit.id}
+                  className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 text-sm text-white"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedUnitIds.has(unit.id)}
+                    onChange={() => toggleUnit(unit.id)}
+                    className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
+                  />
+                  <span className="min-w-0 truncate">{unit.label}</span>
+                </label>
+              ))}
             </div>
           </div>
-
-          <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-            {units.map((unit) => (
-              <label
-                key={unit.id}
-                className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 text-sm text-white"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedUnitIds.has(unit.id)}
-                  onChange={() => toggleUnit(unit.id)}
-                  className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
-                />
-                <span className="min-w-0 truncate">{unit.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
         ) : (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm leading-6 text-[var(--text-muted)]">
             Use this when the community does not have a complete or reliable unit list yet. Resident submissions remain pending registration data for later review.
@@ -790,40 +843,7 @@ export function CommunityRegistrationCard({
                 : totalUnits}
           </p>
         </div>
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            REGISTRATION PROGRESS
-          </p>
-          <p className="mt-2 text-3xl font-semibold text-white">
-            {registrationProgress.percent}%
-          </p>
-          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            {hasKnownCampaignTotal
-              ? `${registrationProgress.submittedUnits} of ${registrationProgress.totalUnits} units submitted`
-              : `${registrationProgress.submittedUnits} units submitted`}
-          </p>
-          <div
-            aria-label="Registration progress"
-            aria-valuemax={100}
-            aria-valuemin={0}
-            aria-valuenow={registrationProgress.percent}
-            className="mt-3 h-2 overflow-hidden rounded-full bg-slate-950"
-            role="progressbar"
-          >
-            <div
-              className="h-full rounded-full bg-violet-400"
-              style={{ width: `${registrationProgress.percent}%` }}
-            />
-          </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-violet-100">
-            <span>{registrationProgress.submittedResidents} residents received</span>
-            <span>
-              {hasKnownCampaignTotal
-                ? `${registrationProgress.remainingUnits} units remaining`
-                : "Total units unknown"}
-            </span>
-          </div>
-        </div>
+        <RegistrationProgressSummary progress={registrationProgress} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
