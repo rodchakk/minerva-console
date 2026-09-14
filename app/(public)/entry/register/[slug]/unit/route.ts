@@ -28,8 +28,12 @@ const MAX_UNIT_LABEL_LENGTH = 120;
 
 function jsonResponse(body: { available: false } | {
   available: true;
+  registrationMode: "existing_units" | "resident_provided_units";
   residentLimit: number;
   unitLabel: string;
+} | {
+  available: false;
+  error: "already_registered" | "unavailable";
 }, status = 200) {
   return jsonRegistrationResponse(body, status);
 }
@@ -135,11 +139,21 @@ export async function POST(
   }
 
   if (!lookup.available) {
-    return jsonResponse({ available: false });
+    return jsonResponse(
+      {
+        available: false,
+        error:
+          lookup.reason === "already_registered"
+            ? "already_registered"
+            : "unavailable",
+      },
+      lookup.reason === "already_registered" ? 409 : 200,
+    );
   }
 
   return jsonResponse({
     available: true,
+    registrationMode: lookup.registrationMode,
     residentLimit: lookup.residentLimit,
     unitLabel: lookup.unitLabel,
   });

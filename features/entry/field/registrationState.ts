@@ -28,11 +28,10 @@ export function getFieldRegistrationStateKind(
 export function isRegistrationLaunchEligible({
   hasOperationalCampaign,
   isReadOnlyPreview,
-  unitCount,
 }: {
   hasOperationalCampaign: boolean;
   isReadOnlyPreview: boolean;
   unitCount: number;
 }): boolean {
-  return !hasOperationalCampaign && unitCount > 0 && !isReadOnlyPreview;
+  return !hasOperationalCampaign && !isReadOnlyPreview;
 }

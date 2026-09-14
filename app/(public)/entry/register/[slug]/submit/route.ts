@@ -30,6 +30,7 @@ type PublicSubmissionResponse =
   | {
       error:
         | "access_required"
+        | "already_registered"
         | "invalid_request"
         | "payload_too_large"
         | "rate_limited"
@@ -155,9 +156,16 @@ export async function POST(
 
   return submissionResponse(
     {
-      error: submission.reason === "unavailable" ? "unavailable" : "try_again",
+      error:
+        submission.reason === "already_registered"
+          ? "already_registered"
+          : submission.reason === "unavailable"
+            ? "unavailable"
+            : "try_again",
       submitted: false,
     },
-    submission.reason === "unavailable" ? 409 : 502,
+    submission.reason === "unavailable" || submission.reason === "already_registered"
+      ? 409
+      : 502,
   );
 }

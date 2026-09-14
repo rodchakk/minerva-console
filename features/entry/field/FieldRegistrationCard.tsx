@@ -38,6 +38,7 @@ function campaignStatusLabel(status: string) {
   if (normalized === "confirmed") return "Confirmed";
   if (normalized === "processed") return "Processed";
   if (normalized === "closed") return "Closed";
+  if (normalized === "cancelled") return "Cancelled";
   return status || "Campaign";
 }
 
@@ -48,6 +49,7 @@ function campaignStatusToneClass(status: string) {
   if (normalized === "review" || normalized === "confirmed") {
     return "border-sky-300/30 bg-sky-300/10 text-sky-100";
   }
+  if (normalized === "cancelled") return "border-rose-300/30 bg-rose-300/10 text-rose-100";
   return "border-white/12 bg-white/[0.03] text-[var(--console-text-muted)]";
 }
 
@@ -63,21 +65,60 @@ function UnitProgressLink({ communityId }: { communityId: string }) {
   );
 }
 
-function RegistrationProgress({ submitted, total }: { submitted: number; total: number }) {
-  const percentage = total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
+function RegistrationProgress({
+  hasKnownTotal = true,
+  submitted,
+  total,
+}: {
+  hasKnownTotal?: boolean;
+  submitted: number;
+  total: number;
+}) {
+  if (!hasKnownTotal) {
+    return (
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-3">
+          <p className="text-xs text-[var(--console-text-muted)]">Units submitted</p>
+          <p className="mt-1 text-2xl font-semibold text-[var(--console-text)]">
+            {formatFieldCount(submitted)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-3">
+          <p className="text-xs text-[var(--console-text-muted)]">
+            Total participating units
+          </p>
+          <p className="mt-1 text-lg font-semibold text-[var(--console-text)]">
+            Unknown
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const percentage =
+    total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
 
   return (
     <div className="mt-4">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-2xl font-semibold text-[var(--console-text)]">
-            {formatFieldCount(submitted)} of {formatFieldCount(total)}
+            {`${formatFieldCount(submitted)} of ${formatFieldCount(total)}`}
           </p>
           <p className="mt-1 text-xs text-[var(--console-text-muted)]">units completed</p>
         </div>
-        <span className="text-xs font-semibold text-[var(--console-text-soft)]">{percentage}%</span>
+        <span className="text-xs font-semibold text-[var(--console-text-soft)]">
+          {percentage}%
+        </span>
       </div>
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+      <div
+        aria-label="Registration progress"
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={percentage}
+        className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/[0.08]"
+        role="progressbar"
+      >
         <div
           className="h-full rounded-full bg-[var(--console-accent)]"
           style={{ width: `${percentage}%` }}
@@ -106,6 +147,8 @@ export function FieldRegistrationCard({
     isReadOnlyPreview,
     unitCount: units.length,
   });
+  const hasKnownCampaignTotal =
+    campaign?.registrationMode !== "resident_provided_units";
 
   function recoverLink(onSuccess: (registrationUrl: string) => Promise<void> | void) {
     if (!campaign) return;
@@ -167,6 +210,7 @@ export function FieldRegistrationCard({
     });
   }
 
+  // STATE 1: NO CAMPAIGN EXISTS
   if (stateKind === "no_campaign" || !campaign) {
     return (
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
@@ -176,7 +220,7 @@ export function FieldRegistrationCard({
             <h2 className="mt-1 text-lg font-semibold text-[var(--console-text)]">Not started</h2>
           </div>
           <span className="rounded-full border border-white/12 bg-white/[0.03] px-2.5 py-1 text-xs font-bold text-[var(--console-text-muted)]">
-            {units.length > 0 ? "Ready" : "Needs units"}
+            Ready
           </span>
         </div>
         <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
@@ -195,6 +239,7 @@ export function FieldRegistrationCard({
     );
   }
 
+  // STATE 2: CAMPAIGN EXISTS BUT IS NOT OPEN
   if (stateKind === "non_open_campaign") {
     return (
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
@@ -207,9 +252,13 @@ export function FieldRegistrationCard({
             {campaignStatusLabel(campaign.status)}
           </span>
         </div>
-        <RegistrationProgress submitted={submittedUnitCount} total={totalCampaignUnitCount} />
+        <RegistrationProgress
+          hasKnownTotal={hasKnownCampaignTotal}
+          submitted={submittedUnitCount}
+          total={totalCampaignUnitCount}
+        />
         <p className="mt-3 text-xs leading-5 text-[var(--console-text-soft)]">
-          Link sharing is available only while registration is open.
+          Registration link sharing is available only while the campaign is open.
         </p>
         <UnitProgressLink communityId={communityId} />
         {canLaunchNewCampaign ? (
@@ -225,6 +274,7 @@ export function FieldRegistrationCard({
     );
   }
 
+  // STATE 3: OPEN CAMPAIGN WITH UNRECOVERABLE LINK
   if (stateKind === "open_unrecoverable") {
     return (
       <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
@@ -235,15 +285,20 @@ export function FieldRegistrationCard({
           </div>
           <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-100">Open</span>
         </div>
-        <RegistrationProgress submitted={submittedUnitCount} total={totalCampaignUnitCount} />
+        <RegistrationProgress
+          hasKnownTotal={hasKnownCampaignTotal}
+          submitted={submittedUnitCount}
+          total={totalCampaignUnitCount}
+        />
         <p className="mt-4 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-sm leading-5 text-amber-100">
-          This legacy link must be replaced from Console before it can be shared again.
+          The current registration link cannot be recovered from Field.
         </p>
         <UnitProgressLink communityId={communityId} />
       </section>
     );
   }
 
+  // STATE 4: OPEN CAMPAIGN WITH RECOVERABLE LINK
   return (
     <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
       <div className="flex items-start justify-between gap-3">
@@ -254,10 +309,16 @@ export function FieldRegistrationCard({
         <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2.5 py-1 text-xs font-bold text-emerald-100">Open</span>
       </div>
 
-      <RegistrationProgress submitted={submittedUnitCount} total={totalCampaignUnitCount} />
-      <p className="mt-2 text-xs text-[var(--console-text-soft)]">
-        {formatFieldCount(totalCampaignUnitCount)} participating units
-      </p>
+      <RegistrationProgress
+        hasKnownTotal={hasKnownCampaignTotal}
+        submitted={submittedUnitCount}
+        total={totalCampaignUnitCount}
+      />
+      {hasKnownCampaignTotal ? (
+        <p className="mt-2 text-xs text-[var(--console-text-soft)]">
+          {`${formatFieldCount(totalCampaignUnitCount)} participating units`}
+        </p>
+      ) : null}
 
       {message ? (
         <p className="mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 p-3 text-sm leading-5 text-rose-100">{message}</p>
@@ -295,7 +356,7 @@ export function FieldRegistrationCard({
           className="flex min-h-11 items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] px-3 text-sm font-semibold text-[var(--console-text)] disabled:opacity-50"
         >
           <ExternalLink aria-hidden="true" className="h-4 w-4" />
-          {opening ? "Opening..." : "Open"}
+          {opening ? "Opening..." : "Open registration"}
         </button>
       </div>
       <UnitProgressLink communityId={communityId} />

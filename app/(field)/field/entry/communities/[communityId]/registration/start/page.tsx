@@ -49,8 +49,6 @@ export default async function FieldRegistrationStartPage({
           <p className="mt-3 text-sm leading-6 text-[var(--console-text-muted)]">
             {registrationState.hasOperationalCampaign
               ? "An operational registration campaign already exists for this community."
-              : registrationState.units.length === 0
-              ? "Unit records are required before starting a registration campaign."
               : "Registration campaign creation is unavailable in read-only Preview mode."}
           </p>
         </section>

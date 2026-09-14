@@ -29,6 +29,7 @@ test("getFieldRegistrationStateKind classifies state correctly without treating 
     id: "camp-processed",
     publicSlug: "slug-processed",
     publicTitle: "Registro de residentes 2025",
+    registrationMode: "existing_units",
     status: "processed",
   };
   assert.equal(getFieldRegistrationStateKind(processedCampaign), "non_open_campaign");
@@ -40,6 +41,7 @@ test("getFieldRegistrationStateKind classifies state correctly without treating 
     id: "camp-closed",
     publicSlug: "slug-closed",
     publicTitle: "Registro de residentes 2024",
+    registrationMode: "existing_units",
     status: "closed",
   };
   assert.equal(getFieldRegistrationStateKind(closedCampaign), "non_open_campaign");
@@ -51,6 +53,7 @@ test("getFieldRegistrationStateKind classifies state correctly without treating 
     id: "camp-paused",
     publicSlug: "slug-paused",
     publicTitle: "Registro de residentes 2026",
+    registrationMode: "existing_units",
     status: "paused",
   };
   assert.equal(getFieldRegistrationStateKind(pausedCampaign), "non_open_campaign");
@@ -62,6 +65,7 @@ test("getFieldRegistrationStateKind classifies state correctly without treating 
     id: "camp-open-legacy",
     publicSlug: "slug-open-legacy",
     publicTitle: "Registro de residentes",
+    registrationMode: "existing_units",
     status: "open",
   };
   assert.equal(getFieldRegistrationStateKind(openUnrecoverable), "open_unrecoverable");
@@ -73,6 +77,7 @@ test("getFieldRegistrationStateKind classifies state correctly without treating 
     id: "camp-open",
     publicSlug: "slug-open",
     publicTitle: "Registro de residentes",
+    registrationMode: "existing_units",
     status: "open",
   };
   assert.equal(getFieldRegistrationStateKind(openRecoverable), "open_recoverable");

@@ -8,6 +8,8 @@ import { launchCommunityRegistrationCampaign } from "@/features/entry/communityR
 import type { CommunityRegistrationAdminUnit } from "@/features/entry/communityRegistration/admin/queries";
 import { formatFieldCount } from "@/features/entry/field/formatting";
 
+type RegistrationMode = "existing_units" | "resident_provided_units";
+
 type FieldRegistrationLaunchFlowProps = {
   communityId: string;
   communityName: string;
@@ -36,8 +38,10 @@ export function FieldRegistrationLaunchFlow({
   const router = useRouter();
   const [step, setStep] = useState<"configure" | "confirm" | "success">("configure");
   const [publicTitle, setPublicTitle] = useState(
-    `Registro de residentes - ${communityName}`,
+    `Resident registration - ${communityName}`,
   );
+  const [registrationMode, setRegistrationMode] =
+    useState<RegistrationMode>("existing_units");
   const [defaultResidentLimit, setDefaultResidentLimit] = useState(3);
   const [publicInstructions, setPublicInstructions] = useState("");
   const [selectedUnitIds, setSelectedUnitIds] = useState<Set<string>>(
@@ -55,8 +59,11 @@ export function FieldRegistrationLaunchFlow({
 
   const canShare = useSyncExternalStore(subscribe, getShareSnapshot, getServerSnapshot);
   const selectedUnitCount = selectedUnitIds.size;
+  const isExistingUnitsMode = registrationMode === "existing_units";
   const canContinueToConfirm =
-    selectedUnitCount > 0 && publicTitle.trim().length > 0 && !isReadOnlyPreview;
+    publicTitle.trim().length > 0 &&
+    !isReadOnlyPreview &&
+    (!isExistingUnitsMode || selectedUnitCount > 0);
 
   function toggleUnit(unitId: string) {
     setSelectedUnitIds((prev) => {
@@ -88,9 +95,12 @@ export function FieldRegistrationLaunchFlow({
       formData.append("public_title", publicTitle.trim());
       formData.append("public_instructions", publicInstructions.trim());
       formData.append("default_resident_limit", String(defaultResidentLimit));
+      formData.append("registration_mode", registrationMode);
 
-      for (const unitId of selectedUnitIds) {
-        formData.append("unit_id", unitId);
+      if (isExistingUnitsMode) {
+        for (const unitId of selectedUnitIds) {
+          formData.append("unit_id", unitId);
+        }
       }
 
       const result = await launchCommunityRegistrationCampaign(null, formData);
@@ -131,7 +141,7 @@ export function FieldRegistrationLaunchFlow({
       try {
         await navigator.share({
           title: publicTitle,
-          text: `Registro de residentes - ${communityName}`,
+          text: `Resident registration - ${communityName}`,
           url: successData.registrationUrl,
         });
       } catch (err: unknown) {
@@ -181,8 +191,11 @@ export function FieldRegistrationLaunchFlow({
             </div>
           </div>
           <p className="mt-3 text-sm leading-6 text-emerald-100/90">
-            The registration campaign for {communityName} is now open with{" "}
-            {formatFieldCount(successData.selectedUnitCount)} participating unit(s).
+            {successData.selectedUnitCount > 0
+              ? `The registration campaign for ${communityName} is now open with ${formatFieldCount(
+                  successData.selectedUnitCount,
+                )} participating unit(s).`
+              : `The registration campaign for ${communityName} is now open. Residents will provide their unit numbers.`}
           </p>
         </section>
 
@@ -299,10 +312,12 @@ export function FieldRegistrationLaunchFlow({
 
             <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] p-3">
               <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
-                Participating units
+                Unit handling
               </p>
               <p className="mt-1 text-base font-semibold text-[var(--console-text)]">
-                {formatFieldCount(selectedUnitCount)} of {formatFieldCount(units.length)}
+                {isExistingUnitsMode
+                  ? `${formatFieldCount(selectedUnitCount)} of ${formatFieldCount(units.length)}`
+                  : "Residents provide units"}
               </p>
             </div>
           </div>
@@ -318,23 +333,25 @@ export function FieldRegistrationLaunchFlow({
             </div>
           ) : null}
 
-          <div className="pt-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
-              Selected units
-            </p>
-            <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-2">
-              <div className="flex flex-wrap gap-1.5">
-                {selectedUnitsList.map((unit) => (
-                  <span
-                    key={unit.id}
-                    className="rounded-md border border-[var(--console-border)] bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-[var(--console-text)]"
-                  >
-                    {unit.label}
-                  </span>
-                ))}
+          {isExistingUnitsMode ? (
+            <div className="pt-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
+                Selected units
+              </p>
+              <div className="mt-2 max-h-40 overflow-y-auto rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-2">
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedUnitsList.map((unit) => (
+                    <span
+                      key={unit.id}
+                      className="rounded-md border border-[var(--console-border)] bg-white/[0.04] px-2.5 py-1 text-xs font-medium text-[var(--console-text)]"
+                    >
+                      {unit.label}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          ) : null}
         </section>
 
         <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
@@ -377,10 +394,10 @@ export function FieldRegistrationLaunchFlow({
           Step 1 of 2
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-[var(--console-text)]">
-          Start registration campaign
+          Create Resident Registration
         </h1>
         <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
-          Configure title, limits, and participating units for {communityName}.
+          Choose how residents identify their unit, then configure the public campaign for {communityName}.
         </p>
       </section>
 
@@ -391,6 +408,61 @@ export function FieldRegistrationLaunchFlow({
       ) : null}
 
       <div className="space-y-4 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
+            How will residents identify their unit?
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {[
+              {
+                description:
+                  "Residents register against units that already exist in ENTRY.",
+                label: "Existing units",
+                mode: "existing_units" as const,
+              },
+              {
+                description:
+                  "Use this when the community does not have a complete or reliable unit list yet.",
+                label: "Residents provide their unit",
+                mode: "resident_provided_units" as const,
+              },
+            ].map((option) => {
+              const selected = registrationMode === option.mode;
+              return (
+                <button
+                  key={option.mode}
+                  type="button"
+                  onClick={() => setRegistrationMode(option.mode)}
+                  disabled={isReadOnlyPreview}
+                  className={[
+                    "min-h-28 rounded-lg border px-4 py-3 text-left transition-colors disabled:opacity-50",
+                    selected
+                      ? "border-[var(--console-accent-border)] bg-white/[0.06]"
+                      : "border-[var(--console-border)] bg-white/[0.02] hover:bg-white/[0.04]",
+                  ].join(" ")}
+                >
+                  <span className="flex items-start justify-between gap-3">
+                    <span>
+                      <span className="block text-sm font-semibold text-[var(--console-text)]">
+                        {option.label}
+                      </span>
+                      <span className="mt-2 block text-xs leading-5 text-[var(--console-text-muted)]">
+                        {option.description}
+                      </span>
+                    </span>
+                    {selected ? (
+                      <Check
+                        aria-hidden="true"
+                        className="h-4 w-4 shrink-0 text-[var(--console-accent)]"
+                      />
+                    ) : null}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         <div>
           <label
             htmlFor="field-public-title"
@@ -404,7 +476,7 @@ export function FieldRegistrationLaunchFlow({
             value={publicTitle}
             onChange={(e) => setPublicTitle(e.target.value)}
             disabled={isReadOnlyPreview}
-            placeholder="e.g. Registro de residentes - Residencial Aurora"
+            placeholder="e.g. Resident registration - Aurora Residences"
             className="mt-2 min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-3 text-base text-[var(--console-text)] outline-none focus:border-[var(--console-accent-border)] focus:ring-2 focus:ring-white/5 disabled:opacity-50"
           />
         </div>
@@ -450,68 +522,74 @@ export function FieldRegistrationLaunchFlow({
           />
         </div>
 
-        <div className="pt-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
-                Participating units
-              </p>
-              <p className="mt-1 text-sm text-[var(--console-text-muted)]">
-                {formatFieldCount(selectedUnitCount)} of {formatFieldCount(units.length)} selected
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={selectAllUnits}
-                disabled={isReadOnlyPreview}
-                className="min-h-9 rounded-lg px-3 text-xs font-semibold text-[var(--console-text)] hover:bg-white/5 disabled:opacity-50"
-              >
-                Select all
-              </button>
-              <button
-                type="button"
-                onClick={clearAllUnits}
-                disabled={isReadOnlyPreview}
-                className="min-h-9 rounded-lg px-3 text-xs font-semibold text-[var(--console-text-soft)] hover:bg-white/5 hover:text-[var(--console-text)] disabled:opacity-50"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-
-          {selectedUnitCount === 0 ? (
-            <p className="mt-2 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-xs text-amber-100">
-              Select at least one unit to participate in registration.
-            </p>
-          ) : null}
-
-          <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-2 sm:grid-cols-2">
-            {units.map((unit) => {
-              const isChecked = selectedUnitIds.has(unit.id);
-              return (
-                <label
-                  key={unit.id}
-                  className={[
-                    "flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                    isChecked
-                      ? "border-[var(--console-accent-border)] bg-white/[0.05] text-[var(--console-text)]"
-                      : "border-[var(--console-border)] bg-white/[0.02] text-[var(--console-text-muted)] hover:bg-white/[0.04]",
-                  ].join(" ")}
+        {isExistingUnitsMode ? (
+          <div className="pt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-soft)]">
+                  Participating units
+                </p>
+                <p className="mt-1 text-sm text-[var(--console-text-muted)]">
+                  {formatFieldCount(selectedUnitCount)} of {formatFieldCount(units.length)} selected
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={selectAllUnits}
+                  disabled={isReadOnlyPreview}
+                  className="min-h-9 rounded-lg px-3 text-xs font-semibold text-[var(--console-text)] hover:bg-white/5 disabled:opacity-50"
                 >
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => toggleUnit(unit.id)}
-                    disabled={isReadOnlyPreview}
-                    className="h-5 w-5 rounded border-[var(--console-border)] bg-transparent text-[var(--console-accent)] focus:ring-0 focus:ring-offset-0 disabled:opacity-50"
-                  />
-                  <span className="min-w-0 truncate">{unit.label}</span>
-                </label>
-              );
-            })}
+                  Select all
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAllUnits}
+                  disabled={isReadOnlyPreview}
+                  className="min-h-9 rounded-lg px-3 text-xs font-semibold text-[var(--console-text-soft)] hover:bg-white/5 hover:text-[var(--console-text)] disabled:opacity-50"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            {selectedUnitCount === 0 ? (
+              <p className="mt-2 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3 text-xs text-amber-100">
+                Select at least one unit to participate in registration.
+              </p>
+            ) : null}
+
+            <div className="mt-3 grid max-h-64 gap-2 overflow-y-auto rounded-lg border border-[var(--console-border)] bg-white/[0.02] p-2 sm:grid-cols-2">
+              {units.map((unit) => {
+                const isChecked = selectedUnitIds.has(unit.id);
+                return (
+                  <label
+                    key={unit.id}
+                    className={[
+                      "flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                      isChecked
+                        ? "border-[var(--console-accent-border)] bg-white/[0.05] text-[var(--console-text)]"
+                        : "border-[var(--console-border)] bg-white/[0.02] text-[var(--console-text-muted)] hover:bg-white/[0.04]",
+                    ].join(" ")}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleUnit(unit.id)}
+                      disabled={isReadOnlyPreview}
+                      className="h-5 w-5 rounded border-[var(--console-border)] bg-transparent text-[var(--console-accent)] focus:ring-0 focus:ring-offset-0 disabled:opacity-50"
+                    />
+                    <span className="min-w-0 truncate">{unit.label}</span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
+            Residents will enter their own unit number. Submissions remain pending registration data until reviewed later.
+          </div>
+        )}
       </div>
 
       <button

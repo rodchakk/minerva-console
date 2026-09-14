@@ -15,22 +15,27 @@ export type PublicRegistrationCampaign =
       defaultResidentLimit: number;
       publicInstructions: string | null;
       publicTitle: string;
+      registrationMode: RegistrationMode;
       unitLabelPrefix: string;
     };
+
+export type RegistrationMode = "existing_units" | "resident_provided_units";
 
 export type PublicRegistrationUnitLookup =
   | {
       available: false;
+      reason?: "already_registered" | "unavailable";
     }
   | {
       available: true;
+      registrationMode: RegistrationMode;
       residentLimit: number;
       unitLabel: string;
     };
 
 export type PublicRegistrationSubmission =
   | {
-      reason: "try_again" | "unavailable";
+      reason: "already_registered" | "try_again" | "unavailable";
       submitted: false;
     }
   | {
@@ -78,11 +83,14 @@ type CampaignRpcResult = {
   default_resident_limit?: number | null;
   public_instructions?: string | null;
   public_title?: string | null;
+  registration_mode?: string | null;
 };
 
 type UnitLookupRpcResult = {
   can_start?: boolean;
   effective_resident_limit?: number | null;
+  error_code?: string | null;
+  registration_mode?: string | null;
   unit_label?: string | null;
 };
 
@@ -136,6 +144,12 @@ const EDIT_RELATIONSHIPS = new Set([
   "unknown",
 ]);
 
+function normalizeRegistrationMode(value: unknown): RegistrationMode {
+  return value === "resident_provided_units"
+    ? "resident_provided_units"
+    : "existing_units";
+}
+
 export async function resolveCommunityRegistrationCampaign(input: {
   publicSlug: string;
   tokenHash: string;
@@ -183,6 +197,7 @@ export async function resolveCommunityRegistrationCampaign(input: {
     defaultResidentLimit: Number(result.default_resident_limit ?? 0),
     publicInstructions: result.public_instructions ?? null,
     publicTitle: result.public_title?.trim() || "Registro de residentes",
+    registrationMode: normalizeRegistrationMode(result.registration_mode),
     unitLabelPrefix,
   };
 }
@@ -258,7 +273,13 @@ export async function lookupCommunityRegistrationUnit(input: {
 
   const result = data as UnitLookupRpcResult;
   if (result.can_start !== true) {
-    return { available: false };
+    return {
+      available: false,
+      reason:
+        result.error_code === "ENTRY_CR_UNIT_ALREADY_REGISTERED"
+          ? "already_registered"
+          : "unavailable",
+    };
   }
 
   const returnedUnitLabel = result.unit_label?.trim();
@@ -270,6 +291,7 @@ export async function lookupCommunityRegistrationUnit(input: {
 
   return {
     available: true,
+    registrationMode: normalizeRegistrationMode(result.registration_mode),
     residentLimit,
     unitLabel: returnedUnitLabel,
   };
@@ -327,6 +349,10 @@ export async function submitCommunityRegistrationHousehold(input: {
     result.error_code === "ENTRY_CR_UNIT_UNAVAILABLE"
   ) {
     return { reason: "unavailable", submitted: false };
+  }
+
+  if (result.error_code === "ENTRY_CR_UNIT_ALREADY_REGISTERED") {
+    return { reason: "already_registered", submitted: false };
   }
 
   return { reason: "try_again", submitted: false };
