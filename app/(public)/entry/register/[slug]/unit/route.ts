@@ -31,6 +31,7 @@ function jsonResponse(body: { available: false } | {
   registrationMode: "existing_units" | "resident_provided_units";
   residentLimit: number;
   unitLabel: string;
+  unitReference: string | null;
 } | {
   available: false;
   error: "already_registered" | "unavailable";
@@ -156,5 +157,6 @@ export async function POST(
     registrationMode: lookup.registrationMode,
     residentLimit: lookup.residentLimit,
     unitLabel: lookup.unitLabel,
+    unitReference: lookup.unitReference,
   });
 }

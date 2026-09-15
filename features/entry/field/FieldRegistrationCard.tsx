@@ -67,10 +67,12 @@ function UnitProgressLink({ communityId }: { communityId: string }) {
 
 function RegistrationProgress({
   hasKnownTotal = true,
+  submittedResidents = 0,
   submitted,
   total,
 }: {
   hasKnownTotal?: boolean;
+  submittedResidents?: number;
   submitted: number;
   total: number;
 }) {
@@ -97,6 +99,37 @@ function RegistrationProgress({
 
   const percentage =
     total > 0 ? Math.min(100, Math.round((submitted / total) * 100)) : 0;
+
+  if (!hasKnownTotal) {
+    return (
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-3 py-3">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
+            Units submitted
+          </p>
+          <p className="mt-2 text-2xl font-semibold text-[var(--console-text)]">
+            {formatFieldCount(submitted)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-3 py-3">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
+            Residents received
+          </p>
+          <p className="mt-2 text-2xl font-semibold text-[var(--console-text)]">
+            {formatFieldCount(submittedResidents)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-3 py-3">
+          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
+            Total participating units
+          </p>
+          <p className="mt-2 text-2xl font-semibold text-[var(--console-text)]">
+            Unknown
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-4">
@@ -134,8 +167,14 @@ export function FieldRegistrationCard({
   isReadOnlyPreview = false,
   registrationState,
 }: FieldRegistrationCardProps) {
-  const { campaign, hasOperationalCampaign, submittedUnitCount, totalCampaignUnitCount, units } =
-    registrationState;
+  const {
+    campaign,
+    hasOperationalCampaign,
+    registrationProgress,
+    submittedUnitCount,
+    totalCampaignUnitCount,
+    units,
+  } = registrationState;
   const [isPending, startTransition] = useTransition();
   const [copied, setCopied] = useState(false);
   const [opening, setOpening] = useState(false);
@@ -254,6 +293,7 @@ export function FieldRegistrationCard({
         </div>
         <RegistrationProgress
           hasKnownTotal={hasKnownCampaignTotal}
+          submittedResidents={registrationProgress.submittedResidents}
           submitted={submittedUnitCount}
           total={totalCampaignUnitCount}
         />
@@ -287,6 +327,7 @@ export function FieldRegistrationCard({
         </div>
         <RegistrationProgress
           hasKnownTotal={hasKnownCampaignTotal}
+          submittedResidents={registrationProgress.submittedResidents}
           submitted={submittedUnitCount}
           total={totalCampaignUnitCount}
         />
@@ -311,6 +352,7 @@ export function FieldRegistrationCard({
 
       <RegistrationProgress
         hasKnownTotal={hasKnownCampaignTotal}
+        submittedResidents={registrationProgress.submittedResidents}
         submitted={submittedUnitCount}
         total={totalCampaignUnitCount}
       />

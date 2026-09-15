@@ -32,6 +32,7 @@ export type PublicRegistrationUnitLookup =
       registrationMode: RegistrationMode;
       residentLimit: number;
       unitLabel: string;
+      unitReference: string | null;
     };
 
 export type PublicRegistrationSubmission =
@@ -93,6 +94,7 @@ type UnitLookupRpcResult = {
   error_code?: string | null;
   registration_mode?: string | null;
   unit_label?: string | null;
+  unit_reference?: string | null;
 };
 
 type SubmissionRpcResult = {
@@ -359,6 +361,7 @@ export async function lookupCommunityRegistrationUnit(input: {
     registrationMode: normalizeRegistrationMode(result.registration_mode),
     residentLimit,
     unitLabel: returnedUnitLabel,
+    unitReference: result.unit_reference?.trim() || null,
   };
 }
 
