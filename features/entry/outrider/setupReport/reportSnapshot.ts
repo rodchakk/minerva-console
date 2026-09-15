@@ -14,6 +14,15 @@ function normalizedUnit(value: string | null) {
   return normalizeSetupUnitIdentity(value);
 }
 
+function populationUnitSet(workbook: ParsedSetupWorkbook) {
+  return new Set(
+    workbook.units
+      .filter((unit) => unit.isActive !== false)
+      .map((unit) => normalizedUnit(unit.unitLabel))
+      .filter((unit): unit is string => Boolean(unit)),
+  );
+}
+
 export function buildRelevantOutriderInput(detail: OutriderDetail) {
   return {
     communityCity: detail.communityCity === "Not set" ? null : detail.communityCity,
@@ -44,22 +53,22 @@ export function buildSetupReportSummary(
   workbook: ParsedSetupWorkbook,
   validation: SetupValidationResult,
 ): OutriderSetupReportSnapshot["summary"] {
-  const units = new Set(
-    workbook.units
-      .map((unit) => normalizedUnit(unit.unitLabel))
-      .filter((unit): unit is string => Boolean(unit)),
-  );
-  const residentUnits = new Set(
+  const populationUnits = populationUnitSet(workbook);
+  const residentPopulationUnits = new Set(
     workbook.residents
       .map((resident) => normalizedUnit(resident.unitLabel))
-      .filter((unit): unit is string => unit !== null && units.has(unit)),
+      .filter(
+        (unit): unit is string => unit !== null && populationUnits.has(unit),
+      ),
   );
 
   return {
     adminRows: workbook.admins.length,
     destinationRows: workbook.destinations.length,
     residentCoveragePercent:
-      units.size === 0 ? null : Math.round((residentUnits.size / units.size) * 100),
+      populationUnits.size === 0
+        ? null
+        : Math.round((residentPopulationUnits.size / populationUnits.size) * 100),
     residentRows: workbook.residents.length,
     units: workbook.units.length,
     unitsMissingReferences: validation.counts.unitsMissingReferences,
@@ -71,20 +80,38 @@ export function buildSetupReportSummary(
 export function recommendedNextStep(
   summary: OutriderSetupReportSnapshot["summary"],
   validation: SetupValidationResult,
+  workbook: ParsedSetupWorkbook,
 ) {
   if (validation.hasBlockingErrors) {
-    return "Se requiere corregir los errores del workbook antes de continuar.";
+    return "Minerva debe corregir los datos marcados como error antes de continuar.";
+  }
+
+  const populationUnits = populationUnitSet(workbook).size;
+  const unknownStatusUnits = workbook.units.filter(
+    (unit) => unit.isActive === null,
+  ).length;
+
+  if (populationUnits === 0) {
+    return "No hay unidades marcadas para iniciar activas. Minerva debe confirmar el estado inicial de las unidades antes de continuar.";
   }
 
   if (summary.residentRows === 0) {
-    return "Se recomienda utilizar el Registro de Residentes para completar la información.";
+    return "Aún no hay información de residentes para las unidades que iniciarán activas. Se recomienda completar esa población antes de la configuración final.";
   }
 
-  if (summary.residentCoveragePercent === 100) {
-    return "La información recibida puede ser candidata para preparación directa, sujeta a revisión interna de Minerva.";
+  if (summary.residentCoveragePercent === 100 && unknownStatusUnits === 0) {
+    if (validation.counts.warnings === 0) {
+      return "La información está lista para revisión final de Minerva. No se identifican faltantes de residentes en las unidades activas.";
+    }
+
+    return "La cobertura de residentes está completa para las unidades activas. Minerva debe revisar las observaciones restantes antes de aplicar la configuración.";
   }
 
-  return "La información de residentes es parcial. Se requiere definir la estrategia de población antes de continuar.";
+  if (unknownStatusUnits > 0) {
+    return "Se debe confirmar el estado inicial de algunas unidades y completar cualquier información pendiente antes de aplicar la configuración.";
+  }
+
+  return "Falta información de residentes para una o más unidades que iniciarán activas. Minerva debe completar o confirmar esos datos antes de continuar.";
 }
 
 export function buildSetupReportSnapshot(input: {
@@ -112,7 +139,11 @@ export function buildSetupReportSnapshot(input: {
       unitNamingExample: input.detail.unitNamingExample,
       unitTypes: input.detail.unitTypes,
     },
-    recommendation: recommendedNextStep(summary, input.validation),
+    recommendation: recommendedNextStep(
+      summary,
+      input.validation,
+      input.workbook,
+    ),
     reportSchemaVersion: SETUP_REPORT_SCHEMA_VERSION,
     source: input.source,
     summary,
