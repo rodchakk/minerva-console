@@ -39,13 +39,13 @@ type LookupState =
   | { status: "error" };
 
 const NEUTRAL_UNAVAILABLE_MESSAGE =
-  "We could not enable this unit for registration. Check the unit number or contact your community administration.";
+  "No pudimos habilitar esta unidad para el registro. Verifica el número de unidad o comunícate con la administración de tu comunidad.";
 const ALREADY_REGISTERED_MESSAGE =
-  "This unit has already been registered. If you believe this is a mistake, please contact your community administration.";
+  "Esta unidad ya fue registrada. Si crees que se trata de un error, comunícate con la administración de tu comunidad.";
 const RATE_LIMITED_MESSAGE =
-  "You have made too many attempts. Wait a moment and try again.";
+  "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente.";
 const SERVICE_UNAVAILABLE_MESSAGE =
-  "We could not process the request right now. Please try again.";
+  "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente.";
 
 function scrollFocusedControlIntoView(event: FocusEvent<HTMLInputElement>) {
   const target = event.currentTarget;
@@ -146,7 +146,7 @@ export function UnitLookupForm({
         unitLabelPrefix,
         showUnitLabelPrefix,
       )
-    : "1 or 5B";
+    : "1 o 5B";
 
   function resetLookup() {
     setUnitSuffix("");
@@ -167,6 +167,18 @@ export function UnitLookupForm({
         inputValueForUnit(unitLabel, unitLabelPrefix, showUnitLabelPrefix),
       ) === normalizeSearchValue(unitSuffix)
     );
+  }
+
+  const selectedAvailableUnit = showUnitGuide
+    ? availableUnits.find((unitLabel) => isSelectedUnit(unitLabel)) ?? null
+    : null;
+  const selectedAvailableReference = selectedAvailableUnit
+    ? unitReferences[selectedAvailableUnit]?.trim() || null
+    : null;
+
+  function clearSelectedUnit() {
+    setUnitSuffix("");
+    setState({ status: "idle" });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -288,10 +300,10 @@ export function UnitLookupForm({
             </span>
             <div>
               <h2 className="text-xl font-bold text-slate-950 sm:text-2xl">
-                Identify your unit
+                Identifica tu unidad
               </h2>
               <p className="mt-1 text-base leading-6 text-slate-600 sm:mt-2 sm:leading-7">
-                Enter your unit or house number.
+                Ingresa el número de tu casa o unidad.
               </p>
             </div>
           </div>
@@ -495,75 +507,121 @@ export function UnitLookupForm({
             </details>
           ) : null}
 
-          <label className="block" htmlFor="unit-label">
-            <span className="text-base font-bold text-slate-950">
-              Unit or house number
-            </span>
-            <span className="mt-2 flex min-h-14 items-center rounded-2xl border border-[#5b21b6] bg-white px-4 shadow-[0_0_0_3px_rgba(91,33,182,0.08)] focus-within:border-[#4c1d95]">
-              <span className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center text-[#5b21b6]">
-                <svg aria-hidden="true" className="h-7 w-7" fill="none" viewBox="0 0 24 24">
-                  <path
-                    d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.9"
-                  />
-                </svg>
-              </span>
-              {showUnitLabelPrefix ? (
-                <span className="mr-2 text-base font-semibold text-slate-500">
-                  {unitLabelPrefix}
+          {selectedAvailableUnit ? (
+            <div className="rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-4 sm:px-5">
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-[#5b21b6]">
+                  <svg
+                    aria-hidden="true"
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.9"
+                    />
+                  </svg>
                 </span>
-              ) : null}
-              <input
-                autoComplete="off"
-                className="h-12 min-w-0 flex-1 border-0 bg-transparent text-lg text-slate-950 outline-none placeholder:text-slate-400"
-                disabled={isChecking}
-                id="unit-label"
-                maxLength={40}
-                name="unitLabel"
-                onChange={(event) => setUnitSuffix(event.target.value)}
-                onFocus={scrollFocusedControlIntoView}
-                placeholder={`e.g. ${inputExample}`}
-                required
-                type="text"
-                value={unitSuffix}
-              />
-            </span>
-          </label>
-
-          <div className="flex gap-3 text-sm leading-6 text-slate-500">
-            <svg
-              aria-hidden="true"
-              className="mt-1 h-5 w-5 shrink-0"
-              fill="none"
-              viewBox="0 0 24 24"
-            >
-              <path
-                d="M12 17v-6m0-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="1.8"
-              />
-            </svg>
-            <p>
-              Examples:{" "}
-              <span className="font-bold text-[#5b21b6]">
-                {availableUnits.length > 0
-                  ? availableUnits.slice(0, 5).join(", ")
-                  : "1, 2, 3, 5B, 6A"}
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-[#5b21b6]">
+                    Unidad seleccionada
+                  </p>
+                  <p className="mt-0.5 truncate text-lg font-bold text-slate-950">
+                    {selectedAvailableUnit}
+                  </p>
+                  {selectedAvailableReference ? (
+                    <p className="mt-0.5 truncate text-sm text-slate-500">
+                      {selectedAvailableReference}
+                    </p>
+                  ) : null}
+                </div>
+                <button
+                  className="shrink-0 rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm font-bold text-[#4c1d95] transition hover:bg-violet-50"
+                  disabled={isChecking}
+                  onClick={clearSelectedUnit}
+                  type="button"
+                >
+                  Cambiar
+                </button>
+              </div>
+            </div>
+          ) : (
+            <label className="block" htmlFor="unit-label">
+              <span className="text-base font-bold text-slate-950">
+                Número de unidad o casa
               </span>
-            </p>
-          </div>
+              <span className="mt-2 flex min-h-14 items-center rounded-2xl border border-[#5b21b6] bg-white px-4 shadow-[0_0_0_3px_rgba(91,33,182,0.08)] focus-within:border-[#4c1d95]">
+                <span className="mr-3 flex h-9 w-9 shrink-0 items-center justify-center text-[#5b21b6]">
+                  <svg aria-hidden="true" className="h-7 w-7" fill="none" viewBox="0 0 24 24">
+                    <path
+                      d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.9"
+                    />
+                  </svg>
+                </span>
+                {showUnitLabelPrefix ? (
+                  <span className="mr-2 text-base font-semibold text-slate-500">
+                    {unitLabelPrefix}
+                  </span>
+                ) : null}
+                <input
+                  autoComplete="off"
+                  className="h-12 min-w-0 flex-1 border-0 bg-transparent text-lg text-slate-950 outline-none placeholder:text-slate-400"
+                  disabled={isChecking}
+                  id="unit-label"
+                  maxLength={40}
+                  name="unitLabel"
+                  onChange={(event) => setUnitSuffix(event.target.value)}
+                  onFocus={scrollFocusedControlIntoView}
+                  placeholder={`Ej. ${inputExample}`}
+                  required
+                  type="text"
+                  value={unitSuffix}
+                />
+              </span>
+            </label>
+          )}
+
+          {!selectedAvailableUnit ? (
+            <div className="flex gap-3 text-sm leading-6 text-slate-500">
+              <svg
+                aria-hidden="true"
+                className="mt-1 h-5 w-5 shrink-0"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M12 17v-6m0-4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.8"
+                />
+              </svg>
+              <p>
+                Ejemplos:{" "}
+                <span className="font-bold text-[#5b21b6]">
+                  {availableUnits.length > 0
+                    ? availableUnits.slice(0, 5).join(", ")
+                    : "1, 2, 3, 5B, 6A"}
+                </span>
+              </p>
+            </div>
+          ) : null}
 
           <button
             className="inline-flex h-14 w-full items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-base font-bold text-white shadow-[0_16px_34px_rgba(76,29,149,0.24)] transition hover:bg-[#5b21b6] disabled:cursor-not-allowed disabled:opacity-60"
             disabled={isChecking}
             type="submit"
           >
-            {isChecking ? "Checking..." : "Continue"}
+            {isChecking ? "Verificando..." : "Continuar"}
           </button>
         </form>
       </section>
@@ -572,7 +630,7 @@ export function UnitLookupForm({
         {state.status === "unavailable" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
             <p className="text-sm font-semibold text-amber-950">
-              Unit unavailable
+              Unidad no disponible
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-900">
               {state.reason === "already_registered"
@@ -586,7 +644,7 @@ export function UnitLookupForm({
         state.status === "service_unavailable" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
             <p className="text-sm font-semibold text-amber-950">
-              We could not verify the unit
+              No pudimos verificar la unidad
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-900">
               {state.status === "rate_limited"
@@ -599,7 +657,7 @@ export function UnitLookupForm({
         {state.status === "error" ? (
           <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
             <p className="text-sm font-semibold text-amber-950">
-              We could not verify the unit
+              No pudimos verificar la unidad
             </p>
             <p className="mt-2 text-sm leading-6 text-amber-900">
               {NEUTRAL_UNAVAILABLE_MESSAGE}

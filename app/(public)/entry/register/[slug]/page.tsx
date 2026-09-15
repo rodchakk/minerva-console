@@ -25,9 +25,9 @@ import { resolveCommunityRegistrationUnitReferences } from "@/features/entry/com
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
 
-const registrationTitle = "Resident registration | ENTRY";
+const registrationTitle = "Registro de residentes | ENTRY";
 const registrationDescription =
-  "Official ENTRY resident registration for your community.";
+  "Registro oficial de residentes de ENTRY para tu comunidad.";
 const registrationBrandImage =
   "https://console.minervatechs.com/brand/minerva-entry-og-v5-baseline-1200x630.jpg";
 
@@ -81,11 +81,11 @@ function UnavailableState() {
       <RegistrationStepper currentStep={1} />
       <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
         <p className="text-base font-semibold text-amber-950">
-          Registration link unavailable
+          Enlace de registro no disponible
         </p>
         <p className="mt-2 text-sm leading-6 text-amber-900">
-          We could not validate this registration link. Check the official link
-          or contact your community administration.
+          No pudimos validar este enlace de registro. Verifica el enlace oficial
+          o comunícate con la administración de tu comunidad.
         </p>
       </div>
     </PublicRegistrationShell>
@@ -98,7 +98,7 @@ function TemporarilyUnavailableState({ message }: { message: string }) {
       <RegistrationStepper currentStep={1} />
       <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
         <p className="text-base font-semibold text-amber-950">
-          Registration temporarily unavailable
+          Registro temporalmente no disponible
         </p>
         <p className="mt-2 text-sm leading-6 text-amber-900">{message}</p>
       </div>
@@ -179,12 +179,12 @@ export default async function EntryRegisterPage(
               {campaign.communityName}
             </p>
             <h1 className="text-3xl font-bold text-slate-950 sm:text-5xl">
-              Resident registration
+              Registro de residentes
             </h1>
             <p className="text-base leading-6 text-slate-600 sm:leading-7">
               {campaign.publicInstructions
                 ? campaign.publicInstructions
-                : "Complete the information for the people who live in your unit. First identify your unit, then review the registration before submitting it."}
+                : "Completa la información de las personas que viven en tu unidad. Primero identifica tu vivienda y luego revisa el registro antes de enviarlo."}
             </p>
           </div>
         }
