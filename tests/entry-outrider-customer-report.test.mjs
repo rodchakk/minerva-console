@@ -129,18 +129,30 @@ test("active units without residents still produce a population warning", () => 
   assert.ok(findingCodes(validation).includes("RESIDENT_COVERAGE_PARTIAL"));
 });
 
-test("customer PDF is Spanish, readable, and hides internal validation language", () => {
+test("customer PDF is Spanish, customer-facing, and hides internal implementation details", () => {
   assert.match(model, /entry-outrider-setup-report-v2/);
   assert.match(pdf, /Resumen preliminar de preparación/);
   assert.match(pdf, /Estado de preparación/i);
   assert.match(pdf, /Resumen de la comunidad/);
+  assert.match(pdf, /Cobertura unidades activas/);
   assert.match(pdf, /Información preparada/);
   assert.match(pdf, /Observaciones antes de activar/);
+  assert.match(pdf, /Siguiente paso/);
   assert.match(pdf, /Detalle para confirmación/);
   assert.match(pdf, /Listado de unidades/);
+  assert.match(pdf, /Administrador inicial propuesto/);
   assert.match(pdf, /Privacidad y alcance/);
-  assert.match(pdf, /Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes/);
+  assert.match(pdf, /Fuente de preparación: información validada por Minerva/);
+  assert.match(
+    pdf,
+    /Una vez confirmada esta información, Minerva incorporará la comunidad a ENTRY y dará inicio a la fase de registro de residentes/,
+  );
+  assert.match(
+    pdf,
+    /Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes/,
+  );
   assert.doesNotMatch(pdf, /Appendix/);
+  assert.doesNotMatch(pdf, /snapshot\.source\.filename/);
   assert.doesNotMatch(pdf, /finding\.message/);
   assert.doesNotMatch(pdf, /finding\.field/);
   assert.doesNotMatch(pdf, /resident\.phone|resident\.email|resident\.fullName/);
