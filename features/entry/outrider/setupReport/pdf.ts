@@ -24,6 +24,10 @@ const PAGE_HEIGHT = 792;
 const MARGIN = 44;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
 const FOOTER_Y = 34;
+const SAFE_CONTENT_BOTTOM = 82;
+const UNIT_LABEL_X = MARGIN + 18;
+const UNIT_STATUS_X = PAGE_WIDTH - MARGIN - 116;
+const UNIT_LABEL_MAX_WIDTH = UNIT_STATUS_X - UNIT_LABEL_X - 14;
 
 const COLORS = {
   brand: rgb(0.08, 0.1, 0.42),
@@ -43,12 +47,47 @@ const COLORS = {
   white: rgb(1, 1, 1),
 };
 
+function splitOversizedWord(
+  word: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+) {
+  const chunks: string[] = [];
+  let current = "";
+
+  for (const character of Array.from(word)) {
+    const candidate = `${current}${character}`;
+    if (current && font.widthOfTextAtSize(candidate, size) > maxWidth) {
+      chunks.push(current);
+      current = character;
+      continue;
+    }
+    current = candidate;
+  }
+
+  if (current) chunks.push(current);
+  return chunks.length > 0 ? chunks : [word];
+}
+
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   const words = text.split(/\s+/).filter(Boolean);
   const lines: string[] = [];
   let current = "";
 
   for (const word of words) {
+    if (font.widthOfTextAtSize(word, size) > maxWidth) {
+      if (current) {
+        lines.push(current);
+        current = "";
+      }
+
+      const chunks = splitOversizedWord(word, font, size, maxWidth);
+      lines.push(...chunks.slice(0, -1));
+      current = chunks[chunks.length - 1] ?? "";
+      continue;
+    }
+
     const candidate = current ? `${current} ${word}` : word;
     if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
       current = candidate;
@@ -396,6 +435,25 @@ function addDetailPage(
   return { page, y };
 }
 
+function addSummaryContinuationPage(doc: PdfDocumentType, fonts: Fonts) {
+  const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  drawBrandHeader(page, fonts);
+  page.drawText("Resumen preliminar de preparación · continuación", {
+    color: COLORS.ink,
+    font: fonts.bold,
+    size: 16,
+    x: MARGIN,
+    y: PAGE_HEIGHT - 99,
+  });
+  return { page, y: PAGE_HEIGHT - 127 };
+}
+
+function measureUnitRowHeight(label: string, fonts: Fonts) {
+  const lineHeight = 11.2;
+  const lines = wrapText(label, fonts.regular, 9.2, UNIT_LABEL_MAX_WIDTH);
+  return Math.max(19, lines.length * lineHeight + 7);
+}
+
 function drawUnitRow(
   page: PDFPage,
   fonts: Fonts,
@@ -404,10 +462,14 @@ function drawUnitRow(
   status: string,
   statusColor: ReturnType<typeof rgb>,
 ) {
+  const lineHeight = 11.2;
+  const labelLines = wrapText(label, fonts.regular, 9.2, UNIT_LABEL_MAX_WIDTH);
+  const rowHeight = Math.max(19, labelLines.length * lineHeight + 7);
+
   page.drawLine({
     color: rgb(0.91, 0.92, 0.95),
-    end: { x: PAGE_WIDTH - MARGIN, y: y - 8 },
-    start: { x: MARGIN + 18, y: y - 8 },
+    end: { x: PAGE_WIDTH - MARGIN, y: y - rowHeight + 4 },
+    start: { x: MARGIN + 18, y: y - rowHeight + 4 },
     thickness: 0.55,
   });
   page.drawCircle({
@@ -416,21 +478,23 @@ function drawUnitRow(
     x: MARGIN + 6,
     y: y + 2,
   });
-  page.drawText(label, {
-    color: COLORS.ink,
-    font: fonts.regular,
-    size: 9.2,
-    x: MARGIN + 18,
-    y,
+  labelLines.forEach((line, index) => {
+    page.drawText(line, {
+      color: COLORS.ink,
+      font: fonts.regular,
+      size: 9.2,
+      x: UNIT_LABEL_X,
+      y: y - index * lineHeight,
+    });
   });
   page.drawText(status, {
     color: COLORS.muted,
     font: fonts.regular,
     size: 8.8,
-    x: PAGE_WIDTH - MARGIN - 116,
+    x: UNIT_STATUS_X,
     y,
   });
-  return y - 19;
+  return y - rowHeight;
 }
 
 function drawFooter(
@@ -663,31 +727,39 @@ export async function renderSetupReportPdf(
     : snapshot.recommendation;
   const nextStepLines = wrapText(nextStep, regular, 8.8, CONTENT_WIDTH - 28);
   const nextHeight = Math.max(58, 47 + (nextStepLines.length - 1) * 12);
+  let nextStepPage = page;
+  let nextStepY = y;
 
-  page.drawRectangle({
+  if (nextStepY - nextHeight < SAFE_CONTENT_BOTTOM) {
+    const continuation = addSummaryContinuationPage(doc, fonts);
+    nextStepPage = continuation.page;
+    nextStepY = continuation.y;
+  }
+
+  nextStepPage.drawRectangle({
     borderColor: rgb(0.83, 0.84, 0.98),
     borderWidth: 0.8,
     color: COLORS.brandSoft,
     height: nextHeight,
     width: CONTENT_WIDTH,
     x: MARGIN,
-    y: y - nextHeight,
+    y: nextStepY - nextHeight,
   });
-  page.drawText("SIGUIENTE PASO", {
+  nextStepPage.drawText("SIGUIENTE PASO", {
     color: COLORS.brand,
     font: bold,
     size: 8,
     x: MARGIN + 14,
-    y: y - 18,
+    y: nextStepY - 18,
   });
-  drawWrappedText(page, nextStep, {
+  drawWrappedText(nextStepPage, nextStep, {
     color: COLORS.ink,
     font: regular,
     lineHeight: 12,
     maxWidth: CONTENT_WIDTH - 28,
     size: 8.8,
     x: MARGIN + 14,
-    y: y - 35,
+    y: nextStepY - 35,
   });
 
   let detail = addDetailPage(doc, fonts);
@@ -695,7 +767,10 @@ export async function renderSetupReportPdf(
   let detailY = drawSectionTitle(detailPage, "Listado de unidades", fonts, detail.y);
 
   for (const unit of snapshot.workbook.units) {
-    if (detailY < 92) {
+    const label = unit.publicReference ?? unit.unitLabel ?? "Unidad sin referencia";
+    const unitRowHeight = measureUnitRowHeight(label, fonts);
+
+    if (detailY - unitRowHeight < SAFE_CONTENT_BOTTOM) {
       detail = addDetailPage(doc, fonts, true);
       detailPage = detail.page;
       detailY = drawSectionTitle(
@@ -706,7 +781,6 @@ export async function renderSetupReportPdf(
       );
     }
 
-    const label = unit.publicReference ?? unit.unitLabel ?? "Unidad sin referencia";
     detailY = drawUnitRow(
       detailPage,
       fonts,
@@ -718,7 +792,7 @@ export async function renderSetupReportPdf(
   }
 
   const ensureDetailSpace = (height: number) => {
-    if (detailY - height >= 82) return false;
+    if (detailY - height >= SAFE_CONTENT_BOTTOM) return false;
     detail = addDetailPage(doc, fonts, true);
     detailPage = detail.page;
     detailY = detail.y;
