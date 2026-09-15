@@ -51,6 +51,7 @@ declare
   v_current_reference text;
   v_updated_count integer := 0;
   v_unchanged_count integer := 0;
+  v_reference_count integer := 0;
 begin
   perform public._cr_service_role_only_v1();
   perform public._cr_validate_actor_v1(p_actor_user_id);
@@ -64,6 +65,10 @@ begin
      or jsonb_typeof(p_references) <> 'object' then
     perform public._cr_raise_v1('ENTRY_CR_INVALID_CAMPAIGN');
   end if;
+
+  select count(*)::integer
+    into v_reference_count
+    from jsonb_object_keys(p_references);
 
   select * into v_campaign
     from public.community_registration_campaigns
@@ -138,7 +143,7 @@ begin
     'campaign_id', p_campaign_id,
     'updated_count', v_updated_count,
     'unchanged_count', v_unchanged_count,
-    'reference_count', jsonb_object_length(p_references)
+    'reference_count', v_reference_count
   );
 end;
 $function$;
