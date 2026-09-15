@@ -72,6 +72,7 @@ jobs:
             tests/entry-outrider-initial-admins.test.mjs \
             tests/entry-outrider-single-source-upload.test.mjs \
             tests/entry-outrider-setup-report.test.mjs \
+            tests/entry-outrider-setup-report-final-hardening.test.mjs \
             tests/entry-activation-middleware.test.mjs \
             tests/entry-unit-resident-move.test.mjs
 
