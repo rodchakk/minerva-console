@@ -167,6 +167,7 @@ export async function POST(
       byteSize: actualByteSize,
       category,
       createdAt: new Date().toISOString(),
+      fileSha256: null,
       id: result.fileId,
       mimeType: actualMimeType,
       originalFilename,

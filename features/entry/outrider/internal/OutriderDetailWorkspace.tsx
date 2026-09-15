@@ -2,23 +2,33 @@
 
 import Link from "next/link";
 import {
+  AlertTriangle,
   CheckCircle2,
   Copy,
   Download,
   ExternalLink,
   FileArchive,
+  FileCheck2,
   FileDown,
+  FileSpreadsheet,
+  FileText,
+  PlayCircle,
   RefreshCw,
   RotateCw,
+  Upload,
 } from "lucide-react";
 import { useActionState, useState, useTransition } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
   approveOutriderSession,
+  analyzeSetupWorkbook,
+  approveSetupReport,
+  generateSetupReport,
   recoverOutriderLink,
   requestOutriderInformation,
   rotateOutriderLink,
+  uploadSetupWorkbook,
   type OutriderActionResult,
 } from "@/features/entry/outrider/actions";
 import {
@@ -29,6 +39,10 @@ import {
   type OutriderStatus,
 } from "@/features/entry/outrider/model";
 import type { OutriderDetail } from "@/features/entry/outrider/queries";
+import type {
+  OutriderSetupReportAnalysis,
+  SetupFinding,
+} from "@/features/entry/outrider/setupReport/model";
 
 const initialActionState: OutriderActionResult | null = null;
 
@@ -67,6 +81,14 @@ function eventLabel(event: OutriderDetail["events"][number]) {
       return "Approved for handoff";
     case "link_rotated":
       return "Secure link rotated";
+    case "setup_workbook_uploaded":
+      return "Setup workbook uploaded";
+    case "setup_report_generated":
+      return "Setup report generated";
+    case "setup_report_superseded":
+      return "Setup report superseded";
+    case "setup_report_approved":
+      return "Setup report approved";
     default:
       return "Outrider activity";
   }
@@ -292,79 +314,6 @@ function RequestInfoDialog({
   );
 }
 
-function ApproveDialog({
-  onClose,
-  outriderId,
-}: {
-  onClose: () => void;
-  outriderId: string;
-}) {
-  const [state, formAction, pending] = useActionState(
-    approveOutriderSession,
-    initialActionState,
-  );
-
-  if (state?.success) {
-    return (
-      <Overlay>
-        <div className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
-          <Badge tone="success">Approved</Badge>
-          <h3 className="mt-4 text-xl font-semibold text-white">
-            Outrider approved
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-            The handoff package can now be downloaded. No live ENTRY operational
-            records were created.
-          </p>
-          <div className="mt-6 flex justify-end">
-            <Button type="button" onClick={onClose}>
-              Done
-            </Button>
-          </div>
-        </div>
-      </Overlay>
-    );
-  }
-
-  return (
-    <Overlay>
-      <form
-        action={formAction}
-        className="w-full max-w-lg rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-          Approve handoff
-        </p>
-        <h3 className="mt-2 text-xl font-semibold text-white">
-          Approve Outrider for setup handoff
-        </h3>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-          Approval records that the intake is ready for manual onboarding. It
-          does not import units, destinations, residents, staff, or files into
-          live ENTRY operations.
-        </p>
-        <input type="hidden" name="outrider_id" value={outriderId} />
-
-        {state && !state.success ? (
-          <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-            {state.error}
-          </p>
-        ) : null}
-
-        <div className="mt-6 flex flex-wrap justify-end gap-3">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={pending} className="gap-2">
-            <CheckCircle2 className="h-4 w-4 stroke-[1.75]" />
-            {pending ? "Approving..." : "Approve"}
-          </Button>
-        </div>
-      </form>
-    </Overlay>
-  );
-}
-
 function DataCard({
   label,
   value,
@@ -382,10 +331,431 @@ function DataCard({
   );
 }
 
+function findingTone(
+  severity: SetupFinding["severity"],
+): "danger" | "warning" | "info" {
+  if (severity === "error") return "danger";
+  if (severity === "warning") return "warning";
+  return "info";
+}
+
+function FindingList({ findings }: { findings: SetupFinding[] }) {
+  if (findings.length === 0) {
+    return (
+      <p className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+        No deterministic findings.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {findings.slice(0, 12).map((finding, index) => (
+        <div
+          key={`${finding.code}-${finding.row ?? "sheet"}-${index}`}
+          className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2"
+        >
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge tone={findingTone(finding.severity)}>
+              {finding.severity.toUpperCase()}
+            </Badge>
+            <p className="text-xs font-semibold text-white">{finding.code}</p>
+          </div>
+          <p className="mt-1 text-sm leading-5 text-[var(--text-muted)]">
+            {[finding.sheet, finding.row ? `row ${finding.row}` : null, finding.field]
+              .filter(Boolean)
+              .join(" / ")}
+            {finding.sheet || finding.row || finding.field ? ": " : ""}
+            {finding.message}
+          </p>
+        </div>
+      ))}
+      {findings.length > 12 ? (
+        <p className="text-xs text-[var(--text-muted)]">
+          {findings.length - 12} additional findings hidden from this compact view.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AnalysisSummary({
+  analysis,
+}: {
+  analysis: OutriderSetupReportAnalysis;
+}) {
+  const errors = analysis.findings.filter(
+    (finding) => finding.severity === "error",
+  ).length;
+  const warnings = analysis.findings.filter(
+    (finding) => finding.severity === "warning",
+  ).length;
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <DataCard label="Units" value={analysis.summary.units} />
+        <DataCard label="Resident rows" value={analysis.summary.residentRows} />
+        <DataCard label="Destinations" value={analysis.summary.destinationRows} />
+        <DataCard label="Admins" value={analysis.summary.adminRows} />
+      </div>
+      <div className="grid gap-3 sm:grid-cols-3">
+        <DataCard
+          label="References present"
+          value={analysis.summary.unitsWithReferences}
+        />
+        <DataCard
+          label="References missing"
+          value={analysis.summary.unitsMissingReferences}
+        />
+        <DataCard
+          label="Findings"
+          value={`${errors} errors / ${warnings} warnings`}
+        />
+      </div>
+      <FindingList findings={analysis.findings} />
+    </div>
+  );
+}
+
+function SetupReportPanel({ detail }: { detail: OutriderDetail }) {
+  const [uploadState, uploadAction, uploadPending] = useActionState(
+    uploadSetupWorkbook,
+    initialActionState,
+  );
+  const [analysisState, analysisAction, analysisPending] = useActionState(
+    analyzeSetupWorkbook,
+    initialActionState,
+  );
+  const [generateState, generateAction, generatePending] = useActionState(
+    generateSetupReport,
+    initialActionState,
+  );
+  const [approveState, approveAction, approvePending] = useActionState(
+    approveSetupReport,
+    initialActionState,
+  );
+  const [finalApproveState, finalApproveAction, finalApprovePending] =
+    useActionState(approveOutriderSession, initialActionState);
+  const latestWorkbook = detail.latestSetupWorkbook;
+  const report = detail.currentSetupReport;
+  const workflowLocked = detail.status === "approved";
+  const analysis = analysisState?.success
+    ? analysisState.data?.analysis ?? null
+    : null;
+  const analysisErrors =
+    analysis?.findings.filter((finding) => finding.severity === "error").length ?? 0;
+  const analysisMatchesLatest =
+    Boolean(analysis && latestWorkbook && analysis.sourceFileId === latestWorkbook.id);
+  const canGenerate = Boolean(
+    !workflowLocked &&
+      ((analysisMatchesLatest && analysisErrors === 0) ||
+        (report && !report.isStale && report.status === "draft")),
+  );
+  const reportUrl = report
+    ? `/products/entry/outrider/${detail.id}/setup-reports/${report.id}/pdf`
+    : null;
+  const canFinalApprove = Boolean(
+    report?.status === "approved" && !report.isStale && !workflowLocked,
+  );
+
+  return (
+    <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+        <div className="max-w-3xl">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+            Setup report
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <h2 className="text-xl font-semibold text-white">
+              Preliminary setup report
+            </h2>
+            {workflowLocked ? (
+              <Badge tone="success">LOCKED</Badge>
+            ) : report?.status === "approved" && !report.isStale ? (
+              <Badge tone="success">APPROVED</Badge>
+            ) : report?.isStale ? (
+              <Badge tone="warning">OUTDATED</Badge>
+            ) : report ? (
+              <Badge tone="info">PRELIMINARY</Badge>
+            ) : (
+              <Badge tone="default">WORKBOOK REQUIRED</Badge>
+            )}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+            Intake information to setup workbook to validation to preliminary
+            report to explicit approval. Nothing here creates operational ENTRY
+            records.
+          </p>
+          {workflowLocked ? (
+            <p className="mt-2 text-sm leading-6 text-emerald-100">
+              Final Outrider approval is complete. Setup workbook and report
+              mutations are locked for v1.
+            </p>
+          ) : null}
+        </div>
+        <Link href="/products/entry/outrider/setup-workbook/template">
+          <Button type="button" variant="secondary" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4 stroke-[1.75]" />
+            Download setup workbook template
+          </Button>
+        </Link>
+      </div>
+
+      <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+        <div className="space-y-3">
+          <form
+            action={uploadAction}
+            className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3"
+          >
+            <input type="hidden" name="outrider_id" value={detail.id} />
+            <label className="block">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Upload internal setup workbook
+              </span>
+              <input
+                name="setup_workbook"
+                type="file"
+                accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                required
+                disabled={workflowLocked}
+                className="mt-2 block w-full text-sm text-slate-200 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-500/20 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-violet-100"
+              />
+            </label>
+            <Button
+              type="submit"
+              disabled={uploadPending || workflowLocked}
+              className="mt-3 gap-2"
+            >
+              <Upload className="h-4 w-4 stroke-[1.75]" />
+              {uploadPending ? "Uploading..." : "Upload setup workbook"}
+            </Button>
+            {uploadState?.success ? (
+              <p className="mt-3 text-sm text-emerald-200">
+                Setup workbook uploaded.
+              </p>
+            ) : uploadState ? (
+              <p className="mt-3 text-sm text-rose-200">{uploadState.error}</p>
+            ) : null}
+          </form>
+
+          {latestWorkbook ? (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Latest setup workbook
+              </p>
+              <p className="mt-2 truncate text-sm font-semibold text-white">
+                {latestWorkbook.originalFilename}
+              </p>
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                Uploaded {formatDate(latestWorkbook.createdAt)} ·{" "}
+                {Math.round(latestWorkbook.byteSize / 1024)} KB ·{" "}
+                {latestWorkbook.fileSha256
+                  ? `SHA ${latestWorkbook.fileSha256.slice(0, 12)}`
+                  : "hash pending"}
+              </p>
+              <form action={analysisAction} className="mt-3">
+                <input type="hidden" name="outrider_id" value={detail.id} />
+                <input type="hidden" name="source_file_id" value={latestWorkbook.id} />
+                <Button
+                  type="submit"
+                  variant="secondary"
+                  disabled={analysisPending || workflowLocked}
+                  className="gap-2"
+                >
+                  <PlayCircle className="h-4 w-4 stroke-[1.75]" />
+                  {analysisPending ? "Analyzing..." : "Analyze workbook"}
+                </Button>
+              </form>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-[var(--border)] px-4 py-6 text-center">
+              <FileSpreadsheet className="mx-auto h-6 w-6 text-[var(--text-muted)]" />
+              <p className="mt-3 text-sm font-semibold text-white">
+                Setup workbook required
+              </p>
+              <p className="mt-1 text-sm text-[var(--text-muted)]">
+                Upload a normalized internal XLSX before analysis or approval.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {analysis ? <AnalysisSummary analysis={analysis} /> : null}
+          {analysisState && !analysisState.success ? (
+            <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+              {analysisState.error}
+            </p>
+          ) : null}
+
+          {report ? (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                    Report v{report.version}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-white">
+                    {report.sourceFilenameSnapshot}
+                  </p>
+                </div>
+                {report.isStale ? (
+                  <Badge tone="warning">OUTDATED</Badge>
+                ) : report.status === "approved" ? (
+                  <Badge tone="success">APPROVED</Badge>
+                ) : (
+                  <Badge tone="info">PRELIMINARY</Badge>
+                )}
+              </div>
+              <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                Generated {formatDate(report.generatedAt)} · SHA{" "}
+                {report.sourceSha256.slice(0, 12)} · {report.warningCount} warnings
+              </p>
+              {report.isStale ? (
+                <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                  Outrider data or the setup workbook changed after this report
+                  was generated.
+                </p>
+              ) : null}
+              <div className="mt-3 flex flex-wrap gap-2">
+                {reportUrl ? (
+                  <>
+                    <a href={reportUrl} target="_blank" rel="noreferrer">
+                      <Button type="button" variant="secondary" className="gap-2">
+                        <FileText className="h-4 w-4 stroke-[1.75]" />
+                        Preview report
+                      </Button>
+                    </a>
+                    <a href={`${reportUrl}?download=1`}>
+                      <Button type="button" variant="secondary" className="gap-2">
+                        <Download className="h-4 w-4 stroke-[1.75]" />
+                        Download PDF
+                      </Button>
+                    </a>
+                  </>
+                ) : null}
+                {report.status !== "approved" && !workflowLocked ? (
+                  <form action={approveAction}>
+                    <input type="hidden" name="outrider_id" value={detail.id} />
+                    <input type="hidden" name="report_id" value={report.id} />
+                    <Button
+                      type="submit"
+                      disabled={approvePending || report.isStale}
+                      className="gap-2"
+                    >
+                      <CheckCircle2 className="h-4 w-4 stroke-[1.75]" />
+                      {approvePending ? "Approving..." : "Approve setup report"}
+                    </Button>
+                  </form>
+                ) : null}
+              </div>
+              {approveState?.success ? (
+                <p className="mt-3 text-sm text-emerald-200">
+                  Setup report approved.
+                </p>
+              ) : approveState ? (
+                <p className="mt-3 text-sm text-rose-200">{approveState.error}</p>
+              ) : null}
+              {report.status === "approved" || workflowLocked ? (
+                <form action={finalApproveAction} className="mt-3">
+                  <input type="hidden" name="outrider_id" value={detail.id} />
+                  <Button
+                    type="submit"
+                    disabled={!canFinalApprove || finalApprovePending}
+                    className="gap-2"
+                  >
+                    <CheckCircle2 className="h-4 w-4 stroke-[1.75]" />
+                    {finalApprovePending
+                      ? "Approving Outrider..."
+                      : workflowLocked
+                        ? "Outrider approved"
+                        : "Final approve Outrider"}
+                  </Button>
+                </form>
+              ) : null}
+              {finalApproveState?.success ? (
+                <p className="mt-3 text-sm text-emerald-200">
+                  Outrider approved and setup workflow locked.
+                </p>
+              ) : finalApproveState ? (
+                <p className="mt-3 text-sm text-rose-200">
+                  {finalApproveState.error}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          <form action={generateAction}>
+            <input type="hidden" name="outrider_id" value={detail.id} />
+            <input
+              type="hidden"
+              name="source_file_id"
+              value={analysis?.sourceFileId ?? latestWorkbook?.id ?? ""}
+            />
+            <Button
+              type="submit"
+              disabled={!latestWorkbook || generatePending || !canGenerate}
+              className="gap-2"
+            >
+              {analysisErrors > 0 ? (
+                <AlertTriangle className="h-4 w-4 stroke-[1.75]" />
+              ) : (
+                <FileCheck2 className="h-4 w-4 stroke-[1.75]" />
+              )}
+              {generatePending ? "Generating..." : "Generate preliminary report"}
+            </Button>
+          </form>
+          {generateState?.success ? (
+            <p className="text-sm text-emerald-200">
+              Preliminary report generated.
+            </p>
+          ) : generateState ? (
+            <p className="text-sm text-rose-200">{generateState.error}</p>
+          ) : null}
+          {detail.setupReports.length > 1 ? (
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                Report history
+              </p>
+              <div className="mt-3 space-y-2">
+                {detail.setupReports
+                  .filter((item) => item.id !== report?.id)
+                  .map((item) => {
+                    const url = `/products/entry/outrider/${detail.id}/setup-reports/${item.id}/pdf`;
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[var(--border)] px-3 py-2"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            Report v{item.version}
+                          </p>
+                          <p className="text-xs text-[var(--text-muted)]">
+                            {item.status} · {formatDate(item.generatedAt)}
+                          </p>
+                        </div>
+                        <a href={`${url}?download=1`}>
+                          <Button type="button" variant="secondary" className="gap-2">
+                            <Download className="h-4 w-4 stroke-[1.75]" />
+                            Download
+                          </Button>
+                        </a>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) {
   const [showRequestInfo, setShowRequestInfo] = useState(false);
-  const [showApprove, setShowApprove] = useState(false);
-  const canApprove = detail.status === "ready_for_review";
   const canRequestInfo = detail.status === "ready_for_review";
 
   return (
@@ -432,12 +802,6 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
                 Request info
               </Button>
             ) : null}
-            {canApprove ? (
-              <Button type="button" onClick={() => setShowApprove(true)} className="gap-2">
-                <CheckCircle2 className="h-4 w-4 stroke-[1.75]" />
-                Approve
-              </Button>
-            ) : null}
           </div>
         </div>
       </section>
@@ -457,6 +821,8 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
           <p className="mt-2">{detail.reviewNote}</p>
         </section>
       ) : null}
+
+      <SetupReportPanel detail={detail} />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
@@ -691,10 +1057,6 @@ export function OutriderDetailWorkspace({ detail }: { detail: OutriderDetail }) 
           onClose={() => setShowRequestInfo(false)}
           outriderId={detail.id}
         />
-      ) : null}
-
-      {showApprove ? (
-        <ApproveDialog onClose={() => setShowApprove(false)} outriderId={detail.id} />
       ) : null}
     </div>
   );

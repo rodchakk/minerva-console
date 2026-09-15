@@ -21,6 +21,17 @@ import {
   type OutriderStatus,
   type OutriderUnitType,
 } from "@/features/entry/outrider/model";
+import {
+  inputFingerprintHex,
+} from "@/features/entry/outrider/setupReport/fingerprint";
+import {
+  buildRelevantOutriderInput,
+} from "@/features/entry/outrider/setupReport/reportSnapshot";
+import type {
+  OutriderSetupReportRecord,
+  OutriderSetupReportSnapshot,
+  SetupFinding,
+} from "@/features/entry/outrider/setupReport/model";
 
 export type OutriderCommunityOption = {
   city: string;
@@ -74,6 +85,10 @@ export type OutriderDetail = OutriderListItem & {
   securityStaffNotes: string | null;
   unitNamingExample: string | null;
   unitTypes: OutriderUnitType[];
+  currentSetupReport: OutriderSetupReportRecord | null;
+  latestSetupWorkbook: OutriderFileRecord | null;
+  setupReports: OutriderSetupReportRecord[];
+  setupWorkbooks: OutriderFileRecord[];
 };
 
 type Row = Record<string, unknown>;
@@ -225,10 +240,67 @@ function mapFile(row: Row): OutriderFileRecord | null {
     byteSize: coerceNumber(row.byte_size),
     category,
     createdAt: coerceString(row.uploaded_at) || coerceString(row.created_at),
+    fileSha256: nullableString(row.file_sha256),
     id,
     mimeType: coerceString(row.mime_type),
     originalFilename,
     storagePath,
+  };
+}
+
+function mapSetupReport(
+  row: Row,
+  detail: Omit<
+    OutriderDetail,
+    "currentSetupReport" | "latestSetupWorkbook" | "setupReports" | "setupWorkbooks"
+  >,
+  latestSetupWorkbook: OutriderFileRecord | null,
+): OutriderSetupReportRecord | null {
+  const id = coerceString(row.id);
+  const sourceSha256 = nullableString(row.source_sha256);
+  const inputSha256 = nullableString(row.input_sha256);
+  const sourceFileId = nullableString(row.source_file_id);
+  const generatedAt = nullableString(row.generated_at);
+  const status = coerceString(row.status);
+
+  if (
+    !id ||
+    !sourceSha256 ||
+    !inputSha256 ||
+    !sourceFileId ||
+    !generatedAt ||
+    !["draft", "approved", "superseded"].includes(status)
+  ) {
+    return null;
+  }
+
+  const findings = Array.isArray(row.findings)
+    ? (row.findings as SetupFinding[])
+    : [];
+  const currentInputSha256 = inputFingerprintHex({
+    outrider: buildRelevantOutriderInput(detail as OutriderDetail),
+    sourceSha256,
+  });
+  const latestWorkbookIsNewer =
+    Boolean(latestSetupWorkbook) && latestSetupWorkbook?.id !== sourceFileId;
+
+  return {
+    approvedAt: nullableString(row.approved_at),
+    approvedBy: nullableString(row.approved_by),
+    findings,
+    generatedAt,
+    id,
+    inputSha256,
+    isStale: inputSha256 !== currentInputSha256 || latestWorkbookIsNewer,
+    pdfStoragePath: nullableString(row.pdf_storage_path),
+    reportSnapshot: row.report_snapshot as OutriderSetupReportSnapshot,
+    sourceFileId,
+    sourceFilenameSnapshot:
+      nullableString(row.source_filename_snapshot) ?? "setup-workbook.xlsx",
+    sourceSha256,
+    status: status as OutriderSetupReportRecord["status"],
+    version: coerceNumber(row.version),
+    warningCount: findings.filter((finding) => finding.severity === "warning").length,
   };
 }
 
@@ -345,8 +417,12 @@ export async function getOutriderDetail(
   await requireSuperadmin();
 
   const supabase = createAdminClient();
-  const [{ data: sessionData, error }, { data: fileData }, { data: eventData }] =
-    await Promise.all([
+  const [
+    { data: sessionData, error },
+    { data: fileData },
+    { data: eventData },
+    { data: reportData },
+  ] = await Promise.all([
       supabase
         .from("community_outrider_sessions")
         .select("*")
@@ -363,6 +439,12 @@ export async function getOutriderDetail(
         .eq("outrider_id", outriderId)
         .order("created_at", { ascending: false })
         .limit(25),
+      supabase
+        .from("community_outrider_setup_reports")
+        .select("*")
+        .eq("outrider_id", outriderId)
+        .in("status", ["draft", "approved", "superseded"])
+        .order("version", { ascending: false })
     ]);
 
   if (error || !sessionData) return null;
@@ -434,7 +516,10 @@ export async function getOutriderDetail(
 
   const normalizedDraft = normalizeLegacyOutriderDraft(rawDraft);
 
-  return {
+  const detailBase: Omit<
+    OutriderDetail,
+    "currentSetupReport" | "latestSetupWorkbook" | "setupReports" | "setupWorkbooks"
+  > = {
     ...listItem,
     availableInformation: normalizedDraft.availableInformation,
     contactEmail: normalizedDraft.contactEmail,
@@ -466,5 +551,21 @@ export async function getOutriderDetail(
     securityStaffNotes: normalizedDraft.securityStaffNotes,
     unitNamingExample: normalizedDraft.unitNamingExample,
     unitTypes: normalizedDraft.unitTypes,
+  };
+
+  const setupWorkbooks = files.filter((file) => file.category === "setup_workbook");
+  const latestSetupWorkbook = setupWorkbooks[0] ?? null;
+  const setupReports = asRows(reportData)
+    .map((report) => mapSetupReport(report, detailBase, latestSetupWorkbook))
+    .filter((report): report is OutriderSetupReportRecord => report !== null);
+  const currentSetupReport =
+    setupReports.find((report) => report.status !== "superseded") ?? null;
+
+  return {
+    ...detailBase,
+    currentSetupReport,
+    latestSetupWorkbook,
+    setupReports,
+    setupWorkbooks,
   };
 }

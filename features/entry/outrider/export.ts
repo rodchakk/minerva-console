@@ -2,6 +2,7 @@ import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import {
+  OUTRIDER_EXPORT_STORAGE_BUCKET,
   OUTRIDER_STORAGE_BUCKET,
   getOutriderUnitTypeLabel,
   sanitizeOutriderFilename,
@@ -21,7 +22,6 @@ type PortableOutriderExportSummary = Omit<
   };
 };
 
-const OUTRIDER_EXPORT_STORAGE_BUCKET = "entry-outrider-exports";
 const OUTRIDER_EXPORT_MAX_INPUT_BYTES = 95 * 1024 * 1024;
 const OUTRIDER_EXPORT_SIGNED_URL_SECONDS = 10 * 60;
 const ZIP_EPOCH = new Date("1980-01-01T00:00:00Z").getTime();
