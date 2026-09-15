@@ -20,6 +20,7 @@ import {
   RegistrationStepper,
 } from "@/features/entry/communityRegistration/public/PublicRegistrationShell";
 import { UnitLookupForm } from "@/features/entry/communityRegistration/public/UnitLookupForm";
+import { resolveCommunityRegistrationUnitReferences } from "@/features/entry/communityRegistration/public/unitGuideReferences";
 
 export const dynamic = "force-dynamic";
 export const fetchCache = "force-no-store";
@@ -162,6 +163,11 @@ export default async function EntryRegisterPage(
     return <UnavailableState />;
   }
 
+  const unitReferences =
+    campaign.registrationMode === "existing_units"
+      ? await resolveCommunityRegistrationUnitReferences({ publicSlug: slug })
+      : {};
+
   return (
     <PublicRegistrationShell>
       <UnitLookupForm
@@ -185,6 +191,7 @@ export default async function EntryRegisterPage(
         registrationMode={campaign.registrationMode}
         slug={slug}
         unitLabelPrefix={campaign.unitLabelPrefix}
+        unitReferences={unitReferences}
       />
     </PublicRegistrationShell>
   );
