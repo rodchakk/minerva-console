@@ -102,6 +102,47 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines.length > 0 ? lines : [""];
 }
 
+function ellipsizeText(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+) {
+  const normalized = text.trim();
+  if (!normalized || font.widthOfTextAtSize(normalized, size) <= maxWidth) {
+    return normalized;
+  }
+
+  const suffix = "...";
+  if (font.widthOfTextAtSize(suffix, size) > maxWidth) return "";
+
+  let candidate = normalized;
+  while (
+    candidate &&
+    font.widthOfTextAtSize(`${candidate}${suffix}`, size) > maxWidth
+  ) {
+    candidate = candidate.slice(0, -1).trimEnd();
+  }
+
+  return candidate ? `${candidate}${suffix}` : suffix;
+}
+
+function wrapTextClamped(
+  text: string,
+  font: PDFFont,
+  size: number,
+  maxWidth: number,
+  maxLines: number,
+) {
+  const lines = wrapText(text, font, size, maxWidth);
+  if (lines.length <= maxLines) return lines;
+
+  const visible = lines.slice(0, maxLines);
+  const remainder = lines.slice(maxLines - 1).join(" ");
+  visible[maxLines - 1] = ellipsizeText(remainder, font, size, maxWidth);
+  return visible;
+}
+
 function drawWrappedText(
   page: PDFPage,
   text: string,
@@ -230,7 +271,13 @@ function drawStatCard(input: {
     x: input.x + 10,
     y: input.y - 41,
   });
-  input.page.drawText(input.label.toUpperCase(), {
+  const label = ellipsizeText(
+    input.label.toUpperCase(),
+    input.fonts.bold,
+    6.7,
+    input.width - 30,
+  );
+  input.page.drawText(label, {
     color: COLORS.muted,
     font: input.fonts.bold,
     size: 6.7,
@@ -510,22 +557,39 @@ function drawFooter(
     start: { x: MARGIN, y: FOOTER_Y + 10 },
     thickness: 0.6,
   });
-  const left = `${snapshot.intake.communityName.toUpperCase()}${
+
+  const footerSize = 6.8;
+  const rawRight = `${snapshot.source.versionLabel} · ${formatDate(snapshot.generatedAt)} · ${index + 1}/${total}`;
+  const right = ellipsizeText(
+    rawRight,
+    fonts.regular,
+    footerSize,
+    CONTENT_WIDTH * 0.48,
+  );
+  const rightX = rightAlignedX(
+    right,
+    fonts.regular,
+    footerSize,
+    PAGE_WIDTH - MARGIN,
+  );
+  const leftMaxWidth = Math.max(80, rightX - MARGIN - 14);
+  const rawLeft = `${snapshot.intake.communityName.toUpperCase()}${
     snapshot.intake.communityCity ? `  ·  ${snapshot.intake.communityCity.toUpperCase()}` : ""
   }`;
+  const left = ellipsizeText(rawLeft, fonts.regular, footerSize, leftMaxWidth);
+
   page.drawText(left, {
     color: COLORS.muted,
     font: fonts.regular,
-    size: 6.8,
+    size: footerSize,
     x: MARGIN,
     y: FOOTER_Y - 2,
   });
-  const right = `${snapshot.source.versionLabel} · ${formatDate(snapshot.generatedAt)} · ${index + 1}/${total}`;
   page.drawText(right, {
     color: COLORS.muted,
     font: fonts.regular,
-    size: 6.8,
-    x: rightAlignedX(right, fonts.regular, 6.8, PAGE_WIDTH - MARGIN),
+    size: footerSize,
+    x: rightX,
     y: FOOTER_Y - 2,
   });
 }
@@ -578,16 +642,33 @@ export async function renderSetupReportPdf(
     y,
   });
   y -= 20;
-  page.drawText(snapshot.intake.communityName, {
-    color: COLORS.brand,
-    font: regular,
-    size: 12.5,
-    x: MARGIN,
-    y,
+
+  const communityNameLines = wrapTextClamped(
+    snapshot.intake.communityName,
+    regular,
+    12.5,
+    CONTENT_WIDTH,
+    2,
+  );
+  communityNameLines.forEach((line, index) => {
+    page.drawText(line, {
+      color: COLORS.brand,
+      font: regular,
+      size: 12.5,
+      x: MARGIN,
+      y: y - index * 15,
+    });
   });
-  y -= 16;
+  y -= communityNameLines.length * 15;
+
   if (snapshot.intake.communityCity) {
-    page.drawText(snapshot.intake.communityCity, {
+    const city = ellipsizeText(
+      snapshot.intake.communityCity,
+      regular,
+      8.5,
+      CONTENT_WIDTH,
+    );
+    page.drawText(city, {
       color: COLORS.muted,
       font: regular,
       size: 8.5,
