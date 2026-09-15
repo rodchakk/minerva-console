@@ -3,9 +3,9 @@ import Image from "next/image";
 export type RegistrationStep = 1 | 2 | 3;
 
 const STEPS: Array<{ id: RegistrationStep; label: string }> = [
-  { id: 1, label: "Unit" },
-  { id: 2, label: "Residents" },
-  { id: 3, label: "Review" },
+  { id: 1, label: "Unidad" },
+  { id: 2, label: "Residentes" },
+  { id: 3, label: "Revisión" },
 ];
 
 export function RegistrationStepper({
@@ -16,7 +16,7 @@ export function RegistrationStepper({
   isComplete?: boolean;
 }) {
   return (
-    <nav aria-label="Registration progress" className="w-full">
+    <nav aria-label="Progreso del registro" className="w-full">
       <ol className="grid grid-cols-[1fr_1fr_1fr] items-start gap-0">
         {STEPS.map((step, index) => {
           const completed = isComplete || step.id < currentStep;
@@ -62,16 +62,14 @@ export function RegistrationStepper({
               </span>
               <span
                 className={`text-center text-xs font-medium sm:text-sm ${
-                  active ? "text-[#35137a]" : completed ? "text-[#4c1d95]" : "text-slate-500"
+                  active
+                    ? "text-[#35137a]"
+                    : completed
+                      ? "text-[#4c1d95]"
+                      : "text-slate-500"
                 }`}
               >
-                {step.id === 3 ? (
-                  <>
-                    Review
-                  </>
-                ) : (
-                  step.label
-                )}
+                {step.label}
               </span>
             </li>
           );
@@ -122,7 +120,7 @@ export function PublicRegistrationShell({
                   strokeWidth="1.8"
                 />
               </svg>
-              Your data is protected
+              Tus datos están protegidos
             </p>
           </div>
         </footer>
