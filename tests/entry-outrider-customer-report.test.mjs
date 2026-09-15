@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { PDFDocument, decodePDFRawStream } from "pdf-lib";
 import { createJiti } from "jiti";
 
 const root = process.cwd();
@@ -18,6 +19,9 @@ const { validateSetupWorkbook } = jiti(
 );
 const { buildSetupReportSummary, recommendedNextStep } = jiti(
   join(root, "features", "entry", "outrider", "setupReport", "reportSnapshot.ts"),
+);
+const { renderSetupReportPdf } = jiti(
+  join(root, "features", "entry", "outrider", "setupReport", "pdf.ts"),
 );
 
 const pdf = read("features/entry/outrider/setupReport/pdf.ts");
@@ -95,6 +99,49 @@ function workbookFixture() {
   };
 }
 
+function snapshotFixture(workbook = workbookFixture()) {
+  return {
+    generatedAt: "2026-09-15T12:00:00.000Z",
+    intake: {
+      communityCity: "San Pedro Sula",
+      communityId: null,
+      communityName: "Residencial QA",
+      contactName: "Carlos Mendoza",
+      hasDestinations: true,
+      hasEstablishments: true,
+      hasInactiveUnits: true,
+      initialAdminCount: workbook.admins.length,
+      securityStaffCount: 2,
+      unitNamingExample: null,
+      unitTypes: ["casas"],
+    },
+    recommendation:
+      "Confirmar las observaciones pendientes con la administración antes de continuar con la activación de la comunidad.",
+    reportSchemaVersion: "entry-outrider-setup-report-v2",
+    source: {
+      fileId: "11111111-1111-1111-1111-111111111111",
+      filename: "source.xlsx",
+      sha256: "a".repeat(64),
+      sha256Prefix: "aaaaaaaaaaaa",
+      uploadedAt: "2026-09-15T11:00:00.000Z",
+      versionLabel: "v2",
+    },
+    summary: {
+      adminRows: workbook.admins.length,
+      destinationRows: workbook.destinations.length,
+      residentCoveragePercent: 100,
+      residentRows: workbook.residents.length,
+      units: workbook.units.length,
+      unitsMissingReferences: 0,
+      unitsWithReferences: workbook.units.length,
+      warnings: 0,
+    },
+    validation: { findings: [] },
+    workbook,
+    workbookSchemaVersion: "entry-onboarding-workbook-v1",
+  };
+}
+
 function findingCodes(validation) {
   return validation.findings.map((finding) => finding.code);
 }
@@ -110,10 +157,7 @@ test("inactive units do not reduce resident coverage or create missing-resident 
   assert.equal(validation.counts.warnings, 0);
   assert.ok(!findingCodes(validation).includes("UNIT_HAS_NO_RESIDENT_INFORMATION"));
   assert.ok(!findingCodes(validation).includes("RESIDENT_COVERAGE_PARTIAL"));
-  assert.match(
-    recommendedNextStep(summary, validation, workbook),
-    /lista para revisión final/i,
-  );
+  assert.match(recommendedNextStep(summary, validation, workbook), /lista para revisión final/i);
 });
 
 test("active units without residents still produce a population warning", () => {
@@ -129,19 +173,124 @@ test("active units without residents still produce a population warning", () => 
   assert.ok(findingCodes(validation).includes("RESIDENT_COVERAGE_PARTIAL"));
 });
 
-test("customer PDF is Spanish, readable, and hides internal validation language", () => {
+test("customer PDF follows the production customer-facing contract", () => {
   assert.match(model, /entry-outrider-setup-report-v2/);
+  assert.match(pdf, /COMUNIDADES MÁS SEGURAS/);
+  assert.match(pdf, /MINERVA TECHNOLOGIES/);
+  assert.match(pdf, /TECNOLOGÍA CON PROPÓSITO/);
   assert.match(pdf, /Resumen preliminar de preparación/);
+  assert.match(pdf, /Documento preliminar/i);
   assert.match(pdf, /Estado de preparación/i);
   assert.match(pdf, /Resumen de la comunidad/);
+  assert.match(pdf, /Cobertura de unidades activas/);
   assert.match(pdf, /Información preparada/);
   assert.match(pdf, /Observaciones antes de activar/);
+  assert.match(pdf, /Siguiente paso/);
   assert.match(pdf, /Detalle para confirmación/);
   assert.match(pdf, /Listado de unidades/);
   assert.match(pdf, /Privacidad y alcance/);
-  assert.match(pdf, /Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes/);
+  assert.match(pdf, /Fuente de preparación: información validada por Minerva/);
+  assert.match(
+    pdf,
+    /Una vez confirmada esta información, Minerva incorporará la residencial a ENTRY y dará inicio a la fase de registro de residentes/,
+  );
+  assert.match(
+    pdf,
+    /Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes/,
+  );
   assert.doesNotMatch(pdf, /Appendix/);
+  assert.doesNotMatch(pdf, /snapshot\.source\.filename/);
   assert.doesNotMatch(pdf, /finding\.message/);
   assert.doesNotMatch(pdf, /finding\.field/);
   assert.doesNotMatch(pdf, /resident\.phone|resident\.email|resident\.fullName/);
+  assert.doesNotMatch(pdf, /workbook\.admins|admin\.fullName|Administrador inicial propuesto/);
+});
+
+test("normal customer fixture renders as a compact two-page handoff", async () => {
+  const bytes = await renderSetupReportPdf(snapshotFixture());
+  assert.ok(bytes.length > 1_000);
+  const rendered = await PDFDocument.load(bytes);
+  assert.equal(rendered.getPageCount(), 2);
+});
+
+test("customer PDF keeps long identity values and dynamic sections constrained", () => {
+  assert.match(pdf, /function splitWord\(/);
+  assert.match(pdf, /function ellipsis\(/);
+  assert.match(pdf, /summaryContinuation/);
+  assert.match(pdf, /unitRowHeight/);
+  assert.match(pdf, /Establecimientos y destinos informados/);
+  assert.match(pdf, /const need = \(height: number\) =>/);
+  assert.match(pdf, /Math\.max\(80, rx - M - 14\)/);
+});
+
+test("customer PDF renders a multi-page stress case without layout exceptions", async () => {
+  const workbook = workbookFixture();
+  workbook.units = Array.from({ length: 90 }, (_, index) => ({
+    isActive: index % 9 !== 0,
+    notes: null,
+    publicReference:
+      index % 11 === 0
+        ? `Referencia residencial extraordinariamente larga sector norte bloque ${index + 1}`
+        : `Casa ${String(index + 1).padStart(3, "0")}`,
+    row: index + 2,
+    unitLabel: `CASA-${String(index + 1).padStart(3, "0")}`,
+    unitType: "house",
+  }));
+  workbook.destinations = Array.from({ length: 22 }, (_, index) => ({
+    name: `Establecimiento de prueba ${index + 1} con nombre suficientemente largo para validar saltos de línea`,
+    notes: null,
+    reference: null,
+    row: index + 2,
+    type: "business",
+    unitLabel: null,
+  }));
+  workbook.admins = Array.from({ length: 8 }, (_, index) => ({
+    email: null,
+    fullName: `Administrador de prueba con nombre extendido ${index + 1}`,
+    phone: null,
+    row: index + 2,
+    unitLabel: null,
+  }));
+
+  const snapshot = snapshotFixture(workbook);
+  snapshot.intake.communityName =
+    "Residencial Comunitaria de Prueba con un Nombre Extraordinariamente Largo para Validar el Encabezado del Reporte y su Comportamiento en Dos Líneas";
+  snapshot.intake.communityCity =
+    "San Pedro Sula, Cortés, Honduras, sector metropolitano de referencia extraordinariamente largo para prueba";
+  snapshot.summary.units = workbook.units.length;
+  snapshot.summary.unitsWithReferences = workbook.units.length;
+  snapshot.summary.destinationRows = workbook.destinations.length;
+  snapshot.summary.adminRows = workbook.admins.length;
+  snapshot.summary.residentCoveragePercent = 40;
+  snapshot.validation.findings = [
+    { code: "COMMUNITY_NAME_MISMATCH", field: null, message: "internal", row: null, severity: "warning", sheet: "Workbook" },
+    { code: "UNIT_REFERENCE_MISSING", field: "public_reference", message: "internal", row: 3, severity: "warning", sheet: "Units" },
+    { code: "UNIT_TYPE_MISSING", field: "unit_type", message: "internal", row: 4, severity: "warning", sheet: "Units" },
+    { code: "RESIDENT_CONTACT_MISSING", field: null, message: "internal", row: 5, severity: "warning", sheet: "Residents" },
+  ];
+  snapshot.recommendation =
+    "Confirmar con la administración cada observación pendiente antes de continuar. ".repeat(100);
+
+  const bytes = await renderSetupReportPdf(snapshot);
+  assert.ok(bytes.length > 1_000);
+  const rendered = await PDFDocument.load(bytes);
+  assert.ok(rendered.getPageCount() >= 5);
+  // Inspect real text positions: a PDF can render successfully while drawing
+  // a long recommendation outside the page or into the footer.
+  let textPositions = 0;
+  for (const [index, page] of rendered.getPages().entries()) {
+    const contents = page.node.Contents();
+    for (let streamIndex = 0; streamIndex < contents.size(); streamIndex++) {
+      const stream = rendered.context.lookup(contents.get(streamIndex));
+      const operators = Buffer.from(decodePDFRawStream(stream).decode()).toString();
+      for (const match of operators.matchAll(/1 0 0 1 ([\d.-]+) ([\d.-]+) Tm/g)) {
+        textPositions++;
+        const x = Number(match[1]);
+        const y = Number(match[2]);
+        assert.ok(x >= 42 && x <= 570, `Text outside horizontal margin on page ${index + 1}`);
+        assert.ok(y === 29 || (y >= 76 && y <= 762), `Text overlaps footer or page edge on page ${index + 1}: ${y}`);
+      }
+    }
+  }
+  assert.ok(textPositions > 100, "Expected to inspect rendered PDF text positions");
 });

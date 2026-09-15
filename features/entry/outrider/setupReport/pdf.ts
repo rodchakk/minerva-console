@@ -4,6 +4,7 @@ import {
   PDFDocument,
   StandardFonts,
   rgb,
+  type PDFDocument as PdfDocumentType,
   type PDFFont,
   type PDFPage,
 } from "pdf-lib";
@@ -13,534 +14,442 @@ import type {
 } from "@/features/entry/outrider/setupReport/model";
 import { normalizeSetupUnitIdentity } from "@/features/entry/outrider/setupReport/normalization";
 
-type Cursor = {
-  page: PDFPage;
-  y: number;
+type Fonts = { bold: PDFFont; regular: PDFFont };
+type Cursor = { page: PDFPage; y: number };
+
+const W = 612;
+const H = 792;
+const M = 42;
+const CW = W - M * 2;
+const BOTTOM = 76;
+const FOOTER_Y = 30;
+
+const C = {
+  brand: rgb(0.055, 0.075, 0.35),
+  bright: rgb(0.19, 0.23, 0.9),
+  soft: rgb(0.95, 0.965, 1),
+  ink: rgb(0.055, 0.065, 0.13),
+  muted: rgb(0.36, 0.4, 0.5),
+  line: rgb(0.86, 0.88, 0.93),
+  card: rgb(0.985, 0.99, 1),
+  green: rgb(0.03, 0.56, 0.28),
+  greenDark: rgb(0.025, 0.34, 0.17),
+  greenSoft: rgb(0.91, 0.985, 0.94),
+  red: rgb(0.91, 0.2, 0.31),
+  redSoft: rgb(1, 0.94, 0.955),
+  amber: rgb(0.69, 0.39, 0.035),
+  amberDark: rgb(0.37, 0.22, 0.02),
+  amberSoft: rgb(1, 0.965, 0.84),
 };
 
-type Fonts = {
-  bold: PDFFont;
-  regular: PDFFont;
-};
-
-const PAGE_WIDTH = 612;
-const PAGE_HEIGHT = 792;
-const MARGIN = 48;
-const LINE_HEIGHT = 15;
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
-
-function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
-  const words = text.split(/\s+/).filter(Boolean);
-  const lines: string[] = [];
-  let current = "";
-
-  for (const word of words) {
-    const candidate = current ? `${current} ${word}` : word;
-    if (font.widthOfTextAtSize(candidate, size) <= maxWidth) {
-      current = candidate;
-      continue;
-    }
-
-    if (current) lines.push(current);
-    current = word;
-  }
-
-  if (current) lines.push(current);
-  return lines.length > 0 ? lines : [""];
-}
-
-function addPage(doc: PDFDocument, cursor: Cursor) {
-  cursor.page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  cursor.y = PAGE_HEIGHT - MARGIN;
-}
-
-function ensureSpace(doc: PDFDocument, cursor: Cursor, height: number) {
-  if (cursor.y - height < MARGIN + 18) {
-    addPage(doc, cursor);
-  }
-}
-
-function drawText(
-  doc: PDFDocument,
-  cursor: Cursor,
-  text: string,
-  options: {
-    color?: ReturnType<typeof rgb>;
-    font: PDFFont;
-    maxWidth?: number;
-    size: number;
-    x?: number;
-  },
-) {
-  const maxWidth = options.maxWidth ?? CONTENT_WIDTH;
-  const lines = wrapText(text, options.font, options.size, maxWidth);
-  ensureSpace(doc, cursor, lines.length * LINE_HEIGHT + 4);
-
-  for (const line of lines) {
-    cursor.page.drawText(line, {
-      color: options.color ?? rgb(0.12, 0.14, 0.18),
-      font: options.font,
-      size: options.size,
-      x: options.x ?? MARGIN,
-      y: cursor.y,
-    });
-    cursor.y -= LINE_HEIGHT;
-  }
-}
-
-function sectionTitle(
-  doc: PDFDocument,
-  cursor: Cursor,
-  text: string,
-  fonts: Fonts,
-) {
-  cursor.y -= 10;
-  drawText(doc, cursor, text, {
-    color: rgb(0.08, 0.09, 0.13),
-    font: fonts.bold,
-    size: 13,
-  });
-  cursor.y -= 3;
-}
-
-function bullet(
-  doc: PDFDocument,
-  cursor: Cursor,
-  text: string,
-  fonts: Fonts,
-) {
-  drawText(doc, cursor, `• ${text}`, {
-    font: fonts.regular,
-    maxWidth: CONTENT_WIDTH - 8,
-    size: 10,
-  });
-}
-
-function plural(count: number, singular: string, pluralValue: string) {
-  return count === 1 ? singular : pluralValue;
+function plural(n: number, one: string, many: string) {
+  return n === 1 ? one : many;
 }
 
 function formatDate(value: string) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  return `${day}/${month}/${date.getUTCFullYear()}`;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return `${String(d.getUTCDate()).padStart(2, "0")}/${String(d.getUTCMonth() + 1).padStart(2, "0")}/${d.getUTCFullYear()}`;
+}
+
+function splitWord(word: string, font: PDFFont, size: number, maxWidth: number) {
+  const out: string[] = [];
+  let part = "";
+  for (const ch of Array.from(word)) {
+    const next = part + ch;
+    if (part && font.widthOfTextAtSize(next, size) > maxWidth) {
+      out.push(part);
+      part = ch;
+    } else part = next;
+  }
+  if (part) out.push(part);
+  return out.length ? out : [word];
+}
+
+function wrap(text: string, font: PDFFont, size: number, maxWidth: number) {
+  const lines: string[] = [];
+  let current = "";
+  for (const word of text.split(/\s+/).filter(Boolean)) {
+    if (font.widthOfTextAtSize(word, size) > maxWidth) {
+      if (current) lines.push(current);
+      const parts = splitWord(word, font, size, maxWidth);
+      lines.push(...parts.slice(0, -1));
+      current = parts.at(-1) ?? "";
+      continue;
+    }
+    const next = current ? `${current} ${word}` : word;
+    if (font.widthOfTextAtSize(next, size) <= maxWidth) current = next;
+    else {
+      if (current) lines.push(current);
+      current = word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length ? lines : [""];
+}
+
+function ellipsis(text: string, font: PDFFont, size: number, maxWidth: number) {
+  const value = text.trim();
+  if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
+  let cut = value;
+  while (cut && font.widthOfTextAtSize(`${cut}...`, size) > maxWidth) {
+    cut = cut.slice(0, -1).trimEnd();
+  }
+  return cut ? `${cut}...` : "...";
+}
+
+function wrapped(
+  page: PDFPage,
+  text: string,
+  font: PDFFont,
+  size: number,
+  x: number,
+  y: number,
+  maxWidth: number,
+  color = C.ink,
+  lineHeight = size * 1.35,
+) {
+  const lines = wrap(text, font, size, maxWidth);
+  lines.forEach((line, i) => page.drawText(line, { color, font, size, x, y: y - i * lineHeight }));
+  return y - lines.length * lineHeight;
+}
+
+function rightX(text: string, font: PDFFont, size: number, right: number) {
+  return right - font.widthOfTextAtSize(text, size);
+}
+
+function minervaMark(page: PDFPage, x: number, y: number) {
+  const t = 1.8;
+  page.drawLine({ color: C.bright, start: { x, y }, end: { x: x + 8, y: y + 15 }, thickness: t });
+  page.drawLine({ color: C.bright, start: { x: x + 8, y: y + 15 }, end: { x: x + 15, y }, thickness: t });
+  page.drawLine({ color: C.bright, start: { x: x + 15, y: y + 15 }, end: { x: x + 23, y }, thickness: t });
+  page.drawLine({ color: C.bright, start: { x: x + 15, y: y + 15 }, end: { x: x + 8, y }, thickness: t });
+}
+
+function brandHeader(page: PDFPage, f: Fonts) {
+  const y = H - 43;
+  page.drawText("E N T R Y", { color: C.brand, font: f.bold, size: 17, x: M, y });
+  page.drawText("COMUNIDADES MÁS SEGURAS", { color: C.muted, font: f.bold, size: 5.1, x: M + 1, y: y - 12 });
+  const name = "MINERVA TECHNOLOGIES";
+  const size = 7.7;
+  const tx = rightX(name, f.bold, size, W - M);
+  minervaMark(page, tx - 34, y - 2);
+  page.drawText(name, { color: C.brand, font: f.bold, size, x: tx, y: y + 2 });
+  const tag = "TECNOLOGÍA CON PROPÓSITO";
+  page.drawText(tag, { color: C.muted, font: f.bold, size: 4.6, x: rightX(tag, f.bold, 4.6, W - M), y: y - 9 });
+}
+
+function section(page: PDFPage, f: Fonts, text: string, y: number) {
+  page.drawCircle({ color: C.soft, size: 10, x: M + 10, y: y + 5 });
+  page.drawCircle({ color: C.bright, size: 2.8, x: M + 10, y: y + 5 });
+  page.drawText(text, { color: C.brand, font: f.bold, size: 12.2, x: M + 29, y });
+  return y - 21;
+}
+
+function divider(page: PDFPage, y: number) {
+  page.drawLine({ color: C.line, start: { x: M + 29, y }, end: { x: W - M, y }, thickness: 0.65 });
+}
+
+function bullet(page: PDFPage, f: Fonts, text: string, y: number, color = C.green, x = M + 29, maxWidth = CW - 29) {
+  page.drawCircle({ color, size: 2.2, x: x + 3, y: y + 3 });
+  return wrapped(page, text, f.regular, 8.35, x + 13, y, maxWidth - 15, C.ink, 11.1);
+}
+
+function documentIcon(page: PDFPage, x: number, y: number, color: ReturnType<typeof rgb>) {
+  page.drawRectangle({ borderColor: color, borderWidth: 1.1, height: 18, width: 14, x, y });
+  page.drawLine({ color, start: { x: x + 4, y: y + 12 }, end: { x: x + 10, y: y + 12 }, thickness: 0.8 });
+  page.drawLine({ color, start: { x: x + 4, y: y + 8 }, end: { x: x + 10, y: y + 8 }, thickness: 0.8 });
+}
+
+function checkIcon(page: PDFPage, x: number, y: number, color: ReturnType<typeof rgb>) {
+  page.drawCircle({ borderColor: color, borderWidth: 1.5, size: 12, x, y });
+  page.drawLine({ color, start: { x: x - 5, y: y + 1 }, end: { x: x - 1, y: y - 2 }, thickness: 1.7 });
+  page.drawLine({ color, start: { x: x - 1, y: y - 2 }, end: { x: x + 6, y: y + 5 }, thickness: 1.7 });
+}
+
+function callout(input: {
+  page: PDFPage;
+  f: Fonts;
+  y: number;
+  fill: ReturnType<typeof rgb>;
+  border: ReturnType<typeof rgb>;
+  color: ReturnType<typeof rgb>;
+  label: string;
+  text: string;
+  icon: "document" | "check";
+}) {
+  const h = 52;
+  input.page.drawRectangle({ color: input.fill, borderColor: input.border, borderWidth: 0.8, x: M, y: input.y - h, width: CW, height: h });
+  if (input.icon === "check") checkIcon(input.page, M + 26, input.y - 27, input.color);
+  else documentIcon(input.page, M + 19, input.y - 36, input.color);
+  input.page.drawText(input.label.toUpperCase(), { color: input.color, font: input.f.bold, size: 7.2, x: M + 57, y: input.y - 18 });
+  wrapped(input.page, input.text, input.f.bold, 10.8, M + 57, input.y - 37, CW - 72, input.color, 13);
+  return input.y - h;
 }
 
 function statCard(input: {
-  fonts: Fonts;
-  label: string;
   page: PDFPage;
-  value: string;
-  width: number;
+  f: Fonts;
   x: number;
   y: number;
+  w: number;
+  label: string;
+  value: string;
+  accent: ReturnType<typeof rgb>;
+  soft: ReturnType<typeof rgb>;
 }) {
-  input.page.drawRectangle({
-    borderColor: rgb(0.87, 0.88, 0.91),
-    borderWidth: 1,
-    color: rgb(0.98, 0.98, 0.99),
-    height: 54,
-    width: input.width,
-    x: input.x,
-    y: input.y - 54,
-  });
-  input.page.drawText(input.label.toUpperCase(), {
-    color: rgb(0.42, 0.45, 0.52),
-    font: input.fonts.bold,
-    size: 7.5,
-    x: input.x + 12,
-    y: input.y - 18,
-  });
-  input.page.drawText(input.value, {
-    color: rgb(0.08, 0.09, 0.13),
-    font: input.fonts.bold,
-    size: 16,
-    x: input.x + 12,
-    y: input.y - 40,
-  });
+  const h = 58;
+  input.page.drawRectangle({ color: C.card, borderColor: C.line, borderWidth: 0.8, x: input.x, y: input.y - h, width: input.w, height: h });
+  input.page.drawCircle({ color: input.soft, size: 17, x: input.x + 29, y: input.y - 29 });
+  input.page.drawCircle({ color: input.accent, size: 5, x: input.x + 29, y: input.y - 29 });
+  const label = ellipsis(input.label.toUpperCase(), input.f.bold, 6.6, input.w - 72);
+  input.page.drawText(label, { color: C.muted, font: input.f.bold, size: 6.6, x: input.x + 57, y: input.y - 21 });
+  input.page.drawText(input.value, { color: C.ink, font: input.f.bold, size: 17.5, x: input.x + 57, y: input.y - 43 });
 }
 
-function findingGroups(findings: SetupFinding[]) {
-  const groups = new Map<string, number>();
-  for (const finding of findings) {
-    if (finding.severity === "info") continue;
-    groups.set(finding.code, (groups.get(finding.code) ?? 0) + 1);
+function findingMessages(findings: SetupFinding[]) {
+  const counts = new Map<string, number>();
+  findings.filter((f) => f.severity !== "info").forEach((f) => counts.set(f.code, (counts.get(f.code) ?? 0) + 1));
+  const out: string[] = [];
+  for (const [code, n] of counts) {
+    if (code === "COMMUNITY_NAME_MISMATCH") out.push("El nombre de la comunidad en la información preparada no coincide exactamente con el registrado en Outrider.");
+    else if (code === "UNIT_REFERENCE_MISSING") out.push(`${n} ${plural(n, "unidad no tiene", "unidades no tienen")} una referencia visible para residentes.`);
+    else if (code === "UNIT_TYPE_MISSING") out.push(`${n} ${plural(n, "unidad requiere", "unidades requieren")} confirmar su tipo antes de la configuración final.`);
+    else if (code === "UNIT_ACTIVE_UNKNOWN") out.push(`${n} ${plural(n, "unidad requiere", "unidades requieren")} confirmar si iniciará activa o inactiva.`);
+    else if (code === "RESIDENT_CONTACT_MISSING") out.push(`${n} ${plural(n, "registro de residente no tiene", "registros de residentes no tienen")} teléfono ni correo de contacto.`);
+    else if (code === "RESIDENT_PROBABLE_DUPLICATE") out.push(`${n} ${plural(n, "registro podría estar duplicado", "registros podrían estar duplicados")} y Minerva debe revisarlo antes de activar usuarios.`);
+    else if (code === "UNIT_HAS_NO_RESIDENT_INFORMATION") out.push(`${n} ${plural(n, "unidad que iniciará activa no tiene", "unidades que iniciarán activas no tienen")} información de residentes.`);
+    else if (code === "RESIDENT_COVERAGE_PARTIAL" && !counts.has("UNIT_HAS_NO_RESIDENT_INFORMATION")) out.push("La información de residentes todavía no cubre todas las unidades que iniciarán activas.");
+    else if (code !== "RESIDENT_COVERAGE_PARTIAL") out.push(`${n} ${plural(n, "observación adicional requiere", "observaciones adicionales requieren")} revisión interna de Minerva antes de continuar.`);
   }
-  return groups;
+  return out;
 }
 
-function customerFindingMessages(findings: SetupFinding[]) {
-  const groups = findingGroups(findings);
-  const messages: string[] = [];
-
-  for (const [code, count] of groups.entries()) {
-    switch (code) {
-      case "COMMUNITY_NAME_MISMATCH":
-        messages.push(
-          "El nombre de la comunidad en el archivo preparado por Minerva no coincide exactamente con el registrado en Outrider.",
-        );
-        break;
-      case "UNIT_REFERENCE_MISSING":
-        messages.push(
-          `${count} ${plural(count, "unidad no tiene", "unidades no tienen")} una referencia visible para residentes.`,
-        );
-        break;
-      case "UNIT_TYPE_MISSING":
-        messages.push(
-          `${count} ${plural(count, "unidad requiere", "unidades requieren")} confirmar su tipo antes de la configuración final.`,
-        );
-        break;
-      case "UNIT_ACTIVE_UNKNOWN":
-        messages.push(
-          `${count} ${plural(count, "unidad requiere", "unidades requieren")} confirmar si iniciará activa o inactiva.`,
-        );
-        break;
-      case "RESIDENT_CONTACT_MISSING":
-        messages.push(
-          `${count} ${plural(count, "registro de residente no tiene", "registros de residentes no tienen")} teléfono ni correo de contacto.`,
-        );
-        break;
-      case "RESIDENT_PROBABLE_DUPLICATE":
-        messages.push(
-          `${count} ${plural(count, "registro podría estar duplicado", "registros podrían estar duplicados")} y Minerva debe revisarlo antes de activar usuarios.`,
-        );
-        break;
-      case "UNIT_HAS_NO_RESIDENT_INFORMATION":
-        messages.push(
-          `${count} ${plural(count, "unidad que iniciará activa no tiene", "unidades que iniciarán activas no tienen")} información de residentes.`,
-        );
-        break;
-      case "RESIDENT_COVERAGE_PARTIAL":
-        if (!groups.has("UNIT_HAS_NO_RESIDENT_INFORMATION")) {
-          messages.push(
-            "La información de residentes todavía no cubre todas las unidades que iniciarán activas.",
-          );
-        }
-        break;
-      default:
-        messages.push(
-          `${count} ${plural(count, "observación adicional requiere", "observaciones adicionales requieren")} revisión interna de Minerva antes de aplicar la configuración.`,
-        );
-        break;
-    }
-  }
-
-  return messages;
-}
-
-function unitStatusLabel(value: boolean | null) {
+function statusLabel(value: boolean | null) {
   if (value === true) return "Activa al inicio";
   if (value === false) return "Inactiva al inicio";
   return "Estado por confirmar";
 }
 
-export async function renderSetupReportPdf(
-  snapshot: OutriderSetupReportSnapshot,
-) {
+function statusColor(value: boolean | null) {
+  if (value === true) return C.green;
+  if (value === false) return C.muted;
+  return C.amber;
+}
+
+function detailPage(doc: PdfDocumentType, f: Fonts, continued = false): Cursor {
+  const page = doc.addPage([W, H]);
+  brandHeader(page, f);
+  page.drawText(continued ? "Detalle para confirmación · continuación" : "Detalle para confirmación", {
+    color: C.ink,
+    font: f.bold,
+    size: continued ? 16 : 20,
+    x: M,
+    y: H - 92,
+  });
+  if (!continued) {
+    wrapped(page, "Revise este listado para confirmar que las unidades y su estado inicial coinciden con lo esperado antes de la activación.", f.regular, 8.8, M, H - 114, CW, C.muted, 12.5);
+    return { page, y: H - 151 };
+  }
+  return { page, y: H - 123 };
+}
+
+function summaryContinuation(doc: PdfDocumentType, f: Fonts): Cursor {
+  const page = doc.addPage([W, H]);
+  brandHeader(page, f);
+  page.drawText("Resumen preliminar de preparación · continuación", { color: C.ink, font: f.bold, size: 16, x: M, y: H - 92 });
+  return { page, y: H - 123 };
+}
+
+function unitRowHeight(label: string, f: Fonts) {
+  return Math.max(18, wrap(label, f.regular, 8.9, CW - 190).length * 10.8 + 6);
+}
+
+function unitRow(page: PDFPage, f: Fonts, y: number, label: string, active: boolean | null) {
+  const labelX = M + 32;
+  const statusX = W - M - 118;
+  const lines = wrap(label, f.regular, 8.9, statusX - labelX - 16);
+  const h = Math.max(18, lines.length * 10.8 + 6);
+  page.drawLine({ color: rgb(0.91, 0.92, 0.95), start: { x: M + 12, y: y - h + 4 }, end: { x: W - M - 12, y: y - h + 4 }, thickness: 0.5 });
+  page.drawCircle({ color: statusColor(active), size: 2.8, x: M + 20, y: y + 2 });
+  lines.forEach((line, i) => page.drawText(line, { color: C.ink, font: f.regular, size: 8.9, x: labelX, y: y - i * 10.8 }));
+  page.drawText(statusLabel(active), { color: C.muted, font: f.regular, size: 8.5, x: statusX, y });
+  return y - h;
+}
+
+function footer(page: PDFPage, f: Fonts, s: OutriderSetupReportSnapshot, index: number, total: number) {
+  page.drawLine({ color: C.line, start: { x: M, y: FOOTER_Y + 11 }, end: { x: W - M, y: FOOTER_Y + 11 }, thickness: 0.6 });
+  const size = 6.5;
+  const right = `Versión ${s.source.versionLabel} · ${formatDate(s.generatedAt)} · ${index + 1}/${total}`;
+  const rightText = ellipsis(right, f.regular, size, CW * 0.45);
+  const rx = rightX(rightText, f.regular, size, W - M);
+  const left = ellipsis(`${s.intake.communityName.toUpperCase()}${s.intake.communityCity ? `  |  ${s.intake.communityCity.toUpperCase()}` : ""}`, f.regular, size, Math.max(80, rx - M - 14));
+  page.drawText(left, { color: C.muted, font: f.regular, size, x: M, y: FOOTER_Y - 1 });
+  page.drawText(rightText, { color: C.muted, font: f.regular, size, x: rx, y: FOOTER_Y - 1 });
+}
+
+export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot) {
   const doc = await PDFDocument.create();
-  const regular = await doc.embedFont(StandardFonts.Helvetica);
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
-  const fonts = { bold, regular };
-  const cursor: Cursor = {
-    page: doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
-    y: PAGE_HEIGHT - MARGIN,
+  const f: Fonts = {
+    regular: await doc.embedFont(StandardFonts.Helvetica),
+    bold: await doc.embedFont(StandardFonts.HelveticaBold),
   };
 
-  const activeUnits = snapshot.workbook.units.filter(
-    (unit) => unit.isActive === true,
-  ).length;
-  const inactiveUnits = snapshot.workbook.units.filter(
-    (unit) => unit.isActive === false,
-  ).length;
-  const unknownUnits = snapshot.workbook.units.filter(
-    (unit) => unit.isActive === null,
-  ).length;
-  const populationUnits = new Set(
-    snapshot.workbook.units
-      .filter((unit) => unit.isActive !== false)
-      .map((unit) => normalizeSetupUnitIdentity(unit.unitLabel))
-      .filter((unit): unit is string => Boolean(unit)),
-  );
-  const populatedPopulationUnits = new Set(
-    snapshot.workbook.residents
-      .map((resident) => normalizeSetupUnitIdentity(resident.unitLabel))
-      .filter(
-        (unit): unit is string => unit !== null && populationUnits.has(unit),
-      ),
-  ).size;
-  const customerFindings = customerFindingMessages(snapshot.validation.findings);
-  const readyForFinalReview =
-    snapshot.summary.residentCoveragePercent === 100 &&
-    customerFindings.length === 0 &&
-    unknownUnits === 0;
+  const active = snapshot.workbook.units.filter((u) => u.isActive === true).length;
+  const inactive = snapshot.workbook.units.filter((u) => u.isActive === false).length;
+  const unknown = snapshot.workbook.units.filter((u) => u.isActive === null).length;
+  const launchUnits = new Set(snapshot.workbook.units.filter((u) => u.isActive !== false).map((u) => normalizeSetupUnitIdentity(u.unitLabel)).filter((u): u is string => Boolean(u)));
+  const coveredUnits = new Set(snapshot.workbook.residents.map((r) => normalizeSetupUnitIdentity(r.unitLabel)).filter((u): u is string => u !== null && launchUnits.has(u))).size;
+  const findings = findingMessages(snapshot.validation.findings);
+  const ready = snapshot.summary.residentCoveragePercent === 100 && findings.length === 0 && unknown === 0;
 
-  cursor.page.drawText("ENTRY", {
-    color: rgb(0.08, 0.09, 0.13),
-    font: bold,
-    size: 18,
-    x: MARGIN,
-    y: cursor.y,
-  });
-  cursor.page.drawText("MINERVA TECHNOLOGIES", {
-    color: rgb(0.42, 0.45, 0.52),
-    font: bold,
-    size: 8,
-    x: PAGE_WIDTH - MARGIN - 98,
-    y: cursor.y + 3,
-  });
-  cursor.y -= 30;
-
-  drawText(doc, cursor, "Resumen preliminar de preparación", {
-    color: rgb(0.08, 0.09, 0.13),
-    font: bold,
-    size: 21,
-  });
-  drawText(doc, cursor, snapshot.intake.communityName, {
-    color: rgb(0.28, 0.31, 0.38),
-    font: regular,
-    size: 12,
-  });
+  const page = doc.addPage([W, H]);
+  brandHeader(page, f);
+  let y = H - 88;
+  page.drawText("Resumen preliminar de preparación", { color: C.ink, font: f.bold, size: 20, x: M, y });
+  y -= 22;
+  const communityLines = wrap(snapshot.intake.communityName, f.regular, 12.4, CW);
+  const community = communityLines.length > 2
+    ? [communityLines[0], ellipsis(communityLines.slice(1).join(" "), f.regular, 12.4, CW)]
+    : communityLines;
+  community.forEach((line, i) => page.drawText(line, { color: C.brand, font: f.regular, size: 12.4, x: M, y: y - i * 14.5 }));
+  y -= community.length * 14.5;
   if (snapshot.intake.communityCity) {
-    drawText(doc, cursor, snapshot.intake.communityCity, {
-      color: rgb(0.42, 0.45, 0.52),
-      font: regular,
-      size: 9,
-    });
+    page.drawCircle({ color: C.brand, size: 2.1, x: M + 2, y: y + 2.4 });
+    page.drawText(ellipsis(snapshot.intake.communityCity, f.regular, 8.5, CW - 10), { color: C.muted, font: f.regular, size: 8.5, x: M + 10, y });
+    y -= 12;
   }
+  y -= 6;
 
-  cursor.y -= 10;
-  cursor.page.drawRectangle({
-    color: rgb(1, 0.95, 0.79),
-    height: 52,
-    width: CONTENT_WIDTH,
-    x: MARGIN,
-    y: cursor.y - 44,
-  });
-  cursor.page.drawText("DOCUMENTO PRELIMINAR", {
-    color: rgb(0.36, 0.24, 0.03),
-    font: bold,
-    size: 10,
-    x: MARGIN + 14,
-    y: cursor.y - 16,
-  });
-  cursor.page.drawText(
-    "Todavía no se ha aplicado ningún cambio a ENTRY.",
-    {
-      color: rgb(0.36, 0.24, 0.03),
-      font: regular,
-      size: 9.5,
-      x: MARGIN + 14,
-      y: cursor.y - 33,
-    },
-  );
-  cursor.y -= 66;
+  callout({ page, f, y, fill: C.amberSoft, border: rgb(0.94, 0.81, 0.42), color: C.amberDark, label: "Documento preliminar", text: "Todavía no se ha aplicado ningún cambio operativo a ENTRY.", icon: "document" });
+  y -= 60;
+  callout({ page, f, y, fill: ready ? C.greenSoft : C.amberSoft, border: ready ? rgb(0.6, 0.86, 0.68) : rgb(0.94, 0.81, 0.42), color: ready ? C.greenDark : C.amberDark, label: "Estado de preparación", text: ready ? "Lista para revisión final" : "Con observaciones por revisar", icon: ready ? "check" : "document" });
+  y -= 68;
+  y = wrapped(page, "Este documento resume la información que Minerva organizó para preparar ENTRY y permite confirmar, de forma sencilla, qué está listo y qué falta revisar antes de la activación.", f.regular, 8.7, M, y, CW, C.muted, 12.2) - 7;
 
-  ensureSpace(doc, cursor, 62);
-  const statusColor = readyForFinalReview
-    ? rgb(0.89, 0.97, 0.92)
-    : rgb(1, 0.95, 0.79);
-  const statusTextColor = readyForFinalReview
-    ? rgb(0.08, 0.35, 0.19)
-    : rgb(0.42, 0.27, 0.03);
-  cursor.page.drawRectangle({
-    borderColor: readyForFinalReview
-      ? rgb(0.65, 0.86, 0.71)
-      : rgb(0.91, 0.78, 0.43),
-    borderWidth: 1,
-    color: statusColor,
-    height: 48,
-    width: CONTENT_WIDTH,
-    x: MARGIN,
-    y: cursor.y - 48,
-  });
-  cursor.page.drawText("ESTADO DE PREPARACIÓN", {
-    color: statusTextColor,
-    font: bold,
-    size: 7.5,
-    x: MARGIN + 14,
-    y: cursor.y - 17,
-  });
-  cursor.page.drawText(
-    readyForFinalReview ? "Lista para revisión final" : "Con observaciones por revisar",
-    {
-      color: statusTextColor,
-      font: bold,
-      size: 13,
-      x: MARGIN + 14,
-      y: cursor.y - 36,
-    },
-  );
-  cursor.y -= 62;
-
-  drawText(
-    doc,
-    cursor,
-    "Este documento resume la información que Minerva organizó para preparar ENTRY y permite confirmar, de forma sencilla, qué está listo y qué falta revisar antes de la activación.",
-    { font: regular, size: 10 },
-  );
-
-  sectionTitle(doc, cursor, "Resumen de la comunidad", fonts);
-  ensureSpace(doc, cursor, 126);
+  y = section(page, f, "Resumen de la comunidad", y);
   const gap = 10;
-  const cardWidth = (CONTENT_WIDTH - gap) / 2;
-  const top = cursor.y;
-  statCard({ fonts, label: "Unidades identificadas", page: cursor.page, value: String(snapshot.summary.units), width: cardWidth, x: MARGIN, y: top });
-  statCard({ fonts, label: "Activas al inicio", page: cursor.page, value: String(activeUnits), width: cardWidth, x: MARGIN + cardWidth + gap, y: top });
-  statCard({ fonts, label: "Inactivas al inicio", page: cursor.page, value: String(inactiveUnits), width: cardWidth, x: MARGIN, y: top - 64 });
-  statCard({
-    fonts,
-    label: "Cobertura de población",
-    page: cursor.page,
-    value:
-      snapshot.summary.residentCoveragePercent === null
-        ? "Pendiente"
-        : `${snapshot.summary.residentCoveragePercent}%`,
-    width: cardWidth,
-    x: MARGIN + cardWidth + gap,
-    y: top - 64,
-  });
-  cursor.y -= 128;
+  const cardW = (CW - gap) / 2;
+  statCard({ page, f, x: M, y, w: cardW, label: "Unidades identificadas", value: String(snapshot.summary.units), accent: C.bright, soft: C.soft });
+  statCard({ page, f, x: M + cardW + gap, y, w: cardW, label: "Activas al inicio", value: String(active), accent: C.green, soft: C.greenSoft });
+  y -= 66;
+  statCard({ page, f, x: M, y, w: cardW, label: "Inactivas al inicio", value: String(inactive), accent: C.muted, soft: C.soft });
+  statCard({ page, f, x: M + cardW + gap, y, w: cardW, label: "Cobertura de unidades activas", value: snapshot.summary.residentCoveragePercent === null ? "Pendiente" : `${snapshot.summary.residentCoveragePercent}%`, accent: C.bright, soft: C.soft });
+  y -= 70;
+  y = wrapped(page, `La cobertura considera las ${launchUnits.size} ${plural(launchUnits.size, "unidad que iniciará activa o requiere confirmar estado", "unidades que iniciarán activas o requieren confirmar estado")}. Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes.`, f.regular, 7.2, M, y, CW, C.muted, 10) - 8;
 
-  drawText(
-    doc,
-    cursor,
-    `La cobertura considera las ${populationUnits.size} ${plural(
-      populationUnits.size,
-      "unidad que iniciará activa o requiere confirmar estado",
-      "unidades que iniciarán activas o requieren confirmar estado",
-    )}. Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes.`,
-    { color: rgb(0.42, 0.45, 0.52), font: regular, size: 8.5 },
-  );
+  y = section(page, f, "Información preparada", y);
+  y = bullet(page, f, `${snapshot.summary.residentRows} ${plural(snapshot.summary.residentRows, "registro de residente recibido", "registros de residentes recibidos")} para ${coveredUnits} ${plural(coveredUnits, "unidad de inicio", "unidades de inicio")}.`, y) - 2;
+  y = bullet(page, f, `${snapshot.summary.destinationRows} ${plural(snapshot.summary.destinationRows, "establecimiento o destino identificado", "establecimientos o destinos identificados")}.`, y) - 2;
+  y = bullet(page, f, `${snapshot.summary.adminRows} ${plural(snapshot.summary.adminRows, "administrador inicial preparado", "administradores iniciales preparados")}.`, y) - 2;
+  y = bullet(page, f, `Personal de seguridad informado: ${snapshot.intake.securityStaffCount ?? "pendiente de confirmar"}.`, y) - 1;
+  divider(page, y);
+  y -= 18;
 
-  sectionTitle(doc, cursor, "Información preparada", fonts);
-  bullet(
-    doc,
-    cursor,
-    `${snapshot.summary.residentRows} ${plural(snapshot.summary.residentRows, "registro de residente recibido", "registros de residentes recibidos")} para ${populatedPopulationUnits} ${plural(populatedPopulationUnits, "unidad de inicio", "unidades de inicio")}.`,
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    `${snapshot.summary.destinationRows} ${plural(snapshot.summary.destinationRows, "establecimiento o destino identificado", "establecimientos o destinos identificados")}.`,
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    `${snapshot.summary.adminRows} ${plural(snapshot.summary.adminRows, "administrador inicial preparado", "administradores iniciales preparados")}.`,
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    `Personal de seguridad informado: ${snapshot.intake.securityStaffCount ?? "pendiente de confirmar"}.`,
-    fonts,
-  );
-
-  sectionTitle(doc, cursor, "Observaciones antes de activar", fonts);
-  if (customerFindings.length === 0) {
-    bullet(
-      doc,
-      cursor,
-      "No se identifican pendientes que impidan continuar con la revisión final.",
-      fonts,
-    );
-    if (inactiveUnits > 0) {
-      bullet(
-        doc,
-        cursor,
-        `${inactiveUnits} ${plural(inactiveUnits, "unidad está marcada como inactiva", "unidades están marcadas como inactivas")} y no requiere residente para el cálculo de cobertura inicial.`,
-        fonts,
-      );
+  let overview: Cursor = { page, y };
+  const overviewSection = (title: string, height: number) => {
+    if (overview.y - height < BOTTOM) overview = summaryContinuation(doc, f);
+    overview.y = section(overview.page, f, title, overview.y);
+  };
+  const observations = findings.length
+    ? findings
+    : [
+        "No se identifican pendientes que impidan continuar con la revisión final.",
+        ...(inactive ? [`${inactive} ${plural(inactive, "unidad está marcada como inactiva", "unidades están marcadas como inactivas")} y no requiere residente para el cálculo de cobertura inicial.`] : []),
+      ];
+  overviewSection("Observaciones antes de activar", 32 + wrap(observations[0], f.regular, 8.35, CW - 44).length * 11.1);
+  for (const message of observations) {
+    const height = wrap(message, f.regular, 8.35, CW - 44).length * 11.1 + 2;
+    if (overview.y - height < BOTTOM) {
+      overview = summaryContinuation(doc, f);
+      overview.y = section(overview.page, f, "Observaciones antes de activar · continuación", overview.y);
     }
-  } else {
-    for (const message of customerFindings.slice(0, 8)) {
-      bullet(doc, cursor, message, fonts);
+    overview.y = bullet(overview.page, f, message, overview.y, findings.length ? C.amber : C.green) - 2;
+  }
+  divider(overview.page, overview.y);
+  overview.y -= 18;
+
+  const next = ready
+    ? "Una vez confirmada esta información, Minerva incorporará la residencial a ENTRY y dará inicio a la fase de registro de residentes. Si se requiere algún ajuste de nomenclatura o detalle operativo, podrá afinarse antes de la activación."
+    : snapshot.recommendation;
+  const nextLines = wrap(next, f.regular, 8.6, CW - 29);
+  overviewSection("Siguiente paso", 27 + Math.min(nextLines.length, 4) * 11.2);
+  for (const line of nextLines) {
+    if (overview.y - 11.2 < BOTTOM) {
+      overview = summaryContinuation(doc, f);
+      overview.y = section(overview.page, f, "Siguiente paso · continuación", overview.y);
     }
+    overview.page.drawText(line, { color: C.muted, font: f.regular, size: 8.6, x: M + 29, y: overview.y });
+    overview.y -= 11.2;
   }
 
-  sectionTitle(doc, cursor, "Siguiente paso", fonts);
-  drawText(doc, cursor, snapshot.recommendation, {
-    font: regular,
-    size: 10,
-  });
+  let d = detailPage(doc, f);
+  d.y = section(d.page, f, "Listado de unidades", d.y);
+  const listHeight = snapshot.workbook.units.reduce((sum, u) => sum + unitRowHeight(u.publicReference ?? u.unitLabel ?? "Unidad sin referencia", f), 0) + 10;
+  if (d.y - listHeight >= BOTTOM) {
+    d.page.drawRectangle({ color: C.card, borderColor: C.line, borderWidth: 0.8, x: M, y: d.y - listHeight + 7, width: CW, height: listHeight });
+    d.y -= 7;
+  }
 
-  addPage(doc, cursor);
-  drawText(doc, cursor, "Detalle para confirmación", {
-    color: rgb(0.08, 0.09, 0.13),
-    font: bold,
-    size: 18,
-  });
-  drawText(
-    doc,
-    cursor,
-    "Revise este listado para confirmar que las unidades y su estado inicial coinciden con lo esperado antes de la activación.",
-    { color: rgb(0.36, 0.39, 0.46), font: regular, size: 10 },
-  );
-
-  sectionTitle(doc, cursor, "Listado de unidades", fonts);
-  for (const unit of snapshot.workbook.units.slice(0, 100)) {
+  for (const unit of snapshot.workbook.units) {
     const label = unit.publicReference ?? unit.unitLabel ?? "Unidad sin referencia";
-    bullet(doc, cursor, `${label} — ${unitStatusLabel(unit.isActive)}`, fonts);
-  }
-  if (snapshot.workbook.units.length > 100) {
-    bullet(
-      doc,
-      cursor,
-      `${snapshot.workbook.units.length - 100} unidades adicionales no se muestran en este resumen compacto.`,
-      fonts,
-    );
+    const h = unitRowHeight(label, f);
+    if (d.y - h < BOTTOM) {
+      d = detailPage(doc, f, true);
+      d.y = section(d.page, f, "Listado de unidades · continuación", d.y);
+    }
+    d.y = unitRow(d.page, f, d.y, label, unit.isActive);
   }
 
-  if (snapshot.workbook.destinations.length > 0) {
-    sectionTitle(doc, cursor, "Establecimientos y destinos informados", fonts);
-    for (const destination of snapshot.workbook.destinations.slice(0, 20)) {
-      if (destination.name) bullet(doc, cursor, destination.name, fonts);
+  const need = (height: number) => {
+    if (d.y - height >= BOTTOM) return false;
+    d = detailPage(doc, f, true);
+    return true;
+  };
+
+  if (snapshot.workbook.destinations.length) {
+    const title = "Establecimientos y destinos informados";
+    if (!need(65)) d.y -= 18;
+    d.y = section(d.page, f, title, d.y);
+    for (const destination of snapshot.workbook.destinations) {
+      if (!destination.name) continue;
+      const h = wrap(destination.name, f.regular, 8.35, CW - 44).length * 11.1 + 4;
+      if (need(h + 24)) d.y = section(d.page, f, `${title} · continuación`, d.y);
+      d.y = bullet(d.page, f, destination.name, d.y) - 2;
     }
   }
 
-  sectionTitle(doc, cursor, "Privacidad y alcance", fonts);
-  bullet(
-    doc,
-    cursor,
+  const privacy = [
     "Este reporte no incluye nombres, teléfonos ni correos del directorio de residentes.",
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
     "La aprobación de este documento no crea por sí sola casas, residentes, guardias, destinos ni usuarios en ENTRY.",
-    fonts,
-  );
+  ];
+  const privacyH = 30 + privacy.reduce((sum, t) => sum + wrap(t, f.regular, 8.35, CW - 44).length * 11.1 + 2, 0);
+  if (!need(privacyH)) {
+    d.y -= 7;
+    divider(d.page, d.y + 8);
+    d.y -= 10;
+  }
+  d.y = section(d.page, f, "Privacidad y alcance", d.y);
+  for (const text of privacy) d.y = bullet(d.page, f, text, d.y) - 2;
 
-  sectionTitle(doc, cursor, "Control del documento", fonts);
-  bullet(doc, cursor, `Versión: ${snapshot.source.versionLabel}`, fonts);
-  bullet(doc, cursor, `Generado: ${formatDate(snapshot.generatedAt)}`, fonts);
-  bullet(doc, cursor, `Archivo de preparación: ${snapshot.source.filename}`, fonts);
-  bullet(doc, cursor, `Referencia de integridad: ${snapshot.source.sha256Prefix}`, fonts);
+  const control = [
+    `Versión: ${snapshot.source.versionLabel}`,
+    `Generado: ${formatDate(snapshot.generatedAt)}`,
+    "Fuente de preparación: información validada por Minerva",
+    `Referencia de integridad: ${snapshot.source.sha256Prefix}`,
+  ];
+  const controlH = 30 + control.reduce((sum, t) => sum + wrap(t, f.regular, 8.35, CW - 44).length * 11.1 + 2, 0);
+  if (!need(controlH)) {
+    d.y -= 7;
+    divider(d.page, d.y + 8);
+    d.y -= 10;
+  }
+  d.y = section(d.page, f, "Control del documento", d.y);
+  control.forEach((text, i) => {
+    d.y = bullet(d.page, f, text, d.y) - (i === control.length - 1 ? 0 : 2);
+  });
 
   const pages = doc.getPages();
-  pages.forEach((page, index) => {
-    page.drawLine({
-      color: rgb(0.9, 0.9, 0.92),
-      end: { x: PAGE_WIDTH - MARGIN, y: 38 },
-      start: { x: MARGIN, y: 38 },
-      thickness: 0.6,
-    });
-    page.drawText(
-      `Minerva Technologies · ENTRY · ${snapshot.source.versionLabel} · ${index + 1}/${pages.length}`,
-      {
-        color: rgb(0.48, 0.5, 0.56),
-        font: regular,
-        size: 7.5,
-        x: MARGIN,
-        y: 22,
-      },
-    );
-  });
-
+  pages.forEach((p, i) => footer(p, f, snapshot, i, pages.length));
   return Buffer.from(await doc.save());
 }
