@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
+import { PDFDocument } from "pdf-lib";
 import { createJiti } from "jiti";
 
 const root = process.cwd();
@@ -18,6 +19,9 @@ const { validateSetupWorkbook } = jiti(
 );
 const { buildSetupReportSummary, recommendedNextStep } = jiti(
   join(root, "features", "entry", "outrider", "setupReport", "reportSnapshot.ts"),
+);
+const { renderSetupReportPdf } = jiti(
+  join(root, "features", "entry", "outrider", "setupReport", "pdf.ts"),
 );
 
 const pdf = read("features/entry/outrider/setupReport/pdf.ts");
@@ -95,6 +99,49 @@ function workbookFixture() {
   };
 }
 
+function snapshotFixture(workbook = workbookFixture()) {
+  return {
+    generatedAt: "2026-09-15T12:00:00.000Z",
+    intake: {
+      communityCity: "San Pedro Sula",
+      communityId: null,
+      communityName: "Residencial QA",
+      contactName: "Carlos Mendoza",
+      hasDestinations: true,
+      hasEstablishments: true,
+      hasInactiveUnits: true,
+      initialAdminCount: workbook.admins.length,
+      securityStaffCount: 2,
+      unitNamingExample: null,
+      unitTypes: ["casas"],
+    },
+    recommendation:
+      "Confirmar las observaciones pendientes con la administración antes de continuar con la activación de la comunidad.",
+    reportSchemaVersion: "entry-outrider-setup-report-v2",
+    source: {
+      fileId: "11111111-1111-1111-1111-111111111111",
+      filename: "source.xlsx",
+      sha256: "a".repeat(64),
+      sha256Prefix: "aaaaaaaaaaaa",
+      uploadedAt: "2026-09-15T11:00:00.000Z",
+      versionLabel: "v2",
+    },
+    summary: {
+      adminRows: workbook.admins.length,
+      destinationRows: workbook.destinations.length,
+      residentCoveragePercent: 100,
+      residentRows: workbook.residents.length,
+      units: workbook.units.length,
+      unitsMissingReferences: 0,
+      unitsWithReferences: workbook.units.length,
+      warnings: 0,
+    },
+    validation: { findings: [] },
+    workbook,
+    workbookSchemaVersion: "entry-onboarding-workbook-v1",
+  };
+}
+
 function findingCodes(validation) {
   return validation.findings.map((finding) => finding.code);
 }
@@ -169,6 +216,89 @@ test("customer PDF pagination keeps section headings single and sizes wrapped co
   assert.match(pdf, /const adminRowHeight =\s*wrapText\(/);
   assert.match(pdf, /const nextStepLines = wrapText\(/);
   assert.match(pdf, /const nextHeight = Math\.max\(58,/);
+  assert.match(pdf, /nextStepY - nextHeight < SAFE_CONTENT_BOTTOM/);
+  assert.match(pdf, /Resumen preliminar de preparación · continuación/);
+  assert.match(pdf, /measureUnitRowHeight\(label, fonts\)/);
+  assert.match(pdf, /splitOversizedWord/);
   assert.match(pdf, /Establecimientos y destinos informados.*continuación/s);
   assert.match(pdf, /Administradores iniciales propuestos.*continuación/s);
+});
+
+test("customer PDF renders a multi-page stress case without layout exceptions", async () => {
+  const workbook = workbookFixture();
+  workbook.units = Array.from({ length: 90 }, (_, index) => ({
+    isActive: index % 9 !== 0,
+    notes: null,
+    publicReference:
+      index % 11 === 0
+        ? `Referencia residencial extraordinariamente larga sector norte bloque ${index + 1}`
+        : `Casa ${String(index + 1).padStart(3, "0")}`,
+    row: index + 2,
+    unitLabel: `CASA-${String(index + 1).padStart(3, "0")}`,
+    unitType: "house",
+  }));
+  workbook.destinations = Array.from({ length: 22 }, (_, index) => ({
+    name: `Establecimiento de prueba ${index + 1} con nombre suficientemente largo para validar saltos de línea`,
+    notes: null,
+    reference: null,
+    row: index + 2,
+    type: "business",
+    unitLabel: null,
+  }));
+  workbook.admins = Array.from({ length: 8 }, (_, index) => ({
+    email: null,
+    fullName: `Administrador de prueba con nombre extendido ${index + 1}`,
+    phone: null,
+    row: index + 2,
+    unitLabel: null,
+  }));
+
+  const snapshot = snapshotFixture(workbook);
+  snapshot.summary.units = workbook.units.length;
+  snapshot.summary.unitsWithReferences = workbook.units.length;
+  snapshot.summary.destinationRows = workbook.destinations.length;
+  snapshot.summary.adminRows = workbook.admins.length;
+  snapshot.summary.residentCoveragePercent = 40;
+  snapshot.validation.findings = [
+    {
+      code: "COMMUNITY_NAME_MISMATCH",
+      field: null,
+      message: "internal",
+      row: null,
+      severity: "warning",
+      sheet: "Workbook",
+    },
+    {
+      code: "UNIT_REFERENCE_MISSING",
+      field: "public_reference",
+      message: "internal",
+      row: 3,
+      severity: "warning",
+      sheet: "Units",
+    },
+    {
+      code: "UNIT_TYPE_MISSING",
+      field: "unit_type",
+      message: "internal",
+      row: 4,
+      severity: "warning",
+      sheet: "Units",
+    },
+    {
+      code: "RESIDENT_CONTACT_MISSING",
+      field: null,
+      message: "internal",
+      row: 5,
+      severity: "warning",
+      sheet: "Residents",
+    },
+  ];
+  snapshot.recommendation =
+    "Confirmar con la administración cada observación pendiente antes de continuar. ".repeat(14);
+
+  const bytes = await renderSetupReportPdf(snapshot);
+  assert.ok(bytes.length > 1_000);
+
+  const rendered = await PDFDocument.load(bytes);
+  assert.ok(rendered.getPageCount() >= 5);
 });
