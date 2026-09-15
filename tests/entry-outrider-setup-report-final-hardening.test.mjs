@@ -53,7 +53,7 @@ test("setup report approval is idempotent only while the approved report is stil
   assert.match(approval, /ENTRY_OUTRIDER_SETUP_REPORT_STALE/);
   assert.match(
     approval,
-    /if v_report\.status = 'approved' then[\s\S]*'idempotent', true[\s\S]*return/,
+    /if v_report\.status = 'approved' then[\s\S]*return jsonb_build_object\([\s\S]*'idempotent', true/,
   );
   assert.match(
     approval,
