@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
+import { OutriderPublicFileManager } from "@/features/entry/outrider/public/OutriderPublicFileManager";
 import { OutriderPublicForm } from "@/features/entry/outrider/public/OutriderPublicForm";
 import { resolvePublicOutrider } from "@/features/entry/outrider/public/gateway";
 import { hashOutriderToken } from "@/features/entry/outrider/token";
@@ -109,9 +110,23 @@ export default async function PublicOutriderPage(
     return <UnavailableOutrider />;
   }
 
+  const fileStateKey = session.files
+    .map((file) => file.id)
+    .sort()
+    .join(",");
+
   return (
     <>
-      <OutriderPublicForm session={session} token={token} />
+      <OutriderPublicFileManager
+        files={session.files}
+        status={session.status}
+        token={token}
+      />
+      <OutriderPublicForm
+        key={fileStateKey}
+        session={session}
+        token={token}
+      />
       <OutriderBrandFooter />
     </>
   );
