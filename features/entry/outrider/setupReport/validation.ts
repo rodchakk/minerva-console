@@ -69,6 +69,8 @@ export function validateSetupWorkbook(
   }
 
   const unitKeys = new Map<string, { label: string; row: number }>();
+  const populationUnitKeys = new Set<string>();
+
   for (const unit of workbook.units) {
     const key = normalizeSetupUnitIdentity(unit.unitLabel);
     if (!key) {
@@ -95,6 +97,12 @@ export function validateSetupWorkbook(
       });
     } else {
       unitKeys.set(key, { label: unit.unitLabel ?? "", row: unit.row });
+    }
+
+    // Explicitly inactive units are not expected to have resident information at launch.
+    // Unknown activity state remains in the population denominator until it is confirmed.
+    if (unit.isActive !== false) {
+      populationUnitKeys.add(key);
     }
 
     if (!unit.publicReference) {
@@ -212,7 +220,7 @@ export function validateSetupWorkbook(
 
   for (const unit of workbook.units) {
     const key = normalizeSetupUnitIdentity(unit.unitLabel);
-    if (key && !populatedUnitKeys.has(key)) {
+    if (key && unit.isActive !== false && !populatedUnitKeys.has(key)) {
       addFinding(findings, {
         code: "UNIT_HAS_NO_RESIDENT_INFORMATION",
         field: "unit_label",
@@ -224,13 +232,17 @@ export function validateSetupWorkbook(
     }
   }
 
-  if (workbook.units.length > 0 && workbook.residents.length > 0) {
-    const coverage = populatedUnitKeys.size / workbook.units.length;
+  if (populationUnitKeys.size > 0 && workbook.residents.length > 0) {
+    const populatedPopulationUnits = Array.from(populatedUnitKeys).filter((key) =>
+      populationUnitKeys.has(key),
+    ).length;
+    const coverage = populatedPopulationUnits / populationUnitKeys.size;
     if (coverage > 0 && coverage < 1) {
       addFinding(findings, {
         code: "RESIDENT_COVERAGE_PARTIAL",
         field: null,
-        message: "Resident information covers only part of the known units.",
+        message:
+          "Resident information covers only part of the active or not-yet-confirmed units.",
         row: null,
         severity: "warning",
         sheet: "Residents",
