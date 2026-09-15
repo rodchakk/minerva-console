@@ -25,12 +25,8 @@ type LookupResult =
     };
 
 type LookupState =
-  | {
-      status: "idle";
-    }
-  | {
-      status: "checking";
-    }
+  | { status: "idle" }
+  | { status: "checking" }
   | {
       status: "success";
       result: Extract<LookupResult, { available: true }>;
@@ -39,12 +35,8 @@ type LookupState =
       status: "unavailable";
       reason?: "already_registered" | "unavailable";
     }
-  | {
-      status: "rate_limited" | "service_unavailable";
-    }
-  | {
-      status: "error";
-    };
+  | { status: "rate_limited" | "service_unavailable" }
+  | { status: "error" };
 
 const NEUTRAL_UNAVAILABLE_MESSAGE =
   "We could not enable this unit for registration. Check the unit number or contact your community administration.";
@@ -55,9 +47,7 @@ const RATE_LIMITED_MESSAGE =
 const SERVICE_UNAVAILABLE_MESSAGE =
   "We could not process the request right now. Please try again.";
 
-function scrollFocusedControlIntoView(
-  event: FocusEvent<HTMLInputElement>,
-) {
+function scrollFocusedControlIntoView(event: FocusEvent<HTMLInputElement>) {
   const target = event.currentTarget;
   if (!window.matchMedia("(max-width: 640px)").matches) return;
 
@@ -118,12 +108,14 @@ export function UnitLookupForm({
   registrationMode,
   slug,
   unitLabelPrefix,
+  unitReferences = {},
 }: {
   availableUnits?: string[];
   intro?: ReactNode;
   registrationMode: RegistrationMode;
   slug: string;
   unitLabelPrefix: string;
+  unitReferences?: Record<string, string>;
 }) {
   const [unitGuideQuery, setUnitGuideQuery] = useState("");
   const [unitSuffix, setUnitSuffix] = useState("");
@@ -142,10 +134,11 @@ export function UnitLookupForm({
     const query = normalizeSearchValue(unitGuideQuery);
     if (!query) return availableUnits;
 
-    return availableUnits.filter((unitLabel) =>
-      normalizeSearchValue(unitLabel).includes(query),
-    );
-  }, [availableUnits, unitGuideQuery]);
+    return availableUnits.filter((unitLabel) => {
+      const reference = unitReferences[unitLabel]?.trim() ?? "";
+      return normalizeSearchValue(`${unitLabel} ${reference}`).includes(query);
+    });
+  }, [availableUnits, unitGuideQuery, unitReferences]);
 
   const inputExample = availableUnits[0]
     ? inputValueForUnit(
@@ -166,12 +159,14 @@ export function UnitLookupForm({
       inputValueForUnit(unitLabel, unitLabelPrefix, showUnitLabelPrefix),
     );
     setState({ status: "idle" });
+  }
 
-    window.requestAnimationFrame(() => {
-      const input = document.getElementById("unit-label") as HTMLInputElement | null;
-      input?.focus();
-      input?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+  function isSelectedUnit(unitLabel: string) {
+    return (
+      normalizeSearchValue(
+        inputValueForUnit(unitLabel, unitLabelPrefix, showUnitLabelPrefix),
+      ) === normalizeSearchValue(unitSuffix)
+    );
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -307,9 +302,27 @@ export function UnitLookupForm({
           onSubmit={handleSubmit}
         >
           {showUnitGuide ? (
-            <details className="group overflow-hidden rounded-2xl border border-violet-200 bg-violet-50/70">
+            <details className="group overflow-hidden rounded-2xl border border-violet-200 bg-violet-50/60">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-left text-sm font-bold text-[#35137a] marker:content-none sm:px-5">
-                <span>¿Necesitas ayuda para identificar tu unidad?</span>
+                <span className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full border border-violet-300 bg-white text-[#5b21b6]">
+                    <svg
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        d="M9.2 9a3 3 0 1 1 5.3 1.9c-.9 1-2.5 1.5-2.5 3.1m0 3h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                        stroke="currentColor"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth="1.8"
+                      />
+                    </svg>
+                  </span>
+                  ¿Necesitas ayuda para identificar tu unidad?
+                </span>
                 <svg
                   aria-hidden="true"
                   className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180"
@@ -327,57 +340,153 @@ export function UnitLookupForm({
               </summary>
 
               <div className="border-t border-violet-200/80 px-4 py-4 sm:px-5 sm:py-5">
-                <div className="space-y-3 text-sm leading-6 text-slate-700">
-                  <p className="font-semibold text-slate-900">
-                    Antes de continuar, identifica la unidad que corresponde exactamente a tu vivienda.
-                  </p>
-                  <ol className="list-decimal space-y-1 pl-5">
-                    <li>Busca tu casa o unidad en la lista disponible.</li>
-                    <li>
-                      Toca el número correspondiente para colocarlo automáticamente en el registro.
-                    </li>
-                    <li>
-                      Si no estás seguro, no selecciones una unidad al azar. Consulta con la administración de tu comunidad antes de continuar.
-                    </li>
-                  </ol>
+                <p className="text-sm font-semibold leading-6 text-slate-900">
+                  Antes de continuar, identifica la unidad que corresponde exactamente a tu vivienda.
+                </p>
+
+                <div className="mt-3 space-y-2.5 text-sm leading-5 text-slate-600">
+                  {[
+                    "Busca tu casa o unidad en la lista disponible.",
+                    "Toca la unidad correspondiente para seleccionarla automáticamente.",
+                    "Si no estás seguro, no selecciones una unidad al azar. Consulta con la administración de tu comunidad.",
+                  ].map((instruction, index) => (
+                    <div className="flex gap-3" key={instruction}>
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-[#5b21b6]">
+                        {index + 1}
+                      </span>
+                      <p className="pt-0.5">{instruction}</p>
+                    </div>
+                  ))}
                 </div>
 
-                <label className="mt-4 block" htmlFor="unit-guide-search">
-                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">
-                    Buscar en unidades disponibles
+                <label className="mt-5 block" htmlFor="unit-guide-search">
+                  <span className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.12em] text-slate-600">
+                    <span>Buscar en unidades disponibles</span>
+                    <span className="normal-case tracking-normal text-slate-500">
+                      {filteredAvailableUnits.length} de {availableUnits.length}
+                    </span>
                   </span>
-                  <input
-                    autoComplete="off"
-                    className="mt-2 h-11 w-full rounded-xl border border-violet-200 bg-white px-3 text-base text-slate-950 outline-none placeholder:text-slate-400 focus:border-[#5b21b6] focus:ring-2 focus:ring-violet-100"
-                    id="unit-guide-search"
-                    onChange={(event) => setUnitGuideQuery(event.target.value)}
-                    placeholder="Ej. C1301, A1324, 101..."
-                    type="search"
-                    value={unitGuideQuery}
-                  />
+                  <span className="relative mt-2 block">
+                    <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
+                      <svg
+                        aria-hidden="true"
+                        className="h-5 w-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          d="m21 21-4.35-4.35m1.35-5.65a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                          stroke="currentColor"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="1.8"
+                        />
+                      </svg>
+                    </span>
+                    <input
+                      autoComplete="off"
+                      className="h-11 w-full rounded-xl border border-violet-200 bg-white pl-10 pr-3 text-base text-slate-950 outline-none placeholder:text-slate-400 focus:border-[#5b21b6] focus:ring-2 focus:ring-violet-100"
+                      id="unit-guide-search"
+                      onChange={(event) => setUnitGuideQuery(event.target.value)}
+                      placeholder="Buscar por número o referencia..."
+                      type="search"
+                      value={unitGuideQuery}
+                    />
+                  </span>
                 </label>
 
-                <div className="mt-4 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
-                  <span>Unidades disponibles</span>
-                  <span>{filteredAvailableUnits.length} de {availableUnits.length}</span>
-                </div>
-
-                <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-violet-100 bg-white p-2">
+                <div className="mt-3 max-h-[21rem] overflow-y-auto rounded-xl border border-violet-100 bg-white">
                   {filteredAvailableUnits.length > 0 ? (
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {filteredAvailableUnits.map((unitLabel) => (
-                        <button
-                          className="min-h-10 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm font-bold text-slate-800 transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-200"
-                          key={unitLabel}
-                          onClick={() => selectAvailableUnit(unitLabel)}
-                          type="button"
-                        >
-                          {unitLabel}
-                        </button>
-                      ))}
+                    <div className="divide-y divide-slate-100">
+                      {filteredAvailableUnits.map((unitLabel) => {
+                        const reference = unitReferences[unitLabel]?.trim() || null;
+                        const selected = isSelectedUnit(unitLabel);
+
+                        return (
+                          <button
+                            aria-pressed={selected}
+                            className={`flex min-h-[4.25rem] w-full items-center gap-3 px-3.5 py-3 text-left transition focus:outline-none focus:ring-2 focus:ring-inset focus:ring-violet-200 ${
+                              selected
+                                ? "bg-violet-50"
+                                : "bg-white hover:bg-slate-50"
+                            }`}
+                            key={unitLabel}
+                            onClick={() => selectAvailableUnit(unitLabel)}
+                            type="button"
+                          >
+                            <span
+                              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                                selected
+                                  ? "bg-violet-100 text-[#5b21b6]"
+                                  : "bg-slate-100 text-slate-500"
+                              }`}
+                            >
+                              <svg
+                                aria-hidden="true"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1v-9.5Z"
+                                  stroke="currentColor"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="1.8"
+                                />
+                              </svg>
+                            </span>
+
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-base font-bold text-slate-950">
+                                {unitLabel}
+                              </span>
+                              {reference ? (
+                                <span className="mt-0.5 block truncate text-sm text-slate-500">
+                                  {reference}
+                                </span>
+                              ) : null}
+                            </span>
+
+                            {selected ? (
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#5b21b6] text-white">
+                                <svg
+                                  aria-hidden="true"
+                                  className="h-4 w-4"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path
+                                    d="m6 12 4 4 8-8"
+                                    stroke="currentColor"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="2"
+                                  />
+                                </svg>
+                              </span>
+                            ) : (
+                              <svg
+                                aria-hidden="true"
+                                className="h-5 w-5 shrink-0 text-slate-400"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  d="m9 6 6 6-6 6"
+                                  stroke="currentColor"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth="1.8"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <p className="px-3 py-6 text-center text-sm leading-6 text-slate-500">
+                    <p className="px-4 py-8 text-center text-sm leading-6 text-slate-500">
                       No encontramos una unidad con esa búsqueda. Verifica el número o consulta con la administración.
                     </p>
                   )}
