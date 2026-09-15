@@ -661,8 +661,9 @@ export async function renderSetupReportPdf(
   const nextStep = readyForFinalReview
     ? "Una vez confirmada esta información, Minerva incorporará la comunidad a ENTRY y dará inicio a la fase de registro de residentes. Cualquier ajuste identificado podrá corregirse antes de la activación."
     : snapshot.recommendation;
+  const nextStepLines = wrapText(nextStep, regular, 8.8, CONTENT_WIDTH - 28);
+  const nextHeight = Math.max(58, 47 + (nextStepLines.length - 1) * 12);
 
-  const nextHeight = 58;
   page.drawRectangle({
     borderColor: rgb(0.83, 0.84, 0.98),
     borderWidth: 0.8,
@@ -716,36 +717,40 @@ export async function renderSetupReportPdf(
     );
   }
 
-  const ensureDetailSpace = (height: number, title?: string) => {
-    if (detailY - height >= 82) return;
+  const ensureDetailSpace = (height: number) => {
+    if (detailY - height >= 82) return false;
     detail = addDetailPage(doc, fonts, true);
     detailPage = detail.page;
     detailY = detail.y;
-    if (title) detailY = drawSectionTitle(detailPage, title, fonts, detailY);
+    return true;
   };
 
   if (snapshot.workbook.destinations.length > 0) {
-    ensureDetailSpace(70, "Establecimientos y destinos informados");
-    if (detailY === detail.y) {
-      detailY = drawSectionTitle(
-        detailPage,
-        "Establecimientos y destinos informados",
-        fonts,
-        detailY,
-      );
-    } else {
-      detailY -= 6;
-      detailY = drawSectionTitle(
-        detailPage,
-        "Establecimientos y destinos informados",
-        fonts,
-        detailY,
-      );
-    }
+    const destinationTitle = "Establecimientos y destinos informados";
+    const movedToNewPage = ensureDetailSpace(70);
+    if (!movedToNewPage) detailY -= 6;
+    detailY = drawSectionTitle(detailPage, destinationTitle, fonts, detailY);
+
     for (const destination of snapshot.workbook.destinations) {
       if (!destination.name) continue;
-      ensureDetailSpace(24, "Establecimientos y destinos informados");
-      detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: destination.name, x: MARGIN, y: detailY }) - 2;
+      const destinationRowHeight =
+        wrapText(destination.name, regular, 8.7, CONTENT_WIDTH - 14).length * 12 + 2;
+      if (ensureDetailSpace(destinationRowHeight)) {
+        detailY = drawSectionTitle(
+          detailPage,
+          `${destinationTitle} · continuación`,
+          fonts,
+          detailY,
+        );
+      }
+      detailY = drawBulletLine({
+        fonts,
+        maxWidth: CONTENT_WIDTH,
+        page: detailPage,
+        text: destination.name,
+        x: MARGIN,
+        y: detailY,
+      }) - 2;
     }
   }
 
@@ -753,35 +758,88 @@ export async function renderSetupReportPdf(
     .map((admin) => admin.fullName)
     .filter((name): name is string => Boolean(name));
   if (adminNames.length > 0) {
-    ensureDetailSpace(64, "Administrador inicial propuesto");
-    detailY -= 4;
-    detailY = drawSectionTitle(
-      detailPage,
+    const adminTitle =
       adminNames.length === 1
         ? "Administrador inicial propuesto"
-        : "Administradores iniciales propuestos",
-      fonts,
-      detailY,
-    );
+        : "Administradores iniciales propuestos";
+    const movedToNewPage = ensureDetailSpace(64);
+    if (!movedToNewPage) detailY -= 4;
+    detailY = drawSectionTitle(detailPage, adminTitle, fonts, detailY);
+
     for (const name of adminNames) {
-      ensureDetailSpace(22, "Administradores iniciales propuestos");
-      detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: name, x: MARGIN, y: detailY }) - 2;
+      const adminRowHeight =
+        wrapText(name, regular, 8.7, CONTENT_WIDTH - 14).length * 12 + 2;
+      if (ensureDetailSpace(adminRowHeight)) {
+        detailY = drawSectionTitle(
+          detailPage,
+          `${adminTitle} · continuación`,
+          fonts,
+          detailY,
+        );
+      }
+      detailY = drawBulletLine({
+        fonts,
+        maxWidth: CONTENT_WIDTH,
+        page: detailPage,
+        text: name,
+        x: MARGIN,
+        y: detailY,
+      }) - 2;
     }
   }
 
-  ensureDetailSpace(92, "Privacidad y alcance");
-  detailY -= 5;
+  const privacyItems = [
+    "Este reporte no incluye nombres, teléfonos ni correos del directorio de residentes.",
+    "La aprobación de este documento no crea por sí sola casas, residentes, guardias, destinos ni usuarios en ENTRY.",
+  ];
+  const privacyHeight =
+    26 +
+    privacyItems.reduce(
+      (height, text) =>
+        height + wrapText(text, regular, 8.7, CONTENT_WIDTH - 14).length * 12 + 2,
+      0,
+    );
+  const privacyMovedToNewPage = ensureDetailSpace(privacyHeight);
+  if (!privacyMovedToNewPage) detailY -= 5;
   detailY = drawSectionTitle(detailPage, "Privacidad y alcance", fonts, detailY);
-  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: "Este reporte no incluye nombres, teléfonos ni correos del directorio de residentes.", x: MARGIN, y: detailY }) - 2;
-  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: "La aprobación de este documento no crea por sí sola casas, residentes, guardias, destinos ni usuarios en ENTRY.", x: MARGIN, y: detailY }) - 2;
+  for (const text of privacyItems) {
+    detailY = drawBulletLine({
+      fonts,
+      maxWidth: CONTENT_WIDTH,
+      page: detailPage,
+      text,
+      x: MARGIN,
+      y: detailY,
+    }) - 2;
+  }
 
-  ensureDetailSpace(94, "Control del documento");
-  detailY -= 5;
+  const controlItems = [
+    `Versión: ${snapshot.source.versionLabel}`,
+    `Generado: ${formatDate(snapshot.generatedAt)}`,
+    "Fuente de preparación: información validada por Minerva",
+    `Referencia de integridad: ${snapshot.source.sha256Prefix}`,
+  ];
+  const controlHeight =
+    26 +
+    controlItems.reduce(
+      (height, text) =>
+        height + wrapText(text, regular, 8.7, CONTENT_WIDTH - 14).length * 12 + 2,
+      0,
+    );
+  const controlMovedToNewPage = ensureDetailSpace(controlHeight);
+  if (!controlMovedToNewPage) detailY -= 5;
   detailY = drawSectionTitle(detailPage, "Control del documento", fonts, detailY);
-  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: `Versión: ${snapshot.source.versionLabel}`, x: MARGIN, y: detailY }) - 2;
-  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: `Generado: ${formatDate(snapshot.generatedAt)}`, x: MARGIN, y: detailY }) - 2;
-  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: "Fuente de preparación: información validada por Minerva", x: MARGIN, y: detailY }) - 2;
-  drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: `Referencia de integridad: ${snapshot.source.sha256Prefix}`, x: MARGIN, y: detailY });
+  controlItems.forEach((text, index) => {
+    const nextY = drawBulletLine({
+      fonts,
+      maxWidth: CONTENT_WIDTH,
+      page: detailPage,
+      text,
+      x: MARGIN,
+      y: detailY,
+    });
+    detailY = index === controlItems.length - 1 ? nextY : nextY - 2;
+  });
 
   const pages = doc.getPages();
   pages.forEach((outputPage, index) => {
