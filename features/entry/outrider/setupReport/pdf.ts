@@ -4,6 +4,7 @@ import {
   PDFDocument,
   StandardFonts,
   rgb,
+  type PDFDocument as PdfDocumentType,
   type PDFFont,
   type PDFPage,
 } from "pdf-lib";
@@ -13,11 +14,6 @@ import type {
 } from "@/features/entry/outrider/setupReport/model";
 import { normalizeSetupUnitIdentity } from "@/features/entry/outrider/setupReport/normalization";
 
-type Cursor = {
-  page: PDFPage;
-  y: number;
-};
-
 type Fonts = {
   bold: PDFFont;
   regular: PDFFont;
@@ -25,9 +21,27 @@ type Fonts = {
 
 const PAGE_WIDTH = 612;
 const PAGE_HEIGHT = 792;
-const MARGIN = 48;
-const LINE_HEIGHT = 15;
+const MARGIN = 44;
 const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+const FOOTER_Y = 34;
+
+const COLORS = {
+  brand: rgb(0.08, 0.1, 0.42),
+  brandSoft: rgb(0.95, 0.96, 1),
+  ink: rgb(0.08, 0.09, 0.16),
+  muted: rgb(0.39, 0.43, 0.52),
+  border: rgb(0.86, 0.88, 0.93),
+  card: rgb(0.98, 0.985, 0.995),
+  green: rgb(0.05, 0.54, 0.3),
+  greenDark: rgb(0.04, 0.34, 0.19),
+  greenSoft: rgb(0.9, 0.98, 0.93),
+  red: rgb(0.9, 0.18, 0.3),
+  redSoft: rgb(1, 0.93, 0.95),
+  amber: rgb(0.7, 0.42, 0.04),
+  amberDark: rgb(0.38, 0.24, 0.03),
+  amberSoft: rgb(1, 0.96, 0.82),
+  white: rgb(1, 1, 1),
+};
 
 function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   const words = text.split(/\s+/).filter(Boolean);
@@ -49,71 +63,33 @@ function wrapText(text: string, font: PDFFont, size: number, maxWidth: number) {
   return lines.length > 0 ? lines : [""];
 }
 
-function addPage(doc: PDFDocument, cursor: Cursor) {
-  cursor.page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  cursor.y = PAGE_HEIGHT - MARGIN;
-}
-
-function ensureSpace(doc: PDFDocument, cursor: Cursor, height: number) {
-  if (cursor.y - height < MARGIN + 18) {
-    addPage(doc, cursor);
-  }
-}
-
-function drawText(
-  doc: PDFDocument,
-  cursor: Cursor,
+function drawWrappedText(
+  page: PDFPage,
   text: string,
   options: {
     color?: ReturnType<typeof rgb>;
     font: PDFFont;
-    maxWidth?: number;
+    lineHeight?: number;
+    maxWidth: number;
     size: number;
-    x?: number;
+    x: number;
+    y: number;
   },
 ) {
-  const maxWidth = options.maxWidth ?? CONTENT_WIDTH;
-  const lines = wrapText(text, options.font, options.size, maxWidth);
-  ensureSpace(doc, cursor, lines.length * LINE_HEIGHT + 4);
+  const lineHeight = options.lineHeight ?? options.size * 1.35;
+  const lines = wrapText(text, options.font, options.size, options.maxWidth);
 
-  for (const line of lines) {
-    cursor.page.drawText(line, {
-      color: options.color ?? rgb(0.12, 0.14, 0.18),
+  lines.forEach((line, index) => {
+    page.drawText(line, {
+      color: options.color ?? COLORS.ink,
       font: options.font,
       size: options.size,
-      x: options.x ?? MARGIN,
-      y: cursor.y,
+      x: options.x,
+      y: options.y - index * lineHeight,
     });
-    cursor.y -= LINE_HEIGHT;
-  }
-}
-
-function sectionTitle(
-  doc: PDFDocument,
-  cursor: Cursor,
-  text: string,
-  fonts: Fonts,
-) {
-  cursor.y -= 10;
-  drawText(doc, cursor, text, {
-    color: rgb(0.08, 0.09, 0.13),
-    font: fonts.bold,
-    size: 13,
   });
-  cursor.y -= 3;
-}
 
-function bullet(
-  doc: PDFDocument,
-  cursor: Cursor,
-  text: string,
-  fonts: Fonts,
-) {
-  drawText(doc, cursor, `• ${text}`, {
-    font: fonts.regular,
-    maxWidth: CONTENT_WIDTH - 8,
-    size: 10,
-  });
+  return options.y - lines.length * lineHeight;
 }
 
 function plural(count: number, singular: string, pluralValue: string) {
@@ -128,7 +104,68 @@ function formatDate(value: string) {
   return `${day}/${month}/${date.getUTCFullYear()}`;
 }
 
-function statCard(input: {
+function rightAlignedX(text: string, font: PDFFont, size: number, right: number) {
+  return right - font.widthOfTextAtSize(text, size);
+}
+
+function drawBrandHeader(page: PDFPage, fonts: Fonts) {
+  page.drawText("E N T R Y", {
+    color: COLORS.brand,
+    font: fonts.bold,
+    size: 17,
+    x: MARGIN,
+    y: PAGE_HEIGHT - 48,
+  });
+  page.drawText("MINERVA TECHNOLOGIES", {
+    color: COLORS.brand,
+    font: fonts.bold,
+    size: 8.5,
+    x: rightAlignedX(
+      "MINERVA TECHNOLOGIES",
+      fonts.bold,
+      8.5,
+      PAGE_WIDTH - MARGIN,
+    ),
+    y: PAGE_HEIGHT - 44,
+  });
+  page.drawLine({
+    color: rgb(0.92, 0.93, 0.96),
+    end: { x: PAGE_WIDTH - MARGIN, y: PAGE_HEIGHT - 64 },
+    start: { x: MARGIN, y: PAGE_HEIGHT - 64 },
+    thickness: 0.7,
+  });
+}
+
+function drawSectionTitle(
+  page: PDFPage,
+  text: string,
+  fonts: Fonts,
+  y: number,
+) {
+  page.drawCircle({
+    color: COLORS.brandSoft,
+    size: 9,
+    x: MARGIN + 9,
+    y: y + 5,
+  });
+  page.drawCircle({
+    color: COLORS.brand,
+    size: 2.4,
+    x: MARGIN + 9,
+    y: y + 5,
+  });
+  page.drawText(text, {
+    color: COLORS.brand,
+    font: fonts.bold,
+    size: 12.5,
+    x: MARGIN + 26,
+    y,
+  });
+  return y - 21;
+}
+
+function drawStatCard(input: {
+  accent: ReturnType<typeof rgb>;
   fonts: Fonts;
   label: string;
   page: PDFPage;
@@ -137,29 +174,103 @@ function statCard(input: {
   x: number;
   y: number;
 }) {
+  const height = 52;
   input.page.drawRectangle({
-    borderColor: rgb(0.87, 0.88, 0.91),
-    borderWidth: 1,
-    color: rgb(0.98, 0.98, 0.99),
-    height: 54,
+    borderColor: COLORS.border,
+    borderWidth: 0.8,
+    color: COLORS.card,
+    height,
     width: input.width,
     x: input.x,
-    y: input.y - 54,
+    y: input.y - height,
+  });
+  input.page.drawRectangle({
+    color: input.accent,
+    height: 30,
+    width: 3,
+    x: input.x + 10,
+    y: input.y - 41,
   });
   input.page.drawText(input.label.toUpperCase(), {
-    color: rgb(0.42, 0.45, 0.52),
+    color: COLORS.muted,
     font: input.fonts.bold,
-    size: 7.5,
-    x: input.x + 12,
+    size: 6.7,
+    x: input.x + 20,
     y: input.y - 18,
   });
   input.page.drawText(input.value, {
-    color: rgb(0.08, 0.09, 0.13),
+    color: COLORS.ink,
     font: input.fonts.bold,
-    size: 16,
-    x: input.x + 12,
+    size: 17,
+    x: input.x + 20,
     y: input.y - 40,
   });
+}
+
+function drawBulletLine(input: {
+  color?: ReturnType<typeof rgb>;
+  fonts: Fonts;
+  maxWidth: number;
+  page: PDFPage;
+  text: string;
+  x: number;
+  y: number;
+}) {
+  input.page.drawCircle({
+    color: input.color ?? COLORS.green,
+    size: 2.2,
+    x: input.x + 3,
+    y: input.y + 3,
+  });
+  return drawWrappedText(input.page, input.text, {
+    color: COLORS.ink,
+    font: input.fonts.regular,
+    lineHeight: 12,
+    maxWidth: input.maxWidth - 14,
+    size: 8.7,
+    x: input.x + 13,
+    y: input.y,
+  });
+}
+
+function drawCallout(input: {
+  border: ReturnType<typeof rgb>;
+  fill: ReturnType<typeof rgb>;
+  fonts: Fonts;
+  label: string;
+  labelColor: ReturnType<typeof rgb>;
+  page: PDFPage;
+  text: string;
+  textColor?: ReturnType<typeof rgb>;
+  y: number;
+}) {
+  const height = 52;
+  input.page.drawRectangle({
+    borderColor: input.border,
+    borderWidth: 0.8,
+    color: input.fill,
+    height,
+    width: CONTENT_WIDTH,
+    x: MARGIN,
+    y: input.y - height,
+  });
+  input.page.drawText(input.label.toUpperCase(), {
+    color: input.labelColor,
+    font: input.fonts.bold,
+    size: 7.5,
+    x: MARGIN + 14,
+    y: input.y - 17,
+  });
+  drawWrappedText(input.page, input.text, {
+    color: input.textColor ?? input.labelColor,
+    font: input.fonts.bold,
+    lineHeight: 14,
+    maxWidth: CONTENT_WIDTH - 28,
+    size: 11.5,
+    x: MARGIN + 14,
+    y: input.y - 37,
+  });
+  return input.y - height;
 }
 
 function findingGroups(findings: SetupFinding[]) {
@@ -179,7 +290,7 @@ function customerFindingMessages(findings: SetupFinding[]) {
     switch (code) {
       case "COMMUNITY_NAME_MISMATCH":
         messages.push(
-          "El nombre de la comunidad en el archivo preparado por Minerva no coincide exactamente con el registrado en Outrider.",
+          "El nombre de la comunidad en la información preparada no coincide exactamente con el registrado en Outrider.",
         );
         break;
       case "UNIT_REFERENCE_MISSING":
@@ -221,7 +332,7 @@ function customerFindingMessages(findings: SetupFinding[]) {
         break;
       default:
         messages.push(
-          `${count} ${plural(count, "observación adicional requiere", "observaciones adicionales requieren")} revisión interna de Minerva antes de aplicar la configuración.`,
+          `${count} ${plural(count, "observación adicional requiere", "observaciones adicionales requieren")} revisión interna de Minerva antes de continuar.`,
         );
         break;
     }
@@ -236,6 +347,125 @@ function unitStatusLabel(value: boolean | null) {
   return "Estado por confirmar";
 }
 
+function unitStatusColor(value: boolean | null) {
+  if (value === true) return COLORS.green;
+  if (value === false) return COLORS.red;
+  return COLORS.amber;
+}
+
+function drawDetailHeading(page: PDFPage, fonts: Fonts, continued = false) {
+  drawBrandHeader(page, fonts);
+  page.drawText(
+    continued ? "Detalle para confirmación · continuación" : "Detalle para confirmación",
+    {
+      color: COLORS.ink,
+      font: fonts.bold,
+      size: continued ? 16 : 20,
+      x: MARGIN,
+      y: PAGE_HEIGHT - 99,
+    },
+  );
+
+  if (!continued) {
+    drawWrappedText(
+      page,
+      "Revise este listado para confirmar que las unidades y su estado inicial coinciden con lo esperado antes de la activación.",
+      {
+        color: COLORS.muted,
+        font: fonts.regular,
+        lineHeight: 13,
+        maxWidth: CONTENT_WIDTH,
+        size: 9,
+        x: MARGIN,
+        y: PAGE_HEIGHT - 119,
+      },
+    );
+    return PAGE_HEIGHT - 154;
+  }
+
+  return PAGE_HEIGHT - 127;
+}
+
+function addDetailPage(
+  doc: PdfDocumentType,
+  fonts: Fonts,
+  continued = false,
+) {
+  const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  const y = drawDetailHeading(page, fonts, continued);
+  return { page, y };
+}
+
+function drawUnitRow(
+  page: PDFPage,
+  fonts: Fonts,
+  y: number,
+  label: string,
+  status: string,
+  statusColor: ReturnType<typeof rgb>,
+) {
+  page.drawLine({
+    color: rgb(0.91, 0.92, 0.95),
+    end: { x: PAGE_WIDTH - MARGIN, y: y - 8 },
+    start: { x: MARGIN + 18, y: y - 8 },
+    thickness: 0.55,
+  });
+  page.drawCircle({
+    color: statusColor,
+    size: 2.8,
+    x: MARGIN + 6,
+    y: y + 2,
+  });
+  page.drawText(label, {
+    color: COLORS.ink,
+    font: fonts.regular,
+    size: 9.2,
+    x: MARGIN + 18,
+    y,
+  });
+  page.drawText(status, {
+    color: COLORS.muted,
+    font: fonts.regular,
+    size: 8.8,
+    x: PAGE_WIDTH - MARGIN - 116,
+    y,
+  });
+  return y - 19;
+}
+
+function drawFooter(
+  page: PDFPage,
+  fonts: Fonts,
+  snapshot: OutriderSetupReportSnapshot,
+  index: number,
+  total: number,
+) {
+  page.drawLine({
+    color: rgb(0.9, 0.91, 0.94),
+    end: { x: PAGE_WIDTH - MARGIN, y: FOOTER_Y + 10 },
+    start: { x: MARGIN, y: FOOTER_Y + 10 },
+    thickness: 0.6,
+  });
+  const left = `${snapshot.intake.communityName.toUpperCase()}${
+    snapshot.intake.communityCity ? `  ·  ${snapshot.intake.communityCity.toUpperCase()}` : ""
+  }`;
+  page.drawText(left, {
+    color: COLORS.muted,
+    font: fonts.regular,
+    size: 6.8,
+    x: MARGIN,
+    y: FOOTER_Y - 2,
+  });
+  const right = `${snapshot.source.versionLabel} · ${formatDate(snapshot.generatedAt)} · ${index + 1}/${total}`;
+  page.drawText(right, {
+    color: COLORS.muted,
+    font: fonts.regular,
+    size: 6.8,
+    x: rightAlignedX(right, fonts.regular, 6.8, PAGE_WIDTH - MARGIN),
+    y: FOOTER_Y - 2,
+  });
+}
+
 export async function renderSetupReportPdf(
   snapshot: OutriderSetupReportSnapshot,
 ) {
@@ -243,10 +473,6 @@ export async function renderSetupReportPdf(
   const regular = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
   const fonts = { bold, regular };
-  const cursor: Cursor = {
-    page: doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]),
-    y: PAGE_HEIGHT - MARGIN,
-  };
 
   const activeUnits = snapshot.workbook.units.filter(
     (unit) => unit.isActive === true,
@@ -276,270 +502,290 @@ export async function renderSetupReportPdf(
     customerFindings.length === 0 &&
     unknownUnits === 0;
 
-  cursor.page.drawText("ENTRY", {
-    color: rgb(0.08, 0.09, 0.13),
-    font: bold,
-    size: 18,
-    x: MARGIN,
-    y: cursor.y,
-  });
-  cursor.page.drawText("MINERVA TECHNOLOGIES", {
-    color: rgb(0.42, 0.45, 0.52),
-    font: bold,
-    size: 8,
-    x: PAGE_WIDTH - MARGIN - 98,
-    y: cursor.y + 3,
-  });
-  cursor.y -= 30;
+  const page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  drawBrandHeader(page, fonts);
 
-  drawText(doc, cursor, "Resumen preliminar de preparación", {
-    color: rgb(0.08, 0.09, 0.13),
+  let y = PAGE_HEIGHT - 99;
+  page.drawText("Resumen preliminar de preparación", {
+    color: COLORS.ink,
     font: bold,
-    size: 21,
+    size: 20,
+    x: MARGIN,
+    y,
   });
-  drawText(doc, cursor, snapshot.intake.communityName, {
-    color: rgb(0.28, 0.31, 0.38),
+  y -= 20;
+  page.drawText(snapshot.intake.communityName, {
+    color: COLORS.brand,
     font: regular,
-    size: 12,
+    size: 12.5,
+    x: MARGIN,
+    y,
   });
+  y -= 16;
   if (snapshot.intake.communityCity) {
-    drawText(doc, cursor, snapshot.intake.communityCity, {
-      color: rgb(0.42, 0.45, 0.52),
+    page.drawText(snapshot.intake.communityCity, {
+      color: COLORS.muted,
       font: regular,
-      size: 9,
+      size: 8.5,
+      x: MARGIN,
+      y,
     });
+    y -= 12;
   }
+  y -= 8;
 
-  cursor.y -= 10;
-  cursor.page.drawRectangle({
-    color: rgb(1, 0.95, 0.79),
-    height: 52,
-    width: CONTENT_WIDTH,
-    x: MARGIN,
-    y: cursor.y - 44,
-  });
-  cursor.page.drawText("DOCUMENTO PRELIMINAR", {
-    color: rgb(0.36, 0.24, 0.03),
-    font: bold,
-    size: 10,
-    x: MARGIN + 14,
-    y: cursor.y - 16,
-  });
-  cursor.page.drawText(
-    "Todavía no se ha aplicado ningún cambio a ENTRY.",
-    {
-      color: rgb(0.36, 0.24, 0.03),
-      font: regular,
-      size: 9.5,
-      x: MARGIN + 14,
-      y: cursor.y - 33,
-    },
-  );
-  cursor.y -= 66;
-
-  ensureSpace(doc, cursor, 62);
-  const statusColor = readyForFinalReview
-    ? rgb(0.89, 0.97, 0.92)
-    : rgb(1, 0.95, 0.79);
-  const statusTextColor = readyForFinalReview
-    ? rgb(0.08, 0.35, 0.19)
-    : rgb(0.42, 0.27, 0.03);
-  cursor.page.drawRectangle({
-    borderColor: readyForFinalReview
-      ? rgb(0.65, 0.86, 0.71)
-      : rgb(0.91, 0.78, 0.43),
-    borderWidth: 1,
-    color: statusColor,
-    height: 48,
-    width: CONTENT_WIDTH,
-    x: MARGIN,
-    y: cursor.y - 48,
-  });
-  cursor.page.drawText("ESTADO DE PREPARACIÓN", {
-    color: statusTextColor,
-    font: bold,
-    size: 7.5,
-    x: MARGIN + 14,
-    y: cursor.y - 17,
-  });
-  cursor.page.drawText(
-    readyForFinalReview ? "Lista para revisión final" : "Con observaciones por revisar",
-    {
-      color: statusTextColor,
-      font: bold,
-      size: 13,
-      x: MARGIN + 14,
-      y: cursor.y - 36,
-    },
-  );
-  cursor.y -= 62;
-
-  drawText(
-    doc,
-    cursor,
-    "Este documento resume la información que Minerva organizó para preparar ENTRY y permite confirmar, de forma sencilla, qué está listo y qué falta revisar antes de la activación.",
-    { font: regular, size: 10 },
-  );
-
-  sectionTitle(doc, cursor, "Resumen de la comunidad", fonts);
-  ensureSpace(doc, cursor, 126);
-  const gap = 10;
-  const cardWidth = (CONTENT_WIDTH - gap) / 2;
-  const top = cursor.y;
-  statCard({ fonts, label: "Unidades identificadas", page: cursor.page, value: String(snapshot.summary.units), width: cardWidth, x: MARGIN, y: top });
-  statCard({ fonts, label: "Activas al inicio", page: cursor.page, value: String(activeUnits), width: cardWidth, x: MARGIN + cardWidth + gap, y: top });
-  statCard({ fonts, label: "Inactivas al inicio", page: cursor.page, value: String(inactiveUnits), width: cardWidth, x: MARGIN, y: top - 64 });
-  statCard({
+  drawCallout({
+    border: rgb(0.94, 0.81, 0.42),
+    fill: COLORS.amberSoft,
     fonts,
-    label: "Cobertura de población",
-    page: cursor.page,
+    label: "Documento preliminar",
+    labelColor: COLORS.amberDark,
+    page,
+    text: "Todavía no se ha aplicado ningún cambio operativo a ENTRY.",
+    y,
+  });
+  y -= 62;
+
+  drawCallout({
+    border: readyForFinalReview ? rgb(0.61, 0.85, 0.68) : rgb(0.94, 0.81, 0.42),
+    fill: readyForFinalReview ? COLORS.greenSoft : COLORS.amberSoft,
+    fonts,
+    label: "Estado de preparación",
+    labelColor: readyForFinalReview ? COLORS.greenDark : COLORS.amberDark,
+    page,
+    text: readyForFinalReview
+      ? "Lista para revisión final"
+      : "Con observaciones por revisar",
+    y,
+  });
+  y -= 64;
+
+  y = drawWrappedText(
+    page,
+    "Este documento resume la información que Minerva organizó para preparar ENTRY y permite confirmar, de forma sencilla, qué está listo y qué falta revisar antes de la activación.",
+    {
+      color: COLORS.muted,
+      font: regular,
+      lineHeight: 13,
+      maxWidth: CONTENT_WIDTH,
+      size: 9,
+      x: MARGIN,
+      y,
+    },
+  );
+  y -= 8;
+
+  y = drawSectionTitle(page, "Resumen de la comunidad", fonts, y);
+  const gap = 8;
+  const cardWidth = (CONTENT_WIDTH - gap * 2) / 3;
+  const rowOne = y;
+  drawStatCard({ accent: COLORS.brand, fonts, label: "Unidades identificadas", page, value: String(snapshot.summary.units), width: cardWidth, x: MARGIN, y: rowOne });
+  drawStatCard({ accent: COLORS.green, fonts, label: "Activas al inicio", page, value: String(activeUnits), width: cardWidth, x: MARGIN + cardWidth + gap, y: rowOne });
+  drawStatCard({ accent: COLORS.red, fonts, label: "Inactivas al inicio", page, value: String(inactiveUnits), width: cardWidth, x: MARGIN + (cardWidth + gap) * 2, y: rowOne });
+
+  const rowTwo = rowOne - 60;
+  drawStatCard({
+    accent: COLORS.brand,
+    fonts,
+    label: "Cobertura unidades activas",
+    page,
     value:
       snapshot.summary.residentCoveragePercent === null
         ? "Pendiente"
         : `${snapshot.summary.residentCoveragePercent}%`,
     width: cardWidth,
-    x: MARGIN + cardWidth + gap,
-    y: top - 64,
+    x: MARGIN,
+    y: rowTwo,
   });
-  cursor.y -= 128;
+  drawStatCard({ accent: COLORS.brand, fonts, label: "Establecimientos / destinos", page, value: String(snapshot.summary.destinationRows), width: cardWidth, x: MARGIN + cardWidth + gap, y: rowTwo });
+  drawStatCard({ accent: COLORS.brand, fonts, label: "Personal de seguridad", page, value: String(snapshot.intake.securityStaffCount ?? "—"), width: cardWidth, x: MARGIN + (cardWidth + gap) * 2, y: rowTwo });
+  y = rowTwo - 62;
 
-  drawText(
-    doc,
-    cursor,
+  y = drawWrappedText(
+    page,
     `La cobertura considera las ${populationUnits.size} ${plural(
       populationUnits.size,
       "unidad que iniciará activa o requiere confirmar estado",
       "unidades que iniciarán activas o requieren confirmar estado",
     )}. Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes.`,
-    { color: rgb(0.42, 0.45, 0.52), font: regular, size: 8.5 },
+    {
+      color: COLORS.muted,
+      font: regular,
+      lineHeight: 10.5,
+      maxWidth: CONTENT_WIDTH,
+      size: 7.4,
+      x: MARGIN,
+      y,
+    },
   );
+  y -= 9;
 
-  sectionTitle(doc, cursor, "Información preparada", fonts);
-  bullet(
-    doc,
-    cursor,
-    `${snapshot.summary.residentRows} ${plural(snapshot.summary.residentRows, "registro de residente recibido", "registros de residentes recibidos")} para ${populatedPopulationUnits} ${plural(populatedPopulationUnits, "unidad de inicio", "unidades de inicio")}.`,
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    `${snapshot.summary.destinationRows} ${plural(snapshot.summary.destinationRows, "establecimiento o destino identificado", "establecimientos o destinos identificados")}.`,
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    `${snapshot.summary.adminRows} ${plural(snapshot.summary.adminRows, "administrador inicial preparado", "administradores iniciales preparados")}.`,
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    `Personal de seguridad informado: ${snapshot.intake.securityStaffCount ?? "pendiente de confirmar"}.`,
-    fonts,
-  );
+  const columnGap = 22;
+  const columnWidth = (CONTENT_WIDTH - columnGap) / 2;
+  const leftX = MARGIN;
+  const rightX = MARGIN + columnWidth + columnGap;
+  const sectionTop = y;
 
-  sectionTitle(doc, cursor, "Observaciones antes de activar", fonts);
+  page.drawText("Información preparada", {
+    color: COLORS.brand,
+    font: bold,
+    size: 11.5,
+    x: leftX,
+    y: sectionTop,
+  });
+  let leftY = sectionTop - 18;
+  leftY = drawBulletLine({ fonts, maxWidth: columnWidth, page, text: `${snapshot.summary.residentRows} ${plural(snapshot.summary.residentRows, "registro de residente recibido", "registros de residentes recibidos")} para ${populatedPopulationUnits} ${plural(populatedPopulationUnits, "unidad de inicio", "unidades de inicio")}.`, x: leftX, y: leftY }) - 2;
+  leftY = drawBulletLine({ fonts, maxWidth: columnWidth, page, text: `${snapshot.summary.destinationRows} ${plural(snapshot.summary.destinationRows, "establecimiento o destino identificado", "establecimientos o destinos identificados")}.`, x: leftX, y: leftY }) - 2;
+  leftY = drawBulletLine({ fonts, maxWidth: columnWidth, page, text: `${snapshot.summary.adminRows} ${plural(snapshot.summary.adminRows, "administrador inicial preparado", "administradores iniciales preparados")}.`, x: leftX, y: leftY }) - 2;
+
+  page.drawText("Observaciones antes de activar", {
+    color: COLORS.brand,
+    font: bold,
+    size: 11.5,
+    x: rightX,
+    y: sectionTop,
+  });
+  let rightY = sectionTop - 18;
   if (customerFindings.length === 0) {
-    bullet(
-      doc,
-      cursor,
-      "No se identifican pendientes que impidan continuar con la revisión final.",
-      fonts,
-    );
+    rightY = drawBulletLine({ fonts, maxWidth: columnWidth, page, text: "No se identifican pendientes que impidan continuar con la revisión final.", x: rightX, y: rightY }) - 2;
     if (inactiveUnits > 0) {
-      bullet(
-        doc,
-        cursor,
-        `${inactiveUnits} ${plural(inactiveUnits, "unidad está marcada como inactiva", "unidades están marcadas como inactivas")} y no requiere residente para el cálculo de cobertura inicial.`,
-        fonts,
-      );
+      rightY = drawBulletLine({ fonts, maxWidth: columnWidth, page, text: `${inactiveUnits} ${plural(inactiveUnits, "unidad está marcada como inactiva", "unidades están marcadas como inactivas")} y no requiere residente para el cálculo de cobertura inicial.`, x: rightX, y: rightY }) - 2;
     }
   } else {
-    for (const message of customerFindings.slice(0, 8)) {
-      bullet(doc, cursor, message, fonts);
+    for (const message of customerFindings.slice(0, 4)) {
+      rightY = drawBulletLine({ color: COLORS.amber, fonts, maxWidth: columnWidth, page, text: message, x: rightX, y: rightY }) - 2;
     }
   }
 
-  sectionTitle(doc, cursor, "Siguiente paso", fonts);
-  drawText(doc, cursor, snapshot.recommendation, {
-    font: regular,
-    size: 10,
-  });
+  y = Math.min(leftY, rightY) - 8;
+  const nextStep = readyForFinalReview
+    ? "Una vez confirmada esta información, Minerva incorporará la comunidad a ENTRY y dará inicio a la fase de registro de residentes. Cualquier ajuste identificado podrá corregirse antes de la activación."
+    : snapshot.recommendation;
 
-  addPage(doc, cursor);
-  drawText(doc, cursor, "Detalle para confirmación", {
-    color: rgb(0.08, 0.09, 0.13),
+  const nextHeight = 58;
+  page.drawRectangle({
+    borderColor: rgb(0.83, 0.84, 0.98),
+    borderWidth: 0.8,
+    color: COLORS.brandSoft,
+    height: nextHeight,
+    width: CONTENT_WIDTH,
+    x: MARGIN,
+    y: y - nextHeight,
+  });
+  page.drawText("SIGUIENTE PASO", {
+    color: COLORS.brand,
     font: bold,
-    size: 18,
+    size: 8,
+    x: MARGIN + 14,
+    y: y - 18,
   });
-  drawText(
-    doc,
-    cursor,
-    "Revise este listado para confirmar que las unidades y su estado inicial coinciden con lo esperado antes de la activación.",
-    { color: rgb(0.36, 0.39, 0.46), font: regular, size: 10 },
-  );
+  drawWrappedText(page, nextStep, {
+    color: COLORS.ink,
+    font: regular,
+    lineHeight: 12,
+    maxWidth: CONTENT_WIDTH - 28,
+    size: 8.8,
+    x: MARGIN + 14,
+    y: y - 35,
+  });
 
-  sectionTitle(doc, cursor, "Listado de unidades", fonts);
-  for (const unit of snapshot.workbook.units.slice(0, 100)) {
+  let detail = addDetailPage(doc, fonts);
+  let detailPage = detail.page;
+  let detailY = drawSectionTitle(detailPage, "Listado de unidades", fonts, detail.y);
+
+  for (const unit of snapshot.workbook.units) {
+    if (detailY < 92) {
+      detail = addDetailPage(doc, fonts, true);
+      detailPage = detail.page;
+      detailY = drawSectionTitle(
+        detailPage,
+        "Listado de unidades · continuación",
+        fonts,
+        detail.y,
+      );
+    }
+
     const label = unit.publicReference ?? unit.unitLabel ?? "Unidad sin referencia";
-    bullet(doc, cursor, `${label} — ${unitStatusLabel(unit.isActive)}`, fonts);
-  }
-  if (snapshot.workbook.units.length > 100) {
-    bullet(
-      doc,
-      cursor,
-      `${snapshot.workbook.units.length - 100} unidades adicionales no se muestran en este resumen compacto.`,
+    detailY = drawUnitRow(
+      detailPage,
       fonts,
+      detailY,
+      label,
+      unitStatusLabel(unit.isActive),
+      unitStatusColor(unit.isActive),
     );
   }
+
+  const ensureDetailSpace = (height: number, title?: string) => {
+    if (detailY - height >= 82) return;
+    detail = addDetailPage(doc, fonts, true);
+    detailPage = detail.page;
+    detailY = detail.y;
+    if (title) detailY = drawSectionTitle(detailPage, title, fonts, detailY);
+  };
 
   if (snapshot.workbook.destinations.length > 0) {
-    sectionTitle(doc, cursor, "Establecimientos y destinos informados", fonts);
-    for (const destination of snapshot.workbook.destinations.slice(0, 20)) {
-      if (destination.name) bullet(doc, cursor, destination.name, fonts);
+    ensureDetailSpace(70, "Establecimientos y destinos informados");
+    if (detailY === detail.y) {
+      detailY = drawSectionTitle(
+        detailPage,
+        "Establecimientos y destinos informados",
+        fonts,
+        detailY,
+      );
+    } else {
+      detailY -= 6;
+      detailY = drawSectionTitle(
+        detailPage,
+        "Establecimientos y destinos informados",
+        fonts,
+        detailY,
+      );
+    }
+    for (const destination of snapshot.workbook.destinations) {
+      if (!destination.name) continue;
+      ensureDetailSpace(24, "Establecimientos y destinos informados");
+      detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: destination.name, x: MARGIN, y: detailY }) - 2;
     }
   }
 
-  sectionTitle(doc, cursor, "Privacidad y alcance", fonts);
-  bullet(
-    doc,
-    cursor,
-    "Este reporte no incluye nombres, teléfonos ni correos del directorio de residentes.",
-    fonts,
-  );
-  bullet(
-    doc,
-    cursor,
-    "La aprobación de este documento no crea por sí sola casas, residentes, guardias, destinos ni usuarios en ENTRY.",
-    fonts,
-  );
+  const adminNames = snapshot.workbook.admins
+    .map((admin) => admin.fullName)
+    .filter((name): name is string => Boolean(name));
+  if (adminNames.length > 0) {
+    ensureDetailSpace(64, "Administrador inicial propuesto");
+    detailY -= 4;
+    detailY = drawSectionTitle(
+      detailPage,
+      adminNames.length === 1
+        ? "Administrador inicial propuesto"
+        : "Administradores iniciales propuestos",
+      fonts,
+      detailY,
+    );
+    for (const name of adminNames) {
+      ensureDetailSpace(22, "Administradores iniciales propuestos");
+      detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: name, x: MARGIN, y: detailY }) - 2;
+    }
+  }
 
-  sectionTitle(doc, cursor, "Control del documento", fonts);
-  bullet(doc, cursor, `Versión: ${snapshot.source.versionLabel}`, fonts);
-  bullet(doc, cursor, `Generado: ${formatDate(snapshot.generatedAt)}`, fonts);
-  bullet(doc, cursor, `Archivo de preparación: ${snapshot.source.filename}`, fonts);
-  bullet(doc, cursor, `Referencia de integridad: ${snapshot.source.sha256Prefix}`, fonts);
+  ensureDetailSpace(92, "Privacidad y alcance");
+  detailY -= 5;
+  detailY = drawSectionTitle(detailPage, "Privacidad y alcance", fonts, detailY);
+  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: "Este reporte no incluye nombres, teléfonos ni correos del directorio de residentes.", x: MARGIN, y: detailY }) - 2;
+  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: "La aprobación de este documento no crea por sí sola casas, residentes, guardias, destinos ni usuarios en ENTRY.", x: MARGIN, y: detailY }) - 2;
+
+  ensureDetailSpace(94, "Control del documento");
+  detailY -= 5;
+  detailY = drawSectionTitle(detailPage, "Control del documento", fonts, detailY);
+  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: `Versión: ${snapshot.source.versionLabel}`, x: MARGIN, y: detailY }) - 2;
+  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: `Generado: ${formatDate(snapshot.generatedAt)}`, x: MARGIN, y: detailY }) - 2;
+  detailY = drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: "Fuente de preparación: información validada por Minerva", x: MARGIN, y: detailY }) - 2;
+  drawBulletLine({ fonts, maxWidth: CONTENT_WIDTH, page: detailPage, text: `Referencia de integridad: ${snapshot.source.sha256Prefix}`, x: MARGIN, y: detailY });
 
   const pages = doc.getPages();
-  pages.forEach((page, index) => {
-    page.drawLine({
-      color: rgb(0.9, 0.9, 0.92),
-      end: { x: PAGE_WIDTH - MARGIN, y: 38 },
-      start: { x: MARGIN, y: 38 },
-      thickness: 0.6,
-    });
-    page.drawText(
-      `Minerva Technologies · ENTRY · ${snapshot.source.versionLabel} · ${index + 1}/${pages.length}`,
-      {
-        color: rgb(0.48, 0.5, 0.56),
-        font: regular,
-        size: 7.5,
-        x: MARGIN,
-        y: 22,
-      },
-    );
+  pages.forEach((outputPage, index) => {
+    drawFooter(outputPage, fonts, snapshot, index, pages.length);
   });
 
   return Buffer.from(await doc.save());
