@@ -101,7 +101,12 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
       const fileId = asString(record.id);
       const filename = asString(record.original_filename);
 
-      if (!fileId || !filename || !isOutriderFileCategory(category)) {
+      if (
+        !fileId ||
+        !filename ||
+        !isOutriderFileCategory(category) ||
+        category === "setup_workbook"
+      ) {
         return null;
       }
 
@@ -109,6 +114,7 @@ function mapPublicOutrider(data: unknown): PublicOutriderResult {
         byteSize: Number(record.byte_size ?? 0),
         category,
         createdAt: asString(record.uploaded_at) || asString(record.created_at),
+        fileSha256: null,
         id: fileId,
         mimeType: asString(record.mime_type),
         originalFilename: filename,

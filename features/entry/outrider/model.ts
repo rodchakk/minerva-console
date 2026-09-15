@@ -1,4 +1,5 @@
 export const OUTRIDER_STORAGE_BUCKET = "entry-outrider";
+export const OUTRIDER_EXPORT_STORAGE_BUCKET = "entry-outrider-exports";
 
 export const OUTRIDER_STATUSES = [
   "not_started",
@@ -35,6 +36,7 @@ export type OutriderSection = (typeof OUTRIDER_SECTIONS)[number];
 // its existing spreadsheet/document before sending it to Minerva.
 export const OUTRIDER_FILE_CATEGORIES = [
   "community_data",
+  "setup_workbook",
   "units",
   "residents",
   "security_staff",
@@ -46,6 +48,10 @@ export type OutriderFileCategory = (typeof OUTRIDER_FILE_CATEGORIES)[number];
 export const OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = ["community_data"] as const;
 export type OutriderPublicUploadCategory =
   (typeof OUTRIDER_PUBLIC_UPLOAD_CATEGORIES)[number];
+
+export const OUTRIDER_SETUP_WORKBOOK_CATEGORY = "setup_workbook" as const;
+export const OUTRIDER_SETUP_WORKBOOK_MIME_TYPE =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export const OUTRIDER_MAX_FILE_BYTES = 20 * 1024 * 1024;
 
@@ -100,6 +106,7 @@ export type OutriderFileRecord = {
   byteSize: number;
   category: OutriderFileCategory;
   createdAt: string;
+  fileSha256: string | null;
   id: string;
   mimeType: string;
   originalFilename: string;

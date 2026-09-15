@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "node:crypto";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import {
   getEntryPreviewReadOnlyError,
@@ -15,12 +16,40 @@ import {
 } from "@/features/entry/outrider/token";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coerceString } from "@/lib/supabase/utils";
+import {
+  OUTRIDER_EXPORT_STORAGE_BUCKET,
+  OUTRIDER_SETUP_WORKBOOK_CATEGORY,
+  OUTRIDER_SETUP_WORKBOOK_MIME_TYPE,
+  OUTRIDER_STORAGE_BUCKET,
+  buildOutriderStoragePath,
+  isAllowedOutriderFile,
+} from "@/features/entry/outrider/model";
+import { getOutriderDetail } from "@/features/entry/outrider/queries";
+import {
+  inputFingerprintHex,
+  sha256Hex,
+} from "@/features/entry/outrider/setupReport/fingerprint";
+import {
+  SETUP_REPORT_SCHEMA_VERSION,
+  SETUP_WORKBOOK_SCHEMA_VERSION,
+  type OutriderSetupReportAnalysis,
+} from "@/features/entry/outrider/setupReport/model";
+import { renderSetupReportPdf } from "@/features/entry/outrider/setupReport/pdf";
+import {
+  buildRelevantOutriderInput,
+  buildSetupReportSnapshot,
+  buildSetupReportSummary,
+} from "@/features/entry/outrider/setupReport/reportSnapshot";
+import { validateSetupWorkbook } from "@/features/entry/outrider/setupReport/validation";
+import { parseSetupWorkbookBytes } from "@/features/entry/outrider/setupReport/workbook";
 
 export type OutriderActionResult =
   | {
       data?: {
+        analysis?: OutriderSetupReportAnalysis;
         link?: string;
         outriderId?: string;
+        reportId?: string;
       };
       success: true;
     }
@@ -75,10 +104,453 @@ function mapActionError(error: { code?: string | null; message?: string | null }
     };
   }
 
+  if (/SETUP_REPORT_REQUIRED|STALE|BLOCKING_FINDINGS|REPORT_UNAVAILABLE/.test(text)) {
+    return {
+      code: "invalid_state" as const,
+      error:
+        "Generate a current setup report without blocking errors before approval.",
+      success: false as const,
+    };
+  }
+
+  if (/APPROVED_LOCKED|GENERATION_IN_PROGRESS/.test(text)) {
+    return {
+      code: "invalid_state" as const,
+      error:
+        "This Outrider setup workflow is locked in its current state.",
+      success: false as const,
+    };
+  }
+
   return {
     code: "unknown" as const,
     error: "Outrider could not complete the request. Please try again.",
     success: false as const,
+  };
+}
+
+async function getSetupWorkbookSource(outriderId: string, sourceFileId?: string) {
+  const detail = await getOutriderDetail(outriderId);
+  const latestSource = detail?.latestSetupWorkbook ?? null;
+  const source =
+    sourceFileId && latestSource?.id !== sourceFileId ? null : latestSource;
+
+  return { detail, latestSource, source: source ?? null };
+}
+
+async function downloadSetupWorkbookBytes(source: { storagePath: string }) {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.storage
+    .from(OUTRIDER_STORAGE_BUCKET)
+    .download(source.storagePath);
+
+  if (error || !data) {
+    throw new Error("SETUP_WORKBOOK_UNAVAILABLE");
+  }
+
+  return Buffer.from(await data.arrayBuffer());
+}
+
+function analyzeSetupWorkbookBytes(input: {
+  bytes: Buffer;
+  detail: NonNullable<Awaited<ReturnType<typeof getOutriderDetail>>>;
+  source: NonNullable<Awaited<ReturnType<typeof getSetupWorkbookSource>>["source"]>;
+}) {
+  const sourceSha256 = sha256Hex(input.bytes);
+  const parsed = parseSetupWorkbookBytes(input.bytes);
+  const validation = validateSetupWorkbook(parsed.workbook, parsed.findings, {
+    outriderCommunityName: input.detail.communityName,
+  });
+  const summary = parsed.workbook
+    ? buildSetupReportSummary(parsed.workbook, validation)
+    : {
+        adminRows: 0,
+        destinationRows: 0,
+        residentCoveragePercent: null,
+        residentRows: 0,
+        units: 0,
+        unitsMissingReferences: 0,
+        unitsWithReferences: 0,
+        warnings: validation.counts.warnings,
+      };
+  const currentInputSha256 = inputFingerprintHex({
+    outrider: buildRelevantOutriderInput(input.detail),
+    sourceSha256,
+  });
+
+  return {
+    currentInputSha256,
+    parsed,
+    sourceSha256,
+    summary,
+    validation,
+  };
+}
+
+export async function uploadSetupWorkbook(
+  _previousState: OutriderActionResult | null,
+  formData: FormData,
+): Promise<OutriderActionResult> {
+  const auth = await requireSuperadmin();
+  const previewError = previewErrorResult();
+  if (previewError) return previewError;
+
+  const outriderId = getFormString(formData, "outrider_id");
+  const file = formData.get("setup_workbook");
+
+  if (!outriderId || !(file instanceof File)) {
+    return {
+      code: "invalid_input",
+      error: "Choose an XLSX setup workbook to upload.",
+      success: false,
+    };
+  }
+
+  const detail = await getOutriderDetail(outriderId);
+  if (!detail || detail.status === "approved") {
+    return {
+      code: "invalid_state",
+      error: "This Outrider setup workflow is locked.",
+      success: false,
+    };
+  }
+
+  if (
+    !isAllowedOutriderFile({
+      byteSize: file.size,
+      mimeType: file.type,
+      originalFilename: file.name,
+    }) ||
+    file.type !== OUTRIDER_SETUP_WORKBOOK_MIME_TYPE ||
+    !file.name.toLowerCase().endsWith(".xlsx")
+  ) {
+    return {
+      code: "invalid_input",
+      error: "Setup workbook must be an XLSX file up to 20 MB.",
+      success: false,
+    };
+  }
+
+  const bytes = Buffer.from(await file.arrayBuffer());
+  const fileSha256 = sha256Hex(bytes);
+  const storagePath = buildOutriderStoragePath({
+    category: OUTRIDER_SETUP_WORKBOOK_CATEGORY,
+    filename: file.name,
+    outriderId,
+    uploadId: randomUUID(),
+  });
+  const supabase = createAdminClient();
+  const { error: uploadError } = await supabase.storage
+    .from(OUTRIDER_STORAGE_BUCKET)
+    .upload(storagePath, bytes, {
+      cacheControl: "0",
+      contentType: OUTRIDER_SETUP_WORKBOOK_MIME_TYPE,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    return {
+      code: "unknown",
+      error: "Could not store the setup workbook.",
+      success: false,
+    };
+  }
+
+  const { error } = await supabase.rpc(
+    "record_community_outrider_setup_workbook_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_byte_size: file.size,
+      p_file_sha256: fileSha256,
+      p_mime_type: OUTRIDER_SETUP_WORKBOOK_MIME_TYPE,
+      p_original_filename: file.name,
+      p_outrider_id: outriderId,
+      p_storage_path: storagePath,
+    },
+  );
+
+  if (error) {
+    await supabase.storage.from(OUTRIDER_STORAGE_BUCKET).remove([storagePath]);
+    return mapActionError(error);
+  }
+
+  revalidatePath(`/products/entry/outrider/${outriderId}`);
+
+  return {
+    data: { outriderId },
+    success: true,
+  };
+}
+
+export async function analyzeSetupWorkbook(
+  _previousState: OutriderActionResult | null,
+  formData: FormData,
+): Promise<OutriderActionResult> {
+  await requireSuperadmin();
+
+  const outriderId = getFormString(formData, "outrider_id");
+  const sourceFileId = getFormString(formData, "source_file_id");
+  if (!outriderId) {
+    return {
+      code: "invalid_input",
+      error: "Outrider information is missing.",
+      success: false,
+    };
+  }
+
+  try {
+  const { detail, latestSource, source } = await getSetupWorkbookSource(
+    outriderId,
+    sourceFileId || undefined,
+  );
+    if (!detail || !source || !latestSource) {
+      return {
+        code: "invalid_state",
+        error: sourceFileId
+          ? "Analyze the latest setup workbook before continuing."
+          : "Upload a setup workbook before analysis.",
+        success: false,
+      };
+    }
+
+    const bytes = await downloadSetupWorkbookBytes(source);
+    const analysis = analyzeSetupWorkbookBytes({ bytes, detail, source });
+
+    return {
+      data: {
+        analysis: {
+          currentInputSha256: analysis.currentInputSha256,
+          findings: analysis.validation.findings,
+          latestSourceFileId: latestSource.id,
+          sourceFileId: source.id,
+          sourceFilename: source.originalFilename,
+          sourceSha256: analysis.sourceSha256,
+          summary: analysis.summary,
+        },
+        outriderId,
+      },
+      success: true,
+    };
+  } catch {
+    return {
+      code: "invalid_state",
+      error: "The setup workbook could not be analyzed.",
+      success: false,
+    };
+  }
+}
+
+export async function generateSetupReport(
+  _previousState: OutriderActionResult | null,
+  formData: FormData,
+): Promise<OutriderActionResult> {
+  const auth = await requireSuperadmin();
+  const previewError = previewErrorResult();
+  if (previewError) return previewError;
+
+  const outriderId = getFormString(formData, "outrider_id");
+  const sourceFileId = getFormString(formData, "source_file_id");
+  if (!outriderId) {
+    return {
+      code: "invalid_input",
+      error: "Outrider information is missing.",
+      success: false,
+    };
+  }
+
+  try {
+    const { detail, latestSource, source } = await getSetupWorkbookSource(
+      outriderId,
+      sourceFileId || undefined,
+    );
+    if (!detail || !source || !latestSource) {
+      return {
+        code: "invalid_state",
+        error: sourceFileId
+          ? "Regenerate analysis from the latest setup workbook."
+          : "Upload a setup workbook before generating a report.",
+        success: false,
+      };
+    }
+
+    if (detail.status === "approved") {
+      return {
+        code: "invalid_state",
+        error: "This Outrider setup workflow is locked.",
+        success: false,
+      };
+    }
+
+    const bytes = await downloadSetupWorkbookBytes(source);
+    const analysis = analyzeSetupWorkbookBytes({ bytes, detail, source });
+    if (!analysis.parsed.workbook || analysis.validation.hasBlockingErrors) {
+      return {
+        code: "invalid_state",
+        error: "Resolve blocking workbook errors before generating a report.",
+        success: false,
+      };
+    }
+
+    const generatedAt = new Date().toISOString();
+    const supabase = createAdminClient();
+    const { data: reservation, error: reservationError } = await supabase.rpc(
+      "prepare_community_outrider_setup_report_v1",
+      {
+        p_actor_user_id: auth.user.id,
+        p_findings: analysis.validation.findings,
+        p_input_sha256: analysis.currentInputSha256,
+        p_parsed_snapshot: analysis.parsed.workbook,
+        p_report_schema_version: SETUP_REPORT_SCHEMA_VERSION,
+        p_source_file_id: source.id,
+        p_source_sha256: analysis.sourceSha256,
+        p_workbook_schema_version:
+          analysis.parsed.workbook.schemaVersion ?? SETUP_WORKBOOK_SCHEMA_VERSION,
+        p_outrider_id: outriderId,
+      },
+    );
+
+    if (reservationError) return mapActionError(reservationError);
+
+    const reserved = reservation as Record<string, unknown>;
+    const reportId = coerceString(reserved.report_id);
+    const reportVersion = Number(reserved.version);
+    const pdfStoragePath = coerceString(reserved.pdf_storage_path);
+    if (!reportId || !Number.isInteger(reportVersion) || !pdfStoragePath) {
+      throw new Error("SETUP_REPORT_RESERVATION_INVALID");
+    }
+
+    const snapshot = buildSetupReportSnapshot({
+      detail,
+      generatedAt,
+      source: {
+        fileId: source.id,
+        filename: source.originalFilename,
+        sha256: analysis.sourceSha256,
+        sha256Prefix: analysis.sourceSha256.slice(0, 12),
+        uploadedAt: source.createdAt,
+        versionLabel: `v${reportVersion}`,
+      },
+      validation: analysis.validation,
+      workbook: analysis.parsed.workbook,
+    });
+    const pdfBytes = await renderSetupReportPdf(snapshot);
+
+    const { error: pdfUploadError } = await supabase.storage
+      .from(OUTRIDER_EXPORT_STORAGE_BUCKET)
+      .upload(pdfStoragePath, pdfBytes, {
+        cacheControl: "0",
+        contentType: "application/pdf",
+        upsert: false,
+      });
+
+    if (pdfUploadError) {
+      await supabase.rpc("cancel_community_outrider_setup_report_generation_v1", {
+        p_actor_user_id: auth.user.id,
+        p_report_id: reportId,
+      });
+      throw new Error(pdfUploadError.message);
+    }
+
+    const { data, error } = await supabase.rpc(
+      "finalize_community_outrider_setup_report_v1",
+      {
+        p_actor_user_id: auth.user.id,
+        p_generated_at: generatedAt,
+        p_report_id: reportId,
+        p_report_schema_version: SETUP_REPORT_SCHEMA_VERSION,
+        p_report_snapshot: snapshot,
+        p_source_filename_snapshot: source.originalFilename,
+      },
+    );
+
+    if (error) {
+      await supabase.storage
+        .from(OUTRIDER_EXPORT_STORAGE_BUCKET)
+        .remove([pdfStoragePath]);
+      await supabase.rpc("cancel_community_outrider_setup_report_generation_v1", {
+        p_actor_user_id: auth.user.id,
+        p_report_id: reportId,
+      });
+      return mapActionError(error);
+    }
+
+    revalidatePath("/products/entry");
+    revalidatePath("/products/entry/outrider");
+    revalidatePath(`/products/entry/outrider/${outriderId}`);
+
+    return {
+      data: {
+        outriderId,
+        reportId: coerceString((data as Record<string, unknown>)?.report_id),
+      },
+      success: true,
+    };
+  } catch {
+    return {
+      code: "unknown",
+      error: "Could not generate the preliminary setup report.",
+      success: false,
+    };
+  }
+}
+
+export async function approveSetupReport(
+  _previousState: OutriderActionResult | null,
+  formData: FormData,
+): Promise<OutriderActionResult> {
+  const auth = await requireSuperadmin();
+  const previewError = previewErrorResult();
+  if (previewError) return previewError;
+
+  const outriderId = getFormString(formData, "outrider_id");
+  const reportId = getFormString(formData, "report_id");
+  if (!outriderId || !reportId) {
+    return {
+      code: "invalid_input",
+      error: "Report information is missing.",
+      success: false,
+    };
+  }
+
+  const detail = await getOutriderDetail(outriderId);
+  const report = detail?.currentSetupReport;
+  if (
+    !detail ||
+    detail.status === "approved" ||
+    !report ||
+    report.id !== reportId ||
+    report.isStale
+  ) {
+    return {
+      code: "invalid_state",
+      error: "Regenerate the current setup report before approval.",
+      success: false,
+    };
+  }
+
+  const currentInputSha256 = inputFingerprintHex({
+    outrider: buildRelevantOutriderInput(detail),
+    sourceSha256: report.sourceSha256,
+  });
+  const supabase = createAdminClient();
+  const { error } = await supabase.rpc(
+    "approve_community_outrider_setup_report_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_current_input_sha256: currentInputSha256,
+      p_report_id: reportId,
+    },
+  );
+
+  if (error) return mapActionError(error);
+
+  revalidatePath("/products/entry");
+  revalidatePath("/products/entry/outrider");
+  revalidatePath(`/products/entry/outrider/${outriderId}`);
+
+  return {
+    data: { outriderId, reportId },
+    success: true,
   };
 }
 
@@ -353,9 +825,29 @@ export async function approveOutriderSession(
     };
   }
 
+  const detail = await getOutriderDetail(outriderId);
+  const report = detail?.currentSetupReport;
+  if (
+    !detail ||
+    !report ||
+    report.status !== "approved" ||
+    report.isStale
+  ) {
+    return {
+      code: "invalid_state",
+      error: "Approve the current setup report before final Outrider approval.",
+      success: false,
+    };
+  }
+
+  const currentInputSha256 = inputFingerprintHex({
+    outrider: buildRelevantOutriderInput(detail),
+    sourceSha256: report.sourceSha256,
+  });
   const supabase = createAdminClient();
   const { error } = await supabase.rpc("approve_community_outrider_v1", {
     p_actor_user_id: auth.user.id,
+    p_current_input_sha256: currentInputSha256,
     p_outrider_id: outriderId,
   });
 
