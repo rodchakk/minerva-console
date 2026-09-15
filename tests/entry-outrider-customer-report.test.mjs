@@ -224,6 +224,15 @@ test("customer PDF pagination keeps section headings single and sizes wrapped co
   assert.match(pdf, /Administradores iniciales propuestos.*continuación/s);
 });
 
+test("customer PDF constrains long identity values and footer metadata", () => {
+  assert.match(pdf, /function ellipsizeText\(/);
+  assert.match(pdf, /function wrapTextClamped\(/);
+  assert.match(pdf, /communityNameLines = wrapTextClamped\(/);
+  assert.match(pdf, /const leftMaxWidth = Math\.max\(80, rightX - MARGIN - 14\)/);
+  assert.match(pdf, /ellipsizeText\(rawLeft, fonts\.regular, footerSize, leftMaxWidth\)/);
+  assert.match(pdf, /input\.width - 30/);
+});
+
 test("customer PDF renders a multi-page stress case without layout exceptions", async () => {
   const workbook = workbookFixture();
   workbook.units = Array.from({ length: 90 }, (_, index) => ({
@@ -254,6 +263,10 @@ test("customer PDF renders a multi-page stress case without layout exceptions", 
   }));
 
   const snapshot = snapshotFixture(workbook);
+  snapshot.intake.communityName =
+    "Residencial Comunitaria de Prueba con un Nombre Extraordinariamente Largo para Validar el Encabezado del Reporte y su Comportamiento en Dos Líneas";
+  snapshot.intake.communityCity =
+    "San Pedro Sula, Cortés, Honduras, sector metropolitano de referencia extraordinariamente largo para prueba";
   snapshot.summary.units = workbook.units.length;
   snapshot.summary.unitsWithReferences = workbook.units.length;
   snapshot.summary.destinationRows = workbook.destinations.length;
