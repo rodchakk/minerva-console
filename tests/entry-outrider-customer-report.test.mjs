@@ -157,3 +157,18 @@ test("customer PDF is Spanish, customer-facing, and hides internal implementatio
   assert.doesNotMatch(pdf, /finding\.field/);
   assert.doesNotMatch(pdf, /resident\.phone|resident\.email|resident\.fullName/);
 });
+
+test("customer PDF pagination keeps section headings single and sizes wrapped content", () => {
+  assert.match(pdf, /const ensureDetailSpace = \(height: number\) => \{/);
+  assert.doesNotMatch(
+    pdf,
+    /const ensureDetailSpace = \(height: number, title\?: string\)/,
+  );
+  assert.doesNotMatch(pdf, /if \(title\) detailY = drawSectionTitle/);
+  assert.match(pdf, /const destinationRowHeight =\s*wrapText\(/);
+  assert.match(pdf, /const adminRowHeight =\s*wrapText\(/);
+  assert.match(pdf, /const nextStepLines = wrapText\(/);
+  assert.match(pdf, /const nextHeight = Math\.max\(58,/);
+  assert.match(pdf, /Establecimientos y destinos informados.*continuación/s);
+  assert.match(pdf, /Administradores iniciales propuestos.*continuación/s);
+});
