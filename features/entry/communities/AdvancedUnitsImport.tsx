@@ -74,10 +74,10 @@ export function AdvancedUnitsImport({
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-xl font-semibold text-white">Import resident data</h3>
+        <h3 className="text-xl font-semibold text-white">Import units and residents</h3>
         <p className="mt-1 text-xs text-[var(--console-text-muted)] max-w-3xl">
-          Import units and residents into the Activation Queue. No active ENTRY
-          users or final PINs are created from this step.
+          Import units, optional unit references, and residents into onboarding.
+          Unit-only rows create units without activation records.
         </p>
       </div>
 
@@ -177,7 +177,7 @@ export function AdvancedUnitsImport({
               onChange={(event) => setPasteValue(event.target.value)}
               className="w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface)] p-3 font-mono text-xs text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
               placeholder={
-                "Unit Label,Resident Name,Phone,Email,Is Owner\nCasa 1,Ana Perez,9999-9999,ana@example.com,Yes\nCasa 2,Carlos Lopez,8888-8888,,No"
+                "Unit Label,Reference,Resident Name,Phone,Email,Is Owner\nC1201,\"Calle 12, casa 01\",Ana Perez,9999-9999,ana@example.com,Yes\nC1202,\"Calle 12, casa 02\",,,,"
               }
             />
           </div>
@@ -216,10 +216,10 @@ export function AdvancedUnitsImport({
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h4 className="text-base font-semibold text-white">2. Import preview</h4>
-                <Badge tone="info">{value.parsedResidentRows} rows</Badge>
+                <Badge tone="info">{value.rows.length} rows</Badge>
               </div>
               <p className="text-xs text-[var(--console-text-muted)]">
-                Review the data before creating the community.
+                Review units, references, and resident rows before creating the community.
               </p>
             </div>
             <p className="text-xs text-[var(--console-text-muted)]">Source: {value.sourceName}</p>
@@ -239,7 +239,7 @@ export function AdvancedUnitsImport({
                 Rows ready
               </p>
               <p className="mt-1 text-lg font-semibold text-white">
-                {Math.max(value.parsedResidentRows - value.errors.length, 0)}
+                {Math.max(value.rows.length - value.errors.length, 0)}
               </p>
             </div>
             <div className="rounded-md border border-[var(--console-border)] bg-[var(--console-surface)] p-3">
@@ -280,7 +280,8 @@ export function AdvancedUnitsImport({
 
           <p className="text-xs text-[var(--console-text-muted)]">
             Blank rows ignored: {value.blankRowsIgnored}. Duplicate unit labels are
-            normalized and will only be created once on final submit.
+            normalized and will only be created once on final submit. Blank references
+            are optional; conflicting references block submission.
           </p>
 
           <div className="overflow-x-auto rounded-md border border-[var(--console-border)]">
@@ -289,6 +290,7 @@ export function AdvancedUnitsImport({
                 <thead className="sticky top-0 bg-[var(--console-surface-raised)] text-slate-300">
                   <tr>
                     <th className="px-4 py-2.5 font-semibold">Unit Label</th>
+                    <th className="px-4 py-2.5 font-semibold">Reference</th>
                     <th className="px-4 py-2.5 font-semibold">Resident Name</th>
                     <th className="px-4 py-2.5 font-semibold">Phone</th>
                     <th className="px-4 py-2.5 font-semibold">Email</th>
@@ -301,6 +303,7 @@ export function AdvancedUnitsImport({
                     value.rows.map((row) => (
                       <tr key={`preview-row-${row.rowNumber}`}>
                         <td className="px-4 py-2.5">{row.unitLabel || "-"}</td>
+                        <td className="px-4 py-2.5">{row.reference || "-"}</td>
                         <td className="px-4 py-2.5">{row.residentName || "-"}</td>
                         <td className="px-4 py-2.5">{row.phone || "-"}</td>
                         <td className="px-4 py-2.5">{row.email || "-"}</td>
@@ -314,7 +317,7 @@ export function AdvancedUnitsImport({
                     ))
                   ) : (
                     <tr>
-                      <td className="px-4 py-6 text-center text-[var(--console-text-muted)]" colSpan={6}>
+                      <td className="px-4 py-6 text-center text-[var(--console-text-muted)]" colSpan={7}>
                         No non-blank rows were found in this import.
                       </td>
                     </tr>

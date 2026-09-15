@@ -115,11 +115,15 @@ type ParsedAdvancedUnitsPayload = {
     isOwner: string;
     phone: string;
     rawData: Record<string, unknown>;
+    reference: string;
     residentName: string;
     unitLabel: string;
   }>;
   skippedBlank: number;
-  units: string[];
+  units: Array<{
+    reference: string;
+    unitLabel: string;
+  }>;
 };
 
 function parseAdvancedUnitsPayload(
@@ -132,27 +136,12 @@ function parseAdvancedUnitsPayload(
   try {
     const parsed = JSON.parse(rawPayload) as {
       blankRowsIgnored?: unknown;
+      errors?: unknown;
       parsedResidentRows?: unknown;
       rows?: unknown;
+      uniqueUnits?: unknown;
       uniqueUnitLabels?: unknown;
     };
-
-    const uniqueUnitLabels = Array.isArray(parsed.uniqueUnitLabels)
-      ? parsed.uniqueUnitLabels
-          .map((value) => String(value ?? "").trim())
-          .filter((value) => value.length > 0)
-      : [];
-
-    const seen = new Set<string>();
-    const units: string[] = [];
-
-    uniqueUnitLabels.forEach((unit) => {
-      const normalized = normalizeUnitLabelForClient(unit);
-      if (normalized && !seen.has(normalized)) {
-        seen.add(normalized);
-        units.push(unit);
-      }
-    });
 
     const residentQueueRows = Array.isArray(parsed.rows)
       ? parsed.rows
@@ -167,6 +156,7 @@ function parseAdvancedUnitsPayload(
                 record.rawData && typeof record.rawData === "object"
                   ? (record.rawData as Record<string, unknown>)
                   : {},
+              reference: coerceString(record.reference),
               residentName: coerceString(record.residentName),
               unitLabel: coerceString(record.unitLabel),
             };
@@ -174,17 +164,101 @@ function parseAdvancedUnitsPayload(
           .filter(
             (item) =>
               item.unitLabel.length > 0 ||
+              item.reference.length > 0 ||
               item.residentName.length > 0 ||
               item.phone.length > 0 ||
               item.email.length > 0,
           )
       : [];
+    const unitCandidates = Array.isArray(parsed.uniqueUnits)
+      ? parsed.uniqueUnits.map((item) => {
+          const record = item as Record<string, unknown>;
+          return {
+            reference: coerceString(record.reference),
+            unitLabel: coerceString(record.unitLabel),
+          };
+        })
+      : Array.isArray(parsed.uniqueUnitLabels)
+        ? parsed.uniqueUnitLabels.map((value) => ({
+            reference: "",
+            unitLabel: coerceString(value),
+          }))
+        : residentQueueRows.map((row) => ({
+            reference: row.reference,
+            unitLabel: row.unitLabel,
+          }));
+
+    const unitsByNormalizedLabel = new Map<
+      string,
+      {
+        reference: string;
+        unitLabel: string;
+      }
+    >();
+
+    unitCandidates.forEach((unit) => {
+      const unitLabel = unit.unitLabel.trim();
+      const normalized = normalizeUnitLabelForClient(unitLabel);
+      const reference = unit.reference.trim();
+
+      if (!normalized) {
+        return;
+      }
+
+      const trackedUnit = unitsByNormalizedLabel.get(normalized);
+      if (!trackedUnit) {
+        unitsByNormalizedLabel.set(normalized, {
+          reference,
+          unitLabel,
+        });
+        return;
+      }
+
+      if (!trackedUnit.reference && reference) {
+        trackedUnit.reference = reference;
+      } else if (
+        trackedUnit.reference &&
+        reference &&
+        trackedUnit.reference !== reference
+      ) {
+        throw new Error("unit_reference_conflict");
+      }
+    });
+
+    residentQueueRows.forEach((row) => {
+      const unitLabel = row.unitLabel.trim();
+      const normalized = normalizeUnitLabelForClient(unitLabel);
+      const reference = row.reference.trim();
+
+      if (!normalized) {
+        return;
+      }
+
+      const trackedUnit = unitsByNormalizedLabel.get(normalized);
+      if (!trackedUnit) {
+        unitsByNormalizedLabel.set(normalized, {
+          reference,
+          unitLabel,
+        });
+        return;
+      }
+
+      if (!trackedUnit.reference && reference) {
+        trackedUnit.reference = reference;
+      } else if (
+        trackedUnit.reference &&
+        reference &&
+        trackedUnit.reference !== reference
+      ) {
+        throw new Error("unit_reference_conflict");
+      }
+    });
 
     return {
       parsedResidentRows: coerceNumber(parsed.parsedResidentRows),
       residentQueueRows,
       skippedBlank: coerceNumber(parsed.blankRowsIgnored),
-      units,
+      units: Array.from(unitsByNormalizedLabel.values()),
     };
   } catch {
     return null;
@@ -356,13 +430,18 @@ export async function createCommunityAction(
   let skippedBlank = parsedUnits.skippedBlank;
 
   if (parsedUnits.units.length > 0) {
-    const { data: bulkData, error: bulkError } = await supabase.rpc(
-      "create_houses_bulk_v2",
-      {
-        p_community_id: communityId,
-        p_houses: parsedUnits.units,
-      },
-    );
+    const { data: bulkData, error: bulkError } = parsedAdvancedUnits
+      ? await supabase.rpc("create_houses_with_references_bulk_v1", {
+          p_community_id: communityId,
+          p_units: parsedAdvancedUnits.units.map((unit) => ({
+            unit_label: unit.unitLabel,
+            unit_reference: unit.reference || null,
+          })),
+        })
+      : await supabase.rpc("create_houses_bulk_v2", {
+          p_community_id: communityId,
+          p_houses: parsedUnits.units,
+        });
 
     if (bulkError) {
       return {
@@ -377,6 +456,7 @@ export async function createCommunityAction(
     insertedUnits =
       coerceNumber(bulkRecord.inserted_count) || parsedUnits.units.length;
     skippedDuplicates +=
+      coerceNumber(bulkRecord.existing_count) ||
       coerceNumber(bulkRecord.skipped_duplicates_count) ||
       coerceNumber(bulkRecord.skipped_duplicates);
     skippedBlank +=

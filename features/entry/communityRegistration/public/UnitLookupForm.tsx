@@ -22,6 +22,7 @@ type LookupResult =
       registrationMode?: RegistrationMode;
       residentLimit: number;
       unitLabel: string;
+      unitReference: string | null;
     };
 
 type LookupState =
@@ -269,6 +270,7 @@ export function UnitLookupForm({
         residentLimit={state.result.residentLimit}
         slug={slug}
         unitLabel={state.result.unitLabel}
+        unitReference={state.result.unitReference ?? null}
       />
     );
   }
