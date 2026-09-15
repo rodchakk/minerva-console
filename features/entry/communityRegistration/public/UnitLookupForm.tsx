@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useMemo,
   useState,
   type FocusEvent,
   type FormEvent,
@@ -9,6 +10,8 @@ import {
 import { HouseholdDraftForm } from "./HouseholdDraftForm";
 import { RegistrationStepper } from "./PublicRegistrationShell";
 
+type RegistrationMode = "existing_units" | "resident_provided_units";
+
 type LookupResult =
   | {
       available: false;
@@ -16,7 +19,7 @@ type LookupResult =
     }
   | {
       available: true;
-      registrationMode?: "existing_units" | "resident_provided_units";
+      registrationMode?: RegistrationMode;
       residentLimit: number;
       unitLabel: string;
     };
@@ -73,22 +76,102 @@ function scrollRegistrationToTop() {
   });
 }
 
+function normalizeSearchValue(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-GT")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function unitLabelHasPrefix(unitLabel: string, unitLabelPrefix: string) {
+  const label = unitLabel.trim().toLocaleLowerCase("es-GT");
+  const prefix = unitLabelPrefix.trim().toLocaleLowerCase("es-GT");
+
+  if (!prefix) return false;
+  return label === prefix || label.startsWith(`${prefix} `);
+}
+
+function inputValueForUnit(
+  unitLabel: string,
+  unitLabelPrefix: string,
+  showUnitLabelPrefix: boolean,
+) {
+  const trimmedLabel = unitLabel.trim();
+  const trimmedPrefix = unitLabelPrefix.trim();
+
+  if (
+    showUnitLabelPrefix &&
+    trimmedPrefix &&
+    unitLabelHasPrefix(trimmedLabel, trimmedPrefix)
+  ) {
+    return trimmedLabel.slice(trimmedPrefix.length).trimStart();
+  }
+
+  return trimmedLabel;
+}
+
 export function UnitLookupForm({
+  availableUnits = [],
   intro,
+  registrationMode,
   slug,
   unitLabelPrefix,
 }: {
+  availableUnits?: string[];
   intro?: ReactNode;
+  registrationMode: RegistrationMode;
   slug: string;
   unitLabelPrefix: string;
 }) {
+  const [unitGuideQuery, setUnitGuideQuery] = useState("");
   const [unitSuffix, setUnitSuffix] = useState("");
   const [state, setState] = useState<LookupState>({ status: "idle" });
+
+  const showUnitGuide =
+    registrationMode === "existing_units" && availableUnits.length > 0;
+  const showUnitLabelPrefix =
+    registrationMode === "resident_provided_units" ||
+    availableUnits.length === 0 ||
+    availableUnits.every((unitLabel) =>
+      unitLabelHasPrefix(unitLabel, unitLabelPrefix),
+    );
+
+  const filteredAvailableUnits = useMemo(() => {
+    const query = normalizeSearchValue(unitGuideQuery);
+    if (!query) return availableUnits;
+
+    return availableUnits.filter((unitLabel) =>
+      normalizeSearchValue(unitLabel).includes(query),
+    );
+  }, [availableUnits, unitGuideQuery]);
+
+  const inputExample = availableUnits[0]
+    ? inputValueForUnit(
+        availableUnits[0],
+        unitLabelPrefix,
+        showUnitLabelPrefix,
+      )
+    : "1 or 5B";
 
   function resetLookup() {
     setUnitSuffix("");
     setState({ status: "idle" });
     scrollRegistrationToTop();
+  }
+
+  function selectAvailableUnit(unitLabel: string) {
+    setUnitSuffix(
+      inputValueForUnit(unitLabel, unitLabelPrefix, showUnitLabelPrefix),
+    );
+    setState({ status: "idle" });
+
+    window.requestAnimationFrame(() => {
+      const input = document.getElementById("unit-label") as HTMLInputElement | null;
+      input?.focus();
+      input?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -223,6 +306,86 @@ export function UnitLookupForm({
           className="space-y-4 px-5 py-4 sm:space-y-5 sm:px-8 sm:py-6"
           onSubmit={handleSubmit}
         >
+          {showUnitGuide ? (
+            <details className="group overflow-hidden rounded-2xl border border-violet-200 bg-violet-50/70">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-4 text-left text-sm font-bold text-[#35137a] marker:content-none sm:px-5">
+                <span>¿Necesitas ayuda para identificar tu unidad?</span>
+                <svg
+                  aria-hidden="true"
+                  className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    d="m6 9 6 6 6-6"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </summary>
+
+              <div className="border-t border-violet-200/80 px-4 py-4 sm:px-5 sm:py-5">
+                <div className="space-y-3 text-sm leading-6 text-slate-700">
+                  <p className="font-semibold text-slate-900">
+                    Antes de continuar, identifica la unidad que corresponde exactamente a tu vivienda.
+                  </p>
+                  <ol className="list-decimal space-y-1 pl-5">
+                    <li>Busca tu casa o unidad en la lista disponible.</li>
+                    <li>
+                      Toca el número correspondiente para colocarlo automáticamente en el registro.
+                    </li>
+                    <li>
+                      Si no estás seguro, no selecciones una unidad al azar. Consulta con la administración de tu comunidad antes de continuar.
+                    </li>
+                  </ol>
+                </div>
+
+                <label className="mt-4 block" htmlFor="unit-guide-search">
+                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">
+                    Buscar en unidades disponibles
+                  </span>
+                  <input
+                    autoComplete="off"
+                    className="mt-2 h-11 w-full rounded-xl border border-violet-200 bg-white px-3 text-base text-slate-950 outline-none placeholder:text-slate-400 focus:border-[#5b21b6] focus:ring-2 focus:ring-violet-100"
+                    id="unit-guide-search"
+                    onChange={(event) => setUnitGuideQuery(event.target.value)}
+                    placeholder="Ej. C1301, A1324, 101..."
+                    type="search"
+                    value={unitGuideQuery}
+                  />
+                </label>
+
+                <div className="mt-4 flex items-center justify-between gap-3 text-xs font-semibold text-slate-500">
+                  <span>Unidades disponibles</span>
+                  <span>{filteredAvailableUnits.length} de {availableUnits.length}</span>
+                </div>
+
+                <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-violet-100 bg-white p-2">
+                  {filteredAvailableUnits.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {filteredAvailableUnits.map((unitLabel) => (
+                        <button
+                          className="min-h-10 rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm font-bold text-slate-800 transition hover:border-violet-300 hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-200"
+                          key={unitLabel}
+                          onClick={() => selectAvailableUnit(unitLabel)}
+                          type="button"
+                        >
+                          {unitLabel}
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="px-3 py-6 text-center text-sm leading-6 text-slate-500">
+                      No encontramos una unidad con esa búsqueda. Verifica el número o consulta con la administración.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </details>
+          ) : null}
+
           <label className="block" htmlFor="unit-label">
             <span className="text-base font-bold text-slate-950">
               Unit or house number
@@ -239,9 +402,11 @@ export function UnitLookupForm({
                   />
                 </svg>
               </span>
-              <span className="mr-2 text-base font-semibold text-slate-500">
-                {unitLabelPrefix}
-              </span>
+              {showUnitLabelPrefix ? (
+                <span className="mr-2 text-base font-semibold text-slate-500">
+                  {unitLabelPrefix}
+                </span>
+              ) : null}
               <input
                 autoComplete="off"
                 className="h-12 min-w-0 flex-1 border-0 bg-transparent text-lg text-slate-950 outline-none placeholder:text-slate-400"
@@ -251,7 +416,7 @@ export function UnitLookupForm({
                 name="unitLabel"
                 onChange={(event) => setUnitSuffix(event.target.value)}
                 onFocus={scrollFocusedControlIntoView}
-                placeholder="e.g. 1 or 5B"
+                placeholder={`e.g. ${inputExample}`}
                 required
                 type="text"
                 value={unitSuffix}
@@ -276,7 +441,11 @@ export function UnitLookupForm({
             </svg>
             <p>
               Examples:{" "}
-              <span className="font-bold text-[#5b21b6]">1, 2, 3, 5B, 6A</span>
+              <span className="font-bold text-[#5b21b6]">
+                {availableUnits.length > 0
+                  ? availableUnits.slice(0, 5).join(", ")
+                  : "1, 2, 3, 5B, 6A"}
+              </span>
             </p>
           </div>
 
