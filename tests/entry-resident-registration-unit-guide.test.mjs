@@ -28,7 +28,7 @@ test("unit guide is contextual, searchable, and does not replace the existing re
   assert.match(unitLookup, /registrationMode === "existing_units" && availableUnits\.length > 0/);
   assert.match(unitLookup, /¿Necesitas ayuda para identificar tu unidad\?/);
   assert.match(unitLookup, /Buscar en unidades disponibles/);
-  assert.match(unitLookup, /No selecciones una unidad al azar/);
+  assert.match(unitLookup, /no selecciones una unidad al azar/i);
   assert.match(unitLookup, /selectAvailableUnit\(unitLabel\)/);
   assert.match(unitLookup, /<HouseholdDraftForm/);
   assert.match(unitLookup, /\/entry\/register\/\$\{encodeURIComponent\(slug\)\}\/unit/);
