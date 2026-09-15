@@ -10,6 +10,7 @@ export type PublicRegistrationCampaign =
     }
   | {
       available: true;
+      availableUnits: string[];
       closesAt: string | null;
       communityName: string;
       defaultResidentLimit: number;
@@ -136,6 +137,14 @@ type CampaignCommunityUnitLabelRecord = {
     | null;
 };
 
+type CampaignIdRecord = {
+  id?: string | null;
+};
+
+type CampaignUnitLabelRecord = {
+  unit_label_snapshot?: string | null;
+};
+
 const EDIT_RELATIONSHIPS = new Set([
   "owner",
   "tenant",
@@ -143,6 +152,11 @@ const EDIT_RELATIONSHIPS = new Set([
   "other",
   "unknown",
 ]);
+
+const UNIT_LABEL_COLLATOR = new Intl.Collator("es", {
+  numeric: true,
+  sensitivity: "base",
+});
 
 function normalizeRegistrationMode(value: unknown): RegistrationMode {
   return value === "resident_provided_units"
@@ -182,9 +196,16 @@ export async function resolveCommunityRegistrationCampaign(input: {
     return { available: false };
   }
 
-  const unitLabelPrefix = await resolveCommunityRegistrationUnitPrefix({
-    publicSlug: input.publicSlug,
-  });
+  const registrationMode = normalizeRegistrationMode(result.registration_mode);
+  const [unitLabelPrefix, availableUnits] = await Promise.all([
+    resolveCommunityRegistrationUnitPrefix({
+      publicSlug: input.publicSlug,
+    }),
+    resolveCommunityRegistrationAvailableUnits({
+      publicSlug: input.publicSlug,
+      registrationMode,
+    }),
+  ]);
 
   if (!unitLabelPrefix) {
     return { available: false };
@@ -192,12 +213,13 @@ export async function resolveCommunityRegistrationCampaign(input: {
 
   return {
     available: true,
+    availableUnits,
     closesAt: result.closes_at ?? null,
     communityName: result.community_name?.trim() || "Comunidad ENTRY",
     defaultResidentLimit: Number(result.default_resident_limit ?? 0),
     publicInstructions: result.public_instructions ?? null,
     publicTitle: result.public_title?.trim() || "Registro de residentes",
-    registrationMode: normalizeRegistrationMode(result.registration_mode),
+    registrationMode,
     unitLabelPrefix,
   };
 }
@@ -237,6 +259,49 @@ async function resolveCommunityRegistrationConfiguredUnitLabel(input: {
     return unitLabel || null;
   } catch {
     return null;
+  }
+}
+
+async function resolveCommunityRegistrationAvailableUnits(input: {
+  publicSlug: string;
+  registrationMode: RegistrationMode;
+}) {
+  if (input.registrationMode !== "existing_units") return [];
+
+  const publicSlug = input.publicSlug.trim().toLocaleLowerCase("es-GT");
+  if (!publicSlug) return [];
+
+  try {
+    const supabase = createAdminClient();
+    const campaignResponse = await supabase
+      .from("community_registration_campaigns")
+      .select("id")
+      .eq("public_slug", publicSlug)
+      .maybeSingle();
+
+    if (campaignResponse.error || !campaignResponse.data) return [];
+
+    const campaignId = (campaignResponse.data as CampaignIdRecord).id?.trim();
+    if (!campaignId) return [];
+
+    const unitsResponse = await supabase
+      .from("community_registration_units")
+      .select("unit_label_snapshot")
+      .eq("campaign_id", campaignId)
+      .eq("status", "unregistered");
+
+    if (unitsResponse.error || !Array.isArray(unitsResponse.data)) return [];
+
+    const labels = unitsResponse.data
+      .map((row) => (row as CampaignUnitLabelRecord).unit_label_snapshot?.trim())
+      .filter((label): label is string => Boolean(label));
+
+    return Array.from(new Set(labels)).sort((left, right) =>
+      UNIT_LABEL_COLLATOR.compare(left, right),
+    );
+  } catch {
+    // The guide is optional. Registration must remain usable if this read fails.
+    return [];
   }
 }
 
