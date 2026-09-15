@@ -4,6 +4,10 @@ import test from "node:test";
 
 const migrationPath =
   "supabase/migrations/20260915055000_outrider_public_intake_qa_fixes.sql";
+const eventMigrationPath =
+  "supabase/migrations/20260915060000_outrider_file_deleted_event.sql";
+const completionFixPath =
+  "supabase/migrations/20260915061000_outrider_completion_email_regex_fix.sql";
 const routePath =
   "app/(public)/entry/outrider/[token]/upload/delete/route.ts";
 const managerPath =
@@ -15,7 +19,7 @@ async function source(path) {
 }
 
 test("unit completion no longer requires the removed unit naming example", async () => {
-  const sql = await source(migrationPath);
+  const sql = await source(completionFixPath);
 
   assert.match(sql, /create or replace function public\._outrider_complete_sections_v2/i);
   assert.doesNotMatch(
@@ -25,10 +29,12 @@ test("unit completion no longer requires the removed unit naming example", async
   assert.match(sql, /cardinality\(coalesce\(p_unit_types, '\{\}'::text\[\]\)\) > 0/i);
   assert.match(sql, /'otro' <> all/i);
   assert.match(sql, /p_unit_type_other/i);
+  assert.match(sql, /\[\^@\[:space:\]\]\+@\[\^@\[:space:\]\]\+/i);
 });
 
 test("public file deletion is token-scoped, editable-only, and community-data-only", async () => {
   const sql = await source(migrationPath);
+  const eventSql = await source(eventMigrationPath);
   const route = await source(routePath);
 
   assert.match(sql, /delete_community_outrider_file_v1/i);
@@ -39,6 +45,7 @@ test("public file deletion is token-scoped, editable-only, and community-data-on
   assert.match(sql, /'file_deleted'/i);
   assert.match(sql, /revoke all on function public\.delete_community_outrider_file_v1/i);
   assert.match(sql, /grant execute on function public\.delete_community_outrider_file_v1[\s\S]*to service_role/i);
+  assert.match(eventSql, /'file_deleted'::text/i);
 
   assert.match(route, /hasOutriderSameOriginBoundary/);
   assert.match(route, /enforceOutriderRateLimit/);
