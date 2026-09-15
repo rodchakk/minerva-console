@@ -8,6 +8,10 @@ import {
   setCommunityUnitActiveStatusAction,
   updateCommunityUnitAction,
 } from "@/features/entry/communities/unitActions";
+import {
+  getCommunityUnitPublicReferenceAction,
+  updateCommunityUnitPublicReferenceAction,
+} from "@/features/entry/communities/unitReferenceActions";
 
 type CommunityUnitQuickActionsProps = {
   communityId: string;
@@ -32,9 +36,11 @@ export function CommunityUnitQuickActions({
     primaryResidentId: unit.primaryResidentId,
     unitId: unit.id,
   }));
+  const [publicReference, setPublicReference] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isReferenceLoading, startReferenceTransition] = useTransition();
   const unitLabel = unitLabelDraft.unitId === unit.id ? unitLabelDraft.label : unit.label;
   const primaryResidentId =
     unitLabelDraft.unitId === unit.id
@@ -60,12 +66,37 @@ export function CommunityUnitQuickActions({
   }
 
   function closeModal() {
-    if (isPending) {
+    if (isPending || isReferenceLoading) {
       return;
     }
 
     setModalState(null);
     setErrorMessage(null);
+  }
+
+  function openEditModal() {
+    setUnitLabel(unit.label);
+    setPrimaryResident(unit.primaryResidentId || unit.residents[0]?.userId || "");
+    setPublicReference("");
+    setSuccessMessage(null);
+    setErrorMessage(null);
+    setModalState("edit");
+
+    startReferenceTransition(async () => {
+      const result = await getCommunityUnitPublicReferenceAction({
+        communityId,
+        unitId: unit.id,
+      });
+
+      if (!result.success) {
+        setErrorMessage(
+          result.error ?? "Could not load the resident-facing reference.",
+        );
+        return;
+      }
+
+      setPublicReference(result.publicReference ?? "");
+    });
   }
 
   function submitEdit() {
@@ -85,6 +116,21 @@ export function CommunityUnitQuickActions({
         return;
       }
 
+      const referenceResult = await updateCommunityUnitPublicReferenceAction({
+        communityId,
+        publicReference,
+        unitId: unit.id,
+      });
+
+      if (!referenceResult.success) {
+        setErrorMessage(
+          `The unit details were saved, but the resident-facing reference could not be updated. ${referenceResult.error ?? "Please try again."}`,
+        );
+        router.refresh();
+        return;
+      }
+
+      setPublicReference(referenceResult.publicReference ?? "");
       setModalState(null);
       setSuccessMessage("Unit updated successfully.");
       router.refresh();
@@ -149,13 +195,7 @@ export function CommunityUnitQuickActions({
         <div className="grid gap-2">
           <button
             type="button"
-            onClick={() => {
-              setUnitLabel(unit.label);
-              setPrimaryResident(unit.primaryResidentId || unit.residents[0]?.userId || "");
-              setSuccessMessage(null);
-              setErrorMessage(null);
-              setModalState("edit");
-            }}
+            onClick={openEditModal}
             className="rounded-lg border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-violet-300/40 hover:bg-white/8"
           >
             Edit unit
@@ -176,7 +216,6 @@ export function CommunityUnitQuickActions({
           >
             {unit.isActive ? "Deactivate unit" : "Activate unit"}
           </button>
-
         </div>
       </div>
 
@@ -206,6 +245,35 @@ export function CommunityUnitQuickActions({
                   This updates the unit label and primary resident shown across the
                   community workspace.
                 </p>
+
+                <label className="block space-y-2">
+                  <span className="text-sm font-medium text-slate-200">
+                    Resident-facing reference
+                  </span>
+                  <input
+                    value={publicReference}
+                    onChange={(event) => setPublicReference(event.target.value)}
+                    disabled={isReferenceLoading}
+                    maxLength={160}
+                    placeholder="e.g. Calle 13 · vivienda 01"
+                    className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-slate-100 outline-none transition placeholder:text-slate-600 focus:border-[var(--primary)] disabled:cursor-wait disabled:opacity-60"
+                  />
+                  <span className="flex items-start justify-between gap-4 text-sm text-[var(--text-muted)]">
+                    <span>
+                      Optional. Helps residents identify this unit during registration.
+                      This does not change the unit label.
+                    </span>
+                    <span className="shrink-0 text-xs tabular-nums">
+                      {publicReference.length}/160
+                    </span>
+                  </span>
+                  {isReferenceLoading ? (
+                    <span className="block text-xs text-violet-200">
+                      Loading current reference...
+                    </span>
+                  ) : null}
+                </label>
+
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-slate-200">
                     Primary resident
@@ -255,13 +323,18 @@ export function CommunityUnitQuickActions({
             ) : null}
 
             <div className="mt-6 flex flex-wrap items-center justify-end gap-3">
-              <Button type="button" variant="ghost" disabled={isPending} onClick={closeModal}>
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={isPending || isReferenceLoading}
+                onClick={closeModal}
+              >
                 Cancel
               </Button>
               <Button
                 type="button"
                 variant={modalState === "status" && unit.isActive ? "danger" : "primary"}
-                disabled={isPending}
+                disabled={isPending || (modalState === "edit" && isReferenceLoading)}
                 onClick={modalState === "edit" ? submitEdit : submitStatusChange}
               >
                 {isPending
