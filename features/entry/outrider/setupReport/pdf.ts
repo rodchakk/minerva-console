@@ -118,25 +118,14 @@ function rightX(text: string, font: PDFFont, size: number, right: number) {
   return right - font.widthOfTextAtSize(text, size);
 }
 
-function minervaMark(page: PDFPage, x: number, y: number) {
-  const t = 1.8;
-  page.drawLine({ color: C.bright, start: { x, y }, end: { x: x + 8, y: y + 15 }, thickness: t });
-  page.drawLine({ color: C.bright, start: { x: x + 8, y: y + 15 }, end: { x: x + 15, y }, thickness: t });
-  page.drawLine({ color: C.bright, start: { x: x + 15, y: y + 15 }, end: { x: x + 23, y }, thickness: t });
-  page.drawLine({ color: C.bright, start: { x: x + 15, y: y + 15 }, end: { x: x + 8, y }, thickness: t });
-}
-
 function brandHeader(page: PDFPage, f: Fonts) {
   const y = H - 43;
-  page.drawText("E N T R Y", { color: C.brand, font: f.bold, size: 17, x: M, y });
-  page.drawText("COMUNIDADES MÁS SEGURAS", { color: C.muted, font: f.bold, size: 5.1, x: M + 1, y: y - 12 });
+  page.drawText("ENTRY", { color: C.brand, font: f.bold, size: 17, x: M, y });
   const name = "MINERVA TECHNOLOGIES";
   const size = 7.7;
   const tx = rightX(name, f.bold, size, W - M);
-  minervaMark(page, tx - 34, y - 2);
-  page.drawText(name, { color: C.brand, font: f.bold, size, x: tx, y: y + 2 });
-  const tag = "TECNOLOGÍA CON PROPÓSITO";
-  page.drawText(tag, { color: C.muted, font: f.bold, size: 4.6, x: rightX(tag, f.bold, 4.6, W - M), y: y - 9 });
+  page.drawText(name, { color: C.brand, font: f.bold, size, x: tx, y });
+  page.drawLine({ color: C.line, start: { x: M, y: y - 14 }, end: { x: W - M, y: y - 14 }, thickness: 0.65 });
 }
 
 function section(page: PDFPage, f: Fonts, text: string, y: number) {

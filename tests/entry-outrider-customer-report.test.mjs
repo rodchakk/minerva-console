@@ -175,9 +175,9 @@ test("active units without residents still produce a population warning", () => 
 
 test("customer PDF follows the production customer-facing contract", () => {
   assert.match(model, /entry-outrider-setup-report-v2/);
-  assert.match(pdf, /COMUNIDADES MÁS SEGURAS/);
+  assert.match(pdf, /page\.drawText\("ENTRY"/);
   assert.match(pdf, /MINERVA TECHNOLOGIES/);
-  assert.match(pdf, /TECNOLOGÍA CON PROPÓSITO/);
+  assert.doesNotMatch(pdf, /COMUNIDADES MÁS SEGURAS|TECNOLOGÍA CON PROPÓSITO|minervaMark/);
   assert.match(pdf, /Resumen preliminar de preparación/);
   assert.match(pdf, /Documento preliminar/i);
   assert.match(pdf, /Estado de preparación/i);
