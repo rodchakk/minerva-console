@@ -263,11 +263,13 @@ function SelectedUnitCard({
   onRequestChange,
   residentLimit,
   unitLabel,
+  unitReference,
 }: {
   onChangeUnit?: () => void;
   onRequestChange: () => void;
   residentLimit: number;
   unitLabel: string;
+  unitReference?: string | null;
 }) {
   return (
     <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-[0_14px_42px_rgba(15,23,42,0.07)] sm:p-5">
@@ -302,6 +304,11 @@ function SelectedUnitCard({
           <p className="mt-0.5 text-xl font-bold text-[#4c1d95] sm:mt-1 sm:text-2xl">
             {unitLabel}
           </p>
+          {unitReference ? (
+            <p className="mt-1 text-sm font-semibold text-slate-600">
+              {unitReference}
+            </p>
+          ) : null}
           <p className="mt-1 text-sm text-slate-500">
             Puedes registrar hasta {residentLimit} residentes.
           </p>
@@ -412,6 +419,7 @@ export function HouseholdDraftForm({
   residentLimit,
   slug,
   unitLabel,
+  unitReference,
 }: {
   finalAction?: FinalAction;
   initialResidents?: InitialHouseholdResidentDraft[];
@@ -419,6 +427,7 @@ export function HouseholdDraftForm({
   residentLimit: number;
   slug: string;
   unitLabel: string;
+  unitReference?: string | null;
   onChangeUnit?: () => void;
 }) {
   const initialDrafts =
@@ -716,6 +725,7 @@ export function HouseholdDraftForm({
         onRequestChange={requestUnitChange}
         residentLimit={residentLimit}
         unitLabel={unitLabel}
+        unitReference={unitReference}
       />
 
       {confirmingUnitChange && onChangeUnit ? (

@@ -4,6 +4,7 @@ import * as XLSX from "xlsx";
 
 export const TEMPLATE_HEADERS = [
   "Unit Label",
+  "Reference",
   "Resident Name",
   "Phone",
   "Email",
@@ -11,9 +12,9 @@ export const TEMPLATE_HEADERS = [
 ] as const;
 
 export const TEMPLATE_EXAMPLE_ROWS = [
-  ["Casa 1", "Ana Perez", "9999-9999", "ana@example.com", "Yes"],
-  ["Casa 1", "Juan Perez", "9888-8888", "juan@example.com", "No"],
-  ["Casa 2", "Carlos Ruiz", "9777-7777", "", "Yes"],
+  ["C1201", "Calle 12, casa 01", "Ana Perez", "9999-9999", "ana@example.com", "Yes"],
+  ["C1201", "Calle 12, casa 01", "Juan Perez", "9888-8888", "juan@example.com", "No"],
+  ["C1202", "Calle 12, casa 02", "", "", "", ""],
 ] as const;
 
 export type AdvancedImportSeverity = "error" | "warning";
@@ -29,9 +30,15 @@ export type AdvancedImportRow = {
   isOwner: string;
   phone: string;
   rawData: Record<string, string | number>;
+  reference: string;
   residentName: string;
-  residentStatus: "Prepared / not created yet";
+  residentStatus: "Prepared / not created yet" | "Unit only";
   rowNumber: number;
+  unitLabel: string;
+};
+
+export type AdvancedImportUnit = {
+  reference: string;
   unitLabel: string;
 };
 
@@ -42,6 +49,7 @@ export type AdvancedUnitsImportPayload = {
   rows: AdvancedImportRow[];
   sourceName: string;
   uniqueUnitLabels: string[];
+  uniqueUnits: AdvancedImportUnit[];
   warnings: AdvancedImportIssue[];
 };
 
@@ -49,22 +57,31 @@ type ImportColumnKey =
   | "email"
   | "isOwner"
   | "phone"
+  | "reference"
   | "residentName"
   | "unitLabel";
 
 const HEADER_ALIASES: Record<string, ImportColumnKey> = {
+  address: "reference",
   email: "email",
   isowner: "isOwner",
+  location: "reference",
   owner: "isOwner",
   phone: "phone",
+  reference: "reference",
   resident: "residentName",
   residentname: "residentName",
   unit: "unitLabel",
   unitlabel: "unitLabel",
+  unitreference: "reference",
 };
 
 function normalizeHeader(value: string) {
   return value.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+function normalizeUnitKey(value: string) {
+  return value.toLowerCase().replace(/\s+/g, "").replace(/[^a-z0-9]/g, "");
 }
 
 function normalizeValue(value: unknown) {
@@ -99,8 +116,14 @@ function parseSheetRows(
   const errors: AdvancedImportIssue[] = [];
   const warnings: AdvancedImportIssue[] = [];
   const rows: AdvancedImportRow[] = [];
-  const uniqueUnitLabels: string[] = [];
-  const seenUnits = new Set<string>();
+  const unitsByNormalizedLabel = new Map<
+    string,
+    {
+      reference: string;
+      referenceConflictReported: boolean;
+      unitLabel: string;
+    }
+  >();
   let blankRowsIgnored = 0;
   let parsedResidentRows = 0;
 
@@ -116,7 +139,8 @@ function parseSheetRows(
       parsedResidentRows,
       rows,
       sourceName,
-      uniqueUnitLabels,
+      uniqueUnitLabels: [],
+      uniqueUnits: [],
       warnings,
     };
   }
@@ -136,6 +160,10 @@ function parseSheetRows(
       headerIndexes.unitLabel === undefined
         ? ""
         : normalizeValue(rawRow[headerIndexes.unitLabel]);
+    const reference =
+      headerIndexes.reference === undefined
+        ? ""
+        : normalizeValue(rawRow[headerIndexes.reference]);
     const residentName =
       headerIndexes.residentName === undefined
         ? ""
@@ -153,9 +181,14 @@ function parseSheetRows(
         ? ""
         : normalizeValue(rawRow[headerIndexes.isOwner]);
 
-    const isBlankRow = [unitLabel, residentName, phone, email, isOwner].every(
-      (value) => value.length === 0,
-    );
+    const isBlankRow = [
+      unitLabel,
+      reference,
+      residentName,
+      phone,
+      email,
+      isOwner,
+    ].every((value) => value.length === 0);
 
     if (isBlankRow) {
       blankRowsIgnored += 1;
@@ -163,6 +196,7 @@ function parseSheetRows(
     }
 
     const rowNumber = rowIndex + 2;
+    const hasResidentData = Boolean(residentName || phone || email || isOwner);
 
     if (!unitLabel) {
       errors.push({
@@ -180,7 +214,7 @@ function parseSheetRows(
       });
     }
 
-    if (residentName || phone || email || isOwner) {
+    if (hasResidentData) {
       parsedResidentRows += 1;
     }
 
@@ -192,12 +226,14 @@ function parseSheetRows(
         email,
         isOwner,
         phone,
+        reference,
         residentName,
         rowNumber,
         unitLabel,
       },
+      reference,
       residentName,
-      residentStatus: "Prepared / not created yet",
+      residentStatus: hasResidentData ? "Prepared / not created yet" : "Unit only",
       rowNumber,
       unitLabel,
     });
@@ -206,12 +242,39 @@ function parseSheetRows(
       return;
     }
 
-    const normalizedUnit = unitLabel.toLowerCase();
-    if (!seenUnits.has(normalizedUnit)) {
-      seenUnits.add(normalizedUnit);
-      uniqueUnitLabels.push(unitLabel);
+    const normalizedUnit = normalizeUnitKey(unitLabel);
+    const trackedUnit = unitsByNormalizedLabel.get(normalizedUnit);
+
+    if (!trackedUnit) {
+      unitsByNormalizedLabel.set(normalizedUnit, {
+        reference,
+        referenceConflictReported: false,
+        unitLabel,
+      });
+      return;
+    }
+
+    if (!trackedUnit.reference && reference) {
+      trackedUnit.reference = reference;
+    } else if (
+      trackedUnit.reference &&
+      reference &&
+      trackedUnit.reference !== reference &&
+      !trackedUnit.referenceConflictReported
+    ) {
+      errors.push({
+        message: `Unit ${trackedUnit.unitLabel} has conflicting references.`,
+        rowNumber,
+        severity: "error",
+      });
+      trackedUnit.referenceConflictReported = true;
     }
   });
+
+  const uniqueUnits = Array.from(unitsByNormalizedLabel.values()).map((unit) => ({
+    reference: unit.reference,
+    unitLabel: unit.unitLabel,
+  }));
 
   return {
     blankRowsIgnored,
@@ -219,7 +282,8 @@ function parseSheetRows(
     parsedResidentRows,
     rows,
     sourceName,
-    uniqueUnitLabels,
+    uniqueUnitLabels: uniqueUnits.map((unit) => unit.unitLabel),
+    uniqueUnits,
     warnings,
   };
 }

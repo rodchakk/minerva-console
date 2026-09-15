@@ -769,62 +769,79 @@ export function CommunityRegistrationCard({
         )}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Units submitted
-          </p>
-          <p className="mt-2 text-2xl font-semibold text-white">
-            {unitSubmittedText}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            Participating units
-          </p>
-          <p className="mt-2 text-2xl font-semibold text-white">
-            {campaign && !hasKnownCampaignTotal
-              ? "Unknown"
-              : campaign
-                ? totalCampaignUnitCount
-                : totalUnits}
-          </p>
-        </div>
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            REGISTRATION PROGRESS
-          </p>
-          <p className="mt-2 text-3xl font-semibold text-white">
-            {registrationProgress.percent}%
-          </p>
-          <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-            {hasKnownCampaignTotal
-              ? `${registrationProgress.submittedUnits} of ${registrationProgress.totalUnits} units submitted`
-              : `${registrationProgress.submittedUnits} units submitted`}
-          </p>
-          <div
-            aria-label="Registration progress"
-            aria-valuemax={100}
-            aria-valuemin={0}
-            aria-valuenow={registrationProgress.percent}
-            className="mt-3 h-2 overflow-hidden rounded-full bg-slate-950"
-            role="progressbar"
-          >
+      {hasKnownCampaignTotal ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Units submitted
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {unitSubmittedText}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Participating units
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {campaign ? totalCampaignUnitCount : totalUnits}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              REGISTRATION PROGRESS
+            </p>
+            <p className="mt-2 text-3xl font-semibold text-white">
+              {registrationProgress.percent}%
+            </p>
+            <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+              {`${registrationProgress.submittedUnits} of ${registrationProgress.totalUnits} units submitted`}
+            </p>
             <div
-              className="h-full rounded-full bg-violet-400"
-              style={{ width: `${registrationProgress.percent}%` }}
-            />
-          </div>
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-violet-100">
-            <span>{registrationProgress.submittedResidents} residents received</span>
-            <span>
-              {hasKnownCampaignTotal
-                ? `${registrationProgress.remainingUnits} units remaining`
-                : "Total units unknown"}
-            </span>
+              aria-label="Registration progress"
+              aria-valuemax={100}
+              aria-valuemin={0}
+              aria-valuenow={registrationProgress.percent}
+              className="mt-3 h-2 overflow-hidden rounded-full bg-slate-950"
+              role="progressbar"
+            >
+              <div
+                className="h-full rounded-full bg-violet-400"
+                style={{ width: `${registrationProgress.percent}%` }}
+              />
+            </div>
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-semibold text-violet-100">
+              <span>{registrationProgress.submittedResidents} residents received</span>
+              <span>{registrationProgress.remainingUnits} units remaining</span>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Units submitted
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {registrationProgress.submittedUnits}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Residents received
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-white">
+              {registrationProgress.submittedResidents}
+            </p>
+          </div>
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              Total participating units
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-white">Unknown</p>
+          </div>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">

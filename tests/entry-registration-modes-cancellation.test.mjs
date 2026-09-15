@@ -73,15 +73,31 @@ test("internal campaign creation exposes both registration modes", () => {
   assert.match(actions, /launch_community_registration_campaign_v3/);
 });
 
-test("unknown totals are shown for resident-provided campaign progress", () => {
+test("resident-provided campaign progress omits unknowable percentages", () => {
   const adminCard = read("features/entry/communityRegistration/admin/CommunityRegistrationCard.tsx");
   const fieldCard = read("features/entry/field/FieldRegistrationCard.tsx");
   const progressPage = read("app/(field)/field/entry/communities/[communityId]/registration/page.tsx");
   const query = read("features/entry/communityRegistration/admin/queries.ts");
+  const unknownAdminBlock = adminCard.slice(
+    adminCard.indexOf(") : (", adminCard.indexOf("hasKnownCampaignTotal")),
+    adminCard.indexOf('<div className="mt-4 flex', adminCard.indexOf("hasKnownCampaignTotal")),
+  );
+  const unknownFieldBlock = fieldCard.slice(
+    fieldCard.indexOf("if (!hasKnownTotal)"),
+    fieldCard.indexOf("return (", fieldCard.indexOf("if (!hasKnownTotal)") + 1),
+  );
 
   assert.match(query, /hasKnownTotal/);
   assert.match(query, /campaign\.registrationMode === "existing_units"/);
-  assert.match(adminCard, /Unknown/);
-  assert.match(fieldCard, /Total participating units unknown/);
+  assert.match(unknownAdminBlock, /Units submitted/);
+  assert.match(unknownAdminBlock, /Residents received/);
+  assert.match(unknownAdminBlock, /Total participating units/);
+  assert.match(unknownAdminBlock, /Unknown/);
+  assert.doesNotMatch(unknownAdminBlock, /role="progressbar"|registrationProgress\.percent|%/);
+  assert.match(unknownFieldBlock, /Units submitted/);
+  assert.match(unknownFieldBlock, /Residents received/);
+  assert.match(unknownFieldBlock, /Total participating units/);
+  assert.match(unknownFieldBlock, /Unknown/);
+  assert.doesNotMatch(unknownFieldBlock, /progressbar|percentage|%/);
   assert.match(progressPage, /Total participating units/);
 });
