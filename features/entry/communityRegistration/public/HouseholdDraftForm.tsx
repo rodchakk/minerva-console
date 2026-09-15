@@ -47,25 +47,6 @@ const NAME_MAX_LENGTH = 160;
 const EMAIL_MAX_LENGTH = 254;
 const PHONE_MAX_LENGTH = 32;
 
-const RELATIONSHIP_OPTIONS: Array<{
-  label: string;
-  value: Exclude<Relationship, "">;
-}> = [
-  { label: "Propietario", value: "owner" },
-  { label: "Inquilino", value: "tenant" },
-  { label: "Familiar", value: "family" },
-  { label: "Otro", value: "other" },
-];
-
-const RELATIONSHIP_LABELS: Record<Relationship | "unknown", string> = {
-  "": "No especificada",
-  family: "Familiar",
-  other: "Otro",
-  owner: "Propietario",
-  tenant: "Inquilino",
-  unknown: "No especificada",
-};
-
 function scrollRegistrationToTop() {
   if (typeof window === "undefined") return;
 
@@ -361,9 +342,6 @@ function ResidentSummaryCard({
           <p className="truncate text-sm font-bold text-slate-950">
             {normalizeName(resident.fullName)}
           </p>
-          <p className="truncate text-xs font-medium text-slate-500">
-            {RELATIONSHIP_LABELS[resident.relationship || "unknown"]}
-          </p>
         </div>
         <button
           aria-label={`Editar residente ${index + 1}`}
@@ -498,21 +476,6 @@ export function HouseholdDraftForm({
 
         return nextResident;
       }),
-    );
-    setStep("edit");
-    setDraftNotice(null);
-    setSubmitError(null);
-  }
-
-  function setOwnerReference(residentId: number, checked: boolean) {
-    setResidents((current) =>
-      current.map((resident) => ({
-        ...resident,
-        isOwnerReference:
-          resident.id === residentId &&
-          checked &&
-          resident.relationship === "owner",
-      })),
     );
     setStep("edit");
     setDraftNotice(null);
@@ -818,16 +781,7 @@ export function HouseholdDraftForm({
                     </p>
                   </div>
                 </div>
-                <dl className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm sm:mt-4 sm:grid-cols-3 sm:pt-4">
-                  <div>
-                    <dt className="text-slate-500">Relación</dt>
-                    <dd className="mt-1 font-semibold text-slate-900">
-                      {RELATIONSHIP_LABELS[resident.relationship || "unknown"]}
-                      {resident.isOwnerReference
-                        ? " - propietario de referencia"
-                        : ""}
-                    </dd>
-                  </div>
+                <dl className="mt-3 grid gap-3 border-t border-slate-100 pt-3 text-sm sm:mt-4 sm:grid-cols-2 sm:pt-4">
                   <div>
                     <dt className="text-slate-500">Teléfono</dt>
                     <dd className="mt-1 font-semibold text-slate-900">
@@ -871,7 +825,7 @@ export function HouseholdDraftForm({
                       : submitError === "service_unavailable"
                         ? "No pudimos procesar la solicitud en este momento. Inténtalo nuevamente."
                         : submitError === "already_registered"
-                          ? "This unit has already been registered. If you believe this is a mistake, please contact your community administration."
+                          ? "Esta unidad ya fue registrada. Si crees que se trata de un error, comunícate con la administración de tu comunidad."
                         : submitError === "unavailable"
                           ? "No pudimos completar el registro. Verifica el enlace o comunícate con la administración."
                           : isCorrectionSubmit
@@ -1125,55 +1079,6 @@ export function HouseholdDraftForm({
                   </p>
                 ) : null}
               </label>
-
-              <label className="block" htmlFor={`resident-${activeResident.id}-relationship`}>
-                <span className="text-sm font-bold text-slate-950">
-                  Relación con la vivienda
-                </span>
-                <select
-                  className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
-                  id={`resident-${activeResident.id}-relationship`}
-                  name={`resident-${activeResident.id}-relationship`}
-                  onChange={(event) =>
-                    updateResident(activeResident.id, {
-                      relationship: event.target.value as Relationship,
-                    })
-                  }
-                  onFocus={scrollFocusedControlIntoView}
-                  value={activeResident.relationship}
-                >
-                  <option value="">Selecciona una opción</option>
-                  {RELATIONSHIP_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              {activeResident.relationship === "owner" ? (
-                <label className="flex gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm leading-6 text-slate-700">
-                  <input
-                    checked={activeResident.isOwnerReference}
-                    className="mt-1 h-4 w-4 rounded border-slate-300 accent-[#5b21b6]"
-                    name={`resident-${activeResident.id}-owner-reference`}
-                    onChange={(event) =>
-                      setOwnerReference(activeResident.id, event.target.checked)
-                    }
-                    type="checkbox"
-                  />
-                  <span>Marcar como propietario de referencia de esta vivienda.</span>
-                </label>
-              ) : null}
-
-              {errors[activeResident.id]?.ownerReference ? (
-                <p
-                  className="text-sm leading-5 text-amber-700"
-                  id={getErrorId(activeResident.id, "ownerReference")}
-                >
-                  {errors[activeResident.id]?.ownerReference}
-                </p>
-              ) : null}
 
               {errors[activeResident.id]?.duplicate ? (
                 <p
