@@ -165,6 +165,7 @@ export default async function EntryRegisterPage(
   return (
     <PublicRegistrationShell>
       <UnitLookupForm
+        availableUnits={campaign.availableUnits}
         intro={
           <div className="space-y-2.5 sm:space-y-4">
             <EntryBadge />
@@ -181,6 +182,7 @@ export default async function EntryRegisterPage(
             </p>
           </div>
         }
+        registrationMode={campaign.registrationMode}
         slug={slug}
         unitLabelPrefix={campaign.unitLabelPrefix}
       />
