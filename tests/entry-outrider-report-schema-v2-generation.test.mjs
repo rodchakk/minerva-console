@@ -59,5 +59,6 @@ test("v2 reservation preserves workbook, fingerprint, finding, and version guard
   assert.match(prepare, /coalesce\(max\(version\), 0\) \+ 1/);
   assert.match(prepare, /status = 'generating'/);
   assert.match(prepare, /ENTRY_OUTRIDER_SETUP_REPORT_GENERATION_IN_PROGRESS/);
-  assert.match(prepare, /to service_role/);
+  assert.match(migration, /grant execute on function public\.prepare_community_outrider_setup_report_v1[\s\S]*to service_role/);
+  assert.match(prepare, /_outrider_service_role_only_v1\(\)/);
 });

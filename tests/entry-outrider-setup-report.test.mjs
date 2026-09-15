@@ -363,12 +363,12 @@ test("generation reservations are recoverable without reusing versions", () => {
 });
 
 test("PDF output is Spanish, preliminary, and omits resident PII roster", () => {
-  assert.match(pdf, /Reporte preliminar de configuración/);
-  assert.match(pdf, /PRELIMINAR/);
-  assert.match(pdf, /AÚN NO APLICADO A ENTRY/);
-  assert.match(pdf, /Próximo paso recomendado/);
+  assert.match(pdf, /Resumen preliminar de preparación/);
+  assert.match(pdf, /Documento preliminar/);
+  assert.match(pdf, /Todavía no se ha aplicado ningún cambio operativo a ENTRY/);
+  assert.match(pdf, /Siguiente paso/);
   assert.match(pdf, /á|é|í|ó|ú|ñ|Ñ/);
-  assert.match(pdf, /sin directorio PII/);
+  assert.match(pdf, /Este reporte no incluye nombres, teléfonos ni correos del directorio de residentes/);
   assert.doesNotMatch(pdf, /resident\.phone|resident\.email|resident\.fullName/);
   assert.match(actions, /renderSetupReportPdf/);
   assert.match(actions, /application\/pdf/);

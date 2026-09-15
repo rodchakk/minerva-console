@@ -233,7 +233,7 @@ function statusLabel(value: boolean | null) {
 
 function statusColor(value: boolean | null) {
   if (value === true) return C.green;
-  if (value === false) return C.red;
+  if (value === false) return C.muted;
   return C.amber;
 }
 
@@ -299,7 +299,7 @@ export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot
   const inactive = snapshot.workbook.units.filter((u) => u.isActive === false).length;
   const unknown = snapshot.workbook.units.filter((u) => u.isActive === null).length;
   const launchUnits = new Set(snapshot.workbook.units.filter((u) => u.isActive !== false).map((u) => normalizeSetupUnitIdentity(u.unitLabel)).filter((u): u is string => Boolean(u)));
-  const coveredUnits = new Set(snapshot.workbook.residents.map((r) => normalizeSetupUnitIdentity(r.unitLabel)).filter((u): u is string => Boolean(u) && launchUnits.has(u))).size;
+  const coveredUnits = new Set(snapshot.workbook.residents.map((r) => normalizeSetupUnitIdentity(r.unitLabel)).filter((u): u is string => u !== null && launchUnits.has(u))).size;
   const findings = findingMessages(snapshot.validation.findings);
   const ready = snapshot.summary.residentCoveragePercent === 100 && findings.length === 0 && unknown === 0;
 
@@ -308,7 +308,10 @@ export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot
   let y = H - 88;
   page.drawText("Resumen preliminar de preparación", { color: C.ink, font: f.bold, size: 20, x: M, y });
   y -= 22;
-  const community = wrap(snapshot.intake.communityName, f.regular, 12.4, CW).slice(0, 2);
+  const communityLines = wrap(snapshot.intake.communityName, f.regular, 12.4, CW);
+  const community = communityLines.length > 2
+    ? [communityLines[0], ellipsis(communityLines.slice(1).join(" "), f.regular, 12.4, CW)]
+    : communityLines;
   community.forEach((line, i) => page.drawText(line, { color: C.brand, font: f.regular, size: 12.4, x: M, y: y - i * 14.5 }));
   y -= community.length * 14.5;
   if (snapshot.intake.communityCity) {
@@ -321,7 +324,7 @@ export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot
   callout({ page, f, y, fill: C.amberSoft, border: rgb(0.94, 0.81, 0.42), color: C.amberDark, label: "Documento preliminar", text: "Todavía no se ha aplicado ningún cambio operativo a ENTRY.", icon: "document" });
   y -= 60;
   callout({ page, f, y, fill: ready ? C.greenSoft : C.amberSoft, border: ready ? rgb(0.6, 0.86, 0.68) : rgb(0.94, 0.81, 0.42), color: ready ? C.greenDark : C.amberDark, label: "Estado de preparación", text: ready ? "Lista para revisión final" : "Con observaciones por revisar", icon: ready ? "check" : "document" });
-  y -= 61;
+  y -= 68;
   y = wrapped(page, "Este documento resume la información que Minerva organizó para preparar ENTRY y permite confirmar, de forma sencilla, qué está listo y qué falta revisar antes de la activación.", f.regular, 8.7, M, y, CW, C.muted, 12.2) - 7;
 
   y = section(page, f, "Resumen de la comunidad", y);
@@ -330,9 +333,9 @@ export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot
   statCard({ page, f, x: M, y, w: cardW, label: "Unidades identificadas", value: String(snapshot.summary.units), accent: C.bright, soft: C.soft });
   statCard({ page, f, x: M + cardW + gap, y, w: cardW, label: "Activas al inicio", value: String(active), accent: C.green, soft: C.greenSoft });
   y -= 66;
-  statCard({ page, f, x: M, y, w: cardW, label: "Inactivas al inicio", value: String(inactive), accent: C.red, soft: C.redSoft });
+  statCard({ page, f, x: M, y, w: cardW, label: "Inactivas al inicio", value: String(inactive), accent: C.muted, soft: C.soft });
   statCard({ page, f, x: M + cardW + gap, y, w: cardW, label: "Cobertura de unidades activas", value: snapshot.summary.residentCoveragePercent === null ? "Pendiente" : `${snapshot.summary.residentCoveragePercent}%`, accent: C.bright, soft: C.soft });
-  y -= 64;
+  y -= 70;
   y = wrapped(page, `La cobertura considera las ${launchUnits.size} ${plural(launchUnits.size, "unidad que iniciará activa o requiere confirmar estado", "unidades que iniciarán activas o requieren confirmar estado")}. Las unidades marcadas expresamente como inactivas no se cuentan como faltantes de residentes.`, f.regular, 7.2, M, y, CW, C.muted, 10) - 8;
 
   y = section(page, f, "Información preparada", y);
@@ -343,24 +346,42 @@ export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot
   divider(page, y);
   y -= 18;
 
-  y = section(page, f, "Observaciones antes de activar", y);
-  if (!findings.length) {
-    y = bullet(page, f, "No se identifican pendientes que impidan continuar con la revisión final.", y) - 2;
-    if (inactive) y = bullet(page, f, `${inactive} ${plural(inactive, "unidad está marcada como inactiva", "unidades están marcadas como inactivas")} y no requiere residente para el cálculo de cobertura inicial.`, y) - 2;
-  } else {
-    for (const message of findings.slice(0, 4)) y = bullet(page, f, message, y, C.amber) - 2;
+  let overview: Cursor = { page, y };
+  const overviewSection = (title: string, height: number) => {
+    if (overview.y - height < BOTTOM) overview = summaryContinuation(doc, f);
+    overview.y = section(overview.page, f, title, overview.y);
+  };
+  const observations = findings.length
+    ? findings
+    : [
+        "No se identifican pendientes que impidan continuar con la revisión final.",
+        ...(inactive ? [`${inactive} ${plural(inactive, "unidad está marcada como inactiva", "unidades están marcadas como inactivas")} y no requiere residente para el cálculo de cobertura inicial.`] : []),
+      ];
+  overviewSection("Observaciones antes de activar", 32 + wrap(observations[0], f.regular, 8.35, CW - 44).length * 11.1);
+  for (const message of observations) {
+    const height = wrap(message, f.regular, 8.35, CW - 44).length * 11.1 + 2;
+    if (overview.y - height < BOTTOM) {
+      overview = summaryContinuation(doc, f);
+      overview.y = section(overview.page, f, "Observaciones antes de activar · continuación", overview.y);
+    }
+    overview.y = bullet(overview.page, f, message, overview.y, findings.length ? C.amber : C.green) - 2;
   }
-  divider(page, y);
-  y -= 18;
+  divider(overview.page, overview.y);
+  overview.y -= 18;
 
   const next = ready
     ? "Una vez confirmada esta información, Minerva incorporará la residencial a ENTRY y dará inicio a la fase de registro de residentes. Si se requiere algún ajuste de nomenclatura o detalle operativo, podrá afinarse antes de la activación."
     : snapshot.recommendation;
-  const nextHeight = 27 + wrap(next, f.regular, 8.6, CW - 29).length * 11.2;
-  let nextCursor: Cursor = { page, y };
-  if (y - nextHeight < BOTTOM) nextCursor = summaryContinuation(doc, f);
-  nextCursor.y = section(nextCursor.page, f, "Siguiente paso", nextCursor.y);
-  wrapped(nextCursor.page, next, f.regular, 8.6, M + 29, nextCursor.y, CW - 29, C.muted, 11.2);
+  const nextLines = wrap(next, f.regular, 8.6, CW - 29);
+  overviewSection("Siguiente paso", 27 + Math.min(nextLines.length, 4) * 11.2);
+  for (const line of nextLines) {
+    if (overview.y - 11.2 < BOTTOM) {
+      overview = summaryContinuation(doc, f);
+      overview.y = section(overview.page, f, "Siguiente paso · continuación", overview.y);
+    }
+    overview.page.drawText(line, { color: C.muted, font: f.regular, size: 8.6, x: M + 29, y: overview.y });
+    overview.y -= 11.2;
+  }
 
   let d = detailPage(doc, f);
   d.y = section(d.page, f, "Listado de unidades", d.y);
@@ -388,7 +409,7 @@ export async function renderSetupReportPdf(snapshot: OutriderSetupReportSnapshot
 
   if (snapshot.workbook.destinations.length) {
     const title = "Establecimientos y destinos informados";
-    if (!need(65)) d.y -= 9;
+    if (!need(65)) d.y -= 18;
     d.y = section(d.page, f, title, d.y);
     for (const destination of snapshot.workbook.destinations) {
       if (!destination.name) continue;

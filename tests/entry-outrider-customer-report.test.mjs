@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, decodePDFRawStream } from "pdf-lib";
 import { createJiti } from "jiti";
 
 const root = process.cwd();
@@ -269,10 +269,28 @@ test("customer PDF renders a multi-page stress case without layout exceptions", 
     { code: "RESIDENT_CONTACT_MISSING", field: null, message: "internal", row: 5, severity: "warning", sheet: "Residents" },
   ];
   snapshot.recommendation =
-    "Confirmar con la administración cada observación pendiente antes de continuar. ".repeat(14);
+    "Confirmar con la administración cada observación pendiente antes de continuar. ".repeat(100);
 
   const bytes = await renderSetupReportPdf(snapshot);
   assert.ok(bytes.length > 1_000);
   const rendered = await PDFDocument.load(bytes);
   assert.ok(rendered.getPageCount() >= 5);
+  // Inspect real text positions: a PDF can render successfully while drawing
+  // a long recommendation outside the page or into the footer.
+  let textPositions = 0;
+  for (const [index, page] of rendered.getPages().entries()) {
+    const contents = page.node.Contents();
+    for (let streamIndex = 0; streamIndex < contents.size(); streamIndex++) {
+      const stream = rendered.context.lookup(contents.get(streamIndex));
+      const operators = Buffer.from(decodePDFRawStream(stream).decode()).toString();
+      for (const match of operators.matchAll(/1 0 0 1 ([\d.-]+) ([\d.-]+) Tm/g)) {
+        textPositions++;
+        const x = Number(match[1]);
+        const y = Number(match[2]);
+        assert.ok(x >= 42 && x <= 570, `Text outside horizontal margin on page ${index + 1}`);
+        assert.ok(y === 29 || (y >= 76 && y <= 762), `Text overlaps footer or page edge on page ${index + 1}: ${y}`);
+      }
+    }
+  }
+  assert.ok(textPositions > 100, "Expected to inspect rendered PDF text positions");
 });
