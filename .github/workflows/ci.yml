@@ -74,6 +74,7 @@ jobs:
             tests/entry-outrider-setup-report.test.mjs \
             tests/entry-outrider-setup-report-final-hardening.test.mjs \
             tests/entry-outrider-customer-report.test.mjs \
+            tests/entry-outrider-report-schema-v2-generation.test.mjs \
             tests/entry-activation-middleware.test.mjs \
             tests/entry-unit-resident-move.test.mjs
 
