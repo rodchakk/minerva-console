@@ -1,5 +1,5 @@
 export const SETUP_WORKBOOK_SCHEMA_VERSION = "entry-onboarding-workbook-v1";
-export const SETUP_REPORT_SCHEMA_VERSION = "entry-outrider-setup-report-v1";
+export const SETUP_REPORT_SCHEMA_VERSION = "entry-outrider-setup-report-v2";
 
 export const SETUP_WORKBOOK_TEMPLATE_FILENAME =
   "entry-setup-workbook-template-v1.xlsx";
