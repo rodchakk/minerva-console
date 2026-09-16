@@ -243,11 +243,11 @@ async function saveCustomerProfile(
     return { message: "Customer profile was saved, but its ID was not returned." };
   }
 
-  revalidatePath("/products/entry/customers");
-  revalidatePath(`/products/entry/customers/${savedCustomerId}`);
+  revalidatePath("/customers");
+  revalidatePath(`/customers/${savedCustomerId}`);
   revalidatePath(`/products/entry/communities/${communityId}`);
 
-  redirect(`/products/entry/customers/${savedCustomerId}`);
+  redirect(`/customers/${savedCustomerId}`);
 }
 
 export async function createCustomerProfileAction(
