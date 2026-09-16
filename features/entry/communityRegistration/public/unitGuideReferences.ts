@@ -7,6 +7,7 @@ type CampaignIdRecord = {
 };
 
 type UnitReferenceRecord = {
+  public_reference?: string | null;
   unit_label_snapshot?: string | null;
   unit_reference_snapshot?: string | null;
 };
@@ -34,13 +35,13 @@ export async function resolveCommunityRegistrationUnitReferences(input: {
 
     const unitsResponse = await supabase
       .from("community_registration_units")
-      .select("unit_label_snapshot,unit_reference_snapshot")
+      .select("unit_label_snapshot,unit_reference_snapshot,public_reference")
       .eq("campaign_id", campaignId)
       .eq("status", "unregistered");
 
     if (unitsResponse.error || !Array.isArray(unitsResponse.data)) {
       // References are optional presentation metadata. Registration must not
-      // fail if the column is unavailable or the auxiliary read fails.
+      // fail if the auxiliary read fails.
       return {} as Record<string, string>;
     }
 
@@ -48,7 +49,8 @@ export async function resolveCommunityRegistrationUnitReferences(input: {
 
     for (const row of unitsResponse.data as UnitReferenceRecord[]) {
       const unitLabel = row.unit_label_snapshot?.trim();
-      const reference = row.unit_reference_snapshot?.trim();
+      const reference =
+        row.public_reference?.trim() || row.unit_reference_snapshot?.trim();
       if (!unitLabel || !reference) continue;
       references[unitLabel] = reference;
     }
