@@ -11,6 +11,7 @@ import {
   ChevronsLeft,
   ChevronsUpDown,
   CircleGauge,
+  ContactRound,
   Hexagon,
   LayoutDashboard,
   LifeBuoy,
@@ -58,6 +59,7 @@ const entryNavItems: NavItem[] = [
   { label: "Users", href: "/products/entry/users", icon: Users },
   { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
   { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
+  { label: "Customers", href: "/products/entry/customers", icon: ContactRound },
   { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
   { label: "Observability", href: "/products/entry/observability", icon: BarChart3 },
 ];

@@ -21,6 +21,7 @@ import {
   getCommunityWithProgress,
   type CommunityWithProgressItem,
 } from "@/features/entry/communities/queries";
+import { getCustomerProfileForCommunity } from "@/features/entry/customers/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 
 type ActionItem = {
@@ -313,6 +314,7 @@ export default async function CommunitySetupPage(
     adminActivity,
     onboardingDetail,
     registrationState,
+    customerProfile,
   ] = await Promise.all([
     getCommunityDetailPreviews(community.id, {
       allowMessages: community.allowMessages,
@@ -320,6 +322,7 @@ export default async function CommunitySetupPage(
     getCommunityAdminActivityPreview(community.id, 50),
     getCommunityOnboardingDetail(community.id),
     getCommunityRegistrationAdminState(community.id),
+    getCustomerProfileForCommunity(community.id),
   ]);
 
   const primaryAction = getPrimaryAction(community);
@@ -338,6 +341,15 @@ export default async function CommunitySetupPage(
       href: `/products/entry/communities/${community.id}/users`,
       label: "Manage users",
       note: "Open the community-scoped users workspace.",
+    },
+    {
+      href: customerProfile
+        ? `/products/entry/customers/${customerProfile.id}`
+        : `/products/entry/customers/new?community_id=${community.id}`,
+      label: customerProfile ? "View customer profile" : "Create customer profile",
+      note: customerProfile
+        ? "Open the canonical customer record."
+        : "Add manual customer and billing details.",
     },
     {
       href: `/products/entry/communities/${community.id}/staff`,
