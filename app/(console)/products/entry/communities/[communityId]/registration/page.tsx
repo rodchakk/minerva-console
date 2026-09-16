@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
-import { QuickEditResidents } from "@/features/entry/communityRegistration/review/QuickEditResidents";
 import { ReviewWorkspace } from "@/features/entry/communityRegistration/review/ReviewWorkspace";
 import { getCommunityRegistrationQuickEditData } from "@/features/entry/communityRegistration/review/quickEditQueries";
 import {
@@ -98,20 +97,11 @@ export default async function RegistrationReviewPage(
         />
       </section>
 
-      {selectedUnitId && selectedUnit && quickEditData ? (
-        <QuickEditResidents
-          campaignUnitId={selectedUnitId}
-          communityId={community.id}
-          residents={quickEditData.residents}
-          submissionId={quickEditData.submissionId}
-          unitLabel={selectedUnit.unitLabel}
-        />
-      ) : null}
-
       <ReviewWorkspace
         campaign={overview.campaign}
         communityId={community.id}
         loadError={overview.loadError}
+        quickEditData={quickEditData}
         selectedUnit={selectedUnit}
         selectedUnitId={selectedUnitId}
         summary={overview.summary}
