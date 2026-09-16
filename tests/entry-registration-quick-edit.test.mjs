@@ -6,8 +6,10 @@ const migrationPath =
   "supabase/migrations/20260916060000_entry_registration_admin_quick_edit.sql";
 const actionPath =
   "features/entry/communityRegistration/review/quickEditActions.ts";
-const panelPath =
-  "features/entry/communityRegistration/review/QuickEditResidents.tsx";
+const dialogPath =
+  "features/entry/communityRegistration/review/QuickEditResidentDialog.tsx";
+const workspacePath =
+  "features/entry/communityRegistration/review/ReviewWorkspace.tsx";
 const pagePath =
   "app/(console)/products/entry/communities/[communityId]/registration/page.tsx";
 
@@ -45,12 +47,19 @@ test("quick edit RPC is service-role only and the server action requires superad
   assert.match(action, /getEntryPreviewReadOnlyError\(\)/);
 });
 
-test("review page surfaces quick edit as a separate non-formal admin tool", async () => {
-  const [panel, page] = await Promise.all([source(panelPath), source(pagePath)]);
+test("quick edit lives inside household submission and opens a compact modal", async () => {
+  const [dialog, workspace, page] = await Promise.all([
+    source(dialogPath),
+    source(workspacePath),
+    source(pagePath),
+  ]);
 
-  assert.match(panel, /Admin quick edit/);
-  assert.match(panel, /does not mark the household reviewed or open a correction request/);
-  assert.match(panel, /Save changes/);
-  assert.match(page, /<QuickEditResidents/);
-  assert.match(page, /<ReviewWorkspace/);
+  assert.match(dialog, /Edit resident/);
+  assert.match(dialog, /without changing the household review status/);
+  assert.match(dialog, /Save changes/);
+  assert.match(workspace, /setEditingResident\(quickResident\)/);
+  assert.match(workspace, /<QuickEditResidentDialog/);
+  assert.match(workspace, />\s*Edit\s*</);
+  assert.doesNotMatch(page, /<QuickEditResidents/);
+  assert.match(page, /quickEditData=\{quickEditData\}/);
 });
