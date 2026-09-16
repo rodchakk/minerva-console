@@ -178,11 +178,14 @@ function PasswordResetControl({ user }: { user: UserSearchItem }) {
     () => formatExpiration(codeState.expiresAt),
     [codeState.expiresAt],
   );
+  const normalizedRole = user.role.trim().toUpperCase();
+  const canUseTemporaryCode =
+    normalizedRole === "RESIDENT" || normalizedRole === "GUARD";
 
   if (isSyntheticEmail(user.email)) {
     return (
       <div className="flex flex-col">
-        {user.role === "RESIDENT" ? (
+        {canUseTemporaryCode ? (
           <form action={codeAction}>
             <input type="hidden" name="communityId" value={user.communityId} />
             <input type="hidden" name="email" value={user.email} />
@@ -201,7 +204,7 @@ function PasswordResetControl({ user }: { user: UserSearchItem }) {
             role="menuitem"
             disabled
             className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-400 opacity-60"
-            title="PIN reset required"
+            title="PIN reset not available for this role"
           >
             <KeyRound className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
             <span>Reset password</span>

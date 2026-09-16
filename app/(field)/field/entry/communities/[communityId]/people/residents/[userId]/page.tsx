@@ -6,6 +6,7 @@ import { isEntryPreviewReadOnly } from "@/features/entry/deploymentBoundary";
 import { FieldAdminProfileEditor } from "@/features/entry/field/FieldAdminProfileEditor";
 import { FieldAdminUnitAssignment } from "@/features/entry/field/FieldAdminUnitAssignment";
 import { FieldResidentActions } from "@/features/entry/field/FieldResidentActions";
+import { FieldUserRecoveryAction } from "@/features/entry/field/FieldUserRecoveryAction";
 import { FieldUserStatusAction } from "@/features/entry/field/FieldUserStatusAction";
 import { getFieldResidentDetailData } from "@/features/entry/field/peopleData";
 
@@ -57,6 +58,7 @@ export default async function FieldResidentDetailPage({
   if (!data.resident) notFound();
 
   const isResident = data.resident.role === "RESIDENT";
+  const isGuard = data.resident.role === "GUARD";
   const isAdmin = data.resident.role === "ADMIN";
   const isCurrentUser = operator.user.id === data.resident.userId;
   const isReadOnlyPreview = isEntryPreviewReadOnly();
@@ -115,6 +117,14 @@ export default async function FieldResidentDetailPage({
         />
       ) : null}
 
+      {isGuard ? (
+        <FieldUserRecoveryAction
+          communityId={data.community.id}
+          isReadOnlyPreview={isReadOnlyPreview}
+          user={data.resident}
+        />
+      ) : null}
+
       {isResident && data.resident.houseId ? (
         <section className="space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--console-accent)]">
@@ -169,9 +179,9 @@ export default async function FieldResidentDetailPage({
             user={data.resident}
           />
         </>
-      ) : !isResident ? (
+      ) : !isResident && !isGuard ? (
         <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 text-sm leading-6 text-[var(--console-text-muted)]">
-          This {data.resident.role.toLowerCase()} account is visible in Field People. Resident-only profile, unit, and recovery actions are not available for this role.
+          This {data.resident.role.toLowerCase()} account is visible in Field People. Resident-only profile and unit actions are not available for this role.
         </section>
       ) : null}
 

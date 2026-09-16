@@ -399,10 +399,10 @@ export async function generateTemporaryRecoveryCodeAction(
     };
   }
 
-  if (role !== "RESIDENT") {
+  if (role !== "RESIDENT" && role !== "GUARD") {
     return {
       error:
-        "Temporary recovery codes are only available for residents without email.",
+        "Temporary recovery codes are only available for resident or guard accounts without email.",
       success: false,
     };
   }

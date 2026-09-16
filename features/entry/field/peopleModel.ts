@@ -65,8 +65,9 @@ export function canUseResidentRecoveryCode(resident: {
   email: string;
   role: string;
 }) {
+  const role = resident.role.trim().toUpperCase();
   return (
-    resident.role.trim().toUpperCase() === "RESIDENT" &&
+    (role === "RESIDENT" || role === "GUARD") &&
     isSyntheticResidentEmail(resident.email)
   );
 }
