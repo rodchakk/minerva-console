@@ -11,6 +11,11 @@ import {
   requestCommunityRegistrationCorrection,
   type CommunityRegistrationReviewActionResult,
 } from "@/features/entry/communityRegistration/review/actions";
+import { QuickEditResidentDialog } from "@/features/entry/communityRegistration/review/QuickEditResidentDialog";
+import type {
+  CommunityRegistrationQuickEditData,
+  CommunityRegistrationQuickEditResident,
+} from "@/features/entry/communityRegistration/review/quickEditQueries";
 import type {
   CommunityRegistrationReviewCampaign,
   CommunityRegistrationReviewSummary,
@@ -22,6 +27,7 @@ type ReviewWorkspaceProps = {
   campaign: CommunityRegistrationReviewCampaign;
   communityId: string;
   loadError: string | null;
+  quickEditData: CommunityRegistrationQuickEditData | null;
   selectedUnit: CommunityRegistrationReviewUnitDetail | null;
   selectedUnitId: string | null;
   summary: CommunityRegistrationReviewSummary;
@@ -474,6 +480,7 @@ export function ReviewWorkspace({
   campaign,
   communityId,
   loadError,
+  quickEditData,
   selectedUnit,
   selectedUnitId,
   summary,
@@ -484,6 +491,8 @@ export function ReviewWorkspace({
     "create" | "replace" | null
   >(null);
   const [showActivationHandoff, setShowActivationHandoff] = useState(false);
+  const [editingResident, setEditingResident] =
+    useState<CommunityRegistrationQuickEditResident | null>(null);
   const [reviewState, reviewAction, reviewPending] = useActionState(
     markCommunityRegistrationUnitReviewed,
     initialActionState,
@@ -499,6 +508,7 @@ export function ReviewWorkspace({
     reviewCapable && selectedStatus === "needs_correction";
   const canReplaceCorrectionLink =
     reviewCapable && selectedStatus === "edit_enabled";
+  const canQuickEdit = selectedStatus === "submitted" && Boolean(quickEditData);
   const activationQueueUrl = `/products/entry/activation?community_id=${encodeURIComponent(
     communityId,
   )}`;
@@ -655,32 +665,47 @@ export function ReviewWorkspace({
               <HandoffProgress selectedUnit={selectedUnit} />
 
               <div className="mt-5 space-y-3">
-                {selectedUnit.residents.map((resident) => (
-                  <div
-                    key={`${resident.position}-${resident.fullName}`}
-                    className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {resident.position}. {resident.fullName}
+                {selectedUnit.residents.map((resident) => {
+                  const quickResident = quickEditData?.residents.find(
+                    (item) => item.position === resident.position,
+                  );
+
+                  return (
+                    <div
+                      key={`${resident.position}-${resident.fullName}`}
+                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-white">
+                            {resident.position}. {resident.fullName}
+                          </p>
+                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                            {resident.relationshipToHouse}
+                            {resident.isOwnerReference ? " · owner reference" : ""}
+                          </p>
+                        </div>
+                        {canQuickEdit && quickResident ? (
+                          <button
+                            type="button"
+                            onClick={() => setEditingResident(quickResident)}
+                            className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/5"
+                          >
+                            Edit
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                        <p className="text-[var(--text-muted)]">
+                          Email: <span className="text-white">{resident.email ?? "—"}</span>
                         </p>
-                        <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                          {resident.relationshipToHouse}
-                          {resident.isOwnerReference ? " · owner reference" : ""}
+                        <p className="text-[var(--text-muted)]">
+                          Phone: <span className="text-white">{resident.phone ?? "—"}</span>
                         </p>
                       </div>
                     </div>
-                    <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                      <p className="text-[var(--text-muted)]">
-                        Email: <span className="text-white">{resident.email ?? "—"}</span>
-                      </p>
-                      <p className="text-[var(--text-muted)]">
-                        Phone: <span className="text-white">{resident.phone ?? "—"}</span>
-                      </p>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {reviewState && !reviewState.success ? (
@@ -783,6 +808,16 @@ export function ReviewWorkspace({
           onClose={() => setShowActivationHandoff(false)}
           unitId={selectedUnitId}
           unitLabel={selectedUnit.unitLabel}
+        />
+      ) : null}
+
+      {editingResident && selectedUnitId && quickEditData ? (
+        <QuickEditResidentDialog
+          campaignUnitId={selectedUnitId}
+          communityId={communityId}
+          onClose={() => setEditingResident(null)}
+          resident={editingResident}
+          submissionId={quickEditData.submissionId}
         />
       ) : null}
     </div>
