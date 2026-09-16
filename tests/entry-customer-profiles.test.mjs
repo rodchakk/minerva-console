@@ -6,7 +6,7 @@ function read(path) {
   return readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 }
 
-test("ENTRY customer profiles use a separate contacts model with one primary contact", () => {
+test("customer profiles use a separate contacts model with one primary contact", () => {
   const migration = read(
     "supabase/migrations/20260916010000_entry_customer_profiles.sql",
   );
@@ -38,9 +38,12 @@ test("customer profile tables are not directly mutable by authenticated users", 
   assert.match(migration, /using \(public\.is_superadmin\(\)\)/);
 });
 
-test("customer profile RPC is security-definer and superadmin-gated", () => {
+test("customer profile RPC is security-definer, superadmin-gated, and anon-revoked", () => {
   const migration = read(
     "supabase/migrations/20260916010000_entry_customer_profiles.sql",
+  );
+  const hardening = read(
+    "supabase/migrations/20260916052000_harden_entry_customer_profile_rpc_anon.sql",
   );
   const actions = read("features/entry/customers/actions.ts");
 
@@ -49,24 +52,38 @@ test("customer profile RPC is security-definer and superadmin-gated", () => {
   assert.match(migration, /if not public\.is_superadmin\(\) then/);
   assert.match(migration, /revoke all on function public\.upsert_entry_customer_profile_v1/);
   assert.match(migration, /grant execute on function public\.upsert_entry_customer_profile_v1/);
+  assert.match(hardening, /revoke execute on function public\.upsert_entry_customer_profile_v1/);
+  assert.match(hardening, /from anon/);
   assert.match(actions, /await requireSuperadmin\(\)/);
   assert.match(actions, /getEntryPreviewReadOnlyError/);
 });
 
-test("ENTRY customers are reachable from navigation and route pages", () => {
+test("Minerva customers are global Control navigation, not ENTRY navigation", () => {
   const sidebar = read("components/layout/AppSidebar.tsx");
-  const listPage = read("app/(console)/products/entry/customers/page.tsx");
-  const newPage = read("app/(console)/products/entry/customers/new/page.tsx");
-  const detailPage = read(
-    "app/(console)/products/entry/customers/[customerId]/page.tsx",
-  );
+  const listPage = read("app/(console)/customers/page.tsx");
+  const newPage = read("app/(console)/customers/new/page.tsx");
+  const detailPage = read("app/(console)/customers/[customerId]/page.tsx");
 
-  assert.match(sidebar, /Customers/);
-  assert.match(sidebar, /\/products\/entry\/customers/);
+  assert.match(sidebar, /label: "Customers", href: "\/customers"/);
+  assert.doesNotMatch(sidebar, /label: "Customers", href: "\/products\/entry\/customers"/);
+  assert.match(listPage, /Minerva · Customers/);
   assert.match(listPage, /New customer/);
   assert.match(newPage, /CustomerForm/);
-  assert.match(detailPage, /Edit customer info/);
+  assert.match(detailPage, /Products & services/);
+  assert.match(detailPage, /The customer itself belongs to Minerva Technologies/);
   assert.doesNotMatch(detailPage, /Connect to Seshat/);
+});
+
+test("legacy ENTRY customer routes redirect to canonical global routes", () => {
+  const listPage = read("app/(console)/products/entry/customers/page.tsx");
+  const newPage = read("app/(console)/products/entry/customers/new/page.tsx");
+  const detailPage = read("app/(console)/products/entry/customers/[customerId]/page.tsx");
+  const editPage = read("app/(console)/products/entry/customers/[customerId]/edit/page.tsx");
+
+  assert.match(listPage, /redirect\("\/customers"\)/);
+  assert.match(newPage, /\/customers\/new\?community_id=/);
+  assert.match(detailPage, /redirect\(`\/customers\/\$\{customerId\}`\)/);
+  assert.match(editPage, /redirect\(`\/customers\/\$\{customerId\}\/edit`\)/);
 });
 
 test("additional contacts are opt-in from the customer form", () => {
@@ -78,7 +95,7 @@ test("additional contacts are opt-in from the customer form", () => {
   assert.doesNotMatch(form, /Secondary contact/);
 });
 
-test("community detail routes to view or create the related customer profile", () => {
+test("community detail preserves its customer link through legacy-compatible routes", () => {
   const communityDetail = read(
     "app/(console)/products/entry/communities/[communityId]/page.tsx",
   );
