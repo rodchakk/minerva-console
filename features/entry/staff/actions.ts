@@ -84,9 +84,10 @@ function normalizeGuardUsername(value: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, "_")
+    .replace(/[^a-z0-9._]+/g, "_")
     .replace(/_+/g, "_")
-    .replace(/^_+|_+$/g, "")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^[._]+|[._]+$/g, "")
     .slice(0, 32);
 }
 
@@ -426,7 +427,7 @@ export async function createGuardAction(
     return {
       ok: false,
       message:
-        "Username must be at least 3 characters after normalization. Use letters, numbers, or underscores.",
+        "Username must be at least 3 characters after normalization. Use letters, numbers, periods, or underscores.",
     };
   }
 
