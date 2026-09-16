@@ -4,7 +4,9 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
+import { QuickEditResidents } from "@/features/entry/communityRegistration/review/QuickEditResidents";
 import { ReviewWorkspace } from "@/features/entry/communityRegistration/review/ReviewWorkspace";
+import { getCommunityRegistrationQuickEditData } from "@/features/entry/communityRegistration/review/quickEditQueries";
 import {
   getCommunityRegistrationReviewOverview,
   getCommunityRegistrationReviewUnit,
@@ -73,9 +75,12 @@ export default async function RegistrationReviewPage(
     selectedUnitSummary.residentCount > 0
       ? selectedUnitSummary.id
       : null;
-  const selectedUnit = selectedUnitId
-    ? await getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId)
-    : null;
+  const [selectedUnit, quickEditData] = selectedUnitId
+    ? await Promise.all([
+        getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId),
+        getCommunityRegistrationQuickEditData(selectedUnitId),
+      ])
+    : [null, null];
 
   return (
     <div className="space-y-4">
@@ -92,6 +97,16 @@ export default async function RegistrationReviewPage(
           }
         />
       </section>
+
+      {selectedUnitId && selectedUnit && quickEditData ? (
+        <QuickEditResidents
+          campaignUnitId={selectedUnitId}
+          communityId={community.id}
+          residents={quickEditData.residents}
+          submissionId={quickEditData.submissionId}
+          unitLabel={selectedUnit.unitLabel}
+        />
+      ) : null}
 
       <ReviewWorkspace
         campaign={overview.campaign}
