@@ -60,6 +60,7 @@ function getBreadcrumbs(pathname: string) {
   if (pathname === "/logs") return ["Minerva Console", "Logs"];
   if (pathname === "/products") return ["Minerva Console", "Products"];
   if (pathname.startsWith("/products/entry/tickets")) return ["Minerva Console", "ENTRY", "Tickets"];
+  if (pathname.startsWith("/products/entry/customers")) return ["Minerva Console", "ENTRY", "Customers"];
   if (pathname.startsWith("/products/entry/communities")) return ["Minerva Console", "ENTRY", "Communities"];
   if (pathname.startsWith("/products/entry/users")) return ["Minerva Console", "ENTRY", "Users"];
   if (pathname.startsWith("/products/entry/messages")) return ["Minerva Console", "ENTRY", "Messages"];
