@@ -51,6 +51,19 @@ test("staff contact rules hide synthetic emails and prefer usernames", () => {
   }
 });
 
+test("staff guard usernames preserve periods", () => {
+  const source = read("features/entry/staff/actions.ts");
+  const normalizer = source.slice(
+    source.indexOf("function normalizeGuardUsername"),
+    source.indexOf("function buildGuardSyntheticEmail"),
+  );
+
+  assert.ok(normalizer.includes('.replace(/[^a-z0-9._]+/g, "_")'));
+  assert.ok(normalizer.includes('.replace(/\\.{2,}/g, ".")'));
+  assert.ok(normalizer.includes('.replace(/^[._]+|[._]+$/g, "")'));
+  assert.doesNotMatch(normalizer, /\[\^a-z0-9_\]\+/);
+});
+
 test("staff page enriches profiles through server-only admin client", () => {
   const source = read("features/entry/staff/actions.ts");
   const profileSource = source.slice(
