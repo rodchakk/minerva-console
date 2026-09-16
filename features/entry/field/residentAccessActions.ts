@@ -43,7 +43,7 @@ function mapResident(item: unknown): CanonicalResident | null {
     fullName:
       coerceString(record.full_name) ||
       coerceString(record.username) ||
-      "Unnamed resident",
+      "Unnamed user",
     isActive: coerceBoolean(record.is_active),
     role: coerceString(record.role).trim().toUpperCase(),
     userId,
@@ -104,7 +104,7 @@ export async function resetFieldResidentAccess(input: {
 
   if (!communityId || !userId) {
     return {
-      error: "Community and resident are required.",
+      error: "Community and user are required.",
       mode: "unsupported",
       success: false,
     };
@@ -114,15 +114,19 @@ export async function resetFieldResidentAccess(input: {
 
   if (!resident) {
     return {
-      error: "Resident was not found in this community.",
+      error: "User was not found in this community.",
       mode: "unsupported",
       success: false,
     };
   }
 
-  if (resident.role !== "RESIDENT" && resident.role !== "UNASSIGNED") {
+  if (
+    resident.role !== "RESIDENT" &&
+    resident.role !== "GUARD" &&
+    resident.role !== "UNASSIGNED"
+  ) {
     return {
-      error: "Only resident accounts can use this recovery flow.",
+      error: "This account cannot use the Field recovery flow.",
       mode: "unsupported",
       success: false,
     };
