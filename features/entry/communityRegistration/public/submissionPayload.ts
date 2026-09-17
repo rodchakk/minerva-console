@@ -26,6 +26,7 @@ export type HouseholdSubmissionResident = {
 export type HouseholdSubmissionBody = {
   residents: HouseholdSubmissionResident[];
   unitLabel: string;
+  unitReference?: string;
 };
 
 export type HouseholdCorrectionSubmissionBody = {
@@ -51,6 +52,7 @@ type ParseCorrectionSubmissionResult =
     };
 
 const MAX_UNIT_LABEL_LENGTH = 120;
+const UNIT_REFERENCE_MAX_LENGTH = 160;
 const NAME_MAX_LENGTH = 160;
 const EMAIL_MAX_LENGTH = 254;
 const PHONE_MAX_LENGTH = 32;
@@ -232,6 +234,16 @@ export function parseHouseholdSubmissionBody(
     return { ok: false };
   }
 
+  let unitReference: string | undefined;
+  if ("unitReference" in body) {
+    if (typeof body.unitReference !== "string") return { ok: false };
+    const normalizedUnitReference = normalizeName(body.unitReference);
+    if (countCharacters(normalizedUnitReference) > UNIT_REFERENCE_MAX_LENGTH) {
+      return { ok: false };
+    }
+    if (normalizedUnitReference) unitReference = normalizedUnitReference;
+  }
+
   const residents = parseHouseholdResidents(body.residents);
   if (!residents) return { ok: false };
 
@@ -239,6 +251,7 @@ export function parseHouseholdSubmissionBody(
     body: {
       residents,
       unitLabel,
+      ...(unitReference ? { unitReference } : {}),
     },
     ok: true,
   };
