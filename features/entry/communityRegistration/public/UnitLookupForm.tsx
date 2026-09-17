@@ -267,6 +267,7 @@ export function UnitLookupForm({
     return (
       <HouseholdDraftForm
         onChangeUnit={resetLookup}
+        registrationMode={state.result.registrationMode ?? registrationMode}
         residentLimit={state.result.residentLimit}
         slug={slug}
         unitLabel={state.result.unitLabel}
