@@ -30,6 +30,7 @@ type ReviewWorkspaceProps = {
   quickEditData: CommunityRegistrationQuickEditData | null;
   selectedUnit: CommunityRegistrationReviewUnitDetail | null;
   selectedUnitId: string | null;
+  selectedUnitReference: string | null;
   summary: CommunityRegistrationReviewSummary;
   units: CommunityRegistrationReviewUnit[];
 };
@@ -483,6 +484,7 @@ export function ReviewWorkspace({
   quickEditData,
   selectedUnit,
   selectedUnitId,
+  selectedUnitReference,
   summary,
   units,
 }: ReviewWorkspaceProps) {
@@ -497,7 +499,6 @@ export function ReviewWorkspace({
     markCommunityRegistrationUnitReviewed,
     initialActionState,
   );
-
   const campaignStatus = campaign.status.trim().toLowerCase();
   const reviewCapable = ["open", "review"].includes(campaignStatus);
   const selectedStatus = selectedUnit?.status.trim().toLowerCase() ?? "";
@@ -650,6 +651,17 @@ export function ReviewWorkspace({
                   {statusLabel(selectedUnit.status)}
                 </Badge>
               </div>
+
+              {selectedUnitReference ? (
+                <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                    Referencia de la vivienda
+                  </p>
+                  <p className="mt-1 text-sm font-medium leading-6 text-white">
+                    {selectedUnitReference}
+                  </p>
+                </div>
+              ) : null}
 
               {selectedUnit.review?.observation ? (
                 <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
