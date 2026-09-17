@@ -210,7 +210,6 @@ begin
 end;
 $function$
 ;
-
 CREATE OR REPLACE FUNCTION public.create_resident_activation_queue_bulk_v1(p_community_id uuid, p_rows jsonb)
  RETURNS jsonb
  LANGUAGE plpgsql
@@ -376,4 +375,3 @@ BEGIN
 END;
 $function$
 ;
-
