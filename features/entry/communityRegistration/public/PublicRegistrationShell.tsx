@@ -1,4 +1,5 @@
 import Image from "next/image";
+import styles from "./PublicRegistrationShell.module.css";
 
 export type RegistrationStep = 1 | 2 | 3 | 4;
 
@@ -18,27 +19,35 @@ export function RegistrationStepper({
   includesReference?: boolean;
 }) {
   const steps = includesReference
-    ? [{ id: 1, label: "Unidad" }, { id: 2, label: "Referencia" }, { id: 3, label: "Residentes" }, { id: 4, label: "Revisión" }]
+    ? [
+        { id: 1, label: "Unidad" },
+        { id: 2, label: "Referencia" },
+        { id: 3, label: "Residentes" },
+        { id: 4, label: "Revisión" },
+      ]
     : STEPS;
+
   return (
     <nav aria-label="Progreso del registro" className="w-full">
-      <ol className={`grid ${includesReference ? "grid-cols-4" : "grid-cols-3"} items-start gap-0`}>
+      <ol
+        className={`grid ${includesReference ? "grid-cols-4" : "grid-cols-3"} items-start gap-0`}
+      >
         {steps.map((step, index) => {
           const completed = isComplete || step.id < currentStep;
           const active = !isComplete && step.id === currentStep;
 
           return (
-            <li className="relative flex flex-col items-center gap-2" key={step.id}>
+            <li className="relative flex flex-col items-center gap-1.5" key={step.id}>
               {index > 0 ? (
                 <span
                   aria-hidden="true"
-                  className={`absolute right-1/2 top-[18px] h-px w-full ${
+                  className={`absolute right-1/2 top-[15px] h-px w-full sm:top-[18px] ${
                     completed ? "bg-[#5b21b6]" : "bg-slate-200"
                   }`}
                 />
               ) : null}
               <span
-                className={`relative z-10 flex h-9 w-9 items-center justify-center rounded-full border text-sm font-semibold ${
+                className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border text-xs font-semibold sm:h-9 sm:w-9 sm:text-sm ${
                   active
                     ? "border-[#5b21b6] bg-[#4c1d95] text-white shadow-[0_6px_18px_rgba(91,33,182,0.22)]"
                     : completed
@@ -49,7 +58,7 @@ export function RegistrationStepper({
                 {completed ? (
                   <svg
                     aria-hidden="true"
-                    className="h-4 w-4"
+                    className="h-3.5 w-3.5 sm:h-4 sm:w-4"
                     fill="none"
                     viewBox="0 0 24 24"
                   >
@@ -66,7 +75,7 @@ export function RegistrationStepper({
                 )}
               </span>
               <span
-                className={`text-center text-xs font-medium sm:text-sm ${
+                className={`text-center text-[11px] font-medium leading-4 sm:text-sm ${
                   active
                     ? "text-[#35137a]"
                     : completed
@@ -98,7 +107,9 @@ export function PublicRegistrationShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className="min-h-screen bg-[#f8fafc] text-slate-950">
+    <main
+      className={`${styles.registrationPolish} min-h-screen bg-[#f8fafc] text-slate-950`}
+    >
       <div className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 pb-5 pt-4 sm:px-6 sm:pb-8 sm:pt-8">
         <div className="flex-1">{children}</div>
         <footer className="mt-6 border-t border-slate-200/80 pt-4 sm:mt-8">
