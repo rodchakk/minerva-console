@@ -451,6 +451,8 @@ export function HouseholdDraftForm({
   const [errors, setErrors] = useState<Record<number, ResidentErrors>>({});
   const [reviewResidents, setReviewResidents] = useState<ValidResidentDraft[]>([]);
   const [unitReferenceDraft, setUnitReferenceDraft] = useState(unitReference ?? "");
+  const [referenceAccepted, setReferenceAccepted] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<
     | "access_unavailable"
@@ -481,9 +483,24 @@ export function HouseholdDraftForm({
   const isCorrectionSubmit = finalAction === "correction-submit";
   const isResidentProvidedUnit = registrationMode === "resident_provided_units";
   const normalizedUnitReference = normalizeName(unitReferenceDraft);
+  const canEnterResidents = !isResidentProvidedUnit || referenceAccepted;
   const displayedUnitReference = isResidentProvidedUnit
-    ? normalizedUnitReference || null
+    ? referenceAccepted ? normalizedUnitReference : null
     : unitReference;
+
+  function acceptUnitReference(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!normalizedUnitReference || normalizedUnitReference.length > UNIT_REFERENCE_MAX_LENGTH) {
+      setReferenceError(!normalizedUnitReference
+        ? "Ingresa una referencia de la vivienda para continuar."
+        : "Usa una referencia de 160 caracteres o menos.");
+      return;
+    }
+    setUnitReferenceDraft(normalizedUnitReference);
+    setReferenceError(null);
+    setReferenceAccepted(true);
+    scrollRegistrationToTop();
+  }
 
   useEffect(() => {
     scrollRegistrationToTop();
@@ -545,6 +562,7 @@ export function HouseholdDraftForm({
   }
 
   function addResident() {
+    if (!canEnterResidents) return;
     if (isAtLimit || activeResidentId !== null) return;
 
     const resident = createResidentDraft(nextResidentId);
@@ -615,6 +633,7 @@ export function HouseholdDraftForm({
   }
 
   function handleReview() {
+    if (!canEnterResidents) return;
     if (activeResidentId !== null) {
       setDraftNotice("Guarda el residente abierto antes de continuar.");
       return;
@@ -645,6 +664,7 @@ export function HouseholdDraftForm({
   }
 
   async function handleFinalSubmit() {
+    if (!canEnterResidents) return;
     if (isSubmitting || reviewResidents.length < MIN_RESIDENTS) return;
 
     setIsSubmitting(true);
@@ -734,11 +754,14 @@ export function HouseholdDraftForm({
     }
   }
 
-  const currentStep = step === "review" || step === "success" ? 3 : 2;
+  const currentStep = isResidentProvidedUnit
+    ? step === "review" || step === "success" ? 4 : referenceAccepted ? 3 : 2
+    : step === "review" || step === "success" ? 3 : 2;
 
   return (
     <div className="space-y-4">
       <RegistrationStepper
+        includesReference={isResidentProvidedUnit}
         currentStep={currentStep}
         isComplete={step === "success"}
       />
@@ -751,32 +774,45 @@ export function HouseholdDraftForm({
         unitReference={displayedUnitReference}
       />
 
-      {isResidentProvidedUnit && step !== "success" ? (
-        <section className="rounded-2xl border border-slate-100 bg-white px-4 py-4 shadow-sm sm:px-5">
+      {isResidentProvidedUnit && step !== "success" ? referenceAccepted ? (
+        <button className="text-sm font-bold text-[#4c1d95]" disabled={isSubmitting} onClick={() => {
+          setReferenceAccepted(false);
+          setStep("edit");
+          setReviewResidents([]);
+          setSubmitError(null);
+        }} type="button">Editar referencia</button>
+      ) : (
+        <form noValidate onSubmit={acceptUnitReference} className="border border-slate-100 bg-white px-4 py-4 sm:px-5">
           <label className="block" htmlFor="unit-reference">
             <span className="text-sm font-bold text-slate-950">
-              Referencia de la vivienda <span className="font-medium text-slate-500">(opcional)</span>
+              Referencia de la vivienda
             </span>
             <input
               autoComplete="off"
               className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
               id="unit-reference"
+              required
+              aria-invalid={Boolean(referenceError)}
+              aria-describedby={referenceError ? "unit-reference-helper unit-reference-error" : "unit-reference-helper"}
               maxLength={UNIT_REFERENCE_MAX_LENGTH}
               onChange={(event) => {
                 setUnitReferenceDraft(event.target.value);
+                setReferenceError(null);
                 setDraftNotice(null);
                 setSubmitError(null);
               }}
               onFocus={scrollFocusedControlIntoView}
-              placeholder="Ej. Bloque B, calle principal, frente al parque"
+              placeholder="Ej. 3ra calle, 2da avenida, frente al parque"
               type="text"
               value={unitReferenceDraft}
             />
           </label>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
-            Esta referencia solo ayuda a la administración a identificar correctamente la vivienda. No reemplaza el número de casa.
+          <p id="unit-reference-helper" className="mt-2 text-sm leading-6 text-slate-500">
+            Ingresa una calle, avenida, bloque o referencia que ayude a identificar tu vivienda.
           </p>
-        </section>
+          {referenceError ? <p role="alert" id="unit-reference-error" className="mt-2 text-sm text-amber-700">{referenceError}</p> : null}
+          <button type="submit" className="mt-4 h-12 w-full rounded-xl bg-[#4c1d95] px-4 font-bold text-white">Continuar a residentes</button>
+        </form>
       ) : null}
 
       {confirmingUnitChange && onChangeUnit ? (
@@ -974,7 +1010,7 @@ export function HouseholdDraftForm({
             </button>
           </div>
         </section>
-      ) : (
+      ) : canEnterResidents ? (
         <section className="space-y-4" aria-labelledby="household-edit-title">
           <div>
             <div className="flex items-start gap-3">
@@ -1055,6 +1091,19 @@ export function HouseholdDraftForm({
               noValidate
               onSubmit={saveActiveResident}
             >
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-5 w-5 accent-[#4c1d95]"
+                  checked={residents[0]?.id === activeResident.id}
+                  onChange={() => makeResidentPrimary(activeResident.id)}
+                  aria-describedby={`resident-${activeResident.id}-titular-helper`}
+                />
+                <span>
+                  <span className="block text-sm font-bold text-slate-950">Titular de la vivienda</span>
+                  <span id={`resident-${activeResident.id}-titular-helper`} className="block text-sm text-slate-500">Esta persona será el contacto principal de esta vivienda.</span>
+                </span>
+              </label>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <ResidentIcon plus={!savedResidentIds.includes(activeResident.id)} />
@@ -1258,7 +1307,7 @@ export function HouseholdDraftForm({
             </button>
           </div>
         </section>
-      )}
+      ) : null}
     </div>
   );
 }
