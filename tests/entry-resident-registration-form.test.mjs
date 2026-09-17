@@ -21,6 +21,9 @@ const submissionPayload = read(
 const gateway = read(
   "features/entry/communityRegistration/public/gateway.ts",
 );
+const reviewWorkspace = read(
+  "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+);
 const submitRoute = read(
   "app/(public)/entry/register/[slug]/submit/route.ts",
 );
@@ -40,9 +43,10 @@ test("titular is a registration primary-contact convention, not an ownership fla
   );
   assert.match(householdForm, /resident\.position === 1/);
   assert.match(householdForm, /function makeResidentPrimary/);
+  assert.match(reviewWorkspace, /resident\.position === 1[\s\S]*Titular/);
 
   const makePrimaryFunction = householdForm.match(
-    /function makeResidentPrimary[\s\S]*?\n  }\n\n  function addResident/,
+    /function makeResidentPrimary[\s\S]*?setSubmitError\(null\);\s*}/,
   )?.[0];
   assert.ok(makePrimaryFunction);
   assert.doesNotMatch(makePrimaryFunction, /isOwnerReference|relationship/);
@@ -84,7 +88,19 @@ test("resident-provided unit reference is staged without becoming an ownership m
   );
   assert.match(submissionMigration, /unit_reference_snapshot/);
   assert.match(submissionMigration, /v_unit_reference/);
-  assert.doesNotMatch(submissionMigration, /is_owner|owner_id|property_owner/i);
+  assert.match(
+    submissionMigration,
+    /if v_campaign\.registration_mode = 'resident_provided_units' then[\s\S]*unit_reference_snapshot[\s\S]*v_unit_reference[\s\S]*else[\s\S]*select \* into v_unit/,
+  );
+  assert.doesNotMatch(
+    submissionMigration,
+    /else[\s\S]*unit_reference_snapshot[\s\S]*v_unit_reference[\s\S]*end if;/,
+  );
+  const residentProvidedInsert = submissionMigration.match(
+    /if v_campaign\.registration_mode = 'resident_provided_units' then[\s\S]*?returning \* into v_unit;/,
+  )?.[0];
+  assert.ok(residentProvidedInsert);
+  assert.doesNotMatch(residentProvidedInsert, /owner_id|property_owner/i);
 });
 
 test("confirmed staging reference only fills a blank operational house reference", () => {
