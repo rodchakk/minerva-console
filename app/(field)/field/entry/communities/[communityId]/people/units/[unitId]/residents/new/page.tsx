@@ -37,7 +37,7 @@ export default async function FieldQuickResidentPage({
           Add resident
         </h1>
         <p className="text-sm leading-6 text-[var(--console-text-muted)]">
-          Create an ENTRY resident account and link it directly to this unit.
+          Invite a resident by email or create access now for this unit.
         </p>
       </section>
 
