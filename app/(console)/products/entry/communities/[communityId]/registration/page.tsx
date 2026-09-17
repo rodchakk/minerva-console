@@ -127,6 +127,7 @@ export default async function RegistrationReviewPage(
         quickEditData={quickEditData}
         selectedUnit={selectedUnit}
         selectedUnitId={selectedUnitId}
+        selectedUnitReference={selectedUnitReference}
         summary={overview.summary}
         units={overview.units}
       />
