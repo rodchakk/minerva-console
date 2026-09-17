@@ -10,6 +10,7 @@ import {
   getCommunityRegistrationReviewOverview,
   getCommunityRegistrationReviewUnit,
 } from "@/features/entry/communityRegistration/review/queries";
+import { getCommunityRegistrationUnitReference } from "@/features/entry/communityRegistration/review/unitReferenceQuery";
 
 type RegistrationReviewPageProps = {
   params: Promise<{ communityId: string }>;
@@ -74,12 +75,13 @@ export default async function RegistrationReviewPage(
     selectedUnitSummary.residentCount > 0
       ? selectedUnitSummary.id
       : null;
-  const [selectedUnit, quickEditData] = selectedUnitId
+  const [selectedUnit, quickEditData, selectedUnitReference] = selectedUnitId
     ? await Promise.all([
         getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId),
         getCommunityRegistrationQuickEditData(selectedUnitId),
+        getCommunityRegistrationUnitReference(selectedUnitId),
       ])
-    : [null, null];
+    : [null, null, null];
 
   return (
     <div className="space-y-4">
@@ -96,6 +98,27 @@ export default async function RegistrationReviewPage(
           }
         />
       </section>
+
+      {selectedUnit && selectedUnitReference ? (
+        <section className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">
+                Referencia de la vivienda
+              </p>
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <p className="text-base font-semibold text-white">
+                  {selectedUnit.unitLabel}
+                </p>
+                <p className="text-sm leading-6 text-[var(--text-muted)]">
+                  {selectedUnitReference}
+                </p>
+              </div>
+            </div>
+            <Badge tone="info">Para revisión</Badge>
+          </div>
+        </section>
+      ) : null}
 
       <ReviewWorkspace
         campaign={overview.campaign}
