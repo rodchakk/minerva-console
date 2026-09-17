@@ -148,6 +148,7 @@ export async function POST(
     residents: parsedBody.body.residents,
     tokenHash: accessState.tokenHash,
     unitLabel: parsedBody.body.unitLabel,
+    unitReference: parsedBody.body.unitReference,
   });
 
   if (submission.submitted) {
