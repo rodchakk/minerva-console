@@ -1,5 +1,5 @@
 -- Read-only deployed importer snapshots inspected 2026-09-17.
--- Test fixtures only: the production migration does not replace these functions.
+-- Baseline fixtures only: the production migration replaces both functions after these load.
 CREATE OR REPLACE FUNCTION public.confirm_resident_bulk_import_v1(p_community_id uuid, p_rows jsonb, p_create_missing_units boolean DEFAULT true)
  RETURNS jsonb
  LANGUAGE plpgsql

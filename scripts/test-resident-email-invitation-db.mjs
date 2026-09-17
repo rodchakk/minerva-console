@@ -106,7 +106,7 @@ try {
   ])
     await sql(readFileSync(file, "utf8"));
   console.log(
-    "PASS: SQL validation, house boundaries, status reuse, Auth conflict, grants, auditing, both bulk writers",
+    "PASS: SQL validation and both importers' two-row batches across all six states, normalized email, house conflict, and unrelated unique violations",
   );
 
   const pair = await Promise.all([
@@ -146,11 +146,12 @@ try {
       ),
     ),
   );
-  assert.equal(bulkResults.filter((result) => result.code === 0).length, 1);
-  assert.match(
-    bulkResults.find((result) => result.code !== 0).stderr,
-    /23505[\s\S]*ux_raq_live_email_identity/,
+  assert.equal(bulkResults.filter((result) => result.code === 0).length, 2);
+  const bulkSummaries = bulkResults.map((result) =>
+    JSON.parse(result.stdout.split("\n").find((line) => line.startsWith("{"))),
   );
+  assert.equal(bulkSummaries.reduce((sum, result) => sum + result.inserted_count, 0), 1);
+  assert.equal(bulkSummaries.reduce((sum, result) => sum + result.failed_count, 0), 1);
   assert.equal(
     (
       await sql(
@@ -160,7 +161,7 @@ try {
     "1",
   );
   console.log(
-    "PASS: concurrent canonical/legacy bulk writers yield one live row and canonical 23505 conflict",
+    "PASS: concurrent canonical/legacy bulk writers both complete with one live row and row-level conflict",
   );
 
   const mixed = await Promise.all([
@@ -173,7 +174,7 @@ try {
       true,
     ),
   ]);
-  assert.ok(mixed.some((result) => result.code === 0));
+  assert.ok(mixed.every((result) => result.code === 0));
   assert.equal(
     (
       await sql(
@@ -187,6 +188,41 @@ try {
   console.log(
     "PASS: concurrent single/bulk preparation cannot create duplicate live invitations",
   );
+  for (const importer of ["canonical", "legacy"]) {
+    const email = `${importer}-unlocked@example.com`;
+    const direct = sql(`begin;
+      insert into public.resident_activation_queue
+        (community_id,house_id,unit_label,resident_name,email,activation_method,status)
+        values('${community}','${house}','10','Uncooperative Writer','${email}','email','failed');
+      select pg_sleep(3) /* unlocked-${importer} */; commit;`);
+    let sleeping = false;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const activity = await sql(`select exists(select 1 from pg_stat_activity
+        where pid <> pg_backend_pid() and state='active'
+          and query like '%pg_sleep(3) /* unlocked-${importer} */%');`);
+      if (activity.stdout.trim() === "t") {
+        sleeping = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    assert.ok(sleeping, "unlocked writer has inserted but not committed");
+    const rows = JSON.stringify([
+      { unit_label: "10", resident_name: "Uncooperative Writer", email },
+      { unit_label: "10", resident_name: "Valid Following Row", email: `fresh-${email}` },
+    ]);
+    const call = importer === "canonical"
+      ? `public.confirm_resident_bulk_import_v1('${community}','${rows}',false)`
+      : `public.create_resident_activation_queue_bulk_v1('${community}','${rows}')`;
+    const result = await sql(`set test.superadmin='true'; select ${call};`);
+    assert.equal((await direct).code, 0);
+    const summary = JSON.parse(
+      result.stdout.split("\n").find((line) => line.startsWith("{")),
+    );
+    assert.equal(summary.inserted_count, 1);
+    assert.equal(summary.skipped_duplicates_count, 1);
+    console.log(`PASS: ${importer} INSERT fallback handles unlocked writer's unique race and preserves second row`);
+  }
 } finally {
   await docker(["rm", "-f", container]);
 }
