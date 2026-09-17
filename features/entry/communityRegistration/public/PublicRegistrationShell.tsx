@@ -1,6 +1,6 @@
 import Image from "next/image";
 
-export type RegistrationStep = 1 | 2 | 3;
+export type RegistrationStep = 1 | 2 | 3 | 4;
 
 const STEPS: Array<{ id: RegistrationStep; label: string }> = [
   { id: 1, label: "Unidad" },
@@ -11,14 +11,19 @@ const STEPS: Array<{ id: RegistrationStep; label: string }> = [
 export function RegistrationStepper({
   currentStep,
   isComplete = false,
+  includesReference = false,
 }: {
   currentStep: RegistrationStep;
   isComplete?: boolean;
+  includesReference?: boolean;
 }) {
+  const steps = includesReference
+    ? [{ id: 1, label: "Unidad" }, { id: 2, label: "Referencia" }, { id: 3, label: "Residentes" }, { id: 4, label: "Revisión" }]
+    : STEPS;
   return (
     <nav aria-label="Progreso del registro" className="w-full">
-      <ol className="grid grid-cols-[1fr_1fr_1fr] items-start gap-0">
-        {STEPS.map((step, index) => {
+      <ol className={`grid ${includesReference ? "grid-cols-4" : "grid-cols-3"} items-start gap-0`}>
+        {steps.map((step, index) => {
           const completed = isComplete || step.id < currentStep;
           const active = !isComplete && step.id === currentStep;
 

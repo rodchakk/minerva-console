@@ -677,9 +677,16 @@ export function ReviewWorkspace({
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-semibold text-white">
-                            {resident.position}. {resident.fullName}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-sm font-semibold text-white">
+                              {resident.position}. {resident.fullName}
+                            </p>
+                            {resident.position === 1 ? (
+                              <span className="rounded-full border border-violet-300/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-100">
+                                Titular
+                              </span>
+                            ) : null}
+                          </div>
                           <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
                             {resident.relationshipToHouse}
                             {resident.isOwnerReference ? " · owner reference" : ""}

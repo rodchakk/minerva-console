@@ -267,6 +267,7 @@ export function UnitLookupForm({
     return (
       <HouseholdDraftForm
         onChangeUnit={resetLookup}
+        registrationMode={state.result.registrationMode ?? registrationMode}
         residentLimit={state.result.residentLimit}
         slug={slug}
         unitLabel={state.result.unitLabel}
@@ -279,7 +280,7 @@ export function UnitLookupForm({
     <div className="space-y-4">
       {intro ? <div>{intro}</div> : null}
 
-      <RegistrationStepper currentStep={1} />
+      <RegistrationStepper currentStep={1} includesReference={registrationMode === "resident_provided_units"} />
 
       <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_16px_48px_rgba(15,23,42,0.07)]">
         <div className="border-b border-slate-100 px-5 py-4 sm:px-8 sm:py-6">

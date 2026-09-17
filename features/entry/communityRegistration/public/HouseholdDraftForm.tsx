@@ -11,6 +11,7 @@ import { buildHouseholdSubmissionResidents } from "./submissionPayload";
 import { RegistrationStepper } from "./PublicRegistrationShell";
 
 type Relationship = "" | "owner" | "tenant" | "family" | "other";
+type RegistrationMode = "existing_units" | "resident_provided_units";
 
 type ResidentDraft = {
   email: string;
@@ -46,6 +47,7 @@ const MIN_RESIDENTS = 1;
 const NAME_MAX_LENGTH = 160;
 const EMAIL_MAX_LENGTH = 254;
 const PHONE_MAX_LENGTH = 32;
+const UNIT_REFERENCE_MAX_LENGTH = 160;
 
 function scrollRegistrationToTop() {
   if (typeof window === "undefined") return;
@@ -202,6 +204,7 @@ function hasResidentContent(resident: ResidentDraft) {
     resident.isOwnerReference
   );
 }
+
 function getErrorId(residentId: number, field: keyof ResidentErrors) {
   return `resident-${residentId}-${field}-error`;
 }
@@ -328,13 +331,17 @@ function SelectedUnitCard({
 
 function ResidentSummaryCard({
   index,
+  isPrimary,
   onEdit,
+  onMakePrimary,
   onRemove,
   resident,
   removable,
 }: {
   index: number;
+  isPrimary: boolean;
   onEdit: () => void;
+  onMakePrimary: () => void;
   onRemove: () => void;
   resident: ResidentDraft;
   removable: boolean;
@@ -346,9 +353,29 @@ function ResidentSummaryCard({
           {index + 1}
         </span>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-bold text-slate-950">
-            {normalizeName(resident.fullName)}
-          </p>
+          <div className="flex min-w-0 items-center gap-2">
+            <p className="truncate text-sm font-bold text-slate-950">
+              {normalizeName(resident.fullName)}
+            </p>
+            {isPrimary ? (
+              <span className="shrink-0 rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#4c1d95]">
+                Titular
+              </span>
+            ) : null}
+          </div>
+          {!isPrimary ? (
+            <button
+              className="mt-1 text-xs font-bold text-[#5b21b6] transition hover:text-[#4c1d95]"
+              onClick={onMakePrimary}
+              type="button"
+            >
+              Hacer titular
+            </button>
+          ) : (
+            <p className="mt-1 text-xs text-slate-500">
+              Contacto principal de esta vivienda
+            </p>
+          )}
         </div>
         <button
           aria-label={`Editar residente ${index + 1}`}
@@ -394,6 +421,7 @@ export function HouseholdDraftForm({
   initialResidents,
   introText,
   onChangeUnit,
+  registrationMode = "existing_units",
   residentLimit,
   slug,
   unitLabel,
@@ -402,6 +430,7 @@ export function HouseholdDraftForm({
   finalAction?: FinalAction;
   initialResidents?: InitialHouseholdResidentDraft[];
   introText?: string;
+  registrationMode?: RegistrationMode;
   residentLimit: number;
   slug: string;
   unitLabel: string;
@@ -421,6 +450,9 @@ export function HouseholdDraftForm({
   const [activeResidentId, setActiveResidentId] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<number, ResidentErrors>>({});
   const [reviewResidents, setReviewResidents] = useState<ValidResidentDraft[]>([]);
+  const [unitReferenceDraft, setUnitReferenceDraft] = useState(unitReference ?? "");
+  const [referenceAccepted, setReferenceAccepted] = useState(false);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<
     | "access_unavailable"
@@ -449,6 +481,26 @@ export function HouseholdDraftForm({
     [residents],
   );
   const isCorrectionSubmit = finalAction === "correction-submit";
+  const isResidentProvidedUnit = registrationMode === "resident_provided_units";
+  const normalizedUnitReference = normalizeName(unitReferenceDraft);
+  const canEnterResidents = !isResidentProvidedUnit || referenceAccepted;
+  const displayedUnitReference = isResidentProvidedUnit
+    ? referenceAccepted ? normalizedUnitReference : null
+    : unitReference;
+
+  function acceptUnitReference(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!normalizedUnitReference || normalizedUnitReference.length > UNIT_REFERENCE_MAX_LENGTH) {
+      setReferenceError(!normalizedUnitReference
+        ? "Ingresa una referencia de la vivienda para continuar."
+        : "Usa una referencia de 160 caracteres o menos.");
+      return;
+    }
+    setUnitReferenceDraft(normalizedUnitReference);
+    setReferenceError(null);
+    setReferenceAccepted(true);
+    scrollRegistrationToTop();
+  }
 
   useEffect(() => {
     scrollRegistrationToTop();
@@ -491,7 +543,26 @@ export function HouseholdDraftForm({
     setSubmitError(null);
   }
 
+  function makeResidentPrimary(residentId: number) {
+    setResidents((current) => {
+      const selectedIndex = current.findIndex((resident) => resident.id === residentId);
+      if (selectedIndex <= 0) return current;
+
+      const selected = current[selectedIndex];
+      return [
+        selected,
+        ...current.slice(0, selectedIndex),
+        ...current.slice(selectedIndex + 1),
+      ];
+    });
+    setReviewResidents([]);
+    setStep("edit");
+    setDraftNotice(null);
+    setSubmitError(null);
+  }
+
   function addResident() {
+    if (!canEnterResidents) return;
     if (isAtLimit || activeResidentId !== null) return;
 
     const resident = createResidentDraft(nextResidentId);
@@ -535,7 +606,7 @@ export function HouseholdDraftForm({
   function requestUnitChange() {
     if (!onChangeUnit) return;
 
-    if (hasDraftContent || residents.length > MIN_RESIDENTS) {
+    if (hasDraftContent || residents.length > MIN_RESIDENTS || normalizedUnitReference) {
       setConfirmingUnitChange(true);
       return;
     }
@@ -562,6 +633,7 @@ export function HouseholdDraftForm({
   }
 
   function handleReview() {
+    if (!canEnterResidents) return;
     if (activeResidentId !== null) {
       setDraftNotice("Guarda el residente abierto antes de continuar.");
       return;
@@ -592,6 +664,7 @@ export function HouseholdDraftForm({
   }
 
   async function handleFinalSubmit() {
+    if (!canEnterResidents) return;
     if (isSubmitting || reviewResidents.length < MIN_RESIDENTS) return;
 
     setIsSubmitting(true);
@@ -607,7 +680,14 @@ export function HouseholdDraftForm({
         {
           body: JSON.stringify({
             residents: submissionResidents,
-            ...(isCorrectionSubmit ? {} : { unitLabel }),
+            ...(isCorrectionSubmit
+              ? {}
+              : {
+                  unitLabel,
+                  ...(isResidentProvidedUnit && normalizedUnitReference
+                    ? { unitReference: normalizedUnitReference }
+                    : {}),
+                }),
           }),
           cache: "no-store",
           credentials: "same-origin",
@@ -674,11 +754,14 @@ export function HouseholdDraftForm({
     }
   }
 
-  const currentStep = step === "review" || step === "success" ? 3 : 2;
+  const currentStep = isResidentProvidedUnit
+    ? step === "review" || step === "success" ? 4 : referenceAccepted ? 3 : 2
+    : step === "review" || step === "success" ? 3 : 2;
 
   return (
     <div className="space-y-4">
       <RegistrationStepper
+        includesReference={isResidentProvidedUnit}
         currentStep={currentStep}
         isComplete={step === "success"}
       />
@@ -688,8 +771,49 @@ export function HouseholdDraftForm({
         onRequestChange={requestUnitChange}
         residentLimit={residentLimit}
         unitLabel={unitLabel}
-        unitReference={unitReference}
+        unitReference={displayedUnitReference}
       />
+
+      {isResidentProvidedUnit && step !== "success" ? referenceAccepted ? (
+        <button className="text-sm font-bold text-[#4c1d95]" disabled={isSubmitting} onClick={() => {
+          setReferenceAccepted(false);
+          setStep("edit");
+          setReviewResidents([]);
+          setSubmitError(null);
+        }} type="button">Editar referencia</button>
+      ) : (
+        <form noValidate onSubmit={acceptUnitReference} className="border border-slate-100 bg-white px-4 py-4 sm:px-5">
+          <label className="block" htmlFor="unit-reference">
+            <span className="text-sm font-bold text-slate-950">
+              Referencia de la vivienda
+            </span>
+            <input
+              autoComplete="off"
+              className="mt-2 h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#5b21b6] focus:shadow-[0_0_0_3px_rgba(91,33,182,0.10)]"
+              id="unit-reference"
+              required
+              aria-invalid={Boolean(referenceError)}
+              aria-describedby={referenceError ? "unit-reference-helper unit-reference-error" : "unit-reference-helper"}
+              maxLength={UNIT_REFERENCE_MAX_LENGTH}
+              onChange={(event) => {
+                setUnitReferenceDraft(event.target.value);
+                setReferenceError(null);
+                setDraftNotice(null);
+                setSubmitError(null);
+              }}
+              onFocus={scrollFocusedControlIntoView}
+              placeholder="Ej. 3ra calle, 2da avenida, frente al parque"
+              type="text"
+              value={unitReferenceDraft}
+            />
+          </label>
+          <p id="unit-reference-helper" className="mt-2 text-sm leading-6 text-slate-500">
+            Ingresa una calle, avenida, bloque o referencia que ayude a identificar tu vivienda.
+          </p>
+          {referenceError ? <p role="alert" id="unit-reference-error" className="mt-2 text-sm text-amber-700">{referenceError}</p> : null}
+          <button type="submit" className="mt-4 h-12 w-full rounded-xl bg-[#4c1d95] px-4 font-bold text-white">Continuar a residentes</button>
+        </form>
+      ) : null}
 
       {confirmingUnitChange && onChangeUnit ? (
         <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 shadow-sm">
@@ -770,9 +894,16 @@ export function HouseholdDraftForm({
                   <ResidentIcon />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-bold uppercase text-[#4c1d95]">
-                        Residente {resident.position}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-bold uppercase text-[#4c1d95]">
+                          Residente {resident.position}
+                        </p>
+                        {resident.position === 1 ? (
+                          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#4c1d95]">
+                            Titular
+                          </span>
+                        ) : null}
+                      </div>
                       <button
                         className="inline-flex items-center gap-2 text-sm font-bold text-[#4c1d95]"
                         onClick={() => {
@@ -879,7 +1010,7 @@ export function HouseholdDraftForm({
             </button>
           </div>
         </section>
-      ) : (
+      ) : canEnterResidents ? (
         <section className="space-y-4" aria-labelledby="household-edit-title">
           <div>
             <div className="flex items-start gap-3">
@@ -902,6 +1033,9 @@ export function HouseholdDraftForm({
                   {introText ??
                     "Agrega la información de las personas que viven en esta vivienda."}
                 </p>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  El titular es el contacto principal de este registro. No significa que sea el propietario de la vivienda.
+                </p>
               </div>
             </div>
           </div>
@@ -913,8 +1047,10 @@ export function HouseholdDraftForm({
                 return activeResidentId === resident.id ? null : (
                   <ResidentSummaryCard
                     index={index}
+                    isPrimary={index === 0}
                     key={resident.id}
                     onEdit={() => editResident(resident.id)}
+                    onMakePrimary={() => makeResidentPrimary(resident.id)}
                     onRemove={() => removeResident(resident.id)}
                     removable={canRemoveResident}
                     resident={resident}
@@ -933,7 +1069,7 @@ export function HouseholdDraftForm({
                 Aún no has agregado residentes
               </h3>
               <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">
-                Empieza con la primera persona que vive en esta vivienda.
+                Empieza con la persona que quedará como titular del registro. Podrás cambiar el titular después.
               </p>
               <button
                 className="mt-4 inline-flex h-12 items-center justify-center rounded-2xl bg-[#4c1d95] px-5 text-sm font-bold text-white transition hover:bg-[#5b21b6] sm:mt-5"
@@ -955,14 +1091,34 @@ export function HouseholdDraftForm({
               noValidate
               onSubmit={saveActiveResident}
             >
+              <label className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-5 w-5 accent-[#4c1d95]"
+                  checked={residents[0]?.id === activeResident.id}
+                  onChange={() => makeResidentPrimary(activeResident.id)}
+                  aria-describedby={`resident-${activeResident.id}-titular-helper`}
+                />
+                <span>
+                  <span className="block text-sm font-bold text-slate-950">Titular de la vivienda</span>
+                  <span id={`resident-${activeResident.id}-titular-helper`} className="block text-sm text-slate-500">Esta persona será el contacto principal de esta vivienda.</span>
+                </span>
+              </label>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <ResidentIcon plus={!savedResidentIds.includes(activeResident.id)} />
                   <div>
-                    <p className="text-sm font-bold uppercase text-[#4c1d95]">
-                      Residente{" "}
-                      {residents.findIndex((resident) => resident.id === activeResident.id) + 1}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold uppercase text-[#4c1d95]">
+                        Residente{" "}
+                        {residents.findIndex((resident) => resident.id === activeResident.id) + 1}
+                      </p>
+                      {residents.findIndex((resident) => resident.id === activeResident.id) === 0 ? (
+                        <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#4c1d95]">
+                          Titular
+                        </span>
+                      ) : null}
+                    </div>
                     <h3 className="text-xl font-bold text-slate-950">
                       {savedResidentIds.includes(activeResident.id)
                         ? "Editar residente"
@@ -1151,7 +1307,7 @@ export function HouseholdDraftForm({
             </button>
           </div>
         </section>
-      )}
+      ) : null}
     </div>
   );
 }

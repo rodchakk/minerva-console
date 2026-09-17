@@ -370,8 +370,10 @@ export async function submitCommunityRegistrationHousehold(input: {
   residents: HouseholdSubmissionResident[];
   tokenHash: string;
   unitLabel: string;
+  unitReference?: string;
 }): Promise<PublicRegistrationSubmission> {
   const unitLabel = input.unitLabel.trim();
+  const unitReference = input.unitReference?.trim() || null;
 
   if (
     !input.publicSlug ||
@@ -393,7 +395,9 @@ export async function submitCommunityRegistrationHousehold(input: {
         p_campaign_token_hash: input.tokenHash,
         p_public_slug: input.publicSlug,
         p_residents: input.residents,
-        p_technical_metadata: {},
+        p_technical_metadata: unitReference
+          ? { unit_reference: unitReference }
+          : {},
         p_unit_label: unitLabel,
       },
     );
