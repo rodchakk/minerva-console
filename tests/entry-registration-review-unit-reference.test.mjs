@@ -23,10 +23,19 @@ test("selected household review visibly presents the unit reference", () => {
   const page = read(
     "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
   );
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
 
   assert.match(page, /getCommunityRegistrationUnitReference/);
   assert.match(page, /Referencia de la vivienda/);
   assert.match(page, /selectedUnitReference/);
   assert.match(page, /selectedUnit\.unitLabel/);
   assert.match(page, /Para revisión/);
+
+  assert.match(page, /selectedUnitReference=\{selectedUnitReference\}/);
+  assert.match(workspace, /selectedUnitReference: string \| null/);
+  assert.match(workspace, /Referencia de la vivienda/);
+  assert.match(workspace, /\{selectedUnitReference\}/);
+  assert.match(workspace, /Household submission/);
 });
