@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, ShieldCheck, UserCircle } from "lucide-react";
+import { Home, QrCode, ShieldCheck, UserCircle } from "lucide-react";
 import { FieldNav } from "@/components/field/FieldNav";
 import { ENTRY_PREVIEW_READ_ONLY_MESSAGE } from "@/features/entry/deploymentBoundary";
 import { FieldActiveWorkTimerIndicator } from "@/features/entry/field/FieldActiveWorkTimerIndicator";
@@ -38,6 +38,16 @@ export function FieldShell({
           </Link>
 
           <div className="flex shrink-0 items-center gap-1">
+            <Link
+              href="/field/entry/qr"
+              aria-label="Open quick QR tools"
+              title="Quick QR"
+              className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-full border border-[var(--console-border)] bg-white/[0.03] px-2.5 text-xs font-bold text-[var(--console-text-muted)] transition-colors hover:border-[var(--console-accent-border)] hover:bg-[var(--console-accent-subtle)] hover:text-[var(--console-text)]"
+            >
+              <QrCode aria-hidden="true" className="h-4 w-4 shrink-0 text-[var(--console-accent)]" />
+              <span className="shrink-0">QR</span>
+            </Link>
+
             <FieldActiveWorkTimerIndicator session={activeWorkTimer} />
 
             <nav aria-label="Field sections" className="hidden items-center gap-1 md:flex">
