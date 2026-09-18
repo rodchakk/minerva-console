@@ -138,13 +138,20 @@ export async function getFieldQuickQrRegistrationOptions(): Promise<
     return [];
   }
 
+  const activeTokenCountByCampaign = new Map<string, number>();
   const shareableTokenCountByCampaign = new Map<string, number>();
   for (const token of tokensData) {
-    if (!tokenIsShareable(token)) continue;
     const campaignId = coerceString(
       (token as Record<string, unknown>).campaign_id,
     );
     if (!campaignId) continue;
+
+    activeTokenCountByCampaign.set(
+      campaignId,
+      (activeTokenCountByCampaign.get(campaignId) ?? 0) + 1,
+    );
+
+    if (!tokenIsShareable(token)) continue;
     shareableTokenCountByCampaign.set(
       campaignId,
       (shareableTokenCountByCampaign.get(campaignId) ?? 0) + 1,
@@ -153,7 +160,11 @@ export async function getFieldQuickQrRegistrationOptions(): Promise<
 
   return communities.flatMap((community) => {
     const campaign = latestCampaignByCommunity.get(community.id);
-    if (!campaign || shareableTokenCountByCampaign.get(campaign.id) !== 1) {
+    if (
+      !campaign ||
+      activeTokenCountByCampaign.get(campaign.id) !== 1 ||
+      shareableTokenCountByCampaign.get(campaign.id) !== 1
+    ) {
       return [];
     }
 
