@@ -57,7 +57,7 @@ test("Registration QR recovers the current secure link at selection time", () =>
   assert.match(workspace, /campaignId: option\.campaignId/);
   assert.match(workspace, /communityId: option\.communityId/);
   assert.match(workspace, /url: result\.data\.registrationUrl/);
-  assert.match(workspace, /Field recupera el enlace activo/);
+  assert.match(workspace, /Field recupera el\s+enlace activo/);
 });
 
 test("Quick QR stays inside authenticated Field and does not expose registration tokens in page data", () => {
