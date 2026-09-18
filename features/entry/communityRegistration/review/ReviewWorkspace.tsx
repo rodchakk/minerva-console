@@ -12,6 +12,7 @@ import {
   type CommunityRegistrationReviewActionResult,
 } from "@/features/entry/communityRegistration/review/actions";
 import { QuickEditResidentDialog } from "@/features/entry/communityRegistration/review/QuickEditResidentDialog";
+import { QuickEditUnitDialog } from "@/features/entry/communityRegistration/review/QuickEditUnitDialog";
 import type {
   CommunityRegistrationQuickEditData,
   CommunityRegistrationQuickEditResident,
@@ -495,6 +496,7 @@ export function ReviewWorkspace({
   const [showActivationHandoff, setShowActivationHandoff] = useState(false);
   const [editingResident, setEditingResident] =
     useState<CommunityRegistrationQuickEditResident | null>(null);
+  const [editingUnit, setEditingUnit] = useState(false);
   const [reviewState, reviewAction, reviewPending] = useActionState(
     markCommunityRegistrationUnitReviewed,
     initialActionState,
@@ -510,6 +512,9 @@ export function ReviewWorkspace({
   const canReplaceCorrectionLink =
     reviewCapable && selectedStatus === "edit_enabled";
   const canQuickEdit = selectedStatus === "submitted" && Boolean(quickEditData);
+  const canQuickEditUnit =
+    selectedStatus === "submitted" &&
+    campaign.registrationMode === "resident_provided_units";
   const activationQueueUrl = `/products/entry/activation?community_id=${encodeURIComponent(
     communityId,
   )}`;
@@ -640,9 +645,20 @@ export function ReviewWorkspace({
                   <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
                     Household submission
                   </p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">
-                    {selectedUnit.unitLabel}
-                  </h2>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <h2 className="text-2xl font-semibold text-white">
+                      {selectedUnit.unitLabel}
+                    </h2>
+                    {canQuickEditUnit ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditingUnit(true)}
+                        className="rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/5"
+                      >
+                        Edit unit
+                      </button>
+                    ) : null}
+                  </div>
                   <p className="mt-1 text-sm text-[var(--text-muted)]">
                     Version {selectedUnit.version} · Submitted {formatDate(selectedUnit.submittedAt)}
                   </p>
@@ -827,6 +843,15 @@ export function ReviewWorkspace({
           onClose={() => setShowActivationHandoff(false)}
           unitId={selectedUnitId}
           unitLabel={selectedUnit.unitLabel}
+        />
+      ) : null}
+
+      {editingUnit && selectedUnit && selectedUnitId ? (
+        <QuickEditUnitDialog
+          campaignUnitId={selectedUnitId}
+          communityId={communityId}
+          currentLabel={selectedUnit.unitLabel}
+          onClose={() => setEditingUnit(false)}
         />
       ) : null}
 
