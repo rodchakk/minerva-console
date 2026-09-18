@@ -10,6 +10,7 @@ export type CommunityRegistrationReviewCampaign = {
   id: string;
   publicSlug: string;
   publicTitle: string;
+  registrationMode: string;
   status: string;
 };
 
@@ -106,6 +107,8 @@ function normalizeCampaign(value: unknown): CommunityRegistrationReviewCampaign 
     publicSlug,
     publicTitle:
       coerceString(record.public_title).trim() || "Registro de residentes",
+    registrationMode:
+      coerceString(record.registration_mode).trim() || "existing_units",
     status: coerceString(record.status).trim() || "open",
   };
 }
@@ -222,7 +225,7 @@ export async function getCommunityRegistrationReviewOverview(
 
   const { data: campaignsData, error: campaignsError } = await supabase
     .from("community_registration_campaigns")
-    .select("id,public_title,public_slug,status,created_at")
+    .select("id,public_title,public_slug,status,registration_mode,created_at")
     .eq("community_id", communityId)
     .order("created_at", { ascending: false })
     .limit(10);

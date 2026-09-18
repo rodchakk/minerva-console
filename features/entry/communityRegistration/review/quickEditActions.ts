@@ -80,3 +80,72 @@ export async function quickEditCommunityRegistrationResident(
 
   return { success: true, message: "Resident details updated." };
 }
+
+
+export async function quickEditCommunityRegistrationUnitLabel(
+  _previousState: RegistrationQuickEditActionResult | null,
+  formData: FormData,
+): Promise<RegistrationQuickEditActionResult> {
+  const auth = await requireSuperadmin();
+  const previewError = getEntryPreviewReadOnlyError();
+  if (previewError) return { success: false, error: previewError };
+
+  const communityId = formString(formData, "community_id");
+  const campaignUnitId = formString(formData, "campaign_unit_id");
+  const unitLabel = formString(formData, "unit_label").replace(/\s+/g, " ");
+
+  if (!communityId || !campaignUnitId || !unitLabel) {
+    return { success: false, error: "Unit label and registration context are required." };
+  }
+
+  if (unitLabel.length > 160) {
+    return { success: false, error: "Unit label must be 160 characters or fewer." };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.rpc(
+    "quick_edit_community_registration_unit_label_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_id: campaignUnitId,
+      p_unit_label: unitLabel,
+    },
+  );
+
+  if (error) {
+    const message = error.message ?? "";
+    if (/ENTRY_CR_UNIT_LABEL_CONFLICT/.test(message)) {
+      return {
+        success: false,
+        error: "Another household in this campaign already uses that unit label.",
+      };
+    }
+    if (/ENTRY_CR_INVALID_REVIEW_STATE/.test(message)) {
+      return {
+        success: false,
+        error: "This household changed state. Refresh before editing the unit label.",
+      };
+    }
+    if (/ENTRY_CR_UNIT_IDENTITY_LOCKED/.test(message)) {
+      return {
+        success: false,
+        error: "This unit is already bound to an operational house and cannot be renamed here.",
+      };
+    }
+    if (/ENTRY_CR_INVALID_UNIT_LABEL|ENTRY_CR_INVALID_UNIT/.test(message)) {
+      return {
+        success: false,
+        error: "Enter a valid unit number or label and try again.",
+      };
+    }
+    if (error.code === "42501" || /ENTRY_CR_UNAUTHORIZED/i.test(message)) {
+      return { success: false, error: "Superadmin permission is required." };
+    }
+    return { success: false, error: "Unit label could not be updated." };
+  }
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/products/entry/communities/${communityId}/registration`);
+
+  return { success: true, message: "Unit label updated." };
+}
