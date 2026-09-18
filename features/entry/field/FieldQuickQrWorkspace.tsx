@@ -3,7 +3,6 @@
 import {
   ArrowLeft,
   ChevronRight,
-  Copy,
   Download,
   House,
   Link2,
