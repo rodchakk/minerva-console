@@ -56,7 +56,7 @@ with houses_with_registration_primary as (
     and cr.position = 1
 ),
 sole_active_resident as (
-  select hr.house_id, min(hr.user_id) as user_id
+  select hr.house_id, (array_agg(hr.user_id order by hr.user_id))[1] as user_id
   from public.house_residents hr
   where hr.is_active = true
     and not exists (
