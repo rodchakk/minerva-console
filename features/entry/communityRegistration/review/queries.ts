@@ -3,6 +3,13 @@ import "server-only";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coerceNumber, coerceString } from "@/lib/supabase/utils";
+import {
+  getResidentMissingFields,
+  getUnitMissingFields,
+  summarizeRegistrationCompleteness,
+  type RegistrationCompletenessSummary,
+  type RegistrationMissingField,
+} from "@/features/entry/communityRegistration/review/completeness";
 
 const REVIEW_CAMPAIGN_STATUSES = ["open", "paused", "review", "confirmed"] as const;
 
@@ -72,6 +79,32 @@ export type CommunityRegistrationReviewOverview = {
   loadError: string | null;
   summary: CommunityRegistrationReviewSummary;
   units: CommunityRegistrationReviewUnit[];
+};
+
+export type CommunityRegistrationConfirmationReportResident =
+  CommunityRegistrationReviewResident & {
+    missingFields: RegistrationMissingField[];
+  };
+
+export type CommunityRegistrationConfirmationReportUnit = {
+  id: string;
+  missingFields: RegistrationMissingField[];
+  reference: string | null;
+  residents: CommunityRegistrationConfirmationReportResident[];
+  status: string;
+  submittedAt: string | null;
+  unitLabel: string;
+  version: number;
+};
+
+export type CommunityRegistrationConfirmationReport = {
+  campaignId: string;
+  campaignTitle: string;
+  communityId: string;
+  communityName: string;
+  generatedAt: string;
+  summary: RegistrationCompletenessSummary;
+  units: CommunityRegistrationConfirmationReportUnit[];
 };
 
 function nullableString(value: unknown) {
@@ -305,4 +338,134 @@ export async function getCommunityRegistrationReviewUnit(
 
   if (error) return null;
   return normalizeUnitDetail(data);
+}
+
+
+export async function getCommunityRegistrationConfirmationReport(
+  campaignId: string,
+  communityId: string,
+  requestedUnitIds: string[],
+): Promise<CommunityRegistrationConfirmationReport | null> {
+  await requireSuperadmin();
+
+  const unitIds = Array.from(
+    new Set(requestedUnitIds.map((value) => value.trim()).filter(Boolean)),
+  );
+
+  if (!campaignId.trim() || !communityId.trim() || unitIds.length === 0 || unitIds.length > 100) {
+    return null;
+  }
+
+  const supabase = createAdminClient();
+  const [campaignResponse, communityResponse, unitRowsResponse] = await Promise.all([
+    supabase
+      .from("community_registration_campaigns")
+      .select("id,community_id,public_title")
+      .eq("id", campaignId)
+      .eq("community_id", communityId)
+      .maybeSingle(),
+    supabase
+      .from("communities")
+      .select("id,name")
+      .eq("id", communityId)
+      .maybeSingle(),
+    supabase
+      .from("community_registration_units")
+      .select("id,unit_reference_snapshot")
+      .eq("campaign_id", campaignId)
+      .eq("community_id", communityId)
+      .in("id", unitIds),
+  ]);
+
+  if (
+    campaignResponse.error ||
+    communityResponse.error ||
+    unitRowsResponse.error ||
+    !campaignResponse.data ||
+    !communityResponse.data ||
+    !Array.isArray(unitRowsResponse.data)
+  ) {
+    return null;
+  }
+
+  const unitRows = unitRowsResponse.data as Array<{
+    id: string;
+    unit_reference_snapshot: string | null;
+  }>;
+  const availableIds = new Set(unitRows.map((row) => String(row.id)));
+
+  if (unitIds.some((id) => !availableIds.has(id))) {
+    return null;
+  }
+
+  const detailResponses = await Promise.all(
+    unitIds.map((campaignUnitId) =>
+      supabase.rpc("get_community_registration_review_unit_v1", {
+        p_campaign_id: campaignId,
+        p_campaign_unit_id: campaignUnitId,
+        p_patronato_token_hash: null,
+      }),
+    ),
+  );
+
+  if (detailResponses.some((response) => response.error)) {
+    return null;
+  }
+
+  const referenceById = new Map(
+    unitRows.map((row) => [
+      String(row.id),
+      nullableString(row.unit_reference_snapshot),
+    ]),
+  );
+
+  const units = detailResponses
+    .map((response, index): CommunityRegistrationConfirmationReportUnit | null => {
+      const detail = normalizeUnitDetail(response.data);
+      const id = unitIds[index];
+
+      if (!detail || !id) return null;
+
+      const reference = referenceById.get(id) ?? null;
+      const residents = detail.residents.map((resident) => ({
+        ...resident,
+        missingFields: getResidentMissingFields(resident),
+      }));
+      const missingFields = getUnitMissingFields({
+        reference,
+        residents,
+        unitLabel: detail.unitLabel,
+      });
+
+      return {
+        id,
+        missingFields,
+        reference,
+        residents,
+        status: detail.status,
+        submittedAt: detail.submittedAt,
+        unitLabel: detail.unitLabel,
+        version: detail.version,
+      };
+    })
+    .filter(
+      (unit): unit is CommunityRegistrationConfirmationReportUnit => unit !== null,
+    );
+
+  if (units.length !== unitIds.length) {
+    return null;
+  }
+
+  return {
+    campaignId,
+    campaignTitle:
+      coerceString(campaignResponse.data.public_title).trim() ||
+      "Registro de residentes",
+    communityId,
+    communityName:
+      coerceString(communityResponse.data.name).trim() || "Comunidad",
+    generatedAt: new Date().toISOString(),
+    summary: summarizeRegistrationCompleteness(units),
+    units,
+  };
 }
