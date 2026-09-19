@@ -548,10 +548,10 @@ test("observability hardening adds durable incidents, administration, performanc
   assert.match(hardeningMigration, /create table if not exists public\.entry_observability_incidents/);
   assert.match(hardeningMigration, /create table if not exists public\.entry_performance_events/);
   assert.match(hardeningMigration, /'key','administration'/);
-  assert.match(hardeningMigration, /'performance'/);
-  assert.match(hardeningMigration, /'infrastructure'/);
-  assert.match(hardeningMigration, /'readiness'/);
-  assert.match(hardeningMigration, /'incident_history'/);
+  assert.match(hardeningMigration, /'\{performance\}'/);
+  assert.match(hardeningMigration, /'\{infrastructure\}'/);
+  assert.match(hardeningMigration, /'\{readiness\}'/);
+  assert.match(hardeningMigration, /'\{incident_history\}'/);
   assert.match(experienceMigration, /create or replace function public\.sa_get_entry_observability_v4/);
   assert.match(page, /Performance/);
   assert.match(page, /Operational infrastructure/);
