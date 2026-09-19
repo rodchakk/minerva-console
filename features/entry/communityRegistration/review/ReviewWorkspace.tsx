@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -543,22 +543,10 @@ export function ReviewWorkspace({
   const [editingResident, setEditingResident] =
     useState<CommunityRegistrationQuickEditResident | null>(null);
   const [editingUnit, setEditingUnit] = useState(false);
-  const initialSelectedUnitMissingFields = selectedUnit
-    ? getUnitMissingFields({
-        reference: selectedUnitReference,
-        residents: selectedUnit.residents,
-        unitLabel: selectedUnit.unitLabel,
-      })
-    : [];
-  const [selectedReportUnitIds, setSelectedReportUnitIds] = useState<string[]>(
-    selectedUnitId ? [selectedUnitId] : [],
-  );
-  const [selectionMissingFieldCount, setSelectionMissingFieldCount] = useState(
-    initialSelectedUnitMissingFields.length,
-  );
-  const [selectionMissingEmailCount, setSelectionMissingEmailCount] = useState(
-    initialSelectedUnitMissingFields.filter((field) => field.code === "email").length,
-  );
+  const [selectedReportUnitIds, setSelectedReportUnitIds] = useState<string[]>([]);
+  const [selectionMissingFieldCount, setSelectionMissingFieldCount] = useState(0);
+  const [selectionMissingEmailCount, setSelectionMissingEmailCount] = useState(0);
+  const [selectionHydrated, setSelectionHydrated] = useState(false);
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
@@ -607,6 +595,11 @@ export function ReviewWorkspace({
         .map((field) => field.residentName as string),
     ),
   );
+  const reportableUnitIds = units
+    .filter((unit) => unit.status !== "unregistered" && unit.residentCount > 0)
+    .map((unit) => unit.id);
+  const selectionStorageKey =
+    `entry-confirmation-report-selection:${campaign.id}:${communityId}`;
   const selectedResidentCount = units
     .filter((unit) => selectedReportUnitIds.includes(unit.id))
     .reduce((total, unit) => total + unit.residentCount, 0);
@@ -642,14 +635,66 @@ export function ReviewWorkspace({
     setSelectionMissingEmailCount(result.data.summary.missingEmailCount);
   }
 
+  function saveReportSelection(unitIds: string[]) {
+    setSelectedReportUnitIds(unitIds);
+    window.sessionStorage.setItem(selectionStorageKey, JSON.stringify(unitIds));
+    void refreshSelectionSummary(unitIds);
+  }
+
   function toggleReportUnit(unitId: string) {
     const nextUnitIds = selectedReportUnitIds.includes(unitId)
       ? selectedReportUnitIds.filter((id) => id !== unitId)
       : [...selectedReportUnitIds, unitId];
 
-    setSelectedReportUnitIds(nextUnitIds);
-    void refreshSelectionSummary(nextUnitIds);
+    saveReportSelection(nextUnitIds);
   }
+
+  function selectAllReportableUnits() {
+    saveReportSelection(reportableUnitIds);
+  }
+
+  function clearReportSelection() {
+    saveReportSelection([]);
+  }
+
+  useEffect(() => {
+    if (selectionHydrated) return;
+
+    let restoredUnitIds: string[] = [];
+
+    try {
+      const stored = window.sessionStorage.getItem(selectionStorageKey);
+      const parsed = stored ? JSON.parse(stored) : [];
+
+      if (Array.isArray(parsed)) {
+        restoredUnitIds = parsed
+          .map((value) => String(value))
+          .filter((id) => reportableUnitIds.includes(id));
+      }
+    } catch {
+      restoredUnitIds = [];
+    }
+
+    const initialUnitIds =
+      restoredUnitIds.length > 0
+        ? restoredUnitIds
+        : selectedUnitId && reportableUnitIds.includes(selectedUnitId)
+          ? [selectedUnitId]
+          : [];
+
+    setSelectedReportUnitIds(initialUnitIds);
+    setSelectionHydrated(true);
+    window.sessionStorage.setItem(
+      selectionStorageKey,
+      JSON.stringify(initialUnitIds),
+    );
+    void refreshSelectionSummary(initialUnitIds);
+  }, [
+    reportableUnitIds,
+    selectedUnitId,
+    selectionHydrated,
+    selectionStorageKey,
+  ]);
 
   async function openReport(unitIds: string[], mode: "single" | "selection") {
     if (unitIds.length === 0) return;
@@ -798,7 +843,7 @@ export function ReviewWorkspace({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.4fr)]">
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
                 Participating units
@@ -807,7 +852,29 @@ export function ReviewWorkspace({
                 {summary.totalUnits} units · {summary.pendingObservations} pending observations
               </p>
             </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={selectAllReportableUnits}
+                disabled={reportableUnitIds.length === 0 || selectionLoading}
+                className="rounded-lg border border-violet-400/25 bg-violet-500/[0.06] px-2.5 py-1.5 text-[11px] font-semibold text-violet-100 transition hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Seleccionar todas
+              </button>
+              <button
+                type="button"
+                onClick={clearReportSelection}
+                disabled={selectedReportUnitIds.length === 0 || selectionLoading}
+                className="rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Limpiar
+              </button>
+            </div>
           </div>
+
+          <p className="mt-3 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2 text-xs leading-5 text-[var(--text-muted)]">
+            Marca los cuadros de la izquierda para combinar varias viviendas. La selección se conserva aunque abras otra casa para revisarla.
+          </p>
 
           <div className="mt-4 max-h-[680px] space-y-2 overflow-y-auto pr-1">
             {units.map((unit) => {
