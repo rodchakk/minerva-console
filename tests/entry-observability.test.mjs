@@ -33,6 +33,13 @@ const receiptMigration = read(
 const expirationMigration = read(
   "supabase/migrations/20260919060813_entry_expiration_operational_hardening.sql",
 );
+const diagnosticMigration = read(
+  "supabase/migrations/20260919071405_entry_diagnostic_bundles.sql",
+);
+const diagnosticApi = read("app/api/entry/observability/diagnostic/route.ts");
+const diagnosticControl = read(
+  "features/entry/observability/DiagnosticBundleControl.tsx",
+);
 const pushWorker = read("supabase/functions/smart-service/index.ts");
 const pushReceiptWorker = read("supabase/functions/entry-push-receipts/index.ts");
 const usernameLogin = read("supabase/functions/login-with-username/index.ts");
@@ -583,6 +590,54 @@ test("stale access authorization expires frequently enough for production", () =
   assert.match(expirationMigration, /'\*\/5 \* \* \* \*'/);
   assert.match(expirationMigration, /vp\.status::text in \('ACTIVE','SCHEDULED'\)/);
   assert.doesNotMatch(expirationMigration, /vp\.status::text in \('ACTIVE','CHECKED_IN','SCHEDULED'\)/);
+});
+
+
+test("diagnostic bundles consolidate troubleshooting evidence without sensitive payloads", () => {
+  assert.match(diagnosticMigration, /create table if not exists public\.entry_diagnostic_snapshots/);
+  assert.match(diagnosticMigration, /sa_generate_entry_diagnostic_bundle_v1/);
+  assert.match(diagnosticMigration, /_entry_diagnostic_recent_events_v1/);
+  assert.match(diagnosticMigration, /'triage_summary'/);
+  assert.match(diagnosticMigration, /'suspected_areas'/);
+  assert.match(diagnosticMigration, /'recent_events'/);
+  assert.match(diagnosticMigration, /'pii_minimized', true/);
+  assert.match(diagnosticMigration, /'passwords','pins','qr_tokens','push_tokens','visitor_names','email_addresses','message_bodies'/);
+  assert.doesNotMatch(diagnosticMigration, /s\.details\s+as\s+event/i);
+});
+
+test("diagnostic snapshots preserve incident detection and recovery fail-open", () => {
+  assert.match(diagnosticMigration, /incident_open/);
+  assert.match(diagnosticMigration, /incident_recovery/);
+  assert.match(diagnosticMigration, /after insert on public\.entry_observability_incidents/);
+  assert.match(diagnosticMigration, /after update of status on public\.entry_observability_incidents/);
+  assert.match(diagnosticMigration, /now\(\) \+ interval '90 days'/);
+  assert.match(diagnosticMigration, /now\(\) \+ interval '180 days'/);
+  assert.match(diagnosticMigration, /Diagnostics are fail-open and must never interfere with incident reconciliation/);
+  assert.match(diagnosticMigration, /delete from public\.entry_diagnostic_snapshots[\s\S]*expires_at < now\(\)/);
+});
+
+test("diagnostic UI supports copy, download, save, custom windows, and saved references", () => {
+  assert.match(page, /DiagnosticBundleControl/);
+  assert.match(page, /Diagnostic snapshots/);
+  assert.match(page, /Open JSON/);
+  assert.match(diagnosticControl, /Generate diagnostic/);
+  assert.match(diagnosticControl, /Last 15 minutes/);
+  assert.match(diagnosticControl, /Custom range/);
+  assert.match(diagnosticControl, /Copy summary/);
+  assert.match(diagnosticControl, /Copy JSON/);
+  assert.match(diagnosticControl, /Download JSON/);
+  assert.match(diagnosticControl, /Save snapshot/);
+  assert.match(diagnosticControl, /diagnostic_ref/);
+  assert.match(queries, /sa_list_entry_diagnostic_snapshots_v1/);
+});
+
+test("diagnostic API is superadmin-gated and bounds troubleshooting windows", () => {
+  assert.match(diagnosticApi, /getAuthContext/);
+  assert.match(diagnosticApi, /Superadmin access required/);
+  assert.match(diagnosticApi, /31 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(diagnosticApi, /sa_generate_entry_diagnostic_bundle_v1/);
+  assert.match(diagnosticApi, /sa_get_entry_diagnostic_snapshot_v1/);
+  assert.match(diagnosticApi, /Cache-Control/);
 });
 
 test("dashboard route, filters, loading state, and sidebar entry are wired", () => {

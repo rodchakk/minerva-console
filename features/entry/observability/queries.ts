@@ -175,6 +175,27 @@ export type EntryObservabilityMobilePushDelivery = {
   lastFailedAt: string | null;
 };
 
+
+export type EntryDiagnosticSnapshotMeta = {
+  communityId: string | null;
+  communityName: string | null;
+  createdAt: string;
+  diagnosticRef: string;
+  endsAt: string;
+  expiresAt: string;
+  id: string;
+  notes: string | null;
+  startsAt: string;
+  systemStatus: EntryObservabilityStatus | null;
+  triggerIncidentId: string | null;
+  triggerType: "manual" | "incident_open" | "incident_recovery";
+};
+
+export type EntryDiagnosticSnapshotsResult =
+  | { data: EntryDiagnosticSnapshotMeta[]; state: "ready" }
+  | { error: string; state: "unavailable" };
+
+
 export type EntryObservabilityData = {
   auditActivity: EntryObservabilityAuditItem[];
   communities: EntryObservabilityCommunity[];
@@ -965,6 +986,76 @@ export async function getEntryObservability(input: {
     data: mapDashboardPayload(data, input.range),
     state: "ready",
   };
+}
+
+
+export async function getEntryDiagnosticSnapshots(input?: {
+  communityId?: string | null;
+  limit?: number;
+}): Promise<EntryDiagnosticSnapshotsResult> {
+  await requireSuperadmin();
+
+  const supabase = await createClient();
+  const communityId = input?.communityId?.trim() || null;
+  const limit = Math.max(1, Math.min(Math.trunc(input?.limit ?? 12), 100));
+
+  const { data, error } = await supabase.rpc("sa_list_entry_diagnostic_snapshots_v1", {
+    p_community_id: communityId,
+    p_limit: limit,
+  });
+
+  if (error) {
+    return { error: error.message, state: "unavailable" };
+  }
+
+  const snapshots = toArray(data)
+    .map((item) => {
+      const record = isRecord(item) ? item : {};
+      const id = asString(record.id);
+      const diagnosticRef = asString(record.diagnostic_ref);
+      const createdAt = asString(record.created_at);
+      const startsAt = asString(record.starts_at);
+      const endsAt = asString(record.ends_at);
+      const expiresAt = asString(record.expires_at);
+      const triggerRaw = asString(record.trigger_type);
+
+      if (!id || !diagnosticRef || !createdAt || !startsAt || !endsAt || !expiresAt) {
+        return null;
+      }
+
+      const triggerType =
+        triggerRaw === "incident_open" || triggerRaw === "incident_recovery"
+          ? triggerRaw
+          : "manual";
+
+      const statusRaw = asNullableString(record.system_status);
+      const systemStatus =
+        statusRaw === "healthy" ||
+        statusRaw === "degraded" ||
+        statusRaw === "down" ||
+        statusRaw === "idle" ||
+        statusRaw === "unknown"
+          ? statusRaw
+          : null;
+
+      return {
+        communityId: asNullableString(record.community_id),
+        communityName: asNullableString(record.community_name),
+        createdAt,
+        diagnosticRef,
+        endsAt,
+        expiresAt,
+        id,
+        notes: asNullableString(record.notes),
+        startsAt,
+        systemStatus,
+        triggerIncidentId: asNullableString(record.trigger_incident_id),
+        triggerType,
+      } satisfies EntryDiagnosticSnapshotMeta;
+    })
+    .filter((item): item is EntryDiagnosticSnapshotMeta => item !== null);
+
+  return { data: snapshots, state: "ready" };
 }
 
 export async function getEntryNotificationObservability(input: {
