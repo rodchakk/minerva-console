@@ -23,7 +23,7 @@ export default async function NewCustomerPage(props: {
             New customer
           </h1>
           <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
-            Add a customer manually to Minerva's internal directory. ENTRY community linking remains a product relationship, not the customer's owner.
+            Add a customer manually to Minerva&apos;s internal directory. ENTRY community linking remains a product relationship, not the customer&apos;s owner.
           </p>
         </div>
       </section>
