@@ -36,15 +36,7 @@ type ActivationQueueTableProps = {
   rows: ActivationQueueRow[];
 };
 
-const TABLE_STATUS_OPTIONS = [
-  { label: "All statuses", value: "all" },
-  { label: "Pending", value: "pending" },
-  { label: "Invited", value: "invited" },
-  { label: "PIN Generated", value: "pin_generated" },
-  { label: "Activated", value: "activated" },
-  { label: "Skipped", value: "skipped" },
-  { label: "Error", value: "failed" },
-] as const;
+
 
 function getStatusTone(
   status: string,
