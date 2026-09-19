@@ -47,6 +47,11 @@ const statusCopy: Record<
     label: "Healthy",
     pill: "border-emerald-400/24 bg-emerald-500/[0.10] text-emerald-200",
   },
+  idle: {
+    className: "text-sky-300",
+    label: "Idle",
+    pill: "border-sky-400/20 bg-sky-500/[0.08] text-sky-200",
+  },
   unknown: {
     className: "text-slate-300",
     label: "Unknown",
@@ -281,7 +286,7 @@ function CriticalFlows({
   return (
     <Panel className="min-h-[360px]">
       <PanelHeader
-        description="Health is derived from recent successes, failures, and evidence. No telemetry is Unknown."
+        description="Health is derived from recent successes, failures, current integrity, and workload. Idle means no work is currently expected."
         icon={ListTree}
         title="Critical flows"
       />
@@ -300,7 +305,7 @@ function CriticalFlows({
             {flows.map((flow) => (
               <tr key={flow.key} className="transition-colors hover:bg-white/[0.02]">
                 <td className="px-5 py-3 font-medium text-slate-100">
-                  {flow.key === "notifications" ? (
+                  {flow.key === "communications" ? (
                     <Link
                       href={notificationsHref}
                       className="inline-flex items-center gap-2 text-slate-100 transition-colors hover:text-white"
