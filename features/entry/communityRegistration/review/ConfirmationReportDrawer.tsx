@@ -163,11 +163,9 @@ function ReportDocument({
               <div className="flex items-start gap-4">
                 <span className="mt-1 h-px w-10 bg-violet-300/80" />
                 <p className="text-[14px] leading-5 text-slate-200">
-                  Comunidades
+                  Tecnología que conecta
                   <br />
-                  más conectadas
-                  <br />
-                  para un mejor mañana.
+                  y protege comunidades.
                 </p>
               </div>
               <div className="ml-20 mt-11 border-l border-sky-300/25 pl-4">
@@ -386,9 +384,9 @@ function ReportDocument({
           </p>
           <div className="shrink-0 text-right">
             <p className="text-slate-400">
-              Unidades fuertes.
+              Menos fricción.
                 <br />
-              Comunidades mejores.
+              Más confianza.
             </p>
             <p className="mt-3 text-[11px] uppercase tracking-[0.32em] text-slate-300">
               ENTRY | MINERVA
