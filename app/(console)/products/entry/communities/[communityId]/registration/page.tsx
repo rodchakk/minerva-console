@@ -84,7 +84,7 @@ export default async function RegistrationReviewPage(
     : [null, null, null];
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 lg:px-6">
         <PageHeader
           title={`Resident registration · ${community.name}`}
@@ -98,27 +98,6 @@ export default async function RegistrationReviewPage(
           }
         />
       </section>
-
-      {selectedUnit && selectedUnitReference ? (
-        <section className="rounded-2xl border border-violet-400/20 bg-violet-500/[0.06] px-5 py-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">
-                Referencia de la vivienda
-              </p>
-              <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <p className="text-base font-semibold text-white">
-                  {selectedUnit.unitLabel}
-                </p>
-                <p className="text-sm leading-6 text-[var(--text-muted)]">
-                  {selectedUnitReference}
-                </p>
-              </div>
-            </div>
-            <Badge tone="info">Para revisión</Badge>
-          </div>
-        </section>
-      ) : null}
 
       <ReviewWorkspace
         campaign={overview.campaign}

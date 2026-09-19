@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import type { RegistrationMissingField } from "@/features/entry/communityRegistration/review/completeness";
 import type {
   CommunityRegistrationConfirmationReport,
   CommunityRegistrationConfirmationReportResident,
@@ -74,7 +75,7 @@ function residentStatus(resident: CommunityRegistrationConfirmationReportResiden
   if (resident.missingFields.length === 1) {
     return {
       complete: false,
-      label: resident.missingFields[0].message,
+      label: reportMissingFieldMessage(resident.missingFields[0]),
     };
   }
 
@@ -82,6 +83,23 @@ function residentStatus(resident: CommunityRegistrationConfirmationReportResiden
     complete: false,
     label: `${resident.missingFields.length} datos pendientes`,
   };
+}
+
+function reportMissingFieldMessage(field: RegistrationMissingField) {
+  switch (field.message) {
+    case "Valid name missing":
+      return "Falta nombre válido";
+    case "Invalid email address":
+      return "Correo electrónico inválido";
+    case "Email missing":
+      return "Falta correo electrónico";
+    case "Phone missing":
+      return "Falta teléfono";
+    case "Unit reference missing":
+      return "Falta referencia de la vivienda";
+    default:
+      return field.message;
+  }
 }
 
 async function renderNodeToPng(node: HTMLElement) {
@@ -350,7 +368,7 @@ function ReportDocument({
                       </span>
                     </div>
                     <span className="shrink-0 font-semibold text-amber-200">
-                      {field.message}
+                      {reportMissingFieldMessage(field)}
                     </span>
                   </div>
                 )),
@@ -445,7 +463,7 @@ export function ConfirmationReportDrawer({
       downloadUrl(dataUrl, reportFilename(report, "png"));
     } catch (error) {
       console.error("ENTRY_CONFIRMATION_REPORT_PNG_FAILED", error);
-      setExportError("No se pudo exportar el PNG. Inténtalo nuevamente.");
+      setExportError("The PNG could not be exported. Try again.");
     } finally {
       setExporting(null);
     }
@@ -494,7 +512,7 @@ export function ConfirmationReportDrawer({
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       console.error("ENTRY_CONFIRMATION_REPORT_PDF_FAILED", error);
-      setExportError("No se pudo exportar el PDF. Inténtalo nuevamente.");
+      setExportError("The PDF could not be exported. Try again.");
     } finally {
       setExporting(null);
     }
@@ -504,7 +522,7 @@ export function ConfirmationReportDrawer({
     <div className="fixed inset-0 z-[70] flex justify-end bg-black/65 backdrop-blur-sm">
       <button
         type="button"
-        aria-label="Cerrar vista previa"
+        aria-label="Close report preview"
         className="absolute inset-0 cursor-default"
         onClick={onClose}
       />
@@ -515,15 +533,15 @@ export function ConfirmationReportDrawer({
             <div>
               <div className="flex items-center gap-2">
                 <FileText className="size-4 text-violet-300" />
-                <h2 className="text-base font-semibold text-white">Vista previa del informe</h2>
+                <h2 className="text-base font-semibold text-white">Report preview</h2>
               </div>
               <p className="mt-1 text-xs text-[var(--text-muted)]">
-                Así se verá el reporte para el Patronato.
+                This is how the report will appear to the Patronato.
               </p>
             </div>
             <button
               type="button"
-              aria-label="Cerrar"
+              aria-label="Close"
               onClick={onClose}
               className="grid size-9 place-items-center rounded-lg border border-white/10 text-slate-300 transition hover:bg-white/5 hover:text-white"
             >
@@ -539,7 +557,7 @@ export function ConfirmationReportDrawer({
                   : "px-3 py-2 text-center text-slate-400"
               }
             >
-              Una vivienda
+              Single unit
             </div>
             <div
               className={
@@ -548,14 +566,14 @@ export function ConfirmationReportDrawer({
                   : "px-3 py-2 text-center text-slate-400"
               }
             >
-              Viviendas seleccionadas ({report.summary.unitCount})
+              Selected units ({report.summary.unitCount})
             </div>
           </div>
 
           <div className="mt-3 flex items-center gap-2 rounded-lg border border-sky-400/25 bg-sky-500/[0.08] px-3 py-2.5 text-xs text-sky-100">
             <Mail className="size-4 text-sky-300" />
-            El informe incluirá {report.summary.unitCount} vivienda
-            {report.summary.unitCount === 1 ? "" : "s"} con {report.summary.residentCount} residentes.
+            The report includes {report.summary.unitCount} {report.summary.unitCount === 1 ? "unit" : "units"} with{" "}
+            {report.summary.residentCount} {report.summary.residentCount === 1 ? "resident" : "residents"}.
           </div>
         </header>
 
@@ -577,7 +595,7 @@ export function ConfirmationReportDrawer({
 
           <div className="flex flex-wrap justify-end gap-2">
             <Button type="button" variant="secondary" onClick={onClose} disabled={Boolean(exporting)}>
-              Cancelar
+              Cancel
             </Button>
             <Button
               type="button"
@@ -587,7 +605,7 @@ export function ConfirmationReportDrawer({
               className="gap-2"
             >
               <Download className="size-4" />
-              {exporting === "png" ? "Exportando..." : "Exportar PNG"}
+              {exporting === "png" ? "Exporting..." : "Export PNG"}
             </Button>
             <Button
               type="button"
@@ -596,7 +614,7 @@ export function ConfirmationReportDrawer({
               className="gap-2"
             >
               <Download className="size-4" />
-              {exporting === "pdf" ? "Exportando..." : "Exportar PDF"}
+              {exporting === "pdf" ? "Exporting..." : "Export PDF"}
             </Button>
           </div>
         </footer>

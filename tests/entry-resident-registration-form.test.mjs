@@ -45,7 +45,7 @@ test("titular is a registration primary-contact convention, not an ownership fla
   );
   assert.match(householdForm, /resident\.position === 1/);
   assert.match(householdForm, /function makeResidentPrimary/);
-  assert.match(reviewWorkspace, /resident\.position === 1[\s\S]*Titular/);
+  assert.match(reviewWorkspace, /resident\.position === 1[\s\S]*Primary resident/);
 
   const makePrimaryFunction = householdForm.match(
     /function makeResidentPrimary[\s\S]*?setSubmitError\(null\);\s*}/,

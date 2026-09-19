@@ -37,7 +37,7 @@ export async function loadCommunityRegistrationConfirmationReport(
   if (!campaignId || !communityId || unitIds.length === 0 || unitIds.length > 100) {
     return {
       success: false,
-      error: "Selecciona al menos una vivienda válida para generar el informe.",
+      error: "Select at least one valid unit to generate the report.",
     };
   }
 
@@ -52,7 +52,7 @@ export async function loadCommunityRegistrationConfirmationReport(
       return {
         success: false,
         error:
-          "No se pudo construir el informe con los datos actuales. Actualiza la página e inténtalo nuevamente.",
+          "The report could not be built from the current data. Refresh the page and try again.",
       };
     }
 
@@ -69,7 +69,7 @@ export async function loadCommunityRegistrationConfirmationReport(
     return {
       success: false,
       error:
-        "No se pudo generar el informe. Los datos de revisión no fueron modificados.",
+        "The report could not be generated. Review data was not modified.",
     };
   }
 }
