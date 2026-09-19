@@ -40,6 +40,17 @@ ENTRY remains separate:
 - **Organization:** `Minerva Technologies`
 - **Commercial direction:** may move to Supabase Pro independently when required by real client operation
 
+## Verification — 2026-09-04
+
+The organization transfer was confirmed in the Supabase dashboard after completion:
+
+- `Minerva Internal` is on the Free plan and shows the existing `seshat` project under that organization.
+- The Seshat project remained paused at verification time; no resume was required merely to complete the organization transfer.
+- No replacement project was created as part of the transfer.
+- The intended billing boundary is now established: Seshat remains under `Minerva Internal`, while ENTRY remains under the original `Minerva Technologies` organization for its future commercial/Pro path.
+
+This verification closes the organizational move itself. Functional Seshat QA after resume remains a separate runtime check to perform when application work resumes.
+
 ## Architectural rules
 
 1. **Keep Seshat Free while practical.** Seshat should remain on Free infrastructure while its internal scale, usage, and criticality permit.
