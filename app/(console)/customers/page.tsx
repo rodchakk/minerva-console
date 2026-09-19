@@ -131,7 +131,7 @@ export default async function CustomersPage(props: {
           <ContactRound className="mx-auto h-8 w-8 text-[var(--console-text-muted)]" />
           <h2 className="mt-4 font-semibold text-white">No customers found</h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[var(--console-text-muted)]">
-            Add Minerva's first customer profile or adjust the current filters.
+            Add Minerva&apos;s first customer profile or adjust the current filters.
           </p>
         </section>
       )}
