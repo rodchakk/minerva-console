@@ -54,6 +54,120 @@ type DiagnosticResponse = {
   error?: string;
 };
 
+const DIAGNOSTIC_REQUIRED_SECTIONS = [
+  "schema_version",
+  "generated_at",
+  "community",
+  "range",
+  "triage_summary",
+  "current_incidents",
+  "historical_failure_signals",
+  "queue_health",
+  "suspected_areas",
+  "observability",
+  "current_observability",
+  "recent_events",
+  "privacy",
+] as const;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function diagnosticInspection(bundle: Record<string, unknown>) {
+  const missingSections = DIAGNOSTIC_REQUIRED_SECTIONS.filter(
+    (section) => !Object.prototype.hasOwnProperty.call(bundle, section),
+  );
+  const issues: string[] = [];
+
+  const schemaVersion =
+    typeof bundle.schema_version === "number"
+      ? bundle.schema_version
+      : Number(bundle.schema_version);
+
+  if (!Number.isFinite(schemaVersion) || schemaVersion < 2) {
+    issues.push("unsupported schema");
+  }
+
+  const privacy = isRecord(bundle.privacy) ? bundle.privacy : {};
+  if (privacy.pii_minimized !== true) {
+    issues.push("privacy contract missing");
+  }
+
+  const range = isRecord(bundle.range) ? bundle.range : {};
+  if (
+    typeof range.starts_at !== "string" ||
+    typeof range.ends_at !== "string"
+  ) {
+    issues.push("diagnostic range missing");
+  }
+
+  const triage = isRecord(bundle.triage_summary)
+    ? bundle.triage_summary
+    : {};
+  if (typeof triage.system_status !== "string") {
+    issues.push("current triage status missing");
+  }
+
+  const currentObservability = isRecord(bundle.current_observability)
+    ? bundle.current_observability
+    : {};
+  const currentSummary = isRecord(currentObservability.summary)
+    ? currentObservability.summary
+    : {};
+
+  if (typeof currentSummary.system_status !== "string") {
+    issues.push("current observability status missing");
+  }
+  if (!Array.isArray(currentObservability.critical_flows)) {
+    issues.push("current critical flows missing");
+  }
+
+  if (!isRecord(bundle.observability)) {
+    issues.push("selected-window observability missing");
+  }
+  if (!isRecord(bundle.queue_health)) {
+    issues.push("queue health missing");
+  }
+  if (!Array.isArray(bundle.current_incidents)) {
+    issues.push("current incidents missing");
+  }
+  if (!Array.isArray(bundle.historical_failure_signals)) {
+    issues.push("historical failure signals missing");
+  }
+  if (!Array.isArray(bundle.suspected_areas)) {
+    issues.push("suspected areas missing");
+  }
+  if (!Array.isArray(bundle.recent_events)) {
+    issues.push("recent events missing");
+  }
+
+  const json = JSON.stringify(bundle, null, 2);
+  const bytes = new TextEncoder().encode(json).byteLength;
+  const presentSections =
+    DIAGNOSTIC_REQUIRED_SECTIONS.length - missingSections.length;
+
+  return {
+    bytes,
+    complete: missingSections.length === 0 && issues.length === 0,
+    issues: [...missingSections.map((section) => `missing ${section}`), ...issues],
+    json,
+    presentSections,
+    schemaVersion,
+    totalSections: DIAGNOSTIC_REQUIRED_SECTIONS.length,
+  };
+}
+
+function formatDiagnosticSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  const kilobytes = bytes / 1024;
+  if (kilobytes < 1024) {
+    return `${kilobytes.toFixed(kilobytes >= 100 ? 0 : 1)} KB`;
+  }
+
+  return `${(kilobytes / 1024).toFixed(1)} MB`;
+}
+
 const statusConfig: Record<
   FieldHealthStatus,
   { dot: string; label: string; panel: string; text: string }
@@ -221,9 +335,19 @@ export function FieldEntryHealthWorkspace({
         );
       }
 
-      await copyText(JSON.stringify(payload.bundle, null, 2));
-      setCopyFeedback("Full diagnostic JSON copied to clipboard.");
-      window.setTimeout(() => setCopyFeedback(null), 2600);
+      const inspection = diagnosticInspection(payload.bundle);
+
+      if (!inspection.complete) {
+        throw new Error(
+          `Diagnostic bundle is incomplete (${inspection.issues.join(", ")}). Nothing was copied.`,
+        );
+      }
+
+      await copyText(inspection.json);
+      setCopyFeedback(
+        `Diagnostic copied · ${formatDiagnosticSize(inspection.bytes)} · schema v${inspection.schemaVersion} · ${inspection.presentSections}/${inspection.totalSections} sections · complete`,
+      );
+      window.setTimeout(() => setCopyFeedback(null), 5000);
     } catch (cause) {
       setCopyError(
         cause instanceof Error
@@ -510,8 +634,9 @@ export function FieldEntryHealthWorkspace({
       </div>
 
       <p className="text-center text-xs leading-5 text-[var(--console-text-muted)]">
-        Copies the full privacy-minimized 30-day diagnostic JSON used by Minerva
-        Console. The raw JSON is not displayed in Field.
+        Validates all required diagnostic sections before copying the full
+        privacy-minimized 30-day JSON used by Minerva Console. The raw JSON is
+        not displayed in Field.
       </p>
 
       {copyFeedback ? (

@@ -54,9 +54,22 @@ test("Field health stays compact while copying the complete web diagnostic bundl
     /fetch\("\/api\/entry\/observability\/diagnostic"/,
   );
   assert.match(workspace, /30 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(workspace, /JSON\.stringify\(payload\.bundle, null, 2\)/);
-  assert.match(workspace, /Full diagnostic JSON copied to clipboard/);
-  assert.match(workspace, /raw JSON is not displayed in Field/i);
+  assert.match(workspace, /diagnosticInspection\(payload\.bundle\)/);
+  assert.match(workspace, /JSON\.stringify\(bundle, null, 2\)/);
+  assert.match(workspace, /copyText\(inspection\.json\)/);
+  assert.match(workspace, /Diagnostic copied/);
+  assert.match(workspace, /raw JSON is\s+not displayed in Field/i);
+  assert.match(workspace, /DIAGNOSTIC_REQUIRED_SECTIONS/);
+  assert.match(workspace, /schema_version/);
+  assert.match(workspace, /current_observability/);
+  assert.match(workspace, /current_incidents/);
+  assert.match(workspace, /historical_failure_signals/);
+  assert.match(workspace, /queue_health/);
+  assert.match(workspace, /privacy\.pii_minimized !== true/);
+  assert.match(workspace, /Diagnostic bundle is incomplete/);
+  assert.match(workspace, /Nothing was copied/);
+  assert.match(workspace, /formatDiagnosticSize/);
+  assert.match(workspace, /sections · complete/);
   assert.doesNotMatch(workspace, /<pre/);
   assert.doesNotMatch(workspace, /JSON\.stringify\(payload\.bundle, null, 2\)\}/);
 });
