@@ -545,7 +545,7 @@ begin
     coalesce((select payload from flow_json), '[]'::jsonb),
     (
       coalesce((
-        select jsonb_agg(x.event)
+        select jsonb_agg(x.event order by x.ordinal)
         from (
           select ii.payload as event, 1 as ordinal from integrity_incident ii where ii.payload is not null
           union all
@@ -555,7 +555,6 @@ begin
           from jsonb_array_elements(coalesce(v_result->'incidents', '[]'::jsonb))
             with ordinality e(value, ordinality)
         ) x
-        order by x.ordinal
       ), '[]'::jsonb)
     )
   into v_flows, v_incidents;
