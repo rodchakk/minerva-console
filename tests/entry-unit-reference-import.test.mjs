@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import vm from "node:vm";
 import { test } from "node:test";
@@ -7,6 +8,7 @@ import ts from "typescript";
 import * as XLSX from "xlsx";
 
 const root = process.cwd();
+const nodeRequire = createRequire(import.meta.url);
 
 function read(path) {
   return readFileSync(join(root, path), "utf8");
@@ -21,13 +23,13 @@ function loadUnitsImportModule() {
       target: ts.ScriptTarget.ES2022,
     },
   }).outputText;
-  const module = { exports: {} };
+  const testModule = { exports: {} };
   const context = vm.createContext({
-    exports: module.exports,
-    module,
+    exports: testModule.exports,
+    module: testModule,
     require(specifier) {
       if (specifier === "xlsx") return XLSX;
-      return require(specifier);
+      return nodeRequire(specifier);
     },
   });
 
@@ -35,7 +37,7 @@ function loadUnitsImportModule() {
     filename: "features/entry/communities/unitsImport.ts",
   });
 
-  return module.exports;
+  return testModule.exports;
 }
 
 const unitsImport = loadUnitsImportModule();
