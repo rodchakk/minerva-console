@@ -389,7 +389,7 @@ test("onboarding email failures normalize without recipient email exposure", () 
   assert.match(migration, /'onboarding_email'::text as channel/);
   assert.match(migration, /when m\.status = 'failed' then 'ONBOARDING_EMAIL_FAILED'/);
   assert.match(migration, /without exposing the recipient email/);
-  assert.match(notificationsPage, /onboarding-email evidence/);
+  assert.match(notificationsPage, /Push, email, worker, provider, and delivery evidence/);
   assert.doesNotMatch(migration, /m\.recipient_email/);
   assert.doesNotMatch(migration, /m\.recipient_phone/);
 });
