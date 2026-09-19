@@ -137,7 +137,7 @@ function ReportDocument({
                   ENTRY
                 </p>
                 <p className="mt-2 pl-10 text-[10px] font-semibold uppercase tracking-[0.42em] text-white/90">
-                  By Minerva
+                  By Minerva Technologies
                 </p>
               </div>
 
