@@ -84,7 +84,7 @@ export default async function RegistrationReviewPage(
     : [null, null, null];
 
   return (
-    <div className="space-y-3">
+    <div className="relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]">
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] px-5 py-5 lg:px-6">
         <PageHeader
           title={`Resident registration · ${community.name}`}
