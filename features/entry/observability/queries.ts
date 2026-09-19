@@ -17,6 +17,7 @@ export type EntryObservabilityStatus =
   | "healthy"
   | "degraded"
   | "down"
+  | "idle"
   | "unknown";
 
 export type EntryObservabilityFlow = {
@@ -296,6 +297,7 @@ function normalizeStatus(value: unknown): EntryObservabilityStatus {
     value === "healthy" ||
     value === "degraded" ||
     value === "down" ||
+    value === "idle" ||
     value === "unknown"
   ) {
     return value;
@@ -707,7 +709,7 @@ export async function getEntryObservability(input: {
   const endsAt = new Date().toISOString();
   const communityId = input.communityId?.trim() || null;
 
-  const { data, error } = await supabase.rpc("sa_get_entry_observability_v1", {
+  const { data, error } = await supabase.rpc("sa_get_entry_observability_v2", {
     p_community_id: communityId,
     p_ends_at: endsAt,
     p_starts_at: startsAt,
