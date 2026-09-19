@@ -3,6 +3,7 @@ import { FieldShell } from "@/components/field/FieldShell";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryDeploymentBoundary } from "@/features/entry/deploymentBoundary";
 import { getFieldActiveWorkTimer } from "@/features/entry/field/workTimerData";
+import { getEntryObservability } from "@/features/entry/observability/queries";
 
 export const metadata: Metadata = {
   title: "Minerva Field",
@@ -26,11 +27,26 @@ export default async function FieldLayout({
 }) {
   const { user } = await requireSuperadmin();
   const boundary = getEntryDeploymentBoundary();
-  const activeWorkTimer = await getFieldActiveWorkTimer(user.id);
+
+  const [activeWorkTimer, healthResult] = await Promise.all([
+    getFieldActiveWorkTimer(user.id),
+    getEntryObservability({ range: "24h" }).catch(() => ({
+      error: "ENTRY health unavailable",
+      state: "unavailable" as const,
+    })),
+  ]);
 
   return (
     <FieldShell
       activeWorkTimer={activeWorkTimer}
+      entryHealthStatus={
+        healthResult.state === "ready"
+          ? healthResult.data.summary.systemStatus
+          : "unknown"
+      }
+      entryIncidentCount={
+        healthResult.state === "ready" ? healthResult.data.incidents.length : 0
+      }
       previewReadOnly={boundary.previewReadOnly}
     >
       {children}
