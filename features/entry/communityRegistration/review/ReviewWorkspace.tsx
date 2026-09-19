@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useRef, useState } from "react";
+import {
+  useActionState,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -595,45 +602,52 @@ export function ReviewWorkspace({
         .map((field) => field.residentName as string),
     ),
   );
-  const reportableUnitIds = units
-    .filter((unit) => unit.status !== "unregistered" && unit.residentCount > 0)
-    .map((unit) => unit.id);
+  const reportableUnitIds = useMemo(
+    () =>
+      units
+        .filter((unit) => unit.status !== "unregistered" && unit.residentCount > 0)
+        .map((unit) => unit.id),
+    [units],
+  );
   const selectionStorageKey =
     `entry-confirmation-report-selection:${campaign.id}:${communityId}`;
   const selectedResidentCount = units
     .filter((unit) => selectedReportUnitIds.includes(unit.id))
     .reduce((total, unit) => total + unit.residentCount, 0);
 
-  async function refreshSelectionSummary(unitIds: string[]) {
-    const requestId = ++selectionRequestRef.current;
+  const refreshSelectionSummary = useCallback(
+    async (unitIds: string[]) => {
+      const requestId = ++selectionRequestRef.current;
 
-    if (unitIds.length === 0) {
-      setSelectionMissingFieldCount(0);
-      setSelectionMissingEmailCount(0);
+      if (unitIds.length === 0) {
+        setSelectionMissingFieldCount(0);
+        setSelectionMissingEmailCount(0);
+        setSelectionLoading(false);
+        return;
+      }
+
+      setSelectionLoading(true);
+      const result = await loadCommunityRegistrationConfirmationReport({
+        campaignId: campaign.id,
+        communityId,
+        unitIds,
+      });
+
+      if (requestId !== selectionRequestRef.current) return;
+
       setSelectionLoading(false);
-      return;
-    }
 
-    setSelectionLoading(true);
-    const result = await loadCommunityRegistrationConfirmationReport({
-      campaignId: campaign.id,
-      communityId,
-      unitIds,
-    });
+      if (!result.success) {
+        setReportError(result.error);
+        return;
+      }
 
-    if (requestId !== selectionRequestRef.current) return;
-
-    setSelectionLoading(false);
-
-    if (!result.success) {
-      setReportError(result.error);
-      return;
-    }
-
-    setReportError(null);
-    setSelectionMissingFieldCount(result.data.summary.missingFieldCount);
-    setSelectionMissingEmailCount(result.data.summary.missingEmailCount);
-  }
+      setReportError(null);
+      setSelectionMissingFieldCount(result.data.summary.missingFieldCount);
+      setSelectionMissingEmailCount(result.data.summary.missingEmailCount);
+    },
+    [campaign.id, communityId],
+  );
 
   function saveReportSelection(unitIds: string[]) {
     setSelectedReportUnitIds(unitIds);
@@ -682,14 +696,19 @@ export function ReviewWorkspace({
           ? [selectedUnitId]
           : [];
 
-    setSelectedReportUnitIds(initialUnitIds);
-    setSelectionHydrated(true);
-    window.sessionStorage.setItem(
-      selectionStorageKey,
-      JSON.stringify(initialUnitIds),
-    );
-    void refreshSelectionSummary(initialUnitIds);
+    const frame = window.requestAnimationFrame(() => {
+      setSelectedReportUnitIds(initialUnitIds);
+      setSelectionHydrated(true);
+      window.sessionStorage.setItem(
+        selectionStorageKey,
+        JSON.stringify(initialUnitIds),
+      );
+      void refreshSelectionSummary(initialUnitIds);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [
+    refreshSelectionSummary,
     reportableUnitIds,
     selectedUnitId,
     selectionHydrated,
