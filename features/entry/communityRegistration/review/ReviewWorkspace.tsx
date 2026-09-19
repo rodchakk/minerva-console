@@ -796,7 +796,7 @@ export function ReviewWorkspace({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {loadError ? (
         <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {loadError}
@@ -887,8 +887,8 @@ export function ReviewWorkspace({
         ) : null}
       </section>
 
-      <div className="grid gap-3 xl:h-[calc(100vh-20rem)] xl:min-h-[620px] xl:grid-cols-[minmax(310px,0.72fr)_minmax(0,1.38fr)]">
-        <section className="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
+      <div className="grid gap-3 xl:h-[clamp(30rem,calc(100dvh-22rem),42rem)] xl:grid-cols-[minmax(310px,0.72fr)_minmax(0,1.38fr)]">
+        <section className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
           <div className="border-b border-[var(--border)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -936,7 +936,7 @@ export function ReviewWorkspace({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-3">
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]">
             {visibleUnits.map((unit) => {
               const canOpen = unit.status !== "unregistered" && unit.residentCount > 0;
               const active = selectedUnitId === unit.id;
@@ -1011,7 +1011,7 @@ export function ReviewWorkspace({
           </div>
         </section>
 
-        <section className="relative flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0" aria-busy={detailPending}>
+        <section className="relative flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0" aria-busy={detailPending}>
           {detailPending ? (
             <div className="absolute inset-0 z-20 grid place-items-center bg-[var(--surface)]/92 p-6 backdrop-blur-sm">
               <div className="w-full max-w-xl animate-pulse space-y-4" aria-label="Cargando vivienda">
@@ -1041,7 +1041,7 @@ export function ReviewWorkspace({
             </div>
           ) : (
             <>
-              <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-5">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable] lg:p-5">
                 <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 items-start gap-3">
                     <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-violet-500/12 text-violet-200 ring-1 ring-inset ring-violet-400/20">

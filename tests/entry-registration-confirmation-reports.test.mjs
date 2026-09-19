@@ -69,6 +69,10 @@ test("registration review exposes stable master-detail selection and report prev
   assert.match(workspace, /detailPending/);
   assert.match(workspace, /Buscar vivienda/);
   assert.match(workspace, /Abierta/);
+  assert.match(workspace, /100dvh/);
+  assert.match(workspace, /scrollbar-gutter:stable/);
+  assert.equal(workspace.match(/overflow-y-auto overscroll-contain/g)?.length, 2);
+  assert.doesNotMatch(workspace, /xl:min-h-\[620px\]/);
   assert.doesNotMatch(page, /selectedUnit && selectedUnitReference/);
   assert.doesNotMatch(workspace, /Generar informe de selección/);
 });
