@@ -411,7 +411,8 @@ test("returned contract excludes secrets, tokens, emails, bodies, URLs, and raw 
 
 test("overview and drill-down UI preserve filters and avoid fake healthy empty states", () => {
   assert.match(page, /\/products\/entry\/observability\/notifications/);
-  assert.match(page, /flow\.key === "notifications"/);
+  assert.match(page, /flow\.key === "communications"/);
+  assert.match(notificationsPage, /ENTRY observability \/ Communications/);
   assert.match(notificationsPage, /Back to observability/);
   assert.match(notificationsPage, /basePath="\/products\/entry\/observability\/notifications"/);
   assert.match(drilldown, /No events stays Unknown/);
