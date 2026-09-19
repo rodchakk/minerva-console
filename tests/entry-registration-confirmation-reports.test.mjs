@@ -71,9 +71,22 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
     "features/entry/communityRegistration/review/ConfirmationReportDrawer.tsx",
   );
 
-  assert.match(drawer, /Revisión de residentes por confirmar/);
+  assert.match(drawer, /Revisión de residentes/);
+  assert.match(drawer, /por confirmar/);
+  assert.match(drawer, /By Minerva/);
+  assert.match(drawer, /Gestión de residentes/);
+  assert.match(drawer, /Comunidades/);
+  assert.match(drawer, /más conectadas/);
+  assert.match(drawer, /para un mejor mañana/);
+  assert.match(drawer, /icon=\{House\}/);
+  assert.match(drawer, /icon=\{Users\}/);
+  assert.match(drawer, /icon=\{ClipboardList\}/);
+  assert.match(drawer, /Referencia pendiente/);
+  assert.match(drawer, /Titular/);
   assert.match(drawer, /Resumen de datos pendientes/);
   assert.match(drawer, /Todos los datos requeridos están completos/);
+  assert.match(drawer, /ENTRY \| MINERVA/);
+  assert.match(drawer, /Unidades fuertes/);
   assert.match(drawer, /html-to-image/);
   assert.match(drawer, /pdf-lib/);
   assert.match(drawer, /Exportar PNG/);
