@@ -49,21 +49,28 @@ test("report query reuses the existing registration review RPC and never mutates
   assert.doesNotMatch(action, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });
 
-test("registration review exposes multi-unit selection, live missing-data summary, and preview", () => {
+test("registration review exposes stable master-detail selection and report preview", () => {
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
+  const page = read(
+    "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
+  );
 
-  assert.match(workspace, /Reportes de confirmación/);
   assert.match(workspace, /type="checkbox"/);
-  assert.match(workspace, /Generar informe de selección/);
-  assert.match(workspace, /Correos faltantes/);
+  assert.match(workspace, /Generar informe/);
+  assert.match(workspace, /correos faltantes/);
   assert.match(workspace, /Datos faltantes/);
   assert.match(workspace, /ConfirmationReportDrawer/);
   assert.match(workspace, /loadCommunityRegistrationConfirmationReport/);
   assert.match(workspace, /Seleccionar todas/);
   assert.match(workspace, /sessionStorage/);
-  assert.match(workspace, /La selección se conserva/);
+  assert.match(workspace, /scroll=\{false\}/);
+  assert.match(workspace, /detailPending/);
+  assert.match(workspace, /Buscar vivienda/);
+  assert.match(workspace, /Abierta/);
+  assert.doesNotMatch(page, /selectedUnit && selectedUnitReference/);
+  assert.doesNotMatch(workspace, /Generar informe de selección/);
 });
 
 test("preview is deterministic DOM output with PNG and PDF export", () => {

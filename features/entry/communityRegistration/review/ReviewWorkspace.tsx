@@ -2,6 +2,23 @@
 
 import Link from "next/link";
 import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  ClipboardList,
+  Clock3,
+  FileText,
+  Home,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Search,
+  TriangleAlert,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
+import {
   useActionState,
   useCallback,
   useEffect,
@@ -492,44 +509,40 @@ function HandoffProgress({
   );
 }
 
-function Metric({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
-        {label}
-      </p>
-      <p className="mt-2 text-2xl font-semibold text-white">{value}</p>
-    </div>
-  );
-}
-
-function SelectionMetric({
+function Metric({
+  icon: Icon,
   label,
+  tone = "violet",
   value,
-  tone = "default",
 }: {
+  icon?: LucideIcon;
   label: string;
-  value: number | string;
-  tone?: "default" | "success" | "warning" | "danger";
+  tone?: "violet" | "emerald" | "amber";
+  value: number;
 }) {
-  const valueClass =
-    tone === "success"
-      ? "text-emerald-300"
-      : tone === "warning"
-        ? "text-amber-300"
-        : tone === "danger"
-          ? "text-rose-300"
-          : "text-white";
+  const iconClass =
+    tone === "emerald"
+      ? "bg-emerald-500/12 text-emerald-300 ring-emerald-400/15"
+      : tone === "amber"
+        ? "bg-amber-500/12 text-amber-300 ring-amber-400/15"
+        : "bg-violet-500/12 text-violet-200 ring-violet-400/15";
 
   return (
-    <div className="min-w-0 rounded-xl border border-[var(--border)] bg-black/10 px-4 py-3">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-        {label}
-      </p>
-      <p className={`mt-1 text-lg font-semibold ${valueClass}`}>{value}</p>
+    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
+      {Icon ? (
+        <span className={`grid size-9 shrink-0 place-items-center rounded-full ring-1 ring-inset ${iconClass}`}>
+          <Icon className="size-4" aria-hidden />
+        </span>
+      ) : null}
+      <div className="min-w-0">
+        <p className="truncate text-[11px] text-[var(--text-muted)]">{label}</p>
+        <p className="mt-0.5 text-lg font-semibold leading-none text-white">{value}</p>
+      </div>
     </div>
   );
 }
+
+type UnitFilter = "all" | "pending" | "reviewed" | "activation";
 
 export function ReviewWorkspace({
   campaign,
@@ -557,6 +570,9 @@ export function ReviewWorkspace({
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [unitFilter, setUnitFilter] = useState<UnitFilter>("all");
+  const [unitSearch, setUnitSearch] = useState("");
+  const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
   const [previewReport, setPreviewReport] =
     useState<CommunityRegistrationConfirmationReport | null>(null);
   const [previewMode, setPreviewMode] = useState<"single" | "selection">("single");
@@ -614,6 +630,47 @@ export function ReviewWorkspace({
   const selectedResidentCount = units
     .filter((unit) => selectedReportUnitIds.includes(unit.id))
     .reduce((total, unit) => total + unit.residentCount, 0);
+  const unitFilterCounts = useMemo(
+    () => ({
+      activation: units.filter(
+        (unit) => unit.status.trim().toLowerCase() === "processed",
+      ).length,
+      all: units.length,
+      pending: units.filter((unit) =>
+        ["submitted", "needs_correction", "edit_enabled"].includes(
+          unit.status.trim().toLowerCase(),
+        ),
+      ).length,
+      reviewed: units.filter((unit) =>
+        ["reviewed", "confirmed"].includes(unit.status.trim().toLowerCase()),
+      ).length,
+    }),
+    [units],
+  );
+  const visibleUnits = useMemo(() => {
+    const normalizedSearch = unitSearch.trim().toLocaleLowerCase();
+
+    return units.filter((unit) => {
+      const matchesSearch =
+        normalizedSearch.length === 0 ||
+        unit.label.toLocaleLowerCase().includes(normalizedSearch);
+      const normalizedStatus = unit.status.trim().toLowerCase();
+      const matchesFilter =
+        unitFilter === "all" ||
+        (unitFilter === "pending" &&
+          ["submitted", "needs_correction", "edit_enabled"].includes(
+            normalizedStatus,
+          )) ||
+        (unitFilter === "reviewed" &&
+          ["reviewed", "confirmed"].includes(normalizedStatus)) ||
+        (unitFilter === "activation" && normalizedStatus === "processed");
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [unitFilter, unitSearch, units]);
+  const detailPending = Boolean(
+    pendingUnitId && pendingUnitId !== selectedUnitId,
+  );
 
   const refreshSelectionSummary = useCallback(
     async (unitIds: string[]) => {
@@ -689,12 +746,7 @@ export function ReviewWorkspace({
       restoredUnitIds = [];
     }
 
-    const initialUnitIds =
-      restoredUnitIds.length > 0
-        ? restoredUnitIds
-        : selectedUnitId && reportableUnitIds.includes(selectedUnitId)
-          ? [selectedUnitId]
-          : [];
+    const initialUnitIds = restoredUnitIds;
 
     const frame = window.requestAnimationFrame(() => {
       setSelectedReportUnitIds(initialUnitIds);
@@ -710,10 +762,15 @@ export function ReviewWorkspace({
   }, [
     refreshSelectionSummary,
     reportableUnitIds,
-    selectedUnitId,
     selectionHydrated,
     selectionStorageKey,
   ]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setPendingUnitId(null));
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedUnitId]);
 
   async function openReport(unitIds: string[], mode: "single" | "selection") {
     if (unitIds.length === 0) return;
@@ -746,188 +803,175 @@ export function ReviewWorkspace({
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-              Registration review
-            </p>
-            <h2 className="mt-2 text-xl font-semibold text-white">
-              {campaign.publicTitle}
-            </h2>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Review submitted household data before Patronato confirmation.
-            </p>
-          </div>
-          <Badge tone={statusTone(campaign.status)}>{statusLabel(campaign.status)}</Badge>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          <Metric label="Submitted" value={summary.submitted} />
-          <Metric label="Reviewed" value={summary.reviewed} />
-          <Metric label="Needs correction" value={summary.needsCorrection} />
-          <Metric label="Correction open" value={summary.editEnabled} />
-          <Metric label="Confirmed" value={summary.confirmed} />
-          <Metric label="Residents" value={summary.currentResidentCount} />
-        </div>
-
-        {campaignStatus === "open" ? (
-          <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4 text-sm leading-6 text-amber-50/90">
-            Registration is open. Submitted households can be reviewed and
-            prepared for activation while other units continue registering.
-          </p>
-        ) : null}
-
-        {campaignStatus === "paused" ? (
-          <p className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-50/90">
-            This campaign is paused. Resume the campaign before entering review.
-          </p>
-        ) : null}
+      <section aria-label="Resumen de registro" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+        <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
+        <Metric icon={Check} label="Reviewed" value={summary.reviewed} tone="emerald" />
+        <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
+        <Metric icon={Clock3} label="Correction open" value={summary.editEnabled} tone="amber" />
+        <Metric icon={CheckCircle2} label="Confirmed" value={summary.confirmed} tone="emerald" />
+        <Metric icon={Users} label="Residents" value={summary.currentResidentCount} />
       </section>
 
-      <section className="rounded-2xl border border-violet-400/25 bg-[var(--surface)] p-4 lg:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-              Reportes de confirmación
-            </p>
-            <p className="mt-1 text-sm text-[var(--text-muted)]">
-              Genera reportes de residentes para revisión del Patronato sin cambiar el workflow.
-            </p>
+      {campaignStatus === "open" || campaignStatus === "paused" ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-4 py-2.5 text-sm text-amber-50/85">
+          <span>
+            {campaignStatus === "open"
+              ? "Registration remains open while submitted households are reviewed."
+              : "This campaign is paused. Resume it before entering review."}
+          </span>
+          <Badge tone={statusTone(campaign.status)}>{statusLabel(campaign.status)}</Badge>
+        </div>
+      ) : null}
+
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/12 text-violet-200 ring-1 ring-inset ring-violet-400/20">
+              <FileText className="size-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                {selectedReportUnitIds.length} vivienda{selectedReportUnitIds.length === 1 ? "" : "s"} seleccionada{selectedReportUnitIds.length === 1 ? "" : "s"}
+                <span className="font-normal text-[var(--text-muted)]"> · {selectedResidentCount} residentes</span>
+              </p>
+              <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
+                <span className={selectionMissingFieldCount > 0 ? "text-amber-300" : "text-emerald-300"}>
+                  {selectionLoading ? "Calculando" : selectionMissingFieldCount} datos pendientes
+                </span>
+                <span> · </span>
+                <span className={selectionMissingEmailCount > 0 ? "text-amber-300" : "text-emerald-300"}>
+                  {selectionLoading ? "Calculando" : selectionMissingEmailCount} correos faltantes
+                </span>
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              onClick={() =>
-                selectedUnitId ? void openReport([selectedUnitId], "single") : undefined
-              }
-              disabled={!selectedUnitId || reportLoading}
-            >
-              {reportLoading ? "Generando..." : "Generar informe"}
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               variant="secondary"
-              onClick={() => void openReport(selectedReportUnitIds, "selection")}
+              onClick={selectAllReportableUnits}
+              disabled={reportableUnitIds.length === 0 || selectionLoading}
+            >
+              Seleccionar todas
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={clearReportSelection}
+              disabled={selectedReportUnitIds.length === 0 || selectionLoading}
+            >
+              Limpiar
+            </Button>
+            <span className="mx-1 hidden h-7 w-px bg-[var(--border)] lg:block" aria-hidden />
+            <Button
+              type="button"
+              className="gap-2"
+              onClick={() =>
+                void openReport(
+                  selectedReportUnitIds,
+                  selectedReportUnitIds.length === 1 ? "single" : "selection",
+                )
+              }
               disabled={selectedReportUnitIds.length === 0 || reportLoading}
             >
-              Generar informe de selección
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() => {
-                const ids =
-                  selectedReportUnitIds.length > 0
-                    ? selectedReportUnitIds
-                    : selectedUnitId
-                      ? [selectedUnitId]
-                      : [];
-                void openReport(ids, ids.length === 1 ? "single" : "selection");
-              }}
-              disabled={
-                reportLoading ||
-                (selectedReportUnitIds.length === 0 && !selectedUnitId)
-              }
-            >
-              Exportar
+              <FileText className="size-4" aria-hidden />
+              {reportLoading ? "Generando..." : "Generar informe"}
             </Button>
           </div>
-        </div>
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SelectionMetric
-            label="Viviendas seleccionadas"
-            value={selectedReportUnitIds.length}
-          />
-          <SelectionMetric label="Residentes" value={selectedResidentCount} tone="success" />
-          <SelectionMetric
-            label="Datos pendientes"
-            value={selectionLoading ? "…" : selectionMissingFieldCount}
-            tone={selectionMissingFieldCount > 0 ? "warning" : "success"}
-          />
-          <SelectionMetric
-            label="Correos faltantes"
-            value={selectionLoading ? "…" : selectionMissingEmailCount}
-            tone={selectionMissingEmailCount > 0 ? "danger" : "success"}
-          />
         </div>
 
         {reportError ? (
-          <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+          <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
             {reportError}
           </p>
         ) : null}
       </section>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.4fr)]">
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-                Participating units
-              </p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">
-                {summary.totalUnits} units · {summary.pendingObservations} pending observations
-              </p>
+      <div className="grid gap-3 xl:h-[calc(100vh-20rem)] xl:min-h-[620px] xl:grid-cols-[minmax(310px,0.72fr)_minmax(0,1.38fr)]">
+        <section className="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
+          <div className="border-b border-[var(--border)] p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-white">Viviendas</h2>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Abre una vivienda o marca su cuadro para el informe.
+                </p>
+              </div>
+              <Badge tone="default">{summary.totalUnits}</Badge>
             </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={selectAllReportableUnits}
-                disabled={reportableUnitIds.length === 0 || selectionLoading}
-                className="rounded-lg border border-violet-400/25 bg-violet-500/[0.06] px-2.5 py-1.5 text-[11px] font-semibold text-violet-100 transition hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Seleccionar todas
-              </button>
-              <button
-                type="button"
-                onClick={clearReportSelection}
-                disabled={selectedReportUnitIds.length === 0 || selectionLoading}
-                className="rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-[11px] font-semibold text-[var(--text-muted)] transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                Limpiar
-              </button>
+
+            <label className="relative mt-4 block">
+              <span className="sr-only">Buscar vivienda</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
+              <input
+                type="search"
+                value={unitSearch}
+                onChange={(event) => setUnitSearch(event.target.value)}
+                placeholder="Buscar vivienda..."
+                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
+              />
+            </label>
+
+            <div className="mt-3 flex gap-1 overflow-x-auto pb-1" aria-label="Filtros de viviendas">
+              {([
+                ["all", "Todas"],
+                ["pending", "Pendientes"],
+                ["reviewed", "Revisadas"],
+                ["activation", "Activación"],
+              ] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setUnitFilter(value)}
+                  aria-pressed={unitFilter === value}
+                  className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                    unitFilter === value
+                      ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                      : "border-[var(--border)] text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-white"
+                  }`}
+                >
+                  {label} <span className="ml-1 opacity-70">{unitFilterCounts[value]}</span>
+                </button>
+              ))}
             </div>
           </div>
 
-          <p className="mt-3 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2 text-xs leading-5 text-[var(--text-muted)]">
-            Marca los cuadros de la izquierda para combinar varias viviendas. La selección se conserva aunque abras otra casa para revisarla.
-          </p>
-
-          <div className="mt-4 max-h-[680px] space-y-2 overflow-y-auto pr-1">
-            {units.map((unit) => {
+          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-3">
+            {visibleUnits.map((unit) => {
               const canOpen = unit.status !== "unregistered" && unit.residentCount > 0;
               const active = selectedUnitId === unit.id;
               const selectedForReport = selectedReportUnitIds.includes(unit.id);
               const content = (
-                <>
-                  <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                    <div className="min-w-0">
+                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold text-white">{unit.label}</p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        {unit.residentCount} resident{unit.residentCount === 1 ? "" : "s"}
-                        {unit.hasPendingObservation ? " · observation pending" : ""}
-                      </p>
+                      {active ? (
+                        <span className="text-[10px] font-semibold uppercase text-violet-200">Abierta</span>
+                      ) : null}
                     </div>
-                    <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      {unit.residentCount} residente{unit.residentCount === 1 ? "" : "s"}
+                      {unit.hasPendingObservation ? " · observación pendiente" : ""}
+                    </p>
                   </div>
-                </>
+                  <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
+                </div>
               );
 
               return canOpen ? (
                 <div
                   key={unit.id}
-                  className={`flex items-center overflow-hidden rounded-xl border transition-colors ${
-                    selectedForReport
-                      ? "border-violet-400/55 bg-violet-500/[0.08]"
-                      : active
-                        ? "border-violet-400/35 bg-violet-500/[0.05]"
+                  className={`flex min-h-[62px] items-stretch overflow-hidden rounded-lg border transition-colors ${
+                    active
+                      ? "border-violet-400/55 bg-violet-500/[0.07] ring-1 ring-inset ring-violet-400/10"
+                      : selectedForReport
+                        ? "border-[var(--border)] bg-violet-500/[0.04]"
                         : "border-[var(--border)] bg-[var(--surface-strong)]"
                   }`}
                 >
                   <label
-                    className="grid self-stretch cursor-pointer place-items-center border-r border-white/[0.07] px-3"
+                    className={`grid w-11 shrink-0 cursor-pointer place-items-center border-r border-white/[0.07] transition ${selectedForReport ? "bg-violet-500/12" : "hover:bg-white/[0.03]"}`}
                     title="Seleccionar para informe"
                   >
                     <input
@@ -940,7 +984,12 @@ export function ReviewWorkspace({
                   </label>
                   <Link
                     href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(unit.id)}`}
-                    className="min-w-0 flex-1 px-3 py-3 transition hover:bg-white/[0.025]"
+                    scroll={false}
+                    onNavigate={() => {
+                      if (!active) setPendingUnitId(unit.id);
+                    }}
+                    aria-current={active ? "page" : undefined}
+                    className="min-w-0 flex-1 px-3 py-2.5 transition hover:bg-white/[0.025]"
                   >
                     {content}
                   </Link>
@@ -948,81 +997,96 @@ export function ReviewWorkspace({
               ) : (
                 <div
                   key={unit.id}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 opacity-70"
+                  className="min-h-[62px] rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 opacity-60"
                 >
                   {content}
                 </div>
               );
             })}
+            {visibleUnits.length === 0 ? (
+              <div className="grid min-h-32 place-items-center px-4 text-center text-sm text-[var(--text-muted)]">
+                No hay viviendas que coincidan con este filtro.
+              </div>
+            ) : null}
           </div>
         </section>
 
-        <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5">
+        <section className="relative flex min-h-[620px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0" aria-busy={detailPending}>
+          {detailPending ? (
+            <div className="absolute inset-0 z-20 grid place-items-center bg-[var(--surface)]/92 p-6 backdrop-blur-sm">
+              <div className="w-full max-w-xl animate-pulse space-y-4" aria-label="Cargando vivienda">
+                <div className="h-6 w-40 rounded bg-white/10" />
+                <div className="h-16 rounded-lg bg-white/[0.06]" />
+                <div className="grid grid-cols-4 gap-3">
+                  {[0, 1, 2, 3].map((item) => (
+                    <div key={item} className="h-10 rounded bg-white/[0.05]" />
+                  ))}
+                </div>
+                <div className="h-24 rounded-lg bg-white/[0.06]" />
+                <div className="h-24 rounded-lg bg-white/[0.05]" />
+              </div>
+            </div>
+          ) : null}
           {!selectedUnit || !selectedUnitId ? (
-            <div className="grid min-h-64 place-items-center rounded-xl border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-6 py-10 text-center">
+            <div className="grid flex-1 place-items-center px-6 py-10 text-center">
               <div>
-                <p className="text-base font-semibold text-white">Select a submitted unit</p>
+                <span className="mx-auto grid size-12 place-items-center rounded-full bg-violet-500/10 text-violet-200 ring-1 ring-inset ring-violet-400/20">
+                  <Home className="size-5" aria-hidden />
+                </span>
+                <p className="mt-4 text-base font-semibold text-white">Selecciona una vivienda</p>
                 <p className="mt-2 max-w-md text-sm leading-6 text-[var(--text-muted)]">
-                  Open a household to inspect its current submission and residents.
+                  Abre una vivienda de la lista para revisar su envío y residentes.
                 </p>
               </div>
             </div>
           ) : (
-            <div>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-                    Household submission
-                  </p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <h2 className="text-2xl font-semibold text-white">
-                      {selectedUnit.unitLabel}
-                    </h2>
-                    {canQuickEditUnit ? (
-                      <button
-                        type="button"
-                        onClick={() => setEditingUnit(true)}
-                        className="rounded-lg border border-[var(--border)] px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/5"
-                      >
-                        Edit unit
-                      </button>
-                    ) : null}
+            <>
+              <div className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-5">
+                <div className="flex flex-col gap-4 border-b border-[var(--border)] pb-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-lg bg-violet-500/12 text-violet-200 ring-1 ring-inset ring-violet-400/20">
+                      <Home className="size-5" aria-hidden />
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-xl font-semibold text-white">{selectedUnit.unitLabel}</h2>
+                        <Badge tone={statusTone(selectedUnit.status)}>{statusLabel(selectedUnit.status)}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">
+                        Version {selectedUnit.version} · Submitted {formatDate(selectedUnit.submittedAt)}
+                      </p>
+                    </div>
                   </div>
-                  <p className="mt-1 text-sm text-[var(--text-muted)]">
-                    Version {selectedUnit.version} · Submitted {formatDate(selectedUnit.submittedAt)}
-                  </p>
+                  <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2 sm:max-w-[280px]">
+                    <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
+                      <MapPin className="size-3" aria-hidden /> Referencia de la vivienda
+                    </p>
+                    <p className="mt-1 truncate text-sm font-medium text-white" title={selectedUnitReference ?? undefined}>
+                      {selectedUnitReference ?? "Referencia pendiente"}
+                    </p>
+                  </div>
                 </div>
-                <Badge tone={statusTone(selectedUnit.status)}>
-                  {statusLabel(selectedUnit.status)}
-                </Badge>
-              </div>
 
-              {selectedUnitReference ? (
-                <div className="mt-4 rounded-xl border border-violet-400/20 bg-violet-500/[0.06] px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
-                    Referencia de la vivienda
-                  </p>
-                  <p className="mt-1 text-sm font-medium leading-6 text-white">
-                    {selectedUnitReference}
-                  </p>
-                </div>
-              ) : null}
-
-              {selectedUnit.review?.observation ? (
-                <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
+                {selectedUnit.review?.observation ? (
+                  <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
                     Current correction observation
                   </p>
                   <p className="mt-2 text-sm leading-6 text-amber-50/90">
                     {selectedUnit.review.observation}
                   </p>
+                  </div>
+                ) : null}
+
+                <HandoffProgress selectedUnit={selectedUnit} />
+
+                <div className="mt-5 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-white">Residente(s)</h3>
+                  <Badge tone="default">{selectedUnit.residents.length}</Badge>
                 </div>
-              ) : null}
 
-              <HandoffProgress selectedUnit={selectedUnit} />
-
-              <div className="mt-5 space-y-3">
-                {selectedUnit.residents.map((resident) => {
+                <div className="mt-3 space-y-2">
+                  {selectedUnit.residents.map((resident) => {
                   const quickResident = quickEditData?.residents.find(
                     (item) => item.position === resident.position,
                   );
@@ -1031,13 +1095,17 @@ export function ReviewWorkspace({
                   return (
                     <div
                       key={`${resident.position}-${resident.fullName}`}
-                      className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4"
+                      className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3.5 py-3"
                     >
                       <div className="flex flex-wrap items-start justify-between gap-3">
-                        <div>
+                        <div className="flex min-w-0 items-start gap-3">
+                          <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/[0.06] text-xs font-semibold text-slate-200">
+                            {resident.position}
+                          </span>
+                          <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm font-semibold text-white">
-                              {resident.position}. {resident.fullName}
+                                {resident.fullName}
                             </p>
                             {resident.position === 1 ? (
                               <span className="rounded-full border border-violet-300/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-100">
@@ -1049,6 +1117,7 @@ export function ReviewWorkspace({
                             {resident.relationshipToHouse}
                             {resident.isOwnerReference ? " · owner reference" : ""}
                           </p>
+                          </div>
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                           <span
@@ -1064,28 +1133,32 @@ export function ReviewWorkspace({
                             <button
                               type="button"
                               onClick={() => setEditingResident(quickResident)}
-                              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/5"
+                              className="grid size-8 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition hover:bg-white/5 hover:text-white"
+                              title="Editar residente"
+                              aria-label={`Editar ${resident.fullName}`}
                             >
-                              Edit
+                              <Pencil className="size-3.5" aria-hidden />
                             </button>
                           ) : null}
                         </div>
                       </div>
-                      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                        <p className="text-[var(--text-muted)]">
-                          Email: <span className="text-white">{resident.email ?? "—"}</span>
+                      <div className="mt-3 grid gap-2 border-t border-white/[0.06] pt-3 text-xs sm:grid-cols-2">
+                        <p className="flex min-w-0 items-center gap-2 text-[var(--text-muted)]">
+                          <Mail className="size-3.5 shrink-0" aria-hidden />
+                          <span className="truncate text-slate-200">{resident.email ?? "Correo pendiente"}</span>
                         </p>
-                        <p className="text-[var(--text-muted)]">
-                          Phone: <span className="text-white">{resident.phone ?? "—"}</span>
+                        <p className="flex items-center gap-2 text-[var(--text-muted)]">
+                          <Phone className="size-3.5 shrink-0" aria-hidden />
+                          <span className="text-slate-200">{resident.phone ?? "Teléfono pendiente"}</span>
                         </p>
                       </div>
                     </div>
                   );
-                })}
-              </div>
+                  })}
+                </div>
 
-              {selectedUnitMissingFields.length > 0 ? (
-                <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-4">
+                {selectedUnitMissingFields.length > 0 ? (
+                  <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/[0.08] px-4 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
@@ -1114,29 +1187,47 @@ export function ReviewWorkspace({
                       </div>
                     ))}
                   </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
+                    <CheckCircle2 className="size-5 shrink-0 text-emerald-300" aria-hidden />
+                    <div>
+                      <p className="text-sm font-semibold text-emerald-100">Todos los datos requeridos están completos.</p>
+                      <p className="mt-0.5 text-xs text-emerald-100/65">La vivienda está lista para continuar con la revisión.</p>
+                    </div>
+                  </div>
+                )}
+
+                {reviewState && !reviewState.success ? (
+                  <p className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                    {reviewState.error}
+                  </p>
+                ) : null}
+
+                {!reviewCapable && !isPreparedForActivation && !canConfirmAndPrepare ? (
+                  <p className="mt-5 text-sm leading-6 text-[var(--text-muted)]">
+                    Review actions are read-only until the campaign can accept review.
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface-elevated)]/95 px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:px-5">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">{selectedUnit.unitLabel}</p>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    {selectedUnit.residents.length} residente{selectedUnit.residents.length === 1 ? "" : "s"} · {selectedUnitMissingFields.length === 0 ? "Datos completos" : `${selectedUnitMissingFields.length} pendientes`}
+                  </p>
                 </div>
-              ) : (
-                <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3 text-sm text-emerald-200">
-                  Todos los datos requeridos están completos.
-                </div>
-              )}
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {canQuickEditUnit ? (
+                    <Button type="button" variant="secondary" className="gap-2" onClick={() => setEditingUnit(true)}>
+                      <Pencil className="size-3.5" aria-hidden /> Editar
+                    </Button>
+                  ) : null}
 
-              {reviewState && !reviewState.success ? (
-                <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
-                  {reviewState.error}
-                </p>
-              ) : null}
-
-              {!reviewCapable && !isPreparedForActivation && !canConfirmAndPrepare ? (
-                <p className="mt-5 text-sm leading-6 text-[var(--text-muted)]">
-                  Review actions are read-only until the campaign can accept review.
-                </p>
-              ) : null}
-
-              <div className="mt-5 flex flex-wrap justify-end gap-3">
                 {isPreparedForActivation ? (
                   <Link href={activationQueueUrl}>
-                    <Button type="button">Ver en Activation Queue</Button>
+                      <Button type="button" className="gap-2">Ver en Activation Queue <ArrowRight className="size-3.5" aria-hidden /></Button>
                   </Link>
                 ) : null}
 
@@ -1146,7 +1237,7 @@ export function ReviewWorkspace({
                     variant="secondary"
                     onClick={() => setShowCorrectionRequest(true)}
                   >
-                    Request correction
+                      <TriangleAlert className="mr-2 size-3.5" aria-hidden /> Solicitar corrección
                   </Button>
                 ) : null}
 
@@ -1175,7 +1266,7 @@ export function ReviewWorkspace({
                     onClick={() => setShowActivationHandoff(true)}
                     disabled={Boolean(loadError)}
                   >
-                    Confirmar y preparar activación
+                      Confirmar y preparar activación
                   </Button>
                 ) : null}
 
@@ -1184,12 +1275,13 @@ export function ReviewWorkspace({
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
                     <input type="hidden" name="community_id" value={communityId} />
                     <Button type="submit" disabled={reviewPending || Boolean(loadError)}>
-                      {reviewPending ? "Marking..." : "Mark reviewed"}
+                        {reviewPending ? "Confirmando..." : "Confirmar revisión"}
                     </Button>
                   </form>
                 ) : null}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </section>
       </div>
