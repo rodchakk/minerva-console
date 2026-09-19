@@ -619,6 +619,8 @@ function mapNotificationEvents(
       const record = isRecord(item) ? item : {};
       const id = asString(record.id);
       const occurredAt = asString(record.occurred_at);
+      const operation = asString(record.operation, "Communication event");
+      const isDirectActivationEmail = operation.startsWith("ACTIVATION_EMAIL_");
 
       if (!id || !occurredAt) {
         return null;
@@ -628,7 +630,9 @@ function mapNotificationEvents(
         attempts: asNullableNumber(record.attempts),
         audienceLabel: asNullableString(record.audience_label),
         audienceType: normalizeAudienceType(record.audience_type),
-        channel: normalizeNotificationChannel(record.channel),
+        channel: isDirectActivationEmail
+          ? "onboarding_email"
+          : normalizeNotificationChannel(record.channel),
         claimedAt: asNullableString(record.claimed_at),
         communityId: asNullableString(record.community_id),
         communityName: asNullableString(record.community_name),
@@ -644,11 +648,11 @@ function mapNotificationEvents(
           record.impact_summary,
           "Operational impact is not proven from this evidence.",
         ),
-        layer: asString(record.layer, "unknown"),
+        layer: isDirectActivationEmail ? "provider" : asString(record.layer, "unknown"),
         messageId: asNullableString(record.message_id),
         messageLabel: asNullableString(record.message_label),
         occurredAt,
-        operation: asString(record.operation, "Notification event"),
+        operation,
         providerReached: asNullableBoolean(record.provider_reached),
         queueId: asNullableString(record.queue_id),
         recoveredAt: asNullableString(record.recovered_at),
