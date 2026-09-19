@@ -358,3 +358,23 @@ Activated via queue is intentionally distinct from the total active resident cou
 Raw performance samples are retained for 45 days. Resolved lifecycle incidents are retained for 180 days. Routine Web Push completion heartbeats are no longer emitted for empty dispatcher cycles, and historical idle heartbeat noise is kept only for a short retention window.
 
 Observability remains fail-open: telemetry must never block authentication, access creation, gate validation, administration, notification delivery, or OCR.
+
+
+## Diagnostic bundles
+
+ENTRY Observability includes a privacy-minimized diagnostic bundle workflow so production troubleshooting does not require manually searching every log source.
+
+The dashboard action **Generate diagnostic** uses the current community scope and a selectable time window. It can produce:
+
+- a concise troubleshooting summary for chat/support handoff
+- a copyable JSON bundle
+- a downloadable JSON file
+- a saved diagnostic snapshot with a human reference such as `ENTRY-DIAG-YYYYMMDD-HHMM-XXXXXXXX`
+
+The bundle consolidates the current observability read model, active and historical incidents, performance, infrastructure, rollout readiness, queue/worker state, and a bounded list of sanitized recent system events. Recent-event export deliberately exposes only operational metadata such as severity, module, event type, status, error code/fingerprint, duration, provider, and attempt count.
+
+The bundle excludes passwords, activation PINs, QR tokens, raw push tokens, visitor names, email addresses, message bodies, and raw provider payloads.
+
+Manual snapshots are retained for 180 days. ERROR/CRITICAL incident lifecycle transitions automatically capture 90-day snapshots when the incident is first detected and when it recovers. Automatic capture is fail-open: a diagnostic failure must never interfere with incident reconciliation or product operations.
+
+Saved snapshot references are visible in the Observability dashboard. The snapshot reference is the preferred support handoff identifier because it points to a frozen view of ENTRY at the time of investigation.
