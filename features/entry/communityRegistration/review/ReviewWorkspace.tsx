@@ -887,7 +887,7 @@ export function ReviewWorkspace({
         ) : null}
       </section>
 
-      <div className="grid gap-3 xl:h-[clamp(30rem,calc(100dvh-22rem),42rem)] xl:grid-cols-[minmax(310px,0.72fr)_minmax(0,1.38fr)]">
+      <div className="grid gap-3 xl:h-[clamp(30rem,calc(100dvh-22rem),42rem)] xl:grid-cols-[minmax(320px,0.64fr)_minmax(0,1.56fr)]">
         <section className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
           <div className="border-b border-[var(--border)] p-4">
             <div className="flex items-start justify-between gap-3">
