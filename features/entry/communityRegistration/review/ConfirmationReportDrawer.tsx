@@ -367,7 +367,9 @@ export function ConfirmationReportDrawer({
       }
 
       const bytes = await pdf.save();
-      const blob = new Blob([bytes], { type: "application/pdf" });
+      const arrayBuffer = new ArrayBuffer(bytes.byteLength);
+      new Uint8Array(arrayBuffer).set(bytes);
+      const blob = new Blob([arrayBuffer], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       downloadUrl(url, reportFilename(report, "pdf"));
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
