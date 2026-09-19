@@ -379,8 +379,8 @@ begin
         from public.community_message_push_queue q
         where q.status = 'failed'
           and coalesce(q.last_error,'') not ilike 'No active push tokens found for audience%'
-          and coalesce(q.completed_at,q.updated_at,q.created_at) >= v_start
-          and coalesce(q.completed_at,q.updated_at,q.created_at) < v_end
+          and coalesce(q.completed_at,q.created_at) >= v_start
+          and coalesce(q.completed_at,q.created_at) < v_end
           and (p_community_id is null or q.community_id = p_community_id)
       ),
       'delivery_unavailable_count', (
@@ -388,16 +388,16 @@ begin
         from public.community_message_push_queue q
         where q.status = 'failed'
           and coalesce(q.last_error,'') ilike 'No active push tokens found for audience%'
-          and coalesce(q.completed_at,q.updated_at,q.created_at) >= v_start
-          and coalesce(q.completed_at,q.updated_at,q.created_at) < v_end
+          and coalesce(q.completed_at,q.created_at) >= v_start
+          and coalesce(q.completed_at,q.created_at) < v_end
           and (p_community_id is null or q.community_id = p_community_id)
       ),
       'sent_count', (
         select count(*)
         from public.community_message_push_queue q
         where q.status = 'sent'
-          and coalesce(q.completed_at,q.updated_at,q.created_at) >= v_start
-          and coalesce(q.completed_at,q.updated_at,q.created_at) < v_end
+          and coalesce(q.completed_at,q.created_at) >= v_start
+          and coalesce(q.completed_at,q.created_at) < v_end
           and (p_community_id is null or q.community_id = p_community_id)
       ),
       'oldest_open_at', (
@@ -436,8 +436,8 @@ begin
         from public.plate_ocr_queue q
         join public.entry_logs el on el.id = q.entry_log_id
         where q.status = 'FAILED'
-          and coalesce(q.completed_at,q.updated_at,q.created_at) >= v_start
-          and coalesce(q.completed_at,q.updated_at,q.created_at) < v_end
+          and coalesce(q.completed_at,q.created_at) >= v_start
+          and coalesce(q.completed_at,q.created_at) < v_end
           and (p_community_id is null or el.community_id = p_community_id)
       ),
       'delivery_unavailable_count', 0,
