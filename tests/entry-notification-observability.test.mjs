@@ -12,6 +12,9 @@ function read(path) {
 const migration = read(
   "supabase/migrations/20260908090000_entry_notification_observability_drilldown.sql",
 );
+const receiptMigration = read(
+  "supabase/migrations/20260919061909_entry_notification_receipt_truth.sql",
+);
 const queries = read("features/entry/observability/queries.ts");
 const page = read("app/(console)/products/entry/observability/page.tsx");
 const notificationsPage = read(
@@ -150,10 +153,20 @@ test("RPC aggregates existing notification evidence without exposing raw tables 
   assert.match(migration, /from public\.community_message_push_queue q/);
   assert.match(migration, /public\.community_messages m/);
   assert.match(migration, /from public\.onboarding_campaign_messages m/);
-  assert.match(queries, /supabase\.rpc\(\s*"sa_get_entry_notification_observability_v1"/);
+  assert.match(queries, /supabase\.rpc\(\s*"sa_get_entry_notification_observability_v2"/);
   assert.doesNotMatch(notificationsPage, /\.from\("system_event_log"\)/);
   assert.doesNotMatch(notificationsPage, /\.from\("community_message_push_queue"\)/);
   assert.doesNotMatch(notificationsPage, /\.from\("onboarding_campaign_messages"\)/);
+});
+
+test("receipt-aware drill-down distinguishes acceptance from verified device delivery", () => {
+  assert.match(receiptMigration, /create or replace function public\.sa_get_entry_notification_observability_v2/);
+  assert.match(receiptMigration, /entry_mobile_push_receipts/);
+  assert.match(receiptMigration, /Push accepted; delivery pending/);
+  assert.match(receiptMigration, /Push delivered/);
+  assert.match(receiptMigration, /Push delivery failed/);
+  assert.match(receiptMigration, /Device delivery was verified by the Expo push receipt/);
+  assert.doesNotMatch(receiptMigration, /expo_push_token/);
 });
 
 test("terminal push telemetry is canonical over correlated terminal queue fallback", () => {

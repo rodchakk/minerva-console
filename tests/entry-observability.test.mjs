@@ -21,6 +21,21 @@ const capabilityMigration = read(
 const capabilityInstrumentation = read(
   "supabase/migrations/20260919051000_entry_observability_capability_instrumentation.sql",
 );
+const hardeningMigration = read(
+  "supabase/migrations/20260919060015_entry_observability_hardening_v2.sql",
+);
+const experienceMigration = read(
+  "supabase/migrations/20260919060629_entry_observability_experience_and_delivery.sql",
+);
+const receiptMigration = read(
+  "supabase/migrations/20260919060137_entry_mobile_push_delivery_receipts.sql",
+);
+const expirationMigration = read(
+  "supabase/migrations/20260919060813_entry_expiration_operational_hardening.sql",
+);
+const pushWorker = read("supabase/functions/smart-service/index.ts");
+const pushReceiptWorker = read("supabase/functions/entry-push-receipts/index.ts");
+const usernameLogin = read("supabase/functions/login-with-username/index.ts");
 const activationEmailActions = read("features/entry/activation/emailActions.ts");
 const page = read("app/(console)/products/entry/observability/page.tsx");
 const loading = read("app/(console)/products/entry/observability/loading.tsx");
@@ -269,7 +284,7 @@ test("read model is superadmin-only, bounded, and server-side aggregated", () =>
   assert.match(capabilityMigration, /v_end - v_start > interval '31 days'/);
   assert.match(capabilityMigration, /returns jsonb/);
   assert.match(capabilityMigration, /public\.sa_get_entry_observability_v1/);
-  assert.match(queries, /supabase\.rpc\("sa_get_entry_observability_v2"/);
+  assert.match(queries, /supabase\.rpc\("sa_get_entry_observability_v4"/);
   assert.doesNotMatch(page, /\.from\("system_event_log"\)/);
   assert.doesNotMatch(page, /\.from\("entry_usage_ledger"\)/);
 });
@@ -526,6 +541,48 @@ test("OCR queue visibility uses queue state and the hardening release flips prov
   );
   assert.equal(openOcrObservedMinutesAgo({ createdMinutesAgo: 5 }), 5);
   assert.equal(openOcrObservedMinutesAgo({ createdMinutesAgo: -1 }), 0);
+});
+
+
+test("observability hardening adds durable incidents, administration, performance, readiness, and infrastructure", () => {
+  assert.match(hardeningMigration, /create table if not exists public\.entry_observability_incidents/);
+  assert.match(hardeningMigration, /create table if not exists public\.entry_performance_events/);
+  assert.match(hardeningMigration, /'key','administration'/);
+  assert.match(hardeningMigration, /'\{performance\}'/);
+  assert.match(hardeningMigration, /'\{infrastructure\}'/);
+  assert.match(hardeningMigration, /'\{readiness\}'/);
+  assert.match(hardeningMigration, /'\{incident_history\}'/);
+  assert.match(experienceMigration, /create or replace function public\.sa_get_entry_observability_v4/);
+  assert.match(page, /Performance/);
+  assert.match(page, /Operational infrastructure/);
+  assert.match(page, /Rollout & readiness/);
+  assert.match(page, /Incident history/);
+});
+
+test("mobile push acceptance is verified with Expo receipts without persisting raw tokens", () => {
+  assert.match(receiptMigration, /entry_mobile_push_receipts/);
+  assert.match(receiptMigration, /expo_push_token_hash/);
+  assert.match(pushWorker, /entry_mobile_push_receipts/);
+  assert.match(pushWorker, /sha256Hex/);
+  assert.match(pushReceiptWorker, /push\/getReceipts/);
+  assert.match(pushReceiptWorker, /DeviceNotRegistered/);
+  assert.match(pushReceiptWorker, /expo_push_token_hash/);
+  assert.doesNotMatch(pushReceiptWorker, /select\([^)]*expo_push_token[^)]*\)/);
+});
+
+test("authentication failures distinguish system errors from expected credential rejection", () => {
+  assert.match(usernameLogin, /AUTH_LOGIN_FAILED/);
+  assert.match(usernameLogin, /AUTH_PROVIDER_NETWORK_ERROR/);
+  assert.match(usernameLogin, /authRes\.status >= 500/);
+  assert.match(usernameLogin, /return json\(\{ ok: false, error: "invalid_credentials" \}, 401\)/);
+  assert.doesNotMatch(usernameLogin, /password.*system_event_log/i);
+});
+
+test("stale access authorization expires frequently enough for production", () => {
+  assert.match(expirationMigration, /'expire-stale-records'/);
+  assert.match(expirationMigration, /'\*\/5 \* \* \* \*'/);
+  assert.match(expirationMigration, /vp\.status::text in \('ACTIVE','SCHEDULED'\)/);
+  assert.doesNotMatch(expirationMigration, /vp\.status::text in \('ACTIVE','CHECKED_IN','SCHEDULED'\)/);
 });
 
 test("dashboard route, filters, loading state, and sidebar entry are wired", () => {

@@ -14,6 +14,9 @@ const exportBuilder = read("features/entry/outrider/export.ts");
 const detailPage = read(
   "app/(console)/products/entry/outrider/[outriderId]/page.tsx",
 );
+const detailWorkspace = read(
+  "features/entry/outrider/internal/OutriderDetailWorkspace.tsx",
+);
 const adminSummary = read(
   "features/entry/outrider/internal/OutriderInitialAdminsSummary.tsx",
 );
@@ -24,14 +27,11 @@ const resolverFix = read(
   "supabase/migrations/20260907074018_outrider_resolver_null_admin_count.sql",
 );
 
-test("destination copy describes businesses and service points instead of common areas", () => {
-  assert.match(form, /comercios, talleres, pulperías, oficinas u otros lugares/);
-  assert.match(form, /Taller El Trancazo/);
-  assert.match(form, /Pulpería Don Juan/);
-  assert.doesNotMatch(
-    form,
-    /¿Existen áreas comunes, recreativas u otros lugares que deban aparecer como destinos en ENTRY\?/,
-  );
+test("destination intake separates commercial establishments from common-area destinations", () => {
+  assert.match(form, /¿Existen establecimientos comerciales o empresas dentro de la residencial\?/);
+  assert.match(form, /tiendas, oficinas comerciales, restaurantes, bodegas o empresas/);
+  assert.match(form, /¿Existen áreas comunes o recreativas como destinos en ENTRY\?/);
+  assert.match(form, /canchas de fútbol, casa club, área de piscina, parque o salones de eventos/);
 });
 
 test("initial administrator intake captures count, person, unit and practical contact channel", () => {
@@ -91,7 +91,8 @@ test("internal review and exports expose administrators for activation preparati
   assert.match(exportBuilder, /administrators:/);
   assert.match(exportBuilder, /people: detail\.initialAdmins/);
   assert.match(exportBuilder, /## Initial Administrators/);
-  assert.match(detailPage, /OutriderInitialAdminsSummary/);
+  assert.match(detailPage, /OutriderDetailWorkspace/);
+  assert.match(detailWorkspace, /Administradores iniciales/);
+  assert.match(detailWorkspace, /Unidad:/);
   assert.match(adminSummary, /Administradores iniciales/);
-  assert.match(adminSummary, /Unidad:/);
 });

@@ -13,9 +13,12 @@ interface ExpoMessage {
   sound: 'default'
 }
 
-// Defensive: accept either queue_id (new) or id (legacy) from the claim RPC.
-// During rollout the RPC may return either shape; we normalize here so the
-// worker keeps closing rows correctly across the deploy boundary.
+interface ExpoTicket {
+  status: 'ok' | 'error' | 'unknown'
+  id: string | null
+  errorCode: string | null
+}
+
 interface QueueRowRaw {
   queue_id?: string
   id?: string
@@ -70,6 +73,14 @@ function getRequiredEnv(name: string): string {
 
 function isValidExpoPushToken(token: string): boolean {
   return /^ExponentPushToken\[[^\]]+\]$/.test(token) || /^ExpoPushToken\[[^\]]+\]$/.test(token)
+}
+
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value)
+  const digest = await crypto.subtle.digest('SHA-256', bytes)
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('')
 }
 
 async function getRecipientTokens(
@@ -132,8 +143,8 @@ async function getRecipientTokens(
 async function sendExpoChunk(messages: ExpoMessage[]): Promise<{
   sent: number
   failed: number
+  tickets: ExpoTicket[]
   providerResponseStatus?: number | null
-  providerResponseBody?: string | null
 }> {
   try {
     const expoRes = await fetch(EXPO_PUSH_URL, {
@@ -143,38 +154,114 @@ async function sendExpoChunk(messages: ExpoMessage[]): Promise<{
     })
 
     if (!expoRes.ok) {
-      const raw = await expoRes.text()
-      return { sent: 0, failed: messages.length, providerResponseStatus: expoRes.status, providerResponseBody: raw }
+      return {
+        sent: 0,
+        failed: messages.length,
+        tickets: [],
+        providerResponseStatus: expoRes.status,
+      }
     }
 
     let expoJson: unknown
-    try { expoJson = await expoRes.json() } catch {
-      return { sent: 0, failed: messages.length, providerResponseStatus: expoRes.status, providerResponseBody: 'Invalid JSON' }
+    try {
+      expoJson = await expoRes.json()
+    } catch {
+      return {
+        sent: 0,
+        failed: messages.length,
+        tickets: [],
+        providerResponseStatus: expoRes.status,
+      }
     }
 
     const results = isRecord(expoJson) && Array.isArray(expoJson.data) ? expoJson.data : null
-    if (!results) return { sent: 0, failed: messages.length, providerResponseStatus: expoRes.status, providerResponseBody: JSON.stringify(expoJson) }
-
-    let sent = 0, failed = 0
-    for (const ticket of results) {
-      if (isRecord(ticket) && ticket.status === 'ok') sent++
-      else failed++
+    if (!results) {
+      return {
+        sent: 0,
+        failed: messages.length,
+        tickets: [],
+        providerResponseStatus: expoRes.status,
+      }
     }
-    if (results.length < messages.length) failed += (messages.length - results.length)
 
-    return { sent, failed, providerResponseStatus: expoRes.status, providerResponseBody: JSON.stringify(expoJson) }
-  } catch (error) {
-    return { sent: 0, failed: messages.length, providerResponseStatus: null, providerResponseBody: String(error) }
+    const tickets: ExpoTicket[] = results.map((ticket) => {
+      if (!isRecord(ticket)) return { status: 'unknown', id: null, errorCode: null }
+      const details = isRecord(ticket.details) ? ticket.details : {}
+      const status = ticket.status === 'ok' ? 'ok' : ticket.status === 'error' ? 'error' : 'unknown'
+      return {
+        status,
+        id: typeof ticket.id === 'string' ? ticket.id : null,
+        errorCode: typeof details.error === 'string' ? details.error.slice(0, 96) : null,
+      }
+    })
+
+    const sent = tickets.filter((ticket) => ticket.status === 'ok').length
+    let failed = tickets.filter((ticket) => ticket.status !== 'ok').length
+    if (tickets.length < messages.length) failed += messages.length - tickets.length
+
+    return { sent, failed, tickets, providerResponseStatus: expoRes.status }
+  } catch {
+    return {
+      sent: 0,
+      failed: messages.length,
+      tickets: [],
+      providerResponseStatus: null,
+    }
   }
 }
 
-// Best-effort logger to system_event_log. Never throws.
+async function recordAcceptedTickets(
+  serviceClient: ServiceClient,
+  row: QueueRow,
+  tokens: string[],
+  tickets: ExpoTicket[],
+): Promise<void> {
+  const inserts: Array<Record<string, unknown>> = []
+
+  for (let index = 0; index < tickets.length && index < tokens.length; index += 1) {
+    const ticket = tickets[index]
+    if (ticket.status !== 'ok' || !ticket.id) continue
+
+    inserts.push({
+      queue_id: row.queue_id,
+      community_id: row.community_id,
+      ticket_id: ticket.id,
+      token_hash: await sha256Hex(tokens[index]),
+      status: 'accepted',
+    })
+  }
+
+  if (!inserts.length) return
+
+  const { error } = await serviceClient
+    .from('entry_mobile_push_receipts')
+    .upsert(inserts, { onConflict: 'ticket_id', ignoreDuplicates: true })
+
+  if (error) {
+    await logEvent(
+      serviceClient,
+      'WARN',
+      'PUSH_RECEIPT_TRACKING_FAILED',
+      'Expo accepted push tickets but receipt tracking could not be persisted',
+      {
+        status: 'failed',
+        error_code: 'PUSH_RECEIPT_TRACKING_FAILED',
+        accepted_tickets: inserts.length,
+      },
+      row.community_id,
+      row.queue_id,
+    )
+  }
+}
+
 async function logEvent(
   serviceClient: ServiceClient,
   severity: 'INFO' | 'WARN' | 'ERROR',
   eventType: string,
   message: string,
   details: Record<string, unknown>,
+  communityId: string | null = null,
+  entityId: string | null = null,
 ): Promise<void> {
   try {
     await serviceClient.from('system_event_log').insert({
@@ -183,16 +270,16 @@ async function logEvent(
       event_type: eventType,
       message,
       details,
+      community_id: communityId,
+      entity_type: entityId ? 'community_message_push_queue' : null,
+      entity_id: entityId,
       source: 'smart-service',
     })
   } catch {
-    // swallow — logging must never block the worker
+    // observability must never block notification processing
   }
 }
 
-// Durable worker health is deliberately separate from notification-delivery
-// success/failure. A successful cycle only proves that the worker could claim
-// and complete its loop; it does not prove Expo delivery health.
 async function recordWorkerCycle(
   serviceClient: ServiceClient,
   input: {
@@ -214,7 +301,6 @@ async function recordWorkerCycle(
       p_invocation_id: input.invocationId,
     })
   } catch {
-    // fail-open — observability must never block notification processing
   }
 }
 
@@ -245,7 +331,13 @@ Deno.serve(async (req: Request) => {
     )
 
     if (claimError) {
-      await logEvent(serviceClient, 'ERROR', 'PUSH_CLAIM_RPC_ERROR', 'Failed claiming queue rows', { error: claimError.message })
+      await logEvent(
+        serviceClient,
+        'ERROR',
+        'PUSH_CLAIM_RPC_ERROR',
+        'Failed claiming queue rows',
+        { status: 'failed', error_code: 'PUSH_CLAIM_RPC_ERROR' },
+      )
       await recordWorkerCycle(serviceClient, {
         success: false,
         claimed: 0,
@@ -254,7 +346,7 @@ Deno.serve(async (req: Request) => {
         errorCode: 'PUSH_CLAIM_RPC_ERROR',
         errorSummary: claimError.message,
       })
-      return json({ ok: false, error: `Failed claiming: ${claimError.message}` }, 500)
+      return json({ ok: false, error: 'Push queue claim failed' }, 500)
     }
 
     const rawRows: QueueRowRaw[] = Array.isArray(claimedRows) ? claimedRows : []
@@ -264,13 +356,21 @@ Deno.serve(async (req: Request) => {
       if (norm) {
         rows.push(norm)
       } else {
-        await logEvent(serviceClient, 'ERROR', 'PUSH_CLAIM_ROW_MISSING_ID', 'Claim row had neither queue_id nor id', {
-          has_queue_id: Boolean(raw.queue_id),
-          has_id: Boolean(raw.id),
-          has_message_id: Boolean(raw.message_id),
-          has_community_id: Boolean(raw.community_id),
-          attempts: raw.attempts,
-        })
+        await logEvent(
+          serviceClient,
+          'ERROR',
+          'PUSH_CLAIM_ROW_MISSING_ID',
+          'Claim row had neither queue_id nor id',
+          {
+            status: 'failed',
+            error_code: 'PUSH_CLAIM_ROW_MISSING_ID',
+            has_queue_id: Boolean(raw.queue_id),
+            has_id: Boolean(raw.id),
+            has_message_id: Boolean(raw.message_id),
+            has_community_id: Boolean(raw.community_id),
+            attempts: raw.attempts,
+          },
+        )
       }
     }
 
@@ -283,11 +383,6 @@ Deno.serve(async (req: Request) => {
       })
       return json({ ok: true, claimed: 0, processed: 0, summary: [] }, 200)
     }
-
-    await logEvent(serviceClient, 'INFO', 'PUSH_CLAIMED', `Claimed ${rows.length} queue row(s)`, {
-      claimed: rows.length,
-      queue_ids: rows.map(r => r.queue_id),
-    })
 
     const messageIds = rows.map(r => r.message_id)
     const { data: messageDetails } = await serviceClient
@@ -312,15 +407,44 @@ Deno.serve(async (req: Request) => {
             p_queue_id: row.queue_id,
             p_error: 'No active push tokens found for audience',
           })
+
+          await logEvent(
+            serviceClient,
+            'WARN',
+            'PUSH_NO_ACTIVE_TOKENS',
+            'No active mobile push tokens were available for the audience',
+            {
+              status: 'skipped',
+              error_code: 'PUSH_NO_ACTIVE_TOKENS',
+              provider_reached: false,
+            },
+            row.community_id,
+            row.queue_id,
+          )
+
           if (failError) {
-            await logEvent(serviceClient, 'ERROR', 'PUSH_FAIL_RPC_ERROR', 'fail_community_message_push errored', { queue_id: row.queue_id, error: failError.message })
+            await logEvent(
+              serviceClient,
+              'ERROR',
+              'PUSH_FAIL_RPC_ERROR',
+              'fail_community_message_push errored',
+              { status: 'failed', error_code: 'PUSH_FAIL_RPC_ERROR' },
+              row.community_id,
+              row.queue_id,
+            )
           }
-          summary.push({ queue_id: row.queue_id, message_id: row.message_id, status: failError ? 'fail_rpc_error' : 'failed_no_tokens', target_user_id: targetUserId })
+          summary.push({
+            queue_id: row.queue_id,
+            message_id: row.message_id,
+            status: failError ? 'fail_rpc_error' : 'failed_no_tokens',
+            target_user_id: targetUserId,
+          })
           continue
         }
 
-        let totalSent = 0, totalFailed = 0
-        const chunkSummaries: Array<Record<string, unknown>> = []
+        let totalSent = 0
+        let totalFailed = 0
+        const providerStatuses: number[] = []
 
         for (let i = 0; i < tokens.length; i += EXPO_CHUNK_SIZE) {
           const chunk = tokens.slice(i, i + EXPO_CHUNK_SIZE)
@@ -329,36 +453,116 @@ Deno.serve(async (req: Request) => {
             title: row.push_title,
             body: row.push_body,
             sound: 'default',
-            data: { type: 'community_message', messageId: row.message_id, communityId: row.community_id },
+            data: {
+              type: 'community_message',
+              messageId: row.message_id,
+              communityId: row.community_id,
+            },
           }))
+
           const result = await sendExpoChunk(messages)
           totalSent += result.sent
           totalFailed += result.failed
-          chunkSummaries.push({ chunk_index: Math.floor(i / EXPO_CHUNK_SIZE), chunk_size: chunk.length, sent: result.sent, failed: result.failed, provider_status: result.providerResponseStatus ?? null })
+          if (typeof result.providerResponseStatus === 'number') {
+            providerStatuses.push(result.providerResponseStatus)
+          }
+          await recordAcceptedTickets(serviceClient, row, chunk, result.tickets)
         }
 
+        await serviceClient
+          .from('community_message_push_queue')
+          .update({
+            provider_response: {
+              accepted: totalSent,
+              rejected: totalFailed,
+              provider: 'expo',
+              provider_statuses: [...new Set(providerStatuses)],
+              receipt_tracking: totalSent > 0,
+            },
+          })
+          .eq('id', row.queue_id)
+
         if (totalSent > 0 && totalFailed === 0) {
-          const { error: completeError } = await serviceClient.rpc('complete_community_message_push', { p_queue_id: row.queue_id })
+          const { error: completeError } = await serviceClient.rpc(
+            'complete_community_message_push',
+            { p_queue_id: row.queue_id },
+          )
           if (completeError) {
-            await logEvent(serviceClient, 'ERROR', 'PUSH_COMPLETE_RPC_ERROR', 'complete_community_message_push errored', { queue_id: row.queue_id, error: completeError.message })
+            await logEvent(
+              serviceClient,
+              'ERROR',
+              'PUSH_COMPLETE_RPC_ERROR',
+              'complete_community_message_push errored',
+              { status: 'failed', error_code: 'PUSH_COMPLETE_RPC_ERROR' },
+              row.community_id,
+              row.queue_id,
+            )
           }
-          summary.push({ queue_id: row.queue_id, message_id: row.message_id, status: completeError ? 'complete_rpc_error' : 'sent', sent: totalSent, failed: totalFailed, target_user_id: targetUserId })
+          summary.push({
+            queue_id: row.queue_id,
+            message_id: row.message_id,
+            status: completeError ? 'complete_rpc_error' : 'accepted',
+            accepted: totalSent,
+            rejected: totalFailed,
+            target_user_id: targetUserId,
+          })
         } else {
           const { error: failError } = await serviceClient.rpc('fail_community_message_push', {
             p_queue_id: row.queue_id,
-            p_error: totalSent > 0 ? `Partial. sent=${totalSent}, failed=${totalFailed}` : `Failed. sent=${totalSent}, failed=${totalFailed}`,
+            p_error: totalSent > 0
+              ? `Partial provider acceptance. accepted=${totalSent}, rejected=${totalFailed}`
+              : `Provider rejected all pushes. rejected=${totalFailed}`,
           })
           if (failError) {
-            await logEvent(serviceClient, 'ERROR', 'PUSH_FAIL_RPC_ERROR', 'fail_community_message_push errored', { queue_id: row.queue_id, error: failError.message })
+            await logEvent(
+              serviceClient,
+              'ERROR',
+              'PUSH_FAIL_RPC_ERROR',
+              'fail_community_message_push errored',
+              { status: 'failed', error_code: 'PUSH_FAIL_RPC_ERROR' },
+              row.community_id,
+              row.queue_id,
+            )
           }
-          summary.push({ queue_id: row.queue_id, message_id: row.message_id, status: failError ? 'fail_rpc_error' : 'failed_delivery', sent: totalSent, failed: totalFailed, target_user_id: targetUserId })
+          summary.push({
+            queue_id: row.queue_id,
+            message_id: row.message_id,
+            status: failError ? 'fail_rpc_error' : 'failed_delivery',
+            accepted: totalSent,
+            rejected: totalFailed,
+            target_user_id: targetUserId,
+          })
         }
-      } catch (rowError) {
-        const { error: failError } = await serviceClient.rpc('fail_community_message_push', { p_queue_id: row.queue_id, p_error: String(rowError) })
+      } catch {
+        const { error: failError } = await serviceClient.rpc('fail_community_message_push', {
+          p_queue_id: row.queue_id,
+          p_error: 'Push row processing failed',
+        })
         if (failError) {
-          await logEvent(serviceClient, 'ERROR', 'PUSH_FAIL_RPC_ERROR', 'fail_community_message_push errored after row exception', { queue_id: row.queue_id, error: failError.message, row_error: String(rowError) })
+          await logEvent(
+            serviceClient,
+            'ERROR',
+            'PUSH_FAIL_RPC_ERROR',
+            'fail_community_message_push errored after row exception',
+            { status: 'failed', error_code: 'PUSH_FAIL_RPC_ERROR' },
+            row.community_id,
+            row.queue_id,
+          )
         }
-        summary.push({ queue_id: row.queue_id, message_id: row.message_id, status: 'failed_exception', error: String(rowError) })
+        await logEvent(
+          serviceClient,
+          'ERROR',
+          'PUSH_ROW_PROCESSING_FAILED',
+          'Mobile push row processing failed',
+          { status: 'failed', error_code: 'PUSH_ROW_PROCESSING_FAILED' },
+          row.community_id,
+          row.queue_id,
+        )
+        summary.push({
+          queue_id: row.queue_id,
+          message_id: row.message_id,
+          status: 'failed_exception',
+        })
       }
     }
 
@@ -378,9 +582,16 @@ Deno.serve(async (req: Request) => {
         processed: 0,
         invocationId,
         errorCode: 'PUSH_WORKER_FATAL_ERROR',
-        errorSummary: String(fatalError),
+        errorSummary: fatalError instanceof Error ? fatalError.message : 'Push worker fatal error',
       })
+      await logEvent(
+        serviceClient,
+        'ERROR',
+        'PUSH_WORKER_FATAL_ERROR',
+        'Mobile push worker failed',
+        { status: 'failed', error_code: 'PUSH_WORKER_FATAL_ERROR' },
+      )
     }
-    return json({ ok: false, error: String(fatalError) }, 500)
+    return json({ ok: false, error: 'Push worker failed' }, 500)
   }
 })

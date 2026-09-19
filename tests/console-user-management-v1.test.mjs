@@ -158,7 +158,6 @@ test("service-role and auth users stay server-only", () => {
 test("Console invitation acceptance has its own callback strictly for invite token_hash", () => {
   const callback = read("app/auth/callback/route.ts");
   const setup = read("app/console-invite/setup/page.tsx");
-  const form = read("features/auth/ConsolePasswordSetupForm.tsx");
   const actions = read("features/auth/actions.ts");
   const bridge = read("app/reset-password/page.tsx");
 

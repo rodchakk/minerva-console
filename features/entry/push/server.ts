@@ -455,19 +455,27 @@ export async function dispatchPendingEntryPushes(limit = 50): Promise<EntryPushD
     }
   }
 
-  await recordDispatchEvent(
-    summary.failed > 0 ? "WARN" : "INFO",
-    "ENTRY_WEB_PUSH_DISPATCH_COMPLETED",
-    "ENTRY Web Push dispatcher completed a cycle",
-    {
-      status: summary.failed > 0 ? "partial" : "success",
-      claimed: summary.claimed,
-      sent: summary.sent,
-      failed: summary.failed,
-      retried: summary.retried,
-      pruned: summary.pruned,
-    },
-  );
+  const hasMeaningfulDispatchActivity =
+    summary.claimed > 0 ||
+    summary.failed > 0 ||
+    summary.retried > 0 ||
+    summary.pruned > 0;
+
+  if (hasMeaningfulDispatchActivity) {
+    await recordDispatchEvent(
+      summary.failed > 0 ? "WARN" : "INFO",
+      "ENTRY_WEB_PUSH_DISPATCH_COMPLETED",
+      "ENTRY Web Push dispatcher completed a cycle",
+      {
+        status: summary.failed > 0 ? "partial" : "success",
+        claimed: summary.claimed,
+        sent: summary.sent,
+        failed: summary.failed,
+        retried: summary.retried,
+        pruned: summary.pruned,
+      },
+    );
+  }
 
   return summary;
 }

@@ -111,7 +111,7 @@ test("public Outrider reuses the resident-registration Minerva footer treatment"
   assert.match(publicPage, /Tus datos están protegidos/);
   assert.match(publicPage, /border-t border-slate-200\/80/);
   assert.match(publicPage, /bg-slate-50/);
-  assert.match(publicPage, /<OutriderPublicForm session=\{session\} token=\{token\} \/>/);
+  assert.match(publicPage, /<OutriderPublicForm[\s\S]*session=\{session\}[\s\S]*token=\{token\}/);
   assert.match(publicPage, /<OutriderBrandFooter \/>/);
 });
 
@@ -119,7 +119,7 @@ test("section four uses structured security staffing while files remain optional
   assert.doesNotMatch(publicPage, /OutriderOptionalFilesAcknowledge/);
   assert.match(model, /draft\.securityStaffCount !== null/);
   assert.match(publicForm, /Cantidad de personal de seguridad/);
-  assert.match(publicForm, /Nombres, turnos u otra información \(opcional\)/);
+  assert.match(publicForm, /Nombres del personal \(opcional\)/);
   assert.match(publicForm, /El archivo es opcional/);
   assert.match(model, /OUTRIDER_PUBLIC_UPLOAD_CATEGORIES = \["community_data"\]/);
   assert.match(uploadStartRoute, /isOutriderPublicUploadCategory/);

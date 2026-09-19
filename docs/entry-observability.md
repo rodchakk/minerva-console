@@ -321,3 +321,40 @@ When adding a new ENTRY feature:
 - Add non-sensitive worker invocation identifiers to queue-claim failures so
   future incidents can correlate scheduler, worker, and queue state without
   exposing provider payloads or credentials.
+
+
+## Production hardening v2 — first-customer baseline
+
+ENTRY Observability now treats the dashboard as a small operational control center rather than an error-only screen.
+
+The stable capability taxonomy is Authentication, Onboarding, Resident access, Gate access, Communications, Vision & recognition, and Administration. Administration is workload-driven and can remain Idle when no administrative mutations occur.
+
+### Durable incident lifecycle
+
+Current-state monitors write privacy-minimized incident lifecycle rows with first seen, last seen, occurrence count, and resolved timestamps. A recovered condition therefore remains available for later investigation instead of disappearing when the live check returns Healthy.
+
+Current monitors cover resident-house integrity, identity/membership integrity, expired active authorization, push readiness, stuck push/OCR queues, notification worker health, and failed scheduled jobs.
+
+### Real-user performance
+
+Authenticated ENTRY clients can report privacy-minimized performance metrics without sending content or credentials. The read model exposes p50, p95, and p99 measurements by surface, metric, platform, and app version.
+
+The ENTRY admin web reports Web Vitals plus app, dashboard, access-history, and backend-readiness timings. Mobile ingestion is available through the same RPC contract; the production mobile client must use its actual source repository rather than the historical Gate-Project prototype.
+
+### Communications delivery truth
+
+An Expo push ticket means provider acceptance, not device delivery. ENTRY now stores only the Expo ticket id plus a SHA-256 token hash, checks Expo push receipts asynchronously, records delivered/failed outcomes, and deactivates tokens reported as DeviceNotRegistered.
+
+Raw push tokens, message bodies, credentials, and raw provider payloads are excluded from the receipt ledger and observability read model.
+
+### Workers, queues, and rollout readiness
+
+The read model exposes scheduled worker state, queue depth/age/failures, database connection/cache indicators, mobile-push delivery, and per-community rollout signals.
+
+Activated via queue is intentionally distinct from the total active resident count because legacy or manually created users may have no activation-queue traceability.
+
+### Retention and noise control
+
+Raw performance samples are retained for 45 days. Resolved lifecycle incidents are retained for 180 days. Routine Web Push completion heartbeats are no longer emitted for empty dispatcher cycles, and historical idle heartbeat noise is kept only for a short retention window.
+
+Observability remains fail-open: telemetry must never block authentication, access creation, gate validation, administration, notification delivery, or OCR.

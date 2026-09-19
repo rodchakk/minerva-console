@@ -106,13 +106,109 @@ export type EntryObservabilityOcrQueue = {
   totalJobs: number;
 };
 
+
+export type EntryObservabilityPerformanceMetric = {
+  appVersion: string | null;
+  eventCount: number;
+  failedCount: number;
+  lastSeenAt: string | null;
+  metric: string;
+  p50: number | null;
+  p95: number | null;
+  p99: number | null;
+  platform: string | null;
+  surface: string;
+  unit: string;
+};
+
+export type EntryObservabilityWorker = {
+  lastFinishedAt: string | null;
+  lastStartedAt: string | null;
+  name: string;
+  schedule: string;
+  status: string;
+};
+
+export type EntryObservabilityQueueHealth = {
+  capability: string;
+  failedCount: number;
+  name: string;
+  oldestOpenAt: string | null;
+  openCount: number;
+};
+
+export type EntryObservabilityReadinessCommunity = {
+  activatedResidents: number;
+  activeGuards: number;
+  activeResidents: number;
+  communityId: string;
+  communityName: string;
+  gateAccesses: number;
+  messagesPublished: number;
+  passesCreated: number;
+  pushReadyGuards: number;
+  pushReadyResidents: number;
+};
+
+export type EntryObservabilityIncidentHistoryItem = {
+  capability: string;
+  communityId: string | null;
+  communityName: string | null;
+  errorCode: string | null;
+  eventType: string;
+  fingerprint: string;
+  firstSeenAt: string;
+  id: string;
+  lastSeenAt: string;
+  occurrenceCount: number;
+  resolvedAt: string | null;
+  severity: EntryObservabilityIncident["severity"];
+  status: "open" | "resolved";
+};
+
+export type EntryObservabilityMobilePushDelivery = {
+  acceptedCount: number;
+  deliveredCount: number;
+  deliveryRate: number | null;
+  failedCount: number;
+  lastDeliveredAt: string | null;
+  lastFailedAt: string | null;
+};
+
 export type EntryObservabilityData = {
   auditActivity: EntryObservabilityAuditItem[];
   communities: EntryObservabilityCommunity[];
   criticalFlows: EntryObservabilityFlow[];
   generatedAt: string;
   incidents: EntryObservabilityIncident[];
+  incidentHistory: EntryObservabilityIncidentHistoryItem[];
+  infrastructure: {
+    database: {
+      cacheHitPercent: number | null;
+      conflicts: number;
+      connections: number;
+      deadlocks: number;
+      statsReset: string | null;
+    };
+    queues: EntryObservabilityQueueHealth[];
+    workers: EntryObservabilityWorker[];
+  };
+  mobilePushDelivery: EntryObservabilityMobilePushDelivery;
   ocrQueue: EntryObservabilityOcrQueue;
+  performance: {
+    metrics: EntryObservabilityPerformanceMetric[];
+    summary: {
+      eventCount: number;
+      failedCount: number;
+      lastSeenAt: string | null;
+      p50Ms: number | null;
+      p95Ms: number | null;
+      p99Ms: number | null;
+    };
+  };
+  readiness: {
+    communities: EntryObservabilityReadinessCommunity[];
+  };
   range: {
     communityId: string | null;
     endsAt: string;
@@ -554,6 +650,140 @@ function mapOcrQueue(value: unknown): EntryObservabilityOcrQueue {
   };
 }
 
+
+function mapPerformance(value: unknown): EntryObservabilityData["performance"] {
+  const record = isRecord(value) ? value : {};
+  const summary = isRecord(record.summary) ? record.summary : {};
+
+  return {
+    metrics: toArray(record.metrics).map((item) => {
+      const metric = isRecord(item) ? item : {};
+      return {
+        appVersion: asNullableString(metric.app_version),
+        eventCount: asNumber(metric.event_count),
+        failedCount: asNumber(metric.failed_count),
+        lastSeenAt: asNullableString(metric.last_seen_at),
+        metric: asString(metric.metric, "unknown"),
+        p50: asNullableNumber(metric.p50),
+        p95: asNullableNumber(metric.p95),
+        p99: asNullableNumber(metric.p99),
+        platform: asNullableString(metric.platform),
+        surface: asString(metric.surface, "unknown"),
+        unit: asString(metric.unit, "ms"),
+      };
+    }),
+    summary: {
+      eventCount: asNumber(summary.event_count),
+      failedCount: asNumber(summary.failed_count),
+      lastSeenAt: asNullableString(summary.last_seen_at),
+      p50Ms: asNullableNumber(summary.p50_ms),
+      p95Ms: asNullableNumber(summary.p95_ms),
+      p99Ms: asNullableNumber(summary.p99_ms),
+    },
+  };
+}
+
+function mapInfrastructure(value: unknown): EntryObservabilityData["infrastructure"] {
+  const record = isRecord(value) ? value : {};
+  const database = isRecord(record.database) ? record.database : {};
+
+  return {
+    database: {
+      cacheHitPercent: asNullableNumber(database.cache_hit_percent),
+      conflicts: asNumber(database.conflicts),
+      connections: asNumber(database.connections),
+      deadlocks: asNumber(database.deadlocks),
+      statsReset: asNullableString(database.stats_reset),
+    },
+    queues: toArray(record.queues).map((item) => {
+      const queue = isRecord(item) ? item : {};
+      return {
+        capability: asString(queue.capability, "unknown"),
+        failedCount: asNumber(queue.failed_count),
+        name: asString(queue.name, "Queue"),
+        oldestOpenAt: asNullableString(queue.oldest_open_at),
+        openCount: asNumber(queue.open_count),
+      };
+    }),
+    workers: toArray(record.workers).map((item) => {
+      const worker = isRecord(item) ? item : {};
+      return {
+        lastFinishedAt: asNullableString(worker.last_finished_at),
+        lastStartedAt: asNullableString(worker.last_started_at),
+        name: asString(worker.name, "Worker"),
+        schedule: asString(worker.schedule, ""),
+        status: asString(worker.status, "unknown"),
+      };
+    }),
+  };
+}
+
+function mapReadiness(value: unknown): EntryObservabilityData["readiness"] {
+  const record = isRecord(value) ? value : {};
+  return {
+    communities: toArray(record.communities)
+      .map((item) => {
+        const community = isRecord(item) ? item : {};
+        const communityId = asString(community.community_id);
+        if (!communityId) return null;
+        return {
+          activatedResidents: asNumber(community.activated_residents),
+          activeGuards: asNumber(community.active_guards),
+          activeResidents: asNumber(community.active_residents),
+          communityId,
+          communityName: asString(community.community_name, "Community"),
+          gateAccesses: asNumber(community.gate_accesses),
+          messagesPublished: asNumber(community.messages_published),
+          passesCreated: asNumber(community.passes_created),
+          pushReadyGuards: asNumber(community.push_ready_guards),
+          pushReadyResidents: asNumber(community.push_ready_residents),
+        };
+      })
+      .filter((item): item is EntryObservabilityReadinessCommunity => item !== null),
+  };
+}
+
+function mapIncidentHistory(value: unknown): EntryObservabilityIncidentHistoryItem[] {
+  return toArray(value)
+    .map((item) => {
+      const record = isRecord(item) ? item : {};
+      const id = asString(record.id);
+      const fingerprint = asString(record.fingerprint);
+      const firstSeenAt = asString(record.first_seen_at);
+      const lastSeenAt = asString(record.last_seen_at);
+      if (!id || !fingerprint || !firstSeenAt || !lastSeenAt) return null;
+
+      return {
+        capability: asString(record.capability, "system"),
+        communityId: asNullableString(record.community_id),
+        communityName: asNullableString(record.community_name),
+        errorCode: asNullableString(record.error_code),
+        eventType: asString(record.event_type, "operational_failure"),
+        fingerprint,
+        firstSeenAt,
+        id,
+        lastSeenAt,
+        occurrenceCount: asNumber(record.occurrence_count),
+        resolvedAt: asNullableString(record.resolved_at),
+        severity: normalizeSeverity(record.severity),
+        status: record.status === "resolved" ? "resolved" : "open",
+      };
+    })
+    .filter((item): item is EntryObservabilityIncidentHistoryItem => item !== null);
+}
+
+function mapMobilePushDelivery(value: unknown): EntryObservabilityMobilePushDelivery {
+  const record = isRecord(value) ? value : {};
+  return {
+    acceptedCount: asNumber(record.accepted_count),
+    deliveredCount: asNumber(record.delivered_count),
+    deliveryRate: asNullableNumber(record.delivery_rate),
+    failedCount: asNumber(record.failed_count),
+    lastDeliveredAt: asNullableString(record.last_delivered_at),
+    lastFailedAt: asNullableString(record.last_failed_at),
+  };
+}
+
 function mapDashboardPayload(
   payload: unknown,
   rangeKey: EntryObservabilityTimeRange,
@@ -570,7 +800,12 @@ function mapDashboardPayload(
     criticalFlows: mapFlows(root.critical_flows),
     generatedAt: asString(root.generated_at, new Date().toISOString()),
     incidents: mapIncidents(root.incidents),
+    incidentHistory: mapIncidentHistory(root.incident_history),
+    infrastructure: mapInfrastructure(root.infrastructure),
+    mobilePushDelivery: mapMobilePushDelivery(root.mobile_push_delivery),
     ocrQueue: mapOcrQueue(root.ocr_queue),
+    performance: mapPerformance(root.performance),
+    readiness: mapReadiness(root.readiness),
     range: {
       communityId: asNullableString(range.community_id),
       endsAt: asString(range.ends_at),
@@ -713,7 +948,7 @@ export async function getEntryObservability(input: {
   const endsAt = new Date().toISOString();
   const communityId = input.communityId?.trim() || null;
 
-  const { data, error } = await supabase.rpc("sa_get_entry_observability_v2", {
+  const { data, error } = await supabase.rpc("sa_get_entry_observability_v4", {
     p_community_id: communityId,
     p_ends_at: endsAt,
     p_starts_at: startsAt,
@@ -746,7 +981,7 @@ export async function getEntryNotificationObservability(input: {
   const limit = Math.max(1, Math.min(Math.trunc(input.limit ?? 100), 200));
 
   const { data, error } = await supabase.rpc(
-    "sa_get_entry_notification_observability_v1",
+    "sa_get_entry_notification_observability_v2",
     {
       p_community_id: communityId,
       p_ends_at: endsAt,

@@ -565,7 +565,10 @@ export function calculateOutriderCompletedSections(
 ) {
   const completed = new Set<OutriderSection>(markSectionsComplete);
 
-  if (draft.unitTypes.length > 0) {
+  if (
+    draft.unitTypes.length > 0 &&
+    (!draft.unitTypes.includes("otro") || Boolean(draft.otherUnitType))
+  ) {
     completed.add("units");
   } else {
     completed.delete("units");
