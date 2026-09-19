@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
@@ -13,11 +13,18 @@ import {
 } from "@/features/entry/communityRegistration/review/actions";
 import { QuickEditResidentDialog } from "@/features/entry/communityRegistration/review/QuickEditResidentDialog";
 import { QuickEditUnitDialog } from "@/features/entry/communityRegistration/review/QuickEditUnitDialog";
+import { ConfirmationReportDrawer } from "@/features/entry/communityRegistration/review/ConfirmationReportDrawer";
+import {
+  getResidentCompletenessStatus,
+  getUnitMissingFields,
+} from "@/features/entry/communityRegistration/review/completeness";
+import { loadCommunityRegistrationConfirmationReport } from "@/features/entry/communityRegistration/review/reportActions";
 import type {
   CommunityRegistrationQuickEditData,
   CommunityRegistrationQuickEditResident,
 } from "@/features/entry/communityRegistration/review/quickEditQueries";
 import type {
+  CommunityRegistrationConfirmationReport,
   CommunityRegistrationReviewCampaign,
   CommunityRegistrationReviewSummary,
   CommunityRegistrationReviewUnit,
@@ -319,12 +326,14 @@ function CorrectionLinkDialog({
 function ActivationHandoffDialog({
   campaignId,
   communityId,
+  emailWarningNames,
   onClose,
   unitId,
   unitLabel,
 }: {
   campaignId: string;
   communityId: string;
+  emailWarningNames: string[];
   onClose: () => void;
   unitId: string;
   unitLabel: string;
@@ -387,6 +396,15 @@ function ActivationHandoffDialog({
           residents in Activation Queue. It will not create users, PINs, or
           activation messages.
         </p>
+
+        {emailWarningNames.length > 0 ? (
+          <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+            <span className="font-semibold">Correo pendiente:</span>{" "}
+            {emailWarningNames.join(", ")}. Estas personas pueden prepararse según
+            las reglas actuales, pero no podrán recibir una invitación por correo
+            hasta que se agregue una dirección válida.
+          </div>
+        ) : null}
 
         <input type="hidden" name="campaign_id" value={campaignId} />
         <input type="hidden" name="campaign_unit_id" value={unitId} />
@@ -478,6 +496,34 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
+function SelectionMetric({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: number | string;
+  tone?: "default" | "success" | "warning" | "danger";
+}) {
+  const valueClass =
+    tone === "success"
+      ? "text-emerald-300"
+      : tone === "warning"
+        ? "text-amber-300"
+        : tone === "danger"
+          ? "text-rose-300"
+          : "text-white";
+
+  return (
+    <div className="min-w-0 rounded-xl border border-[var(--border)] bg-black/10 px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        {label}
+      </p>
+      <p className={`mt-1 text-lg font-semibold ${valueClass}`}>{value}</p>
+    </div>
+  );
+}
+
 export function ReviewWorkspace({
   campaign,
   communityId,
@@ -497,6 +543,29 @@ export function ReviewWorkspace({
   const [editingResident, setEditingResident] =
     useState<CommunityRegistrationQuickEditResident | null>(null);
   const [editingUnit, setEditingUnit] = useState(false);
+  const initialSelectedUnitMissingFields = selectedUnit
+    ? getUnitMissingFields({
+        reference: selectedUnitReference,
+        residents: selectedUnit.residents,
+        unitLabel: selectedUnit.unitLabel,
+      })
+    : [];
+  const [selectedReportUnitIds, setSelectedReportUnitIds] = useState<string[]>(
+    selectedUnitId ? [selectedUnitId] : [],
+  );
+  const [selectionMissingFieldCount, setSelectionMissingFieldCount] = useState(
+    initialSelectedUnitMissingFields.length,
+  );
+  const [selectionMissingEmailCount, setSelectionMissingEmailCount] = useState(
+    initialSelectedUnitMissingFields.filter((field) => field.code === "email").length,
+  );
+  const [selectionLoading, setSelectionLoading] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
+  const [previewReport, setPreviewReport] =
+    useState<CommunityRegistrationConfirmationReport | null>(null);
+  const [previewMode, setPreviewMode] = useState<"single" | "selection">("single");
+  const selectionRequestRef = useRef(0);
   const [reviewState, reviewAction, reviewPending] = useActionState(
     markCommunityRegistrationUnitReviewed,
     initialActionState,
@@ -524,6 +593,86 @@ export function ReviewWorkspace({
         (campaignStatus === "confirmed" && selectedStatus === "confirmed")),
   );
   const isPreparedForActivation = selectedStatus === "processed";
+  const selectedUnitMissingFields = selectedUnit
+    ? getUnitMissingFields({
+        reference: selectedUnitReference,
+        residents: selectedUnit.residents,
+        unitLabel: selectedUnit.unitLabel,
+      })
+    : [];
+  const missingEmailNames = Array.from(
+    new Set(
+      selectedUnitMissingFields
+        .filter((field) => field.code === "email" && field.residentName)
+        .map((field) => field.residentName as string),
+    ),
+  );
+  const selectedResidentCount = units
+    .filter((unit) => selectedReportUnitIds.includes(unit.id))
+    .reduce((total, unit) => total + unit.residentCount, 0);
+
+  async function refreshSelectionSummary(unitIds: string[]) {
+    const requestId = ++selectionRequestRef.current;
+
+    if (unitIds.length === 0) {
+      setSelectionMissingFieldCount(0);
+      setSelectionMissingEmailCount(0);
+      setSelectionLoading(false);
+      return;
+    }
+
+    setSelectionLoading(true);
+    const result = await loadCommunityRegistrationConfirmationReport({
+      campaignId: campaign.id,
+      communityId,
+      unitIds,
+    });
+
+    if (requestId !== selectionRequestRef.current) return;
+
+    setSelectionLoading(false);
+
+    if (!result.success) {
+      setReportError(result.error);
+      return;
+    }
+
+    setReportError(null);
+    setSelectionMissingFieldCount(result.data.summary.missingFieldCount);
+    setSelectionMissingEmailCount(result.data.summary.missingEmailCount);
+  }
+
+  function toggleReportUnit(unitId: string) {
+    const nextUnitIds = selectedReportUnitIds.includes(unitId)
+      ? selectedReportUnitIds.filter((id) => id !== unitId)
+      : [...selectedReportUnitIds, unitId];
+
+    setSelectedReportUnitIds(nextUnitIds);
+    void refreshSelectionSummary(nextUnitIds);
+  }
+
+  async function openReport(unitIds: string[], mode: "single" | "selection") {
+    if (unitIds.length === 0) return;
+
+    setReportLoading(true);
+    setReportError(null);
+
+    const result = await loadCommunityRegistrationConfirmationReport({
+      campaignId: campaign.id,
+      communityId,
+      unitIds,
+    });
+
+    setReportLoading(false);
+
+    if (!result.success) {
+      setReportError(result.error);
+      return;
+    }
+
+    setPreviewMode(mode);
+    setPreviewReport(result.data);
+  }
 
   return (
     <div className="space-y-4">
@@ -572,6 +721,81 @@ export function ReviewWorkspace({
         ) : null}
       </section>
 
+      <section className="rounded-2xl border border-violet-400/25 bg-[var(--surface)] p-4 lg:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+              Reportes de confirmación
+            </p>
+            <p className="mt-1 text-sm text-[var(--text-muted)]">
+              Genera reportes de residentes para revisión del Patronato sin cambiar el workflow.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={() =>
+                selectedUnitId ? void openReport([selectedUnitId], "single") : undefined
+              }
+              disabled={!selectedUnitId || reportLoading}
+            >
+              {reportLoading ? "Generando..." : "Generar informe"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => void openReport(selectedReportUnitIds, "selection")}
+              disabled={selectedReportUnitIds.length === 0 || reportLoading}
+            >
+              Generar informe de selección
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                const ids =
+                  selectedReportUnitIds.length > 0
+                    ? selectedReportUnitIds
+                    : selectedUnitId
+                      ? [selectedUnitId]
+                      : [];
+                void openReport(ids, ids.length === 1 ? "single" : "selection");
+              }}
+              disabled={
+                reportLoading ||
+                (selectedReportUnitIds.length === 0 && !selectedUnitId)
+              }
+            >
+              Exportar
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SelectionMetric
+            label="Viviendas seleccionadas"
+            value={selectedReportUnitIds.length}
+          />
+          <SelectionMetric label="Residentes" value={selectedResidentCount} tone="success" />
+          <SelectionMetric
+            label="Datos pendientes"
+            value={selectionLoading ? "…" : selectionMissingFieldCount}
+            tone={selectionMissingFieldCount > 0 ? "warning" : "success"}
+          />
+          <SelectionMetric
+            label="Correos faltantes"
+            value={selectionLoading ? "…" : selectionMissingEmailCount}
+            tone={selectionMissingEmailCount > 0 ? "danger" : "success"}
+          />
+        </div>
+
+        {reportError ? (
+          <p className="mt-3 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+            {reportError}
+          </p>
+        ) : null}
+      </section>
+
       <div className="grid gap-4 xl:grid-cols-[minmax(300px,0.8fr)_minmax(0,1.4fr)]">
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4">
           <div className="flex items-center justify-between gap-3">
@@ -589,6 +813,7 @@ export function ReviewWorkspace({
             {units.map((unit) => {
               const canOpen = unit.status !== "unregistered" && unit.residentCount > 0;
               const active = selectedUnitId === unit.id;
+              const selectedForReport = selectedReportUnitIds.includes(unit.id);
               const content = (
                 <>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
@@ -605,17 +830,35 @@ export function ReviewWorkspace({
               );
 
               return canOpen ? (
-                <Link
+                <div
                   key={unit.id}
-                  href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(unit.id)}`}
-                  className={`block rounded-xl border px-3 py-3 transition-colors ${
-                    active
-                      ? "border-violet-400/40 bg-violet-500/10"
-                      : "border-[var(--border)] bg-[var(--surface-strong)] hover:border-white/15"
+                  className={`flex items-center overflow-hidden rounded-xl border transition-colors ${
+                    selectedForReport
+                      ? "border-violet-400/55 bg-violet-500/[0.08]"
+                      : active
+                        ? "border-violet-400/35 bg-violet-500/[0.05]"
+                        : "border-[var(--border)] bg-[var(--surface-strong)]"
                   }`}
                 >
-                  {content}
-                </Link>
+                  <label
+                    className="grid self-stretch cursor-pointer place-items-center border-r border-white/[0.07] px-3"
+                    title="Seleccionar para informe"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedForReport}
+                      onChange={() => toggleReportUnit(unit.id)}
+                      className="size-4 accent-violet-500"
+                      aria-label={`Seleccionar ${unit.label} para informe`}
+                    />
+                  </label>
+                  <Link
+                    href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(unit.id)}`}
+                    className="min-w-0 flex-1 px-3 py-3 transition hover:bg-white/[0.025]"
+                  >
+                    {content}
+                  </Link>
+                </div>
               ) : (
                 <div
                   key={unit.id}
@@ -697,6 +940,7 @@ export function ReviewWorkspace({
                   const quickResident = quickEditData?.residents.find(
                     (item) => item.position === resident.position,
                   );
+                  const completeness = getResidentCompletenessStatus(resident);
 
                   return (
                     <div
@@ -720,15 +964,26 @@ export function ReviewWorkspace({
                             {resident.isOwnerReference ? " · owner reference" : ""}
                           </p>
                         </div>
-                        {canQuickEdit && quickResident ? (
-                          <button
-                            type="button"
-                            onClick={() => setEditingResident(quickResident)}
-                            className="shrink-0 rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/5"
+                        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                          <span
+                            className={
+                              completeness.complete
+                                ? "rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-300"
+                                : "rounded-full border border-amber-400/20 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
+                            }
                           >
-                            Edit
-                          </button>
-                        ) : null}
+                            {completeness.label}
+                          </span>
+                          {canQuickEdit && quickResident ? (
+                            <button
+                              type="button"
+                              onClick={() => setEditingResident(quickResident)}
+                              className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/5"
+                            >
+                              Edit
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
                         <p className="text-[var(--text-muted)]">
@@ -742,6 +997,43 @@ export function ReviewWorkspace({
                   );
                 })}
               </div>
+
+              {selectedUnitMissingFields.length > 0 ? (
+                <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/[0.08] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                        Datos faltantes
+                      </p>
+                      <p className="mt-1 text-xs text-amber-50/75">
+                        Información que conviene resolver antes de confirmar o activar.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-300">
+                      {selectedUnitMissingFields.length}
+                    </span>
+                  </div>
+                  <div className="mt-3 space-y-2">
+                    {selectedUnitMissingFields.map((field, index) => (
+                      <div
+                        key={`${field.code}-${field.residentPosition ?? "unit"}-${index}`}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-400/10 bg-black/10 px-3 py-2 text-xs"
+                      >
+                        <span className="text-white">
+                          {field.residentName
+                            ? `${field.residentName} · ${selectedUnit.unitLabel}`
+                            : selectedUnit.unitLabel}
+                        </span>
+                        <span className="font-medium text-amber-300">{field.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3 text-sm text-emerald-200">
+                  Todos los datos requeridos están completos.
+                </div>
+              )}
 
               {reviewState && !reviewState.success ? (
                 <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -840,6 +1132,7 @@ export function ReviewWorkspace({
         <ActivationHandoffDialog
           campaignId={campaign.id}
           communityId={communityId}
+          emailWarningNames={missingEmailNames}
           onClose={() => setShowActivationHandoff(false)}
           unitId={selectedUnitId}
           unitLabel={selectedUnit.unitLabel}
@@ -862,6 +1155,14 @@ export function ReviewWorkspace({
           onClose={() => setEditingResident(null)}
           resident={editingResident}
           submissionId={quickEditData.submissionId}
+        />
+      ) : null}
+
+      {previewReport ? (
+        <ConfirmationReportDrawer
+          mode={previewMode}
+          onClose={() => setPreviewReport(null)}
+          report={previewReport}
         />
       ) : null}
     </div>
