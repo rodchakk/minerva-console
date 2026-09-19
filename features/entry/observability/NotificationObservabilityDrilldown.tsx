@@ -342,13 +342,13 @@ export function NotificationObservabilityDrilldown({
         <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-5 py-10 text-center">
           <p className="font-medium text-white">
             {data.range.communityId
-              ? "No notification events matched this filter"
-              : "No notification events recorded"}
+              ? "No communication events matched this filter"
+              : "No communication events recorded"}
           </p>
           <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
             {data.range.communityId
-              ? "The selected community and time range did not return notification evidence."
-              : "The selected time range did not return notification evidence. This remains Unknown, not Healthy."}
+              ? "The selected community and time range did not return communication evidence."
+              : "The selected time range did not return communication evidence. This remains Unknown, not Healthy."}
           </p>
         </section>
       ) : (
@@ -357,7 +357,7 @@ export function NotificationObservabilityDrilldown({
             <div className="flex items-center justify-between gap-3 border-b border-[var(--console-border)] px-5 py-4">
               <div>
                 <h2 className="text-base font-semibold text-white">
-                  Notification events
+                  Communication events
                 </h2>
                 <p className="mt-1 text-sm text-[var(--console-text-muted)]">
                   Showing {formatNumber(data.events.length)} of{" "}
