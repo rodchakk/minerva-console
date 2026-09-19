@@ -89,9 +89,8 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.match(drawer, /por confirmar/);
   assert.match(drawer, /By Minerva/);
   assert.match(drawer, /Gestión de residentes/);
-  assert.match(drawer, /Comunidades/);
-  assert.match(drawer, /más conectadas/);
-  assert.match(drawer, /para un mejor mañana/);
+  assert.match(drawer, /Tecnología que conecta/);
+  assert.match(drawer, /y protege comunidades/);
   assert.match(drawer, /icon=\{House\}/);
   assert.match(drawer, /icon=\{Users\}/);
   assert.match(drawer, /icon=\{ClipboardList\}/);
@@ -100,7 +99,8 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.match(drawer, /Resumen de datos pendientes/);
   assert.match(drawer, /Todos los datos requeridos están completos/);
   assert.match(drawer, /ENTRY \| MINERVA/);
-  assert.match(drawer, /Unidades fuertes/);
+  assert.match(drawer, /Menos fricción/);
+  assert.match(drawer, /Más confianza/);
   assert.match(drawer, /html-to-image/);
   assert.match(drawer, /pdf-lib/);
   assert.match(drawer, /Report preview/);
