@@ -40,10 +40,10 @@ function UnavailableState({ error }: { error: string }) {
         <div>
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/24 bg-amber-500/[0.10] px-3 py-1 text-xs font-semibold text-amber-100">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Notification telemetry unavailable
+            Communications telemetry unavailable
           </div>
           <h2 className="mt-4 text-xl font-semibold text-white">
-            Could not load the Notifications read model
+            Could not load the Communications read model
           </h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--console-text-muted)]">
             {error}
@@ -90,8 +90,8 @@ export default async function EntryNotificationObservabilityPage(props: {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="ENTRY observability / Notifications"
-        description="Notification queue, worker, provider, and onboarding-email evidence."
+        title="ENTRY observability / Communications"
+        description="Push, email, worker, provider, and delivery evidence for ENTRY communications."
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
             <Link
