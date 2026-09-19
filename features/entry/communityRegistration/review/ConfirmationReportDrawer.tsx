@@ -310,7 +310,7 @@ export function ConfirmationReportDrawer({
   onClose,
   report,
 }: ConfirmationReportDrawerProps) {
-  const reportRef = useRef<HTMLElement | null>(null);
+  const reportRef = useRef<HTMLDivElement | null>(null);
   const [exporting, setExporting] = useState<"png" | "pdf" | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
 
