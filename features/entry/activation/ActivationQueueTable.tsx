@@ -1,5 +1,18 @@
 "use client";
 
+import {
+  CheckCircle2,
+  Clock3,
+  KeyRound,
+  Mail,
+  Search,
+  Send,
+  TriangleAlert,
+  UserPlus,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -608,6 +621,150 @@ function CreateUserResultModal({
   );
 }
 
+type QueueView =
+  | "all"
+  | "ready"
+  | "pending_pin"
+  | "pending_invite"
+  | "activated"
+  | "errors";
+
+function matchesQueueView(row: ActivationQueueRow, view: QueueView) {
+  switch (view) {
+    case "ready":
+      return ["pending", "pin_generated", "invited"].includes(row.status);
+    case "pending_pin":
+      return row.status === "pending";
+    case "pending_invite":
+      return ["pin_generated", "invited"].includes(row.status);
+    case "activated":
+      return row.status === "activated";
+    case "errors":
+      return row.status === "failed";
+    default:
+      return true;
+  }
+}
+
+function getQueueViewLabel(view: QueueView) {
+  switch (view) {
+    case "ready":
+      return "Ready";
+    case "pending_pin":
+      return "Pending PIN";
+    case "pending_invite":
+      return "Pending invite";
+    case "activated":
+      return "Activated";
+    case "errors":
+      return "Errors";
+    default:
+      return "All";
+  }
+}
+
+function getActivationStage(row: ActivationQueueRow) {
+  const status = row.status;
+  return [
+    { done: true, label: "Prepared" },
+    {
+      done: ["pin_generated", "invited", "activated"].includes(status),
+      label: "PIN ready",
+    },
+    {
+      done: ["invited", "activated"].includes(status),
+      label: "Invite sent",
+    },
+    { done: status === "activated", label: "Activated" },
+  ];
+}
+
+function hasValue(value: string) {
+  const normalized = value.trim().toLowerCase();
+  return Boolean(normalized) && !["—", "-", "unknown", "not configured"].includes(normalized);
+}
+
+function getQueueBlockers(row: ActivationQueueRow) {
+  const blockers: string[] = [];
+
+  if (row.status === "failed") {
+    blockers.push(
+      hasValue(row.lastError)
+        ? row.lastError
+        : "This queue row is in an error state.",
+    );
+  }
+
+  if (row.method === "not_configured") {
+    blockers.push("Activation method is not configured.");
+  }
+
+  if (row.method === "email" && !hasValue(row.email)) {
+    blockers.push("Email address is required for email activation.");
+  }
+
+  if (row.method === "phone_pin" && !hasValue(row.phone)) {
+    blockers.push("Phone number is required for phone PIN activation.");
+  }
+
+  return Array.from(new Set(blockers));
+}
+
+function QueueMetric({
+  active,
+  description,
+  icon: Icon,
+  label,
+  onClick,
+  tone,
+  value,
+}: {
+  active: boolean;
+  description: string;
+  icon: LucideIcon;
+  label: string;
+  onClick: () => void;
+  tone: "violet" | "amber" | "blue" | "emerald" | "rose";
+  value: number;
+}) {
+  const toneClass =
+    tone === "amber"
+      ? "bg-amber-500/12 text-amber-300 ring-amber-400/20"
+      : tone === "blue"
+        ? "bg-sky-500/12 text-sky-300 ring-sky-400/20"
+        : tone === "emerald"
+          ? "bg-emerald-500/12 text-emerald-300 ring-emerald-400/20"
+          : tone === "rose"
+            ? "bg-rose-500/12 text-rose-300 ring-rose-400/20"
+            : "bg-violet-500/12 text-violet-200 ring-violet-400/20";
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`min-w-0 rounded-xl border px-4 py-3 text-left transition ${
+        active
+          ? "border-violet-400/45 bg-violet-500/[0.08] ring-1 ring-inset ring-violet-400/10"
+          : "border-[var(--border)] bg-[var(--surface)] hover:border-white/15 hover:bg-white/[0.025]"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <span className={`grid size-10 shrink-0 place-items-center rounded-full ring-1 ring-inset ${toneClass}`}>
+          <Icon className="size-4.5" aria-hidden />
+        </span>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium text-[var(--text-muted)]">{label}</p>
+          <p className="mt-0.5 text-2xl font-semibold leading-none text-white">{value}</p>
+          <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-[var(--text-muted)]">
+            {description}
+          </p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
 export function ActivationQueueTable({
   communityId,
   communityName,
@@ -616,23 +773,39 @@ export function ActivationQueueTable({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeRowId, setActiveRowId] = useState<string | null>(rows[0]?.id ?? null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [queueView, setQueueView] = useState<QueueView>("all");
+
+  const queueCounts = useMemo(
+    () => ({
+      activated: rows.filter((row) => matchesQueueView(row, "activated")).length,
+      all: rows.length,
+      errors: rows.filter((row) => matchesQueueView(row, "errors")).length,
+      pending_invite: rows.filter((row) =>
+        matchesQueueView(row, "pending_invite"),
+      ).length,
+      pending_pin: rows.filter((row) => matchesQueueView(row, "pending_pin")).length,
+      ready: rows.filter((row) => matchesQueueView(row, "ready")).length,
+    }),
+    [rows],
+  );
+
   const filteredRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return rows.filter((row) => {
-      const matchesStatus =
-        statusFilter === "all" ? true : row.status === statusFilter;
+      const matchesView = matchesQueueView(row, queueView);
       const matchesQuery =
         !normalizedQuery ||
         row.unit.toLowerCase().includes(normalizedQuery) ||
         row.resident.toLowerCase().includes(normalizedQuery) ||
         row.email.toLowerCase().includes(normalizedQuery) ||
-        row.phone.toLowerCase().includes(normalizedQuery);
+        row.phone.toLowerCase().includes(normalizedQuery) ||
+        row.suggestedUsername.toLowerCase().includes(normalizedQuery);
 
-      return matchesStatus && matchesQuery;
+      return matchesView && matchesQuery;
     });
-  }, [rows, searchQuery, statusFilter]);
+  }, [queueView, rows, searchQuery]);
+
   const visibleRowIds = useMemo(
     () => filteredRows.map((row) => row.id),
     [filteredRows],
@@ -641,6 +814,7 @@ export function ActivationQueueTable({
     visibleRowIds.length > 0 &&
     visibleRowIds.every((rowId) => selectedIds.includes(rowId));
   const selectedCount = selectedIds.length;
+  const selectedRows = rows.filter((row) => selectedIds.includes(row.id));
   const createUserTargetIds = selectedCount > 0 ? selectedIds : visibleRowIds;
   const createUserTargetCount = createUserTargetIds.length;
   const activeRow =
@@ -649,6 +823,13 @@ export function ActivationQueueTable({
     filteredRows[0] ??
     rows[0] ??
     null;
+  const activeRowBlockers = activeRow ? getQueueBlockers(activeRow) : [];
+  const allSelectedAreInvited =
+    selectedRows.length > 0 &&
+    selectedRows.every((row) => row.status === "invited");
+  const someSelectedAreInvited = selectedRows.some(
+    (row) => row.status === "invited",
+  );
 
   type Phase =
     | "idle"
@@ -668,7 +849,13 @@ export function ActivationQueueTable({
     useState<CreateActivatedUsersActionResult | null>(null);
 
   function toggleAllVisibleRows() {
-    setSelectedIds(allVisibleSelected ? [] : [...visibleRowIds]);
+    setSelectedIds((current) => {
+      if (allVisibleSelected) {
+        return current.filter((id) => !visibleRowIds.includes(id));
+      }
+
+      return Array.from(new Set([...current, ...visibleRowIds]));
+    });
   }
 
   function toggleRow(rowId: string) {
@@ -732,6 +919,12 @@ export function ActivationQueueTable({
     setActiveRowId(rowId);
   }
 
+  function runResidentPin(rowId: string) {
+    setSelectedIds([rowId]);
+    setActiveRowId(rowId);
+    setPhase("confirming");
+  }
+
   function runResidentEmail(rowId: string) {
     setSelectedIds([rowId]);
     setActiveRowId(rowId);
@@ -744,13 +937,8 @@ export function ActivationQueueTable({
     setPhase("confirmingCreateUser");
   }
 
-  const canGenerate = selectedCount > 0 && !!communityId;
-  const canCreateUsers = createUserTargetCount > 0 && !!communityId;
-
-  const selectedRows = rows.filter((r) => selectedIds.includes(r.id));
-  const allSelectedAreInvited =
-    selectedRows.length > 0 && selectedRows.every((r) => r.status === "invited");
-  const someSelectedAreInvited = selectedRows.some((r) => r.status === "invited");
+  const canGenerate = selectedCount > 0 && Boolean(communityId);
+  const canCreateUsers = createUserTargetCount > 0 && Boolean(communityId);
 
   return (
     <>
@@ -771,11 +959,7 @@ export function ActivationQueueTable({
               PINs will expire in 7 days and can be regenerated.
             </p>
             <div className="flex flex-wrap justify-end gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setPhase("idle")}
-              >
+              <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>
                 Cancel
               </Button>
               <Button type="button" onClick={handleConfirmGenerate}>
@@ -806,18 +990,36 @@ export function ActivationQueueTable({
         <Overlay>
           <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-white">
-              {someSelectedAreInvited ? "Resend activation email?" : "Send email invites?"}
+              {someSelectedAreInvited
+                ? "Resend activation email?"
+                : "Send email invites?"}
             </h3>
             <p className="text-sm leading-6 text-[var(--text-muted)]">
-              {someSelectedAreInvited
-                ? <>A new PIN will be generated and the activation email will be resent to <span className="font-semibold text-slate-100">{selectedCount}</span> selected resident(s). Any previous PIN will be replaced.</>
-                : <>This will generate PINs and send invitation emails to <span className="font-semibold text-slate-100">{selectedCount}</span> selected resident(s) who have an email address.</>
-              }
+              {someSelectedAreInvited ? (
+                <>
+                  A new PIN will be generated and the activation email will be
+                  resent to{" "}
+                  <span className="font-semibold text-slate-100">
+                    {selectedCount}
+                  </span>{" "}
+                  selected resident(s). Any previous PIN will be replaced.
+                </>
+              ) : (
+                <>
+                  This will generate PINs and send invitation emails to{" "}
+                  <span className="font-semibold text-slate-100">
+                    {selectedCount}
+                  </span>{" "}
+                  selected resident(s) who have an email address.
+                </>
+              )}
             </p>
             <div className="flex flex-wrap justify-end gap-3">
-              <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>Cancel</Button>
+              <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>
+                Cancel
+              </Button>
               <Button type="button" onClick={handleConfirmSendEmail}>
-                {someSelectedAreInvited ? "Resend" : "Send Emails"}
+                {someSelectedAreInvited ? "Resend" : "Send emails"}
               </Button>
             </div>
           </div>
@@ -860,11 +1062,7 @@ export function ActivationQueueTable({
               </p>
             ) : null}
             <div className="flex flex-wrap justify-end gap-3">
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={() => setPhase("idle")}
-              >
+              <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>
                 Cancel
               </Button>
               <Button type="button" onClick={handleConfirmCreateUser}>
@@ -891,357 +1089,474 @@ export function ActivationQueueTable({
         />
       ) : null}
 
-      <section className="space-y-4 rounded-[28px] border border-[var(--border)] bg-[linear-gradient(180deg,rgba(16,20,29,0.94),rgba(12,17,25,0.9))] p-4 shadow-[0_18px_50px_rgba(2,6,23,0.18)] backdrop-blur">
-        <div className="space-y-1">
-          <h2 className="text-lg font-semibold text-white">Prepared residents</h2>
-          <p className="text-sm text-[var(--text-muted)]">
-            Review prepared residents and run controlled activation actions.
-          </p>
-        </div>
-
-        <div
-          className={[
-            "grid gap-4",
-            activeRow ? "xl:h-[calc(100vh-23rem)] xl:grid-cols-[minmax(0,1fr)_352px]" : "",
-          ].join(" ")}
-        >
-          <div className="flex min-h-0 flex-col gap-3 overflow-hidden">
-
-        <div className="rounded-[22px] border border-white/8 bg-[rgba(12,17,25,0.58)] p-3.5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-            <div className="flex flex-wrap items-center gap-3">
-              <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={allVisibleSelected}
-                  onChange={toggleAllVisibleRows}
-                  className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
-                />
-                Select all visible rows
-              </label>
-              <span className="rounded-full bg-white/8 px-3 py-1 text-xs font-semibold text-slate-200">
-                {selectedCount} selected
-              </span>
+      <section className="space-y-3">
+        <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/12 text-violet-200 ring-1 ring-inset ring-violet-400/20">
+              <Users className="size-4" aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                {selectedCount > 0
+                  ? `${selectedCount} resident${selectedCount === 1 ? "" : "s"} selected`
+                  : `${queueCounts.ready} residents still in the activation flow`}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {selectedCount > 0
+                  ? "Bulk actions apply only to the selected residents."
+                  : "Select residents below for PIN and invite actions."}
+              </p>
             </div>
-
-            <p className="text-xs text-[var(--text-muted)]">
-              Select one or more residents to enable activation actions.
-            </p>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
-              disabled={!canGenerate || (phase !== "idle" && phase !== "confirming")}
+              disabled={!canGenerate || phase !== "idle"}
               onClick={() => setPhase("confirming")}
-              title={
-                !communityId
-                  ? "Select a community before generating PINs."
-                  : selectedCount === 0
-                    ? "Select residents to generate PINs."
-                    : "Generate activation PINs for selected residents."
-              }
+              className="gap-2"
             >
+              <KeyRound className="size-4" aria-hidden />
               Generate PIN
             </Button>
-
             <Button
               type="button"
               variant="secondary"
-              disabled={
-                !canCreateUsers ||
-                (phase !== "idle" && phase !== "confirmingCreateUser")
-              }
+              disabled={!canCreateUsers || phase !== "idle"}
               onClick={() => setPhase("confirmingCreateUser")}
-              title={
-                !communityId
-                  ? "Select a community before creating users."
-                  : createUserTargetCount === 0
-                    ? "No residents are visible to create users."
-                    : selectedCount === 0
-                      ? "Create users for all visible residents."
-                      : "Create active users directly from selected residents."
-              }
+              className="gap-2"
             >
+              <UserPlus className="size-4" aria-hidden />
               Create user
             </Button>
-
             <Button
               type="button"
               variant="secondary"
-              disabled={!canGenerate || (phase !== "idle" && phase !== "confirmingEmail")}
+              disabled={!canGenerate || phase !== "idle"}
               onClick={() => setPhase("confirmingEmail")}
-              title={
-                !communityId
-                  ? "Select a community before sending emails."
-                  : selectedCount === 0
-                    ? "Select residents to send emails."
-                    : allSelectedAreInvited
-                      ? "Resend activation email to selected residents."
-                      : "Send email invites with activation PINs."
-              }
+              className="gap-2"
             >
-              {allSelectedAreInvited ? "Resend email" : "Send email invite"}
+              <Send className="size-4" aria-hidden />
+              {allSelectedAreInvited ? "Resend invite" : "Send invite"}
             </Button>
           </div>
+        </div>
 
-          <div className="mt-2.5 flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex flex-wrap gap-3 text-xs leading-5">
-              {!communityId ? (
-                <p className="text-amber-200">
-                  Select a community before generating PINs.
-                </p>
-              ) : null}
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <QueueMetric
+            active={queueView === "ready"}
+            description="Prepared residents still awaiting completion."
+            icon={Users}
+            label="Ready now"
+            onClick={() => setQueueView("ready")}
+            tone="violet"
+            value={queueCounts.ready}
+          />
+          <QueueMetric
+            active={queueView === "pending_pin"}
+            description="Prepared and waiting for an activation PIN."
+            icon={Clock3}
+            label="Pending PIN"
+            onClick={() => setQueueView("pending_pin")}
+            tone="amber"
+            value={queueCounts.pending_pin}
+          />
+          <QueueMetric
+            active={queueView === "pending_invite"}
+            description="PIN ready or invite sent; activation not complete."
+            icon={Mail}
+            label="Pending invite"
+            onClick={() => setQueueView("pending_invite")}
+            tone="blue"
+            value={queueCounts.pending_invite}
+          />
+          <QueueMetric
+            active={queueView === "activated"}
+            description="Residents with completed account activation."
+            icon={CheckCircle2}
+            label="Activated"
+            onClick={() => setQueueView("activated")}
+            tone="emerald"
+            value={queueCounts.activated}
+          />
+          <QueueMetric
+            active={queueView === "errors"}
+            description="Queue rows requiring operator attention."
+            icon={TriangleAlert}
+            label="Errors"
+            onClick={() => setQueueView("errors")}
+            tone="rose"
+            value={queueCounts.errors}
+          />
+        </div>
 
-              {communityId && selectedCount === 0 ? (
-                <p className="text-[var(--text-muted)]">
-                  Generate PIN and email require selection. Create user can use all
-                  visible residents even if none are selected.
+        <div className="grid gap-2 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
+          <button
+            type="button"
+            onClick={() => setQueueView(queueCounts.errors > 0 ? "errors" : "ready")}
+            className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left ${
+              queueCounts.errors > 0
+                ? "border-rose-400/25 bg-rose-500/[0.07]"
+                : "border-emerald-400/20 bg-emerald-500/[0.06]"
+            }`}
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <span className={`grid size-9 shrink-0 place-items-center rounded-full ${
+                queueCounts.errors > 0
+                  ? "bg-rose-500/12 text-rose-300"
+                  : "bg-emerald-500/12 text-emerald-300"
+              }`}>
+                {queueCounts.errors > 0 ? (
+                  <TriangleAlert className="size-4" aria-hidden />
+                ) : (
+                  <CheckCircle2 className="size-4" aria-hidden />
+                )}
+              </span>
+              <div className="min-w-0">
+                <p className={`text-sm font-semibold ${
+                  queueCounts.errors > 0 ? "text-rose-100" : "text-emerald-100"
+                }`}>
+                  {queueCounts.errors > 0 ? "Needs attention" : "Queue checks clear"}
                 </p>
-              ) : null}
-
-              {communityId && selectedCount > 0 ? (
-                <p className="text-[var(--text-muted)]">
-                  {selectedCount} resident{selectedCount !== 1 ? "s" : ""} selected.
+                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                  {queueCounts.errors > 0
+                    ? `${queueCounts.errors} resident${queueCounts.errors === 1 ? "" : "s"} currently have queue errors.`
+                    : "No queue rows are currently reporting activation errors."}
                 </p>
-              ) : null}
+              </div>
             </div>
+            <span className="shrink-0 text-xs font-semibold text-[var(--text-muted)]">
+              {queueCounts.errors > 0 ? "View errors" : "View ready"}
+            </span>
+          </button>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <label className="relative">
-                <input
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  placeholder="Search unit or resident"
-                  className="h-11 w-full min-w-[16rem] rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
-                />
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="h-11 min-w-[9rem] rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 text-sm text-white outline-none transition focus:border-violet-400/50"
-              >
-                {TABLE_STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
+          <div className="flex items-center gap-3 rounded-xl border border-sky-400/15 bg-sky-500/[0.045] px-4 py-3">
+            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sky-500/10 text-sky-300">
+              <KeyRound className="size-4" aria-hidden />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-white">Activation tip</p>
+              <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
+                Select multiple residents to generate PINs or send invites in one controlled batch.
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-white/8 bg-[rgba(9,12,24,0.36)]">
-          <div className="min-h-0 flex-1 overflow-auto">
-            <table className="min-w-[1040px] w-full table-fixed divide-y divide-white/8 text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-[rgba(9,12,24,0.94)] text-slate-300 backdrop-blur">
-                <tr>
-                  <th className="w-12 px-3 py-3 font-semibold">
-                    <span className="sr-only">Select row</span>
-                  </th>
-                  <th className="w-[15%] px-3 py-3 font-semibold">Unit</th>
-                  <th className="w-[16%] px-3 py-3 font-semibold">Resident</th>
-                  <th className="w-[19%] px-3 py-3 font-semibold">Contact</th>
-                  <th className="w-[15%] px-3 py-3 font-semibold">Username</th>
-                  <th className="w-[13%] px-3 py-3 font-semibold">Method</th>
-                  <th className="w-[12%] px-3 py-3 font-semibold">Status</th>
-                  <th className="w-[18%] px-3 py-3 font-semibold">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-white/8 bg-[var(--surface)] text-slate-200">
-                {filteredRows.map((row) => {
-                  const isSelected = selectedIds.includes(row.id);
-                  const isActive = activeRow?.id === row.id;
-
-                  return (
-                    <tr
-                      key={row.id}
-                      className={[
-                        "cursor-pointer transition",
-                        isActive
-                          ? "bg-violet-500/10 ring-1 ring-inset ring-violet-400/30"
-                          : isSelected
-                            ? "bg-violet-500/8"
-                            : "hover:bg-white/4",
-                      ].join(" ")}
-                      onClick={() => focusRow(row.id)}
+        <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-24rem),52rem)] xl:grid-cols-[minmax(0,1fr)_360px]">
+          <section className="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
+            <div className="border-b border-[var(--border)] px-3 py-3">
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Activation queue filters">
+                  {(["all", "ready", "pending_pin", "pending_invite", "activated", "errors"] as QueueView[]).map((view) => (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => setQueueView(view)}
+                      aria-pressed={queueView === view}
+                      className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
+                        queueView === view
+                          ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
+                          : "border-[var(--border)] text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-white"
+                      }`}
                     >
-                      <td className="px-3 py-3 align-top">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => toggleRow(row.id)}
-                          onClick={(event) => event.stopPropagation()}
-                          className="mt-1 h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
-                        />
-                      </td>
-                      <td className="px-3 py-3 align-top font-medium text-white">
-                        <span className="block truncate" title={row.unit}>
-                          {row.unit}
-                        </span>
-                        <span className="mt-1 block text-xs text-[var(--text-muted)]">
-                          {row.ownerReference}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="block truncate text-white" title={row.resident}>
-                          {row.resident}
-                        </span>
-                        {row.lastError !== "â€”" ? (
-                          <span
-                            className="mt-1 block truncate text-xs text-rose-200"
-                            title={row.lastError}
-                          >
-                            {row.lastError}
+                      {getQueueViewLabel(view)}{" "}
+                      <span className="ml-1 opacity-70">{queueCounts[view]}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <label className="relative block xl:w-[20rem]">
+                  <span className="sr-only">Search activation queue</span>
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
+                  <input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search resident, unit or contact..."
+                    className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-200">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleAllVisibleRows}
+                    className="size-4 accent-violet-500"
+                  />
+                  Select all visible
+                </label>
+                <p className="text-xs text-[var(--text-muted)]">
+                  {selectedCount > 0
+                    ? `${selectedCount} selected`
+                    : `${filteredRows.length} visible residents`}
+                </p>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]">
+              <table className="w-full min-w-[1020px] table-fixed border-collapse text-left text-xs">
+                <thead className="sticky top-0 z-10 border-b border-white/[0.08] bg-[rgba(12,17,25,0.96)] text-[var(--text-muted)] backdrop-blur">
+                  <tr>
+                    <th className="w-11 px-3 py-2.5">
+                      <span className="sr-only">Select row</span>
+                    </th>
+                    <th className="w-[13%] px-3 py-2.5 font-semibold">Unit</th>
+                    <th className="w-[18%] px-3 py-2.5 font-semibold">Resident</th>
+                    <th className="w-[21%] px-3 py-2.5 font-semibold">Contact</th>
+                    <th className="w-[15%] px-3 py-2.5 font-semibold">Username</th>
+                    <th className="w-[11%] px-3 py-2.5 font-semibold">Method</th>
+                    <th className="w-[11%] px-3 py-2.5 font-semibold">Status</th>
+                    <th className="w-[16%] px-3 py-2.5 font-semibold">Created</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-white/[0.07] text-slate-200">
+                  {filteredRows.map((row) => {
+                    const isSelected = selectedIds.includes(row.id);
+                    const isActive = activeRow?.id === row.id;
+
+                    return (
+                      <tr
+                        key={row.id}
+                        onClick={() => focusRow(row.id)}
+                        className={`cursor-pointer transition ${
+                          isActive
+                            ? "bg-violet-500/[0.10] ring-1 ring-inset ring-violet-400/25"
+                            : isSelected
+                              ? "bg-violet-500/[0.055]"
+                              : "hover:bg-white/[0.025]"
+                        }`}
+                      >
+                        <td className="px-3 py-2.5 align-top">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleRow(row.id)}
+                            onClick={(event) => event.stopPropagation()}
+                            className="size-4 accent-violet-500"
+                            aria-label={`Select ${row.resident}`}
+                          />
+                        </td>
+                        <td className="px-3 py-2.5 align-top font-medium text-white">
+                          <span className="block truncate" title={row.unit}>{row.unit}</span>
+                        </td>
+                        <td className="px-3 py-2.5 align-top">
+                          <span className="block truncate font-medium text-white" title={row.resident}>
+                            {row.resident}
                           </span>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="block truncate" title={row.phone}>
-                          {row.phone}
-                        </span>
-                        <span
-                          className="mt-1 block truncate text-[var(--text-muted)]"
-                          title={row.email}
-                        >
-                          {row.email}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <span className="block truncate" title={row.suggestedUsername}>
-                          {row.suggestedUsername}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <Badge tone={getMethodTone(row.method)}>
-                          {getMethodLabel(row.method)}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-3 align-top">
-                        <Badge tone={getStatusTone(row.status)}>
-                          {getStatusLabel(row.status)}
-                        </Badge>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 align-top text-[var(--text-muted)]">
-                        {row.createdAt}
+                          {hasValue(row.lastError) ? (
+                            <span className="mt-1 block truncate text-[10px] text-rose-200" title={row.lastError}>
+                              {row.lastError}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2.5 align-top">
+                          <span className="block truncate" title={row.phone}>{row.phone}</span>
+                          <span className="mt-1 block truncate text-[var(--text-muted)]" title={row.email}>{row.email}</span>
+                        </td>
+                        <td className="px-3 py-2.5 align-top">
+                          <span className="block truncate" title={row.suggestedUsername}>{row.suggestedUsername}</span>
+                        </td>
+                        <td className="px-3 py-2.5 align-top">
+                          <Badge tone={getMethodTone(row.method)}>{getMethodLabel(row.method)}</Badge>
+                        </td>
+                        <td className="px-3 py-2.5 align-top">
+                          <Badge tone={getStatusTone(row.status)}>{getStatusLabel(row.status)}</Badge>
+                        </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 align-top text-[var(--text-muted)]">
+                          {row.createdAt}
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {filteredRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-16 text-center text-sm text-[var(--text-muted)]">
+                        No residents match this queue view.
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
 
-          <div className="border-t border-white/8 px-4 py-3 text-sm text-[var(--text-muted)]">
-            Showing 1 to {filteredRows.length} of {rows.length} residents
-          </div>
-        </div>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
+              <span>
+                Showing {filteredRows.length} of {rows.length} residents
+              </span>
+              <span>{selectedCount} selected</span>
+            </div>
+          </section>
 
-          </div>
-
-          {activeRow ? (
-            <aside className="flex h-full flex-col self-start overflow-hidden rounded-[24px] border border-white/8 bg-[rgba(12,17,25,0.72)] p-5 xl:sticky xl:top-4">
-              <div className="flex items-start justify-between gap-3">
-                <h3 className="text-lg font-semibold text-white">Resident actions</h3>
-                <button
-                  type="button"
-                  onClick={() => setActiveRowId(null)}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-white/8 bg-white/[0.03] text-[var(--text-muted)] transition hover:text-white"
-                  aria-label="Close resident actions"
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="mt-6 flex items-start gap-4">
-                <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-[linear-gradient(180deg,rgba(109,99,255,0.22),rgba(65,50,170,0.3))] text-xl font-semibold text-violet-100">
-                  {getInitials(activeRow.resident)}
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-base font-semibold text-white">{activeRow.resident}</p>
-                    <Badge tone={getStatusTone(activeRow.status)}>
-                      {getStatusLabel(activeRow.status)}
-                    </Badge>
-                  </div>
-                  <p className="mt-1.5 text-sm text-[var(--text-muted)]">{activeRow.unit}</p>
-                  <p className="mt-3 text-sm text-slate-200">{activeRow.phone}</p>
-                  <p className="mt-1.5 text-sm text-[var(--text-muted)]">{activeRow.email}</p>
+          <aside className="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
+            {!activeRow ? (
+              <div className="grid flex-1 place-items-center px-6 text-center">
+                <div>
+                  <Users className="mx-auto size-6 text-violet-300" aria-hidden />
+                  <p className="mt-3 text-sm font-semibold text-white">Select a resident</p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                    Open a queue row to review activation status and available actions.
+                  </p>
                 </div>
               </div>
+            ) : (
+              <>
+                <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border)] p-4">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-violet-500/15 text-sm font-semibold text-violet-100 ring-1 ring-inset ring-violet-400/20">
+                      {getInitials(activeRow.resident)}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-white">{activeRow.resident}</p>
+                        <Badge tone={getStatusTone(activeRow.status)}>{getStatusLabel(activeRow.status)}</Badge>
+                      </div>
+                      <p className="mt-1 text-xs text-[var(--text-muted)]">{activeRow.unit}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveRowId(null)}
+                    className="grid size-8 shrink-0 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition hover:bg-white/5 hover:text-white"
+                    aria-label="Close resident details"
+                  >
+                    <X className="size-3.5" aria-hidden />
+                  </button>
+                </div>
 
-              <div className="mt-6 rounded-[20px] border border-white/8 bg-[var(--surface-strong)] p-5">
-                <h4 className="text-sm font-semibold text-white">Resident summary</h4>
-                <div className="mt-5 space-y-4 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--text-muted)]">Username</span>
-                    <span className="text-slate-200">{activeRow.suggestedUsername}</span>
+                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable]">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      Activation progress
+                    </p>
+                    <div className="mt-3 grid grid-cols-4 gap-1.5">
+                      {getActivationStage(activeRow).map((stage, index) => (
+                        <div key={stage.label} className="min-w-0">
+                          <div className="flex items-center">
+                            <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${
+                              stage.done
+                                ? "bg-violet-500 text-white"
+                                : "bg-white/[0.06] text-[var(--text-muted)] ring-1 ring-inset ring-white/10"
+                            }`}>
+                              {stage.done ? "✓" : index + 1}
+                            </span>
+                            {index < 3 ? (
+                              <span className={`h-px flex-1 ${
+                                stage.done ? "bg-violet-400/55" : "bg-white/10"
+                              }`} />
+                            ) : null}
+                          </div>
+                          <p className={`mt-1.5 truncate text-[9px] ${
+                            stage.done ? "text-slate-200" : "text-[var(--text-muted)]"
+                          }`}>
+                            {stage.label}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--text-muted)]">Method</span>
-                    <span className="text-slate-200">{getMethodLabel(activeRow.method)}</span>
+
+                  <div className="mt-5 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
+                    <p className="text-xs font-semibold text-white">Details</p>
+                    <dl className="mt-3 space-y-2.5 text-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Unit</dt>
+                        <dd className="text-right text-slate-200">{activeRow.unit}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Username</dt>
+                        <dd className="max-w-[60%] truncate text-right text-slate-200" title={activeRow.suggestedUsername}>
+                          {activeRow.suggestedUsername}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Method</dt>
+                        <dd className="text-right text-slate-200">{getMethodLabel(activeRow.method)}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Phone</dt>
+                        <dd className="text-right text-slate-200">{activeRow.phone}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Email</dt>
+                        <dd className="max-w-[65%] break-all text-right text-slate-200">{activeRow.email}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Created</dt>
+                        <dd className="text-right text-slate-200">{activeRow.createdAt}</dd>
+                      </div>
+                    </dl>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-[var(--text-muted)]">Created</span>
-                    <span className="text-slate-200">{activeRow.createdAt}</span>
+
+                  <div className="mt-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                      Queue checks
+                    </p>
+                    {activeRowBlockers.length === 0 ? (
+                      <div className="mt-2 flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-3">
+                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
+                        <div>
+                          <p className="text-xs font-semibold text-emerald-100">No blockers detected</p>
+                          <p className="mt-1 text-[11px] leading-4 text-emerald-100/65">
+                            This queue row has the information required by its current activation method.
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 space-y-2">
+                        {activeRowBlockers.map((blocker) => (
+                          <div key={blocker} className="flex items-start gap-2 rounded-lg border border-rose-400/20 bg-rose-500/[0.07] px-3 py-3">
+                            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-rose-300" aria-hidden />
+                            <p className="text-xs leading-5 text-rose-100">{blocker}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              </div>
 
-              <div className="mt-6 space-y-4">
-                <h4 className="text-sm font-semibold text-white">Available actions</h4>
-
-                <button
-                  type="button"
-                  disabled
-                  className="flex w-full items-center justify-between rounded-[18px] border border-white/8 bg-[var(--surface-strong)] px-4 py-5 text-left text-sm text-[var(--text-muted)]"
-                  title="Coming soon."
-                >
-                  <div>
-                    <p className="font-semibold text-white">Send info to WhatsApp</p>
-                    <p className="mt-1 text-[var(--text-muted)]">
-                      Send credential info and community access details via WhatsApp.
-                    </p>
+                <div className="shrink-0 space-y-2 border-t border-[var(--border)] bg-[var(--surface-elevated)]/90 p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                    Actions
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={() => runResidentPin(activeRow.id)}
+                    disabled={!communityId || phase !== "idle"}
+                    className="w-full justify-center gap-2"
+                  >
+                    <KeyRound className="size-3.5" aria-hidden />
+                    Generate PIN
+                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => runResidentEmail(activeRow.id)}
+                      disabled={!communityId || phase !== "idle"}
+                      className="gap-2"
+                    >
+                      <Mail className="size-3.5" aria-hidden />
+                      Send invite
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => runResidentCreateUser(activeRow.id)}
+                      disabled={!communityId || phase !== "idle"}
+                      className="gap-2"
+                    >
+                      <UserPlus className="size-3.5" aria-hidden />
+                      Create user
+                    </Button>
                   </div>
-                  <span>›</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => runResidentEmail(activeRow.id)}
-                  disabled={!canGenerate || phase !== "idle"}
-                  className="flex w-full items-center justify-between rounded-[18px] border border-white/8 bg-[var(--surface-strong)] px-4 py-5 text-left text-sm transition hover:border-violet-400/20"
-                >
-                  <div>
-                    <p className="font-semibold text-white">Send email invite</p>
-                    <p className="mt-1 text-[var(--text-muted)]">
-                      Send an email invite with access instructions.
-                    </p>
-                  </div>
-                  <span className="text-[var(--text-muted)]">›</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => runResidentCreateUser(activeRow.id)}
-                  disabled={!communityId || phase !== "idle"}
-                  className="flex w-full items-center justify-between rounded-[18px] border border-white/8 bg-[var(--surface-strong)] px-4 py-5 text-left text-sm transition hover:border-violet-400/20"
-                >
-                  <div>
-                    <p className="font-semibold text-white">Create user</p>
-                    <p className="mt-1 text-[var(--text-muted)]">
-                      Create the resident user and activate access.
-                    </p>
-                  </div>
-                  <span className="text-[var(--text-muted)]">›</span>
-                </button>
-              </div>
-
-              <p className="mt-auto pt-6 text-xs leading-5 text-[var(--text-muted)]">
-                PINs are temporary 7-day credentials and will expire automatically.
-              </p>
-            </aside>
-          ) : null}
+                </div>
+              </>
+            )}
+          </aside>
         </div>
       </section>
     </>
