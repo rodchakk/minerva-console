@@ -80,6 +80,14 @@ function formatLatency(value: number | null) {
   return `${formatNumber(Math.round(value))} ms`;
 }
 
+function formatMetricValue(value: number | null, unit: string) {
+  if (value === null) return "No data";
+  if (unit === "ms") return `${formatNumber(Math.round(value))} ms`;
+  if (unit === "score") return value.toFixed(4);
+  if (unit === "percent") return `${value.toFixed(1)}%`;
+  return formatNumber(Math.round(value));
+}
+
 function formatCost(value: number | null, hasUsageRecords: boolean) {
   if (value === null) {
     return hasUsageRecords ? "Not available" : "No data";
@@ -663,6 +671,304 @@ function AuditActivity({ data }: { data: EntryObservabilityData }) {
   );
 }
 
+
+function PerformancePanel({ data }: { data: EntryObservabilityData }) {
+  const performance = data.performance;
+
+  return (
+    <Panel>
+      <PanelHeader
+        description="Real user experience and backend timings are kept separate from capability health."
+        icon={Gauge}
+        title="Performance"
+      />
+      <div className="grid gap-0 md:grid-cols-4">
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[var(--console-text-muted)]">Measured events</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatNumber(performance.summary.eventCount)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            {formatNumber(performance.summary.failedCount)} failed measurements
+          </p>
+        </div>
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[var(--console-text-muted)]">P50</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatLatency(performance.summary.p50Ms)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">Typical measured latency</p>
+        </div>
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[var(--console-text-muted)]">P95</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatLatency(performance.summary.p95Ms)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">Slow-user experience</p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-xs text-[var(--console-text-muted)]">P99</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {formatLatency(performance.summary.p99Ms)}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            Last sample {formatRelative(performance.summary.lastSeenAt)}
+          </p>
+        </div>
+      </div>
+      {performance.metrics.length === 0 ? (
+        <EmptyPanelState
+          title="Waiting for experience telemetry"
+          description="Web and mobile measurements will appear here as instrumented clients report real user timings."
+        />
+      ) : (
+        <div className="overflow-x-auto border-t border-[var(--console-border)]">
+          <table className="w-full min-w-[760px] text-left text-sm">
+            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Metric</th>
+                <th className="px-4 py-3 font-medium">Surface</th>
+                <th className="px-4 py-3 font-medium">P50</th>
+                <th className="px-4 py-3 font-medium">P95</th>
+                <th className="px-4 py-3 font-medium">P99</th>
+                <th className="px-4 py-3 font-medium">Samples</th>
+                <th className="px-5 py-3 font-medium">Last seen</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--console-border)]">
+              {performance.metrics.slice(0, 16).map((metric) => (
+                <tr
+                  key={`${metric.surface}-${metric.metric}-${metric.unit}-${metric.appVersion ?? "current"}`}
+                  className="hover:bg-white/[0.02]"
+                >
+                  <td className="px-5 py-3 font-medium text-white">{sentenceLabel(metric.metric)}</td>
+                  <td className="px-4 py-3 text-slate-300">{sentenceLabel(metric.surface)}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatMetricValue(metric.p50, metric.unit)}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatMetricValue(metric.p95, metric.unit)}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatMetricValue(metric.p99, metric.unit)}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatNumber(metric.eventCount)}</td>
+                  <td className="px-5 py-3 text-[var(--console-text-muted)]">{formatRelative(metric.lastSeenAt)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
+  const infrastructure = data.infrastructure;
+  const push = data.mobilePushDelivery;
+
+  return (
+    <Panel>
+      <PanelHeader
+        description="Workers, queues, database state, and verified mobile push delivery."
+        icon={DatabaseZap}
+        title="Operational infrastructure"
+      />
+      <div className="grid gap-0 md:grid-cols-4">
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[var(--console-text-muted)]">DB connections</p>
+          <p className="mt-2 text-2xl font-semibold text-white">{formatNumber(infrastructure.database.connections)}</p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            {infrastructure.database.deadlocks} deadlocks · {infrastructure.database.conflicts} conflicts
+          </p>
+        </div>
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[var(--console-text-muted)]">DB cache hit</p>
+          <p className="mt-2 text-2xl font-semibold text-white">
+            {infrastructure.database.cacheHitPercent === null
+              ? "No data"
+              : `${infrastructure.database.cacheHitPercent.toFixed(1)}%`}
+          </p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">PostgreSQL shared-buffer cache</p>
+        </div>
+        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[var(--console-text-muted)]">Mobile push delivery</p>
+          <p className="mt-2 text-2xl font-semibold text-white">{formatPercent(push.deliveryRate)}</p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            {formatNumber(push.deliveredCount)} delivered / {formatNumber(push.failedCount)} failed
+          </p>
+        </div>
+        <div className="px-5 py-4">
+          <p className="text-xs text-[var(--console-text-muted)]">Receipt pending</p>
+          <p className="mt-2 text-2xl font-semibold text-white">{formatNumber(push.acceptedCount)}</p>
+          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+            Last delivery {formatRelative(push.lastDeliveredAt)}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid border-t border-[var(--console-border)] xl:grid-cols-2">
+        <div className="border-b border-[var(--console-border)] xl:border-b-0 xl:border-r">
+          <div className="border-b border-[var(--console-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            Workers
+          </div>
+          <div className="divide-y divide-[var(--console-border)]">
+            {infrastructure.workers.map((worker) => (
+              <div key={worker.name} className="flex items-center justify-between gap-4 px-5 py-3">
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-white">{sentenceLabel(worker.name)}</p>
+                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">{worker.schedule}</p>
+                </div>
+                <div className="text-right">
+                  <p className={cn(
+                    "text-xs font-semibold",
+                    worker.status === "succeeded" ? "text-emerald-300" : worker.status === "running" ? "text-sky-300" : "text-rose-300",
+                  )}>
+                    {sentenceLabel(worker.status)}
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">{formatRelative(worker.lastFinishedAt ?? worker.lastStartedAt)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div className="border-b border-[var(--console-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            Queues
+          </div>
+          <div className="divide-y divide-[var(--console-border)]">
+            {infrastructure.queues.map((queue) => (
+              <div key={queue.name} className="flex items-center justify-between gap-4 px-5 py-3">
+                <div>
+                  <p className="font-medium text-white">{queue.name}</p>
+                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">{sentenceLabel(queue.capability)}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold text-white">
+                    {formatNumber(queue.openCount)} open
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                    {formatNumber(queue.failedCount)} failed · oldest {formatRelative(queue.oldestOpenAt)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+function ReadinessPanel({ data }: { data: EntryObservabilityData }) {
+  return (
+    <Panel>
+      <PanelHeader
+        description="Deployment readiness and adoption signals. These are operational context, not automatic product failures."
+        icon={ShieldCheck}
+        title="Rollout & readiness"
+      />
+      {data.readiness.communities.length === 0 ? (
+        <EmptyPanelState title="No active communities" description="Readiness appears for active ENTRY communities." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Community</th>
+                <th className="px-4 py-3 font-medium">Residents</th>
+                <th className="px-4 py-3 font-medium">Resident push</th>
+                <th className="px-4 py-3 font-medium">Guards</th>
+                <th className="px-4 py-3 font-medium">Guard push</th>
+                <th className="px-4 py-3 font-medium">Activated via queue</th>
+                <th className="px-4 py-3 font-medium">Passes</th>
+                <th className="px-4 py-3 font-medium">Gate accesses</th>
+                <th className="px-5 py-3 font-medium">Messages</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--console-border)]">
+              {data.readiness.communities.map((community) => (
+                <tr key={community.communityId} className="hover:bg-white/[0.02]">
+                  <td className="px-5 py-3 font-medium text-white">{community.communityName}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatNumber(community.activeResidents)}</td>
+                  <td className="px-4 py-3 text-slate-300">
+                    {formatNumber(community.pushReadyResidents)} / {formatNumber(community.activeResidents)}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">{formatNumber(community.activeGuards)}</td>
+                  <td className={cn(
+                    "px-4 py-3",
+                    community.activeGuards > 0 && community.pushReadyGuards === 0 ? "font-semibold text-amber-300" : "text-slate-300",
+                  )}>
+                    {formatNumber(community.pushReadyGuards)} / {formatNumber(community.activeGuards)}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">{formatNumber(community.activatedResidents)}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatNumber(community.passesCreated)}</td>
+                  <td className="px-4 py-3 text-slate-300">{formatNumber(community.gateAccesses)}</td>
+                  <td className="px-5 py-3 text-slate-300">{formatNumber(community.messagesPublished)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function IncidentHistoryPanel({ data }: { data: EntryObservabilityData }) {
+  return (
+    <Panel>
+      <PanelHeader
+        description="Durable lifecycle history remains available after a condition recovers."
+        icon={ListTree}
+        title="Incident history"
+      />
+      {data.incidentHistory.length === 0 ? (
+        <EmptyPanelState title="No durable incidents" description="Recovered and current monitor incidents will accumulate here." />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-left text-sm">
+            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Incident</th>
+                <th className="px-4 py-3 font-medium">Capability</th>
+                <th className="px-4 py-3 font-medium">Community</th>
+                <th className="px-4 py-3 font-medium">Severity</th>
+                <th className="px-4 py-3 font-medium">State</th>
+                <th className="px-4 py-3 font-medium">First seen</th>
+                <th className="px-5 py-3 font-medium">Last / resolved</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--console-border)]">
+              {data.incidentHistory.slice(0, 30).map((incident) => (
+                <tr key={incident.id} className="hover:bg-white/[0.02]">
+                  <td className="px-5 py-3">
+                    <p className="font-medium text-white">{sentenceLabel(incident.eventType)}</p>
+                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">{incident.errorCode ?? incident.fingerprint}</p>
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">{sentenceLabel(incident.capability)}</td>
+                  <td className="px-4 py-3 text-slate-300">{incident.communityName ?? "ENTRY system"}</td>
+                  <td className="px-4 py-3">
+                    <span className={cn("rounded-full border px-2 py-1 text-[11px] font-semibold", severityClass[incident.severity] ?? severityClass.INFO)}>
+                      {incident.severity}
+                    </span>
+                  </td>
+                  <td className={cn(
+                    "px-4 py-3 font-semibold",
+                    incident.status === "open" ? "text-amber-300" : "text-emerald-300",
+                  )}>
+                    {incident.status === "open" ? "Open" : "Resolved"}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--console-text-muted)]">{formatDateTime(incident.firstSeenAt)}</td>
+                  <td className="px-5 py-3 text-[var(--console-text-muted)]">
+                    {incident.resolvedAt ? `Resolved ${formatRelative(incident.resolvedAt)}` : formatRelative(incident.lastSeenAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
   const status = statusCopy[data.summary.systemStatus];
   const hasUsageRecords = data.usage.summary.recordCount > 0;
@@ -744,6 +1050,14 @@ function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
         />
         <Incidents incidents={data.incidents} />
       </section>
+
+      <PerformancePanel data={data} />
+
+      <InfrastructurePanel data={data} />
+
+      <ReadinessPanel data={data} />
+
+      <IncidentHistoryPanel data={data} />
 
       <OcrQueue queue={data.ocrQueue} />
 
