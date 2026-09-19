@@ -1113,10 +1113,6 @@ export function ReviewWorkspace({
                               </span>
                             ) : null}
                           </div>
-                          <p className="mt-1 text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                            {resident.relationshipToHouse}
-                            {resident.isOwnerReference ? " · owner reference" : ""}
-                          </p>
                           </div>
                         </div>
                         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
