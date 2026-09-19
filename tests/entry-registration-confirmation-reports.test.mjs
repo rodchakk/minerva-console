@@ -87,11 +87,10 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
 
   assert.match(drawer, /Revisión de residentes/);
   assert.match(drawer, /por confirmar/);
-  assert.match(drawer, /By Minerva/);
+  assert.match(drawer, /By Minerva Technologies/);
   assert.match(drawer, /Gestión de residentes/);
-  assert.match(drawer, /Comunidades/);
-  assert.match(drawer, /más conectadas/);
-  assert.match(drawer, /para un mejor mañana/);
+  assert.match(drawer, /Tecnología que conecta/);
+  assert.match(drawer, /y protege comunidades/);
   assert.match(drawer, /icon=\{House\}/);
   assert.match(drawer, /icon=\{Users\}/);
   assert.match(drawer, /icon=\{ClipboardList\}/);
@@ -100,7 +99,8 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.match(drawer, /Resumen de datos pendientes/);
   assert.match(drawer, /Todos los datos requeridos están completos/);
   assert.match(drawer, /ENTRY \| MINERVA/);
-  assert.match(drawer, /Unidades fuertes/);
+  assert.match(drawer, /Menos fricción/);
+  assert.match(drawer, /Más confianza/);
   assert.match(drawer, /html-to-image/);
   assert.match(drawer, /pdf-lib/);
   assert.match(drawer, /Report preview/);
@@ -110,6 +110,30 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.match(drawer, /ref=\{reportRef\}/);
   assert.match(drawer, /renderNodeToPng\(node\)/);
   assert.doesNotMatch(drawer, /openai|image_gen|generative ai/i);
+});
+
+test("resident review cards rely on primary resident instead of relationship labels", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /Primary resident/);
+  assert.doesNotMatch(workspace, /resident\.relationshipToHouse/);
+  assert.doesNotMatch(workspace, /owner reference/);
+});
+
+test("resident registration uses a wider page-specific workspace on desktop", () => {
+  const page = read(
+    "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
+  );
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(page, /max-w-\[2200px\]/);
+  assert.match(page, /w-\[calc\(100vw-19rem\)\]/);
+  assert.match(workspace, /minmax\(320px,0\.64fr\)/);
+  assert.match(workspace, /minmax\(0,1\.56fr\)/);
 });
 
 test("activation handoff warns about missing email without disabling complete residents", () => {
