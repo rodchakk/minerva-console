@@ -195,7 +195,7 @@ async function sendExpoChunk(messages: ExpoMessage[]): Promise<{
       }
     })
 
-    let sent = tickets.filter((ticket) => ticket.status === 'ok').length
+    const sent = tickets.filter((ticket) => ticket.status === 'ok').length
     let failed = tickets.filter((ticket) => ticket.status !== 'ok').length
     if (tickets.length < messages.length) failed += messages.length - tickets.length
 
@@ -533,7 +533,7 @@ Deno.serve(async (req: Request) => {
             target_user_id: targetUserId,
           })
         }
-      } catch (rowError) {
+      } catch {
         const { error: failError } = await serviceClient.rpc('fail_community_message_push', {
           p_queue_id: row.queue_id,
           p_error: 'Push row processing failed',
