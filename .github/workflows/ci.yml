@@ -48,6 +48,25 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+  entry-registration-report-tests:
+    name: ENTRY registration confirmation reports
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run confirmation report regressions
+        run: node --test tests/entry-registration-confirmation-reports.test.mjs
+
   entry-outrider-tests:
     name: ENTRY Outrider regressions
     runs-on: ubuntu-latest
