@@ -56,7 +56,7 @@ test("Field health stays compact while copying the complete web diagnostic bundl
   assert.match(workspace, /30 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(workspace, /JSON\.stringify\(payload\.bundle, null, 2\)/);
   assert.match(workspace, /Diagnostic copied/);
-  assert.match(workspace, /raw JSON is not displayed in Field/i);
+  assert.match(workspace, /raw JSON is\s+not displayed in Field/i);
   assert.match(workspace, /DIAGNOSTIC_REQUIRED_SECTIONS/);
   assert.match(workspace, /schema_version/);
   assert.match(workspace, /current_observability/);
