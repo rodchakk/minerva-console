@@ -34,7 +34,7 @@ const expirationMigration = read(
   "supabase/migrations/20260919060813_entry_expiration_operational_hardening.sql",
 );
 const diagnosticMigration = read(
-  "supabase/migrations/20260919233000_entry_diagnostic_bundles.sql",
+  "supabase/migrations/20260919071405_entry_diagnostic_bundles.sql",
 );
 const diagnosticApi = read("app/api/entry/observability/diagnostic/route.ts");
 const diagnosticControl = read(
