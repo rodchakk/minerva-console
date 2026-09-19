@@ -7,6 +7,7 @@ import {
   Clock3,
   DatabaseZap,
   FileImage,
+  FileJson,
   Gauge,
   ListTree,
   RefreshCw,
