@@ -15,6 +15,13 @@ const migration = read(
 const ocrStatusMigration = read(
   "supabase/migrations/20260907182500_entry_ocr_observability_status.sql",
 );
+const capabilityMigration = read(
+  "supabase/migrations/20260919050000_entry_observability_capability_taxonomy.sql",
+);
+const capabilityInstrumentation = read(
+  "supabase/migrations/20260919051000_entry_observability_capability_instrumentation.sql",
+);
+const activationEmailActions = read("features/entry/activation/emailActions.ts");
 const page = read("app/(console)/products/entry/observability/page.tsx");
 const loading = read("app/(console)/products/entry/observability/loading.tsx");
 const filters = read("features/entry/observability/ObservabilityFilters.tsx");
@@ -257,31 +264,35 @@ test("registration health uses an explicit operational evidence allowlist", () =
 });
 
 test("read model is superadmin-only, bounded, and server-side aggregated", () => {
-  assert.match(migration, /create or replace function public\.sa_get_entry_observability_v1/);
-  assert.match(migration, /if not public\.is_superadmin\(\)/);
-  assert.match(migration, /v_end - v_start > interval '31 days'/);
-  assert.match(migration, /returns jsonb/);
-  assert.match(migration, /jsonb_build_object\(\s*'summary'/);
-  assert.match(queries, /supabase\.rpc\("sa_get_entry_observability_v1"/);
+  assert.match(capabilityMigration, /create or replace function public\.sa_get_entry_observability_v2/);
+  assert.match(capabilityMigration, /if not public\.is_superadmin\(\)/);
+  assert.match(capabilityMigration, /v_end - v_start > interval '31 days'/);
+  assert.match(capabilityMigration, /returns jsonb/);
+  assert.match(capabilityMigration, /public\.sa_get_entry_observability_v1/);
+  assert.match(queries, /supabase\.rpc\("sa_get_entry_observability_v2"/);
   assert.doesNotMatch(page, /\.from\("system_event_log"\)/);
   assert.doesNotMatch(page, /\.from\("entry_usage_ledger"\)/);
 });
 
-test("critical flow health keeps missing telemetry unknown instead of fake green", () => {
-  assert.match(migration, /_entry_observability_flow_status_v1/);
-  assert.match(migration, /p_evidence_count[\s\S]*then 'unknown'/);
+test("capability taxonomy stays general and workload-aware", () => {
   for (const flow of [
-    "create_pass",
-    "validate_qr",
-    "resident_login",
-    "registration",
-    "image_ocr",
-    "notifications",
+    "authentication",
+    "onboarding",
+    "resident_access",
+    "gate_access",
+    "communications",
+    "vision_recognition",
   ]) {
-    assert.match(migration, new RegExp(`'${flow}'`));
+    assert.match(capabilityMigration, new RegExp(`'${flow}'`));
   }
-  assert.match(docs, /No telemetry must stay Unknown/);
-  assert.match(page, /No telemetry is Unknown/);
+
+  assert.match(capabilityMigration, /then 'idle'/);
+  assert.match(capabilityMigration, /RESIDENT_HOUSE_CONTEXT_INVALID/);
+  assert.match(capabilityMigration, /entry_notification_worker_health/);
+  assert.match(page, /Idle means no work is currently expected/);
+  assert.match(docs, /Idle is healthy-neutral/);
+  assert.match(queries, /\| "idle"/);
+
   assert.equal(
     flowStatus({
       evidenceCount: 0,
@@ -300,6 +311,20 @@ test("critical flow health keeps missing telemetry unknown instead of fake green
     }),
     "down",
   );
+});
+
+test("generalized capability instrumentation covers auth, resident access, onboarding, and activation email", () => {
+  assert.match(capabilityInstrumentation, /'AUTH_LOGIN'/);
+  assert.match(capabilityInstrumentation, /'GUARD'/);
+  assert.match(capabilityInstrumentation, /'VISIT_GROUP_CREATED'/);
+  assert.match(capabilityInstrumentation, /'FREQUENT_ACCESS_CREATED'/);
+  assert.match(capabilityInstrumentation, /'ONBOARDING_ACTIVATED'/);
+  assert.match(capabilityInstrumentation, /'ONBOARDING_ACTIVATION_FAILED'/);
+  assert.match(activationEmailActions, /ACTIVATION_EMAIL_SENT/);
+  assert.match(activationEmailActions, /ACTIVATION_EMAIL_FAILED/);
+  assert.match(activationEmailActions, /p_module: "notifications"/);
+  assert.doesNotMatch(activationEmailActions, /p_details:[\s\S]{0,400}item\.email/);
+  assert.doesNotMatch(activationEmailActions, /p_details:[\s\S]{0,400}item\.pin/);
 });
 
 test("incidents are grouped from recurring failures with community impact", () => {

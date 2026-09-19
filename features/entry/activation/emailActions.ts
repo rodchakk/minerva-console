@@ -111,7 +111,7 @@ export async function sendActivationEmails(input: {
   communityName: string;
   queueIds: string[];
 }): Promise<SendEmailInviteResult> {
-  await requireSuperadmin();
+  const { user } = await requireSuperadmin();
   const previewReadOnlyError = getEntryPreviewReadOnlyError();
 
   if (previewReadOnlyError) {
@@ -137,6 +137,53 @@ export async function sendActivationEmails(input: {
   }
 
   const resend = new Resend(apiKey);
+  const supabase = await createClient();
+
+  const recordActivationEmailTelemetry = async (telemetry: {
+    durationMs: number;
+    providerMessageId?: string | null;
+    queueId: string;
+    status: "success" | "failed";
+  }) => {
+    try {
+      const { error } = await supabase.rpc("log_system_event", {
+        p_actor_id: user.id,
+        p_community_id: communityId,
+        p_correlation_id: telemetry.queueId,
+        p_details: {
+          duration_ms: telemetry.durationMs,
+          error_code:
+            telemetry.status === "failed" ? "ACTIVATION_EMAIL_FAILED" : null,
+          provider: "resend",
+          provider_message_id: telemetry.providerMessageId ?? null,
+          status: telemetry.status,
+        },
+        p_entity_id: telemetry.queueId,
+        p_entity_type: "resident_activation_queue",
+        p_event_type:
+          telemetry.status === "success"
+            ? "ACTIVATION_EMAIL_SENT"
+            : "ACTIVATION_EMAIL_FAILED",
+        p_message:
+          telemetry.status === "success"
+            ? "Activation email accepted by provider"
+            : "Activation email delivery failed",
+        p_module: "notifications",
+        p_severity: telemetry.status === "success" ? "INFO" : "ERROR",
+        p_source: "minerva_console_activation_email",
+        p_user_id: null,
+      });
+
+      if (error) {
+        console.warn("Activation email telemetry write failed", {
+          code: error.code ?? null,
+          queueId: telemetry.queueId,
+        });
+      }
+    } catch {
+      // Observability is best-effort and must never block activation delivery.
+    }
+  };
 
   // 1. Generate or retrieve PINs for all selected users
   const pinResult = await generateActivationPins({ communityId, queueIds });
@@ -195,8 +242,10 @@ export async function sendActivationEmails(input: {
       unitLabel: item.unit_label || "-",
     });
 
+    const providerStartedAt = Date.now();
+
     try {
-      const { error: resendError } = await resend.emails.send({
+      const { data: resendData, error: resendError } = await resend.emails.send({
         from: "ENTRY <no-reply@minervatechs.com>",
         to: [item.email],
         subject: emailContent.subject,
@@ -207,6 +256,13 @@ export async function sendActivationEmails(input: {
         throw new Error(resendError.message);
       }
 
+      await recordActivationEmailTelemetry({
+        durationMs: Date.now() - providerStartedAt,
+        providerMessageId: resendData?.id ?? null,
+        queueId: item.queue_id,
+        status: "success",
+      });
+
       sent_count++;
       successfullyInvitedIds.push(item.queue_id);
       emailResults.push({
@@ -215,6 +271,12 @@ export async function sendActivationEmails(input: {
         status: "sent",
       });
     } catch (err) {
+      await recordActivationEmailTelemetry({
+        durationMs: Date.now() - providerStartedAt,
+        queueId: item.queue_id,
+        status: "failed",
+      });
+
       failed_count++;
       emailResults.push({
         queue_id: item.queue_id,
@@ -228,7 +290,6 @@ export async function sendActivationEmails(input: {
   // 3. Update status in database for those who successfully received an email
   if (successfullyInvitedIds.length > 0) {
     try {
-      const supabase = await createClient();
       const inviteSentAt = new Date().toISOString();
       // Resends move invite_sent_at to the latest successful accepted delivery.
       const { error: queueUpdateError } = await supabase

@@ -23,7 +23,7 @@ The dashboard uses `sa_get_entry_observability_v1(starts_at, ends_at,
 community_id)` as its server-side read model. The RPC is superadmin-only,
 bounded to 31 days, and returns summarized JSON for the browser.
 
-The Notifications drill-down uses
+The Communications drill-down uses
 `sa_get_entry_notification_observability_v1(starts_at, ends_at, community_id,
 limit)` as a separate superadmin-only read model. It is also bounded to 31 days,
 clamps `limit` to 200 rows, and returns normalized notification events rather
@@ -43,54 +43,79 @@ different operator question.
 
 ## Critical Flows
 
-The dashboard tracks:
+The dashboard tracks stable ENTRY product capabilities rather than individual
+endpoints or implementation details:
 
-- Create pass
-- Validate QR
-- Resident login
-- Registration
-- Image OCR
-- Notifications
+- Authentication
+- Onboarding
+- Resident access
+- Gate access
+- Communications
+- Vision & recognition
+
+Capability ownership:
+
+- **Authentication** covers successful ENTRY sign-ins for active resident,
+  guard, and community-admin memberships, plus future authentication failures.
+- **Onboarding** covers community registration, conversion, resident activation,
+  and activation outcomes.
+- **Resident access** covers visitor passes, visit groups, self access, frequent
+  access, and the resident-to-home context required by those operations.
+- **Gate access** covers successful gate entries across QR, PIN, self, manual,
+  and other access methods, plus explicit gate validation/rejection failures.
+- **Communications** covers push, activation email, onboarding email, queue and
+  worker health, and future delivery channels.
+- **Vision & recognition** covers plate OCR, image queues, provider calls, and
+  future image-recognition capabilities.
 
 Health states are:
 
 - Healthy: recent successful evidence exists and no meaningful current failure
   signal exists.
-- Degraded: the flow has successes but elevated recent failures, or has a small
-  amount of failure evidence without enough evidence to call it down.
-- Down: recent attempts are consistently failing.
-- Unknown: there is insufficient telemetry.
+- Degraded: the capability has meaningful failure evidence or a current
+  integrity/worker condition that requires review.
+- Down: the capability has sustained failures or a current condition that makes
+  it unusable for the selected scope.
+- Idle: a workload-driven capability has no active work and no failure evidence.
+  Idle is healthy-neutral and does not make global System status Unknown.
+- Unknown: the capability should be observable, but there is insufficient
+  evidence to make a health claim.
 
-No telemetry must stay Unknown. Low-volume communities are not marked Down only
-because no one used a feature recently.
+No telemetry must stay Unknown for continuous capabilities. Low-volume
+communities are not marked Down only because nobody used a feature recently.
 
-The Notifications row links to `/products/entry/observability/notifications`
-with the current range and community filter preserved. The drill-down is the
-operational surface for queue, worker, provider, and onboarding-email evidence;
-the overview remains a summary.
+Onboarding and Vision & recognition are workload-driven. A completed onboarding
+period or a quiet OCR queue should become Idle, not Degraded or Unknown.
+
+Resident access includes a read-time integrity check for active residents. The
+check requires a valid active primary-house relationship matching
+`profiles.house_id`. Any invalid resident context immediately degrades Resident
+access and produces a `RESIDENT_HOUSE_CONTEXT_INVALID` incident without waiting
+for a user to discover the problem.
+
+Communications includes the existing delivery evidence and the durable
+notification-worker heartbeat. A stale or failing worker degrades the capability
+even when older delivery events were successful. Direct activation emails sent
+from Minerva Console emit privacy-minimized `ACTIVATION_EMAIL_SENT` /
+`ACTIVATION_EMAIL_FAILED` telemetry.
+
+The Communications row links to
+`/products/entry/observability/notifications` with the current range and
+community filter preserved. The route name remains for compatibility; the UI
+surface is Communications.
 
 Global system health is intentionally conservative:
 
-1. Down if meaningful critical-flow evidence says a flow is Down.
-2. Degraded if a flow is Degraded, or if a meaningful ERROR/CRITICAL incident
-   is active.
-3. Unknown if any critical flow still lacks enough classified evidence for a
-   system-wide health claim.
-4. Healthy only when every critical flow has enough evidence and none is Down or
-   Degraded.
+1. Down if meaningful capability evidence says a continuous capability is Down.
+2. Degraded if a capability is Degraded, or if a meaningful ERROR/CRITICAL
+   incident is active.
+3. Unknown if a non-Idle capability still lacks enough classified evidence for
+   a system-wide health claim.
+4. Healthy when every non-Idle capability has enough evidence and none is Down
+   or Degraded.
 
-The v1 SQL helper `_entry_observability_flow_status_v1` centralizes the basic
-thresholds. If thresholds change, update that helper and this document together.
-
-QR validation health is method-specific. `entry_logs.method = 'QR'` can provide
-successful QR evidence. `PIN`, `SELF`, and `MANUAL` access events remain tracked
-activity, but they do not prove that QR validation is working.
-
-Registration health uses explicit event classification. Resident/public
-submission and unit activation workflow events can provide success evidence;
-known conversion blockers/failures provide failure evidence. Setup, admin,
-token, campaign, and access-management events remain unclassified activity and
-must not make Registration Healthy.
+QR, PIN, SELF, MANUAL, and frequent-access events remain distinguishable in
+their source records even though the top-level capability is Gate access.
 
 ## Incident Grouping
 
@@ -240,7 +265,7 @@ event. The queue row remains the fallback for historical deliveries that
 predate the instrumentation, so one real queue delivery attempt produces one
 drill-down event instead of a queue row plus duplicate telemetry.
 
-The notification drill-down summary uses the same health semantics as the
+The communications drill-down summary uses the same health semantics as the
 parent Critical Flow helper `_entry_observability_flow_status_v1`. Failures can
 drive Degraded or Down only under that shared failure-count and failure-rate
 logic. Skipped rows, including `PUSH_NO_ACTIVE_TOKENS`, stay visible as
