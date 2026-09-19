@@ -276,6 +276,7 @@ async function logEvent(
       source: 'smart-service',
     })
   } catch {
+    // Observability must never block notification processing.
   }
 }
 
