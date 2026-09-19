@@ -7,8 +7,16 @@
     "summary": "Reconnaissance mission that selected the hybrid Brain placement: UI in Minerva Console, content in content/brain, and a typed loader under features/brain.",
     "created": "2026-06-16",
     "updated": "2026-06-16",
-    "tags": ["brain", "mission", "recon", "architecture"],
-    "related": ["DEC-0001", "DEC-0002"],
+    "tags": [
+      "brain",
+      "mission",
+      "recon",
+      "architecture"
+    ],
+    "related": [
+      "DEC-0001",
+      "DEC-0002"
+    ],
     "path": "content/brain/missions/mcb-0001.md",
     "agent": "human",
     "branch": "",
@@ -24,8 +32,17 @@
     "summary": "Scaffolded the Brain content tree, registries, feature module, console routes, sidebar grouping, and initial read-only shell.",
     "created": "2026-06-16",
     "updated": "2026-06-16",
-    "tags": ["brain", "mission", "shell", "v0"],
-    "related": ["MCB-0001", "DEC-0001", "DEC-0002"],
+    "tags": [
+      "brain",
+      "mission",
+      "shell",
+      "v0"
+    ],
+    "related": [
+      "MCB-0001",
+      "DEC-0001",
+      "DEC-0002"
+    ],
     "path": "content/brain/missions/mcb-0002.md",
     "agent": "codex",
     "branch": "mcb-0002-brain-shell-ci",
@@ -41,8 +58,15 @@
     "summary": "Added the Brain guardrail script and CI workflow checks to enforce Brain boundaries and registry completeness.",
     "created": "2026-06-16",
     "updated": "2026-06-16",
-    "tags": ["brain", "mission", "guardrails", "ci"],
-    "related": ["MCB-0002"],
+    "tags": [
+      "brain",
+      "mission",
+      "guardrails",
+      "ci"
+    ],
+    "related": [
+      "MCB-0002"
+    ],
     "path": "content/brain/missions/mcb-0002-5.md",
     "agent": "codex",
     "branch": "mcb-0002-brain-shell-ci",
@@ -58,8 +82,16 @@
     "summary": "Adjusted the TypeScript CI check after the static shell and guardrails landed on the Brain shell branch.",
     "created": "2026-06-16",
     "updated": "2026-06-16",
-    "tags": ["brain", "mission", "typescript", "ci"],
-    "related": ["MCB-0002", "MCB-0002.5"],
+    "tags": [
+      "brain",
+      "mission",
+      "typescript",
+      "ci"
+    ],
+    "related": [
+      "MCB-0002",
+      "MCB-0002.5"
+    ],
     "path": "content/brain/missions/mcb-0002-7.md",
     "agent": "codex",
     "branch": "mcb-0002-brain-shell-ci",
@@ -75,8 +107,15 @@
     "summary": "Added Markdown document rendering and generic Brain detail routes for registry entries with linked source documents.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "markdown", "routes"],
-    "related": ["MCB-0002"],
+    "tags": [
+      "brain",
+      "mission",
+      "markdown",
+      "routes"
+    ],
+    "related": [
+      "MCB-0002"
+    ],
     "path": "content/brain/missions/mcb-0003.md",
     "agent": "codex",
     "branch": "mcb-0003-brain-markdown-reader",
@@ -92,8 +131,15 @@
     "summary": "Added a local CLI for capturing raw outputs into the Git-backed Brain inbox with registry updates and handoff documentation.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "inbox", "cli"],
-    "related": ["MCB-0003"],
+    "tags": [
+      "brain",
+      "mission",
+      "inbox",
+      "cli"
+    ],
+    "related": [
+      "MCB-0003"
+    ],
     "path": "content/brain/missions/mcb-0004.md",
     "agent": "codex",
     "branch": "mcb-0004-brain-inbox-capture-clean",
@@ -109,8 +155,16 @@
     "summary": "Added local read-only search across Brain registries and Markdown documents, plus a tag index page.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "search", "tags"],
-    "related": ["MCB-0003", "MCB-0004"],
+    "tags": [
+      "brain",
+      "mission",
+      "search",
+      "tags"
+    ],
+    "related": [
+      "MCB-0003",
+      "MCB-0004"
+    ],
     "path": "content/brain/missions/mcb-0005.md",
     "agent": "codex",
     "branch": "mcb-0005-brain-search-tag-index",
@@ -126,8 +180,16 @@
     "summary": "Added a local promotion CLI that turns reviewed inbox items into approved Brain knowledge without UI write paths.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "promotion", "workflow"],
-    "related": ["MCB-0004", "MCB-0005"],
+    "tags": [
+      "brain",
+      "mission",
+      "promotion",
+      "workflow"
+    ],
+    "related": [
+      "MCB-0004",
+      "MCB-0005"
+    ],
     "path": "content/brain/missions/mcb-0006.md",
     "agent": "codex",
     "branch": "mcb-0006-brain-promotion-workflow",
@@ -143,8 +205,15 @@
     "summary": "Create a Git-backed mission ledger so Brain missions are first-class read-only knowledge in Minerva Core Brain.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "ledger", "project-control"],
-    "related": ["MCB-0006"],
+    "tags": [
+      "brain",
+      "mission",
+      "ledger",
+      "project-control"
+    ],
+    "related": [
+      "MCB-0006"
+    ],
     "path": "content/brain/missions/mcb-0007.md",
     "agent": "codex",
     "branch": "mcb-0007-brain-mission-control-ledger",
@@ -160,8 +229,15 @@
     "summary": "Added a Brain relations map deriving outgoing relations, incoming backlinks, and broken references from registry related arrays, with read-only views and a CLI/guardrail relation check.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "relations", "map"],
-    "related": ["MCB-0007"],
+    "tags": [
+      "brain",
+      "mission",
+      "relations",
+      "map"
+    ],
+    "related": [
+      "MCB-0007"
+    ],
     "path": "content/brain/missions/mcb-0008.md",
     "agent": "unknown",
     "branch": "unknown",
@@ -177,8 +253,15 @@
     "summary": "Audit of Brain v0 with minimal, safe fixes: added triaged to guardrail inbox statuses, made brain-new-mission emit date-only YYYY-MM-DD timestamps, and corrected the stale MCB-0007 ledger entry to completed.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "audit", "hardening"],
-    "related": ["MCB-0008"],
+    "tags": [
+      "brain",
+      "mission",
+      "audit",
+      "hardening"
+    ],
+    "related": [
+      "MCB-0008"
+    ],
     "path": "content/brain/missions/mcb-0009.md",
     "agent": "claude",
     "branch": "unknown",
@@ -194,8 +277,16 @@
     "summary": "Registered the previously unrecorded MCB-0008 Relations Map mission in the Brain mission ledger, marking it completed and setting its unverifiable branch/agent to unknown.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "ledger", "completion"],
-    "related": ["MCB-0008", "MCB-0009"],
+    "tags": [
+      "brain",
+      "mission",
+      "ledger",
+      "completion"
+    ],
+    "related": [
+      "MCB-0008",
+      "MCB-0009"
+    ],
     "path": "content/brain/missions/mcb-0010.md",
     "agent": "claude",
     "branch": "unknown",
@@ -211,8 +302,16 @@
     "summary": "Registers MCB-0009 in the Mission Ledger with verified PR, commit, and agent metadata; branch remains unknown because no reliable current branch evidence is available.",
     "created": "2026-06-17",
     "updated": "2026-06-17",
-    "tags": ["brain", "mission", "ledger", "audit"],
-    "related": ["MCB-0009", "MCB-0010"],
+    "tags": [
+      "brain",
+      "mission",
+      "ledger",
+      "audit"
+    ],
+    "related": [
+      "MCB-0009",
+      "MCB-0010"
+    ],
     "path": "content/brain/missions/mcb-0011.md",
     "agent": "claude",
     "branch": "unknown",
@@ -228,8 +327,16 @@
     "summary": "Hardened the Mission Ledger against drift: registered MCB-0010 and MCB-0011, added guardrail CHECK 7 (every mission doc must have a registry entry), documented the unverifiable-field convention, and corrected the contradictory MCB-0011 summary.",
     "created": "2026-06-23",
     "updated": "2026-06-23",
-    "tags": ["brain", "mission", "ledger", "guardrails"],
-    "related": ["MCB-0010", "MCB-0011"],
+    "tags": [
+      "brain",
+      "mission",
+      "ledger",
+      "guardrails"
+    ],
+    "related": [
+      "MCB-0010",
+      "MCB-0011"
+    ],
     "path": "content/brain/missions/mcb-0012.md",
     "agent": "unknown",
     "branch": "unknown",
@@ -245,8 +352,15 @@
     "summary": "Repaired the CI quality gate by fixing the broken YAML indentation in the typecheck job of .github/workflows/ci.yml so the TypeScript check runs as a real blocking step again.",
     "created": "2026-06-24",
     "updated": "2026-06-24",
-    "tags": ["brain", "mission", "ci", "gate"],
-    "related": ["MCB-0012"],
+    "tags": [
+      "brain",
+      "mission",
+      "ci",
+      "gate"
+    ],
+    "related": [
+      "MCB-0012"
+    ],
     "path": "content/brain/missions/mcb-0013.md",
     "agent": "unknown",
     "branch": "unknown",
@@ -262,8 +376,17 @@
     "summary": "Creates the minimal Markdown-first AI mission loop structure for coordinating agents through mission folders, reports, templates, roles, protocol, and operator guidance.",
     "created": "2026-06-24",
     "updated": "2026-06-24",
-    "tags": ["brain", "mission", "loop", "agents", "workflow"],
-    "related": ["MCB-0012", "MCB-0013"],
+    "tags": [
+      "brain",
+      "mission",
+      "loop",
+      "agents",
+      "workflow"
+    ],
+    "related": [
+      "MCB-0012",
+      "MCB-0013"
+    ],
     "path": "content/brain/missions/mcb-0014.md",
     "agent": "claude",
     "branch": "unknown",
@@ -279,8 +402,17 @@
     "summary": "Registered MCB-0014 in the Mission Ledger, closed pre-existing drift by registering MCB-0012 and MCB-0013, and clarified the MERGE APPROVED vs DIRECT PUSH APPROVED rules in the loop docs. First mission merged via GitHub CLI.",
     "created": "2026-06-28",
     "updated": "2026-06-28",
-    "tags": ["brain", "mission", "ledger", "workflow"],
-    "related": ["MCB-0012", "MCB-0013", "MCB-0014"],
+    "tags": [
+      "brain",
+      "mission",
+      "ledger",
+      "workflow"
+    ],
+    "related": [
+      "MCB-0012",
+      "MCB-0013",
+      "MCB-0014"
+    ],
     "path": "content/brain/missions/mcb-0015.md",
     "agent": "claude",
     "branch": "unknown",
@@ -296,8 +428,16 @@
     "summary": "Brain v0 closeout: added the context export script and its output, wrote the initial ENTRY Knowledge Pack, registered MCB-0015 in the ledger, produced loop dry-run artifacts (brief + agent report), and added the Brain v0 freeze note.",
     "created": "2026-06-28",
     "updated": "2026-06-28",
-    "tags": ["brain", "mission", "closeout", "v0", "freeze"],
-    "related": ["MCB-0015"],
+    "tags": [
+      "brain",
+      "mission",
+      "closeout",
+      "v0",
+      "freeze"
+    ],
+    "related": [
+      "MCB-0015"
+    ],
     "path": "content/brain/missions/mcb-0016.md",
     "agent": "claude",
     "branch": "unknown",
@@ -313,8 +453,16 @@
     "summary": "Fable readiness audit for the Agent Operating Layer; identified ledger drift, missing scoped context packs, weak role contracts, unsynchronized state, and recommended MCB-0018 onward.",
     "created": "2026-07-02",
     "updated": "2026-07-02",
-    "tags": ["brain", "mission", "audit", "agent-operating-layer", "roadmap"],
-    "related": ["MCB-0016"],
+    "tags": [
+      "brain",
+      "mission",
+      "audit",
+      "agent-operating-layer",
+      "roadmap"
+    ],
+    "related": [
+      "MCB-0016"
+    ],
     "path": "content/brain/missions/mcb-0017.md",
     "agent": "fable",
     "branch": "unknown",
@@ -330,8 +478,18 @@
     "summary": "Repairs mission-ledger drift by registering MCB-0016 and MCB-0017, records DEC-0005 on why ENTRY-BRAIN-001 is not a mission ledger entry, adds the close-a-mission runbook, and seeds the repo-resident ROADMAP.md.",
     "created": "2026-07-02",
     "updated": "2026-07-02",
-    "tags": ["brain", "mission", "ledger", "runbook", "roadmap"],
-    "related": ["MCB-0016", "MCB-0017", "DEC-0005"],
+    "tags": [
+      "brain",
+      "mission",
+      "ledger",
+      "runbook",
+      "roadmap"
+    ],
+    "related": [
+      "MCB-0016",
+      "MCB-0017",
+      "DEC-0005"
+    ],
     "path": "content/brain/missions/mcb-0018.md",
     "agent": "claude",
     "branch": "unknown",
@@ -347,8 +505,16 @@
     "summary": "Added role-based (not model-based) contracts under loop/contracts/, converted ROLES.md into a role-contract index, and updated the loop templates to separate assigned role, assigned agent/model, and human merge owner.",
     "created": "2026-07-02",
     "updated": "2026-07-02",
-    "tags": ["brain", "mission", "contracts", "roles", "loop"],
-    "related": ["MCB-0018"],
+    "tags": [
+      "brain",
+      "mission",
+      "contracts",
+      "roles",
+      "loop"
+    ],
+    "related": [
+      "MCB-0018"
+    ],
     "path": "content/brain/missions/mcb-0019.md",
     "agent": "claude",
     "branch": "unknown",
@@ -364,8 +530,17 @@
     "summary": "Adds deterministic, zero-dependency scoped Brain context packs for full, mission, agent, project, review, and local handoffs while preserving the legacy monolithic context export.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
-    "tags": ["brain", "mission", "export", "context-packs"],
-    "related": ["MCB-0017", "MCB-0018", "MCB-0019"],
+    "tags": [
+      "brain",
+      "mission",
+      "export",
+      "context-packs"
+    ],
+    "related": [
+      "MCB-0017",
+      "MCB-0018",
+      "MCB-0019"
+    ],
     "path": "content/brain/missions/mcb-0020.md",
     "agent": "codex",
     "branch": "unknown",
@@ -381,8 +556,18 @@
     "summary": "Adds a deterministic, zero-dependency CLI that generates a single loop state snapshot from loop mission folders, missions.json, and ROADMAP.md.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
-    "tags": ["brain", "mission", "loop", "snapshot", "cli"],
-    "related": ["MCB-0018", "MCB-0019", "MCB-0020"],
+    "tags": [
+      "brain",
+      "mission",
+      "loop",
+      "snapshot",
+      "cli"
+    ],
+    "related": [
+      "MCB-0018",
+      "MCB-0019",
+      "MCB-0020"
+    ],
     "path": "content/brain/missions/mcb-0021.md",
     "agent": "codex",
     "branch": "unknown",
@@ -398,13 +583,54 @@
     "summary": "Strengthens loop processes with deterministic guardrails (folder structure, uniqueness, review reports, status mapping, contract checks) and review eval checklists.",
     "created": "2026-07-03",
     "updated": "2026-07-03",
-    "tags": ["brain", "mission", "loop", "guardrails", "evals"],
-    "related": ["MCB-0019", "MCB-0020", "MCB-0021"],
+    "tags": [
+      "brain",
+      "mission",
+      "loop",
+      "guardrails",
+      "evals"
+    ],
+    "related": [
+      "MCB-0019",
+      "MCB-0020",
+      "MCB-0021"
+    ],
     "path": "content/brain/missions/mcb-0022.md",
     "agent": "gemini",
     "branch": "unknown",
     "pr": "#25",
     "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
+  },
+  {
+    "id": "MCB-0024",
+    "title": "Brain Desktop Extraction & Local-First Foundation",
+    "type": "mission",
+    "status": "planned",
+    "summary": "Future-near mission to extract Brain from Minerva Console into an independent Windows/macOS desktop app: local processing and workspace awareness, cloud persistence, and model-agnostic context delivery for GPT, Claude, Codex, and future local AI.",
+    "created": "2026-09-19",
+    "updated": "2026-09-19",
+    "tags": [
+      "brain",
+      "mission",
+      "desktop",
+      "electron",
+      "local-first",
+      "context",
+      "memory",
+      "architecture"
+    ],
+    "related": [
+      "MCB-0020",
+      "MCB-0021",
+      "MCB-0022",
+      "MCB-0023"
+    ],
+    "path": "content/brain/missions/mcb-0024.md",
+    "agent": "unassigned",
+    "branch": "",
+    "pr": "",
+    "commit": "",
+    "phase": "planning"
   }
 ]
