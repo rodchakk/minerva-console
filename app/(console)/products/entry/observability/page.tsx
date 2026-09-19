@@ -14,10 +14,13 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { DiagnosticBundleControl } from "@/features/entry/observability/DiagnosticBundleControl";
 import { ObservabilityFilters } from "@/features/entry/observability/ObservabilityFilters";
 import {
+  getEntryDiagnosticSnapshots,
   getEntryObservability,
   normalizeEntryObservabilityRange,
+  type EntryDiagnosticSnapshotMeta,
   type EntryObservabilityData,
   type EntryObservabilityFlow,
   type EntryObservabilityIncident,
@@ -969,7 +972,109 @@ function IncidentHistoryPanel({ data }: { data: EntryObservabilityData }) {
   );
 }
 
-function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
+
+function DiagnosticSnapshotsPanel({
+  snapshots,
+}: {
+  snapshots: EntryDiagnosticSnapshotMeta[];
+}) {
+  return (
+    <Panel>
+      <PanelHeader
+        description="Saved troubleshooting packages. ERROR/CRITICAL incidents automatically capture detection and recovery snapshots."
+        icon={FileJson}
+        title="Diagnostic snapshots"
+      />
+      {snapshots.length === 0 ? (
+        <EmptyPanelState
+          description="Manual saved diagnostics and automatic incident snapshots will appear here."
+          title="No saved diagnostics yet"
+        />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <tr>
+                <th className="px-5 py-3 font-medium">Reference</th>
+                <th className="px-4 py-3 font-medium">Trigger</th>
+                <th className="px-4 py-3 font-medium">Community</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 font-medium">Captured</th>
+                <th className="px-4 py-3 font-medium">Window</th>
+                <th className="px-5 py-3 font-medium">Bundle</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[var(--console-border)]">
+              {snapshots.map((snapshot) => (
+                <tr key={snapshot.id} className="hover:bg-white/[0.02]">
+                  <td className="px-5 py-3">
+                    <p className="font-mono text-xs font-semibold text-violet-200">
+                      {snapshot.diagnosticRef}
+                    </p>
+                    {snapshot.notes ? (
+                      <p className="mt-1 max-w-sm truncate text-xs text-[var(--console-text-muted)]">
+                        {snapshot.notes}
+                      </p>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">
+                    {snapshot.triggerType === "incident_open"
+                      ? "Incident detected"
+                      : snapshot.triggerType === "incident_recovery"
+                        ? "Incident recovered"
+                        : "Manual"}
+                  </td>
+                  <td className="px-4 py-3 text-slate-300">
+                    {snapshot.communityName ?? "All / ENTRY system"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {snapshot.systemStatus ? (
+                      <span
+                        className={cn(
+                          "inline-flex rounded-md border px-2 py-1 text-xs font-semibold",
+                          statusCopy[snapshot.systemStatus].pill,
+                        )}
+                      >
+                        {statusCopy[snapshot.systemStatus].label}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--console-text-muted)]">Not recorded</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--console-text-muted)]">
+                    {formatRelative(snapshot.createdAt)}
+                  </td>
+                  <td className="px-4 py-3 text-[var(--console-text-muted)]">
+                    {formatDateTime(snapshot.startsAt)} → {formatDateTime(snapshot.endsAt)}
+                  </td>
+                  <td className="px-5 py-3">
+                    <a
+                      href={`/api/entry/observability/diagnostic?snapshot=${snapshot.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 text-sm font-semibold text-violet-200 transition-colors hover:text-violet-100"
+                    >
+                      Open JSON
+                      <ArrowRight className="h-4 w-4" />
+                    </a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
+function ObservabilityDashboard({
+  data,
+  diagnosticSnapshots,
+}: {
+  data: EntryObservabilityData;
+  diagnosticSnapshots: EntryDiagnosticSnapshotMeta[];
+}) {
   const status = statusCopy[data.summary.systemStatus];
   const hasUsageRecords = data.usage.summary.recordCount > 0;
   const notificationsParams = new URLSearchParams();
@@ -1059,6 +1164,8 @@ function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
 
       <IncidentHistoryPanel data={data} />
 
+      <DiagnosticSnapshotsPanel snapshots={diagnosticSnapshots} />
+
       <OcrQueue queue={data.ocrQueue} />
 
       <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(520px,0.85fr)]">
@@ -1080,12 +1187,20 @@ export default async function EntryObservabilityPage(props: {
   const communityId = Array.isArray(searchParams.community)
     ? searchParams.community[0]
     : searchParams.community;
-  const result = await getEntryObservability({
-    communityId: communityId ?? null,
-    range,
-  });
+  const [result, diagnosticSnapshotsResult] = await Promise.all([
+    getEntryObservability({
+      communityId: communityId ?? null,
+      range,
+    }),
+    getEntryDiagnosticSnapshots({
+      communityId: communityId ?? null,
+      limit: 12,
+    }),
+  ]);
 
   const communities = result.state === "ready" ? result.data.communities : [];
+  const diagnosticSnapshots =
+    diagnosticSnapshotsResult.state === "ready" ? diagnosticSnapshotsResult.data : [];
   const selectedCommunity =
     communityId && communities.some((community) => community.id === communityId)
       ? communityId
@@ -1097,11 +1212,18 @@ export default async function EntryObservabilityPage(props: {
         title="ENTRY observability"
         description="Operational health, incidents, usage, and cost visibility for ENTRY."
         actions={
-          <ObservabilityFilters
-            communities={communities}
-            communityId={selectedCommunity}
-            range={range}
-          />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <DiagnosticBundleControl
+              communities={communities}
+              communityId={selectedCommunity}
+              range={range}
+            />
+            <ObservabilityFilters
+              communities={communities}
+              communityId={selectedCommunity}
+              range={range}
+            />
+          </div>
         }
       />
 
@@ -1130,7 +1252,10 @@ export default async function EntryObservabilityPage(props: {
           </div>
         </Panel>
       ) : (
-        <ObservabilityDashboard data={result.data} />
+        <ObservabilityDashboard
+          data={result.data}
+          diagnosticSnapshots={diagnosticSnapshots}
+        />
       )}
     </div>
   );
