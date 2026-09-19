@@ -441,7 +441,10 @@ export function ConfirmationReportDrawer({
         </header>
 
         <div className="min-h-0 flex-1 overflow-auto bg-[#0a0c11] p-5">
-          <div className="mx-auto w-fit overflow-hidden rounded-xl border border-white/10 shadow-2xl">
+          <div
+            ref={reportRef}
+            className="mx-auto w-fit overflow-hidden rounded-xl border border-white/10 shadow-2xl"
+          >
             <ReportDocument report={report} />
           </div>
         </div>
