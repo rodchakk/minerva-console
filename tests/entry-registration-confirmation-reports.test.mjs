@@ -112,6 +112,16 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.doesNotMatch(drawer, /openai|image_gen|generative ai/i);
 });
 
+test("resident review cards rely on primary resident instead of relationship labels", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /Primary resident/);
+  assert.doesNotMatch(workspace, /resident\.relationshipToHouse/);
+  assert.doesNotMatch(workspace, /owner reference/);
+});
+
 test("activation handoff warns about missing email without disabling complete residents", () => {
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
