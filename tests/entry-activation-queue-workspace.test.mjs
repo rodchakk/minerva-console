@@ -24,11 +24,34 @@ test("Activation Queue exposes operational queue buckets and stage filters", () 
   assert.match(source, /Ready now/);
   assert.match(source, /Pending PIN/);
   assert.match(source, /Pending invite/);
+  assert.match(source, /Awaiting activation/);
   assert.match(source, /Activated/);
   assert.match(source, /Errors/);
   assert.match(source, /type QueueView/);
   assert.match(source, /matchesQueueView/);
   assert.match(source, /Activation queue filters/);
+});
+
+
+test("Activation Queue keeps pending invite distinct from awaiting activation", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(
+    source,
+    /case "pending_invite":[\s\S]*return row\.status === "pin_generated"/,
+  );
+  assert.match(
+    source,
+    /case "awaiting_activation":[\s\S]*return row\.status === "invited"/,
+  );
+  assert.match(
+    source,
+    /PIN is ready, but the invitation has not been sent yet\./,
+  );
+  assert.match(
+    source,
+    /Invitation sent; waiting for the resident to complete activation\./,
+  );
 });
 
 test("Activation Queue keeps the table and resident detail as independent scroll regions", () => {

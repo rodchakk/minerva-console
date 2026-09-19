@@ -762,6 +762,39 @@ function PerformancePanel({ data }: { data: EntryObservabilityData }) {
   );
 }
 
+function workerStatusClass(status: string) {
+  switch (status.trim().toLowerCase()) {
+    case "succeeded":
+      return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
+    case "running":
+      return "border-sky-400/20 bg-sky-500/[0.08] text-sky-200";
+    case "failed":
+      return "border-rose-400/24 bg-rose-500/[0.10] text-rose-200";
+    default:
+      return "border-white/10 bg-white/[0.04] text-slate-300";
+  }
+}
+
+function queueOpenClass(input: {
+  deliveryUnavailableCount: number;
+  failedCount: number;
+  openCount: number;
+}) {
+  if (input.failedCount > 0) {
+    return "border-rose-400/24 bg-rose-500/[0.10] text-rose-200";
+  }
+
+  if (input.deliveryUnavailableCount > 0) {
+    return "border-amber-400/22 bg-amber-500/[0.08] text-amber-200";
+  }
+
+  if (input.openCount > 0) {
+    return "border-violet-400/20 bg-violet-500/[0.08] text-violet-200";
+  }
+
+  return "border-emerald-400/18 bg-emerald-500/[0.07] text-emerald-200";
+}
+
 function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
   const infrastructure = data.infrastructure;
   const push = data.mobilePushDelivery;
@@ -773,92 +806,166 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
         icon={DatabaseZap}
         title="Operational infrastructure"
       />
-      <div className="grid gap-0 md:grid-cols-4">
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs text-[var(--console-text-muted)]">DB connections</p>
-          <p className="mt-2 text-2xl font-semibold text-white">{formatNumber(infrastructure.database.connections)}</p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+
+      <div className="grid gap-0 border-b border-[var(--console-border)] sm:grid-cols-2 xl:grid-cols-4">
+        <div className="border-b border-[var(--console-border)] px-4 py-3.5 sm:border-r xl:border-b-0">
+          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+            DB connections
+          </p>
+          <p className="mt-1.5 text-xl font-semibold text-white">
+            {formatNumber(infrastructure.database.connections)}
+          </p>
+          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
             {infrastructure.database.deadlocks} deadlocks · {infrastructure.database.conflicts} conflicts
           </p>
         </div>
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs text-[var(--console-text-muted)]">DB cache hit</p>
-          <p className="mt-2 text-2xl font-semibold text-white">
+
+        <div className="border-b border-[var(--console-border)] px-4 py-3.5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+            DB cache hit
+          </p>
+          <p className="mt-1.5 text-xl font-semibold text-white">
             {infrastructure.database.cacheHitPercent === null
               ? "No data"
               : `${infrastructure.database.cacheHitPercent.toFixed(1)}%`}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">PostgreSQL shared-buffer cache</p>
+          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
+            PostgreSQL shared-buffer cache
+          </p>
         </div>
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs text-[var(--console-text-muted)]">Mobile push delivery</p>
-          <p className="mt-2 text-2xl font-semibold text-white">{formatPercent(push.deliveryRate)}</p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+
+        <div className="border-b border-[var(--console-border)] px-4 py-3.5 sm:border-r sm:border-b-0">
+          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+            Mobile push delivery
+          </p>
+          <p className="mt-1.5 text-xl font-semibold text-white">
+            {formatPercent(push.deliveryRate)}
+          </p>
+          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
             {formatNumber(push.deliveredCount)} delivered / {formatNumber(push.failedCount)} failed
           </p>
         </div>
-        <div className="px-5 py-4">
-          <p className="text-xs text-[var(--console-text-muted)]">Receipt pending</p>
-          <p className="mt-2 text-2xl font-semibold text-white">{formatNumber(push.acceptedCount)}</p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+
+        <div className="px-4 py-3.5">
+          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+            Receipt pending
+          </p>
+          <p className="mt-1.5 text-xl font-semibold text-white">
+            {formatNumber(push.acceptedCount)}
+          </p>
+          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
             Last delivery {formatRelative(push.lastDeliveredAt)}
           </p>
         </div>
       </div>
 
-      <div className="grid border-t border-[var(--console-border)] xl:grid-cols-2">
-        <div className="border-b border-[var(--console-border)] xl:border-b-0 xl:border-r">
-          <div className="border-b border-[var(--console-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
-            Workers
+      <div className="grid xl:h-[clamp(22rem,42dvh,34rem)] xl:grid-cols-2">
+        <section className="flex min-h-0 flex-col border-b border-[var(--console-border)] xl:border-b-0 xl:border-r">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              Workers
+            </p>
+            <span className="rounded-md border border-white/8 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+              {formatNumber(infrastructure.workers.length)}
+            </span>
           </div>
-          <div className="divide-y divide-[var(--console-border)]">
-            {infrastructure.workers.map((worker) => (
-              <div key={worker.name} className="flex items-center justify-between gap-4 px-5 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-white">{sentenceLabel(worker.name)}</p>
-                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">{worker.schedule}</p>
-                </div>
-                <div className="text-right">
-                  <p className={cn(
-                    "text-xs font-semibold",
-                    worker.status === "succeeded" ? "text-emerald-300" : worker.status === "running" ? "text-sky-300" : "text-rose-300",
-                  )}>
-                    {sentenceLabel(worker.status)}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">{formatRelative(worker.lastFinishedAt ?? worker.lastStartedAt)}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        <div>
-          <div className="border-b border-[var(--console-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
-            Queues
-          </div>
-          <div className="divide-y divide-[var(--console-border)]">
-            {infrastructure.queues.map((queue) => (
-              <div key={queue.name} className="flex items-center justify-between gap-4 px-5 py-3">
-                <div>
-                  <p className="font-medium text-white">{queue.name}</p>
-                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">{sentenceLabel(queue.capability)}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-semibold text-white">
-                    {formatNumber(queue.openCount)} open
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--console-text-muted)]">
-                    {formatNumber(queue.failedCount)} system failed
-                    {queue.deliveryUnavailableCount > 0
-                      ? ` · ${formatNumber(queue.deliveryUnavailableCount)} delivery unavailable`
-                      : ""}
-                    {" · "}oldest {formatRelative(queue.oldestOpenAt)}
-                  </p>
-                </div>
+          <div className="min-h-0 flex-1 divide-y divide-[var(--console-border)] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] xl:max-h-none max-h-[28rem]">
+            {infrastructure.workers.length === 0 ? (
+              <div className="grid min-h-36 place-items-center px-5 text-center text-sm text-[var(--console-text-muted)]">
+                No worker telemetry recorded.
               </div>
-            ))}
+            ) : (
+              infrastructure.workers.map((worker) => (
+                <div
+                  key={worker.name}
+                  className="flex items-center justify-between gap-4 px-4 py-2.5 transition-colors hover:bg-white/[0.018]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-white" title={sentenceLabel(worker.name)}>
+                      {sentenceLabel(worker.name)}
+                    </p>
+                    <p className="mt-0.5 truncate font-mono text-[10px] text-[var(--console-text-muted)]" title={worker.schedule}>
+                      {worker.schedule}
+                    </p>
+                  </div>
+
+                  <div className="shrink-0 text-right">
+                    <span
+                      className={cn(
+                        "inline-flex rounded-md border px-2 py-0.5 text-[10px] font-semibold",
+                        workerStatusClass(worker.status),
+                      )}
+                    >
+                      {sentenceLabel(worker.status)}
+                    </span>
+                    <p className="mt-1 text-[10px] text-[var(--console-text-muted)]">
+                      {formatRelative(worker.lastFinishedAt ?? worker.lastStartedAt)}
+                    </p>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
-        </div>
+        </section>
+
+        <section className="flex min-h-0 flex-col">
+          <div className="flex shrink-0 items-center justify-between border-b border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              Queues
+            </p>
+            <span className="rounded-md border border-white/8 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold text-slate-300">
+              {formatNumber(infrastructure.queues.length)}
+            </span>
+          </div>
+
+          <div className="min-h-0 flex-1 divide-y divide-[var(--console-border)] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] xl:max-h-none max-h-[28rem]">
+            {infrastructure.queues.length === 0 ? (
+              <div className="grid min-h-36 place-items-center px-5 text-center text-sm text-[var(--console-text-muted)]">
+                No queue telemetry recorded.
+              </div>
+            ) : (
+              infrastructure.queues.map((queue) => (
+                <div
+                  key={queue.name}
+                  className="px-4 py-2.5 transition-colors hover:bg-white/[0.018]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-white" title={queue.name}>
+                        {queue.name}
+                      </p>
+                      <p className="mt-0.5 truncate text-[10px] text-[var(--console-text-muted)]">
+                        {sentenceLabel(queue.capability)}
+                      </p>
+                    </div>
+
+                    <span
+                      className={cn(
+                        "shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold",
+                        queueOpenClass(queue),
+                      )}
+                    >
+                      {formatNumber(queue.openCount)} open
+                    </span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--console-text-muted)]">
+                    <span className={queue.failedCount > 0 ? "font-semibold text-rose-200" : ""}>
+                      {formatNumber(queue.failedCount)} system failed
+                    </span>
+                    {queue.deliveryUnavailableCount > 0 ? (
+                      <span className="font-semibold text-amber-200">
+                        {formatNumber(queue.deliveryUnavailableCount)} delivery unavailable
+                      </span>
+                    ) : null}
+                    <span>Oldest {formatRelative(queue.oldestOpenAt)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
       </div>
     </Panel>
   );

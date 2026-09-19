@@ -618,6 +618,7 @@ type QueueView =
   | "ready"
   | "pending_pin"
   | "pending_invite"
+  | "awaiting_activation"
   | "activated"
   | "errors";
 
@@ -628,7 +629,9 @@ function matchesQueueView(row: ActivationQueueRow, view: QueueView) {
     case "pending_pin":
       return row.status === "pending";
     case "pending_invite":
-      return ["pin_generated", "invited"].includes(row.status);
+      return row.status === "pin_generated";
+    case "awaiting_activation":
+      return row.status === "invited";
     case "activated":
       return row.status === "activated";
     case "errors":
@@ -646,6 +649,8 @@ function getQueueViewLabel(view: QueueView) {
       return "Pending PIN";
     case "pending_invite":
       return "Pending invite";
+    case "awaiting_activation":
+      return "Awaiting activation";
     case "activated":
       return "Activated";
     case "errors":
@@ -772,6 +777,9 @@ export function ActivationQueueTable({
       activated: rows.filter((row) => matchesQueueView(row, "activated")).length,
       all: rows.length,
       errors: rows.filter((row) => matchesQueueView(row, "errors")).length,
+      awaiting_activation: rows.filter((row) =>
+        matchesQueueView(row, "awaiting_activation"),
+      ).length,
       pending_invite: rows.filter((row) =>
         matchesQueueView(row, "pending_invite"),
       ).length,
@@ -1134,7 +1142,7 @@ export function ActivationQueueTable({
           </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           <QueueMetric
             active={queueView === "ready"}
             description="Prepared residents still awaiting completion."
@@ -1155,12 +1163,21 @@ export function ActivationQueueTable({
           />
           <QueueMetric
             active={queueView === "pending_invite"}
-            description="PIN ready or invite sent; activation not complete."
+            description="PIN is ready, but the invitation has not been sent yet."
             icon={Mail}
             label="Pending invite"
             onClick={() => setQueueView("pending_invite")}
             tone="blue"
             value={queueCounts.pending_invite}
+          />
+          <QueueMetric
+            active={queueView === "awaiting_activation"}
+            description="Invitation sent; waiting for the resident to complete activation."
+            icon={Send}
+            label="Awaiting activation"
+            onClick={() => setQueueView("awaiting_activation")}
+            tone="violet"
+            value={queueCounts.awaiting_activation}
           />
           <QueueMetric
             active={queueView === "activated"}
@@ -1240,7 +1257,7 @@ export function ActivationQueueTable({
             <div className="border-b border-[var(--border)] px-3 py-3">
               <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Activation queue filters">
-                  {(["all", "ready", "pending_pin", "pending_invite", "activated", "errors"] as QueueView[]).map((view) => (
+                  {(["all", "ready", "pending_pin", "pending_invite", "awaiting_activation", "activated", "errors"] as QueueView[]).map((view) => (
                     <button
                       key={view}
                       type="button"
