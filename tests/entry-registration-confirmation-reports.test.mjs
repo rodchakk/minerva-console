@@ -61,6 +61,9 @@ test("registration review exposes multi-unit selection, live missing-data summar
   assert.match(workspace, /Datos faltantes/);
   assert.match(workspace, /ConfirmationReportDrawer/);
   assert.match(workspace, /loadCommunityRegistrationConfirmationReport/);
+  assert.match(workspace, /Seleccionar todas/);
+  assert.match(workspace, /sessionStorage/);
+  assert.match(workspace, /La selección se conserva/);
 });
 
 test("preview is deterministic DOM output with PNG and PDF export", () => {
@@ -75,6 +78,8 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.match(drawer, /pdf-lib/);
   assert.match(drawer, /Exportar PNG/);
   assert.match(drawer, /Exportar PDF/);
+  assert.match(drawer, /ref=\{reportRef\}/);
+  assert.match(drawer, /renderNodeToPng\(node\)/);
   assert.doesNotMatch(drawer, /openai|image_gen|generative ai/i);
 });
 
