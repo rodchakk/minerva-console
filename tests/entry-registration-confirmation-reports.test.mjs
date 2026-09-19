@@ -122,6 +122,20 @@ test("resident review cards rely on primary resident instead of relationship lab
   assert.doesNotMatch(workspace, /owner reference/);
 });
 
+test("resident registration uses a wider page-specific workspace on desktop", () => {
+  const page = read(
+    "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
+  );
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(page, /max-w-\[2200px\]/);
+  assert.match(page, /w-\[calc\(100vw-19rem\)\]/);
+  assert.match(workspace, /minmax\(320px,0\.64fr\)/);
+  assert.match(workspace, /minmax\(0,1\.56fr\)/);
+});
+
 test("activation handoff warns about missing email without disabling complete residents", () => {
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
