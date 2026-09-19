@@ -3,12 +3,16 @@ import { Home, QrCode, ShieldCheck, UserCircle } from "lucide-react";
 import { FieldNav } from "@/components/field/FieldNav";
 import { ENTRY_PREVIEW_READ_ONLY_MESSAGE } from "@/features/entry/deploymentBoundary";
 import { FieldActiveWorkTimerIndicator } from "@/features/entry/field/FieldActiveWorkTimerIndicator";
+import { FieldEntryHealthIndicator } from "@/features/entry/field/FieldEntryHealthIndicator";
 import type { FieldActiveWorkTimer } from "@/features/entry/field/workTimerModel";
+import type { EntryObservabilityStatus } from "@/features/entry/observability/queries";
 import { EntryPushSessionSync } from "@/features/entry/push/EntryPushSessionSync";
 
 type FieldShellProps = {
   activeWorkTimer?: FieldActiveWorkTimer | null;
   children: React.ReactNode;
+  entryHealthStatus?: EntryObservabilityStatus;
+  entryIncidentCount?: number;
   previewReadOnly?: boolean;
 };
 
@@ -21,6 +25,8 @@ const desktopNavItems = [
 export function FieldShell({
   activeWorkTimer = null,
   children,
+  entryHealthStatus = "unknown",
+  entryIncidentCount = 0,
   previewReadOnly = false,
 }: FieldShellProps) {
   return (
@@ -49,6 +55,11 @@ export function FieldShell({
             </Link>
 
             <FieldActiveWorkTimerIndicator session={activeWorkTimer} />
+
+            <FieldEntryHealthIndicator
+              incidentCount={entryIncidentCount}
+              status={entryHealthStatus}
+            />
 
             <nav aria-label="Field sections" className="hidden items-center gap-1 md:flex">
               {desktopNavItems.map((item) => {

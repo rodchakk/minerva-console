@@ -78,23 +78,35 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
   const community = asRecord(bundle.community);
   const range = asRecord(bundle.range);
   const observability = asRecord(bundle.observability);
+  const currentObservability = asRecord(bundle.current_observability);
   const performance = asRecord(observability.performance);
   const performanceSummary = asRecord(performance.summary);
-  const infrastructure = asRecord(observability.infrastructure);
-  const queues = asArray(infrastructure.queues).map(asRecord);
-  const incidents = asArray(observability.incidents).map(asRecord);
-  const flows = asArray(observability.critical_flows).map(asRecord);
+  const currentIncidents = asArray(bundle.current_incidents).map(asRecord);
+  const historicalSignals = asArray(bundle.historical_failure_signals).map(asRecord);
+  const currentFlows = asArray(currentObservability.critical_flows).length
+    ? asArray(currentObservability.critical_flows).map(asRecord)
+    : asArray(observability.critical_flows).map(asRecord);
+  const queueHealth = asRecord(bundle.queue_health);
+
+  const currentStatus = String(triage.system_status || "unknown").toUpperCase();
+  const windowStatus = String(triage.window_status || triage.system_status || "unknown").toUpperCase();
 
   const lines = [
     "ENTRY Diagnostic",
     `Community: ${String(community.name || "All communities")}`,
     `Window: ${String(range.starts_at || "?")} → ${String(range.ends_at || "?")}`,
-    `System: ${String(triage.system_status || "unknown").toUpperCase()}`,
-    "",
-    `Active incidents: ${incidents.length}`,
+    `Current system: ${currentStatus}`,
   ];
 
-  for (const incident of incidents.slice(0, 8)) {
+  if (windowStatus !== currentStatus) {
+    lines.push(
+      `Selected-window health: ${windowStatus} (historical activity in this window; not necessarily current)`,
+    );
+  }
+
+  lines.push("", `Current incidents: ${currentIncidents.length}`);
+
+  for (const incident of currentIncidents.slice(0, 8)) {
     lines.push(
       `- ${String(incident.error_code || incident.event_type || "Incident")} [${String(
         incident.severity || "INFO",
@@ -102,14 +114,28 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
     );
   }
 
-  lines.push("", "Critical flows:");
-  for (const flow of flows) {
+  if (historicalSignals.length > 0) {
+    lines.push(
+      "",
+      `Historical failure signals in selected window: ${historicalSignals.length} (not currently open)`,
+    );
+    for (const incident of historicalSignals.slice(0, 6)) {
+      lines.push(
+        `- ${String(incident.error_code || incident.event_type || "Historical signal")} [${String(
+          incident.severity || "INFO",
+        )}]`,
+      );
+    }
+  }
+
+  lines.push("", "Critical flows (current):");
+  for (const flow of currentFlows) {
     lines.push(`- ${String(flow.label || flow.key || "Flow")}: ${String(flow.status || "unknown")}`);
   }
 
   lines.push(
     "",
-    "Performance:",
+    "Performance (selected window):",
     `- p50: ${performanceSummary.p50_ms ?? "n/a"} ms`,
     `- p95: ${performanceSummary.p95_ms ?? "n/a"} ms`,
     `- p99: ${performanceSummary.p99_ms ?? "n/a"} ms`,
@@ -117,12 +143,50 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
     "Queues:",
   );
 
-  for (const queue of queues) {
+  const mobilePush = asRecord(queueHealth.mobile_push);
+  const activation = asRecord(queueHealth.activation);
+  const ocr = asRecord(queueHealth.ocr);
+
+  if (Object.keys(activation).length > 0) {
     lines.push(
-      `- ${String(queue.name || "Queue")}: ${String(queue.open_count ?? 0)} open / ${String(
-        queue.failed_count ?? 0,
-      )} failed`,
+      `- Activation queue: ${String(activation.open_count ?? 0)} open / ${String(
+        activation.system_failed_count ?? 0,
+      )} system failed`,
     );
+  }
+
+  if (Object.keys(mobilePush).length > 0) {
+    lines.push(
+      `- Mobile push queue: ${String(mobilePush.open_count ?? 0)} open / ${String(
+        mobilePush.system_failed_count ?? 0,
+      )} system failed / ${String(
+        mobilePush.delivery_unavailable_count ?? 0,
+      )} delivery unavailable (no active device)`,
+    );
+  }
+
+  if (Object.keys(ocr).length > 0) {
+    lines.push(
+      `- OCR queue: ${String(ocr.open_count ?? 0)} open / ${String(
+        ocr.system_failed_count ?? 0,
+      )} system failed`,
+    );
+  }
+
+  if (
+    Object.keys(activation).length === 0 &&
+    Object.keys(mobilePush).length === 0 &&
+    Object.keys(ocr).length === 0
+  ) {
+    const infrastructure = asRecord(observability.infrastructure);
+    const queues = asArray(infrastructure.queues).map(asRecord);
+    for (const queue of queues) {
+      lines.push(
+        `- ${String(queue.name || "Queue")}: ${String(queue.open_count ?? 0)} open / ${String(
+          queue.failed_count ?? 0,
+        )} failed`,
+      );
+    }
   }
 
   return lines.join("\n");

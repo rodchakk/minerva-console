@@ -131,6 +131,7 @@ export type EntryObservabilityWorker = {
 
 export type EntryObservabilityQueueHealth = {
   capability: string;
+  deliveryUnavailableCount: number;
   failedCount: number;
   name: string;
   oldestOpenAt: string | null;
@@ -720,6 +721,7 @@ function mapInfrastructure(value: unknown): EntryObservabilityData["infrastructu
       const queue = isRecord(item) ? item : {};
       return {
         capability: asString(queue.capability, "unknown"),
+        deliveryUnavailableCount: asNumber(queue.delivery_unavailable_count),
         failedCount: asNumber(queue.failed_count),
         name: asString(queue.name, "Queue"),
         oldestOpenAt: asNullableString(queue.oldest_open_at),
@@ -969,7 +971,7 @@ export async function getEntryObservability(input: {
   const endsAt = new Date().toISOString();
   const communityId = input.communityId?.trim() || null;
 
-  const { data, error } = await supabase.rpc("sa_get_entry_observability_v4", {
+  const { data, error } = await supabase.rpc("sa_get_entry_observability_v5", {
     p_community_id: communityId,
     p_ends_at: endsAt,
     p_starts_at: startsAt,

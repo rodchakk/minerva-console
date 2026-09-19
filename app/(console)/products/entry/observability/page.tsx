@@ -848,7 +848,11 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
                     {formatNumber(queue.openCount)} open
                   </p>
                   <p className="mt-1 text-xs text-[var(--console-text-muted)]">
-                    {formatNumber(queue.failedCount)} failed · oldest {formatRelative(queue.oldestOpenAt)}
+                    {formatNumber(queue.failedCount)} system failed
+                    {queue.deliveryUnavailableCount > 0
+                      ? ` · ${formatNumber(queue.deliveryUnavailableCount)} delivery unavailable`
+                      : ""}
+                    {" · "}oldest {formatRelative(queue.oldestOpenAt)}
                   </p>
                 </div>
               </div>

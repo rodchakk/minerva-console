@@ -36,6 +36,12 @@ const expirationMigration = read(
 const diagnosticMigration = read(
   "supabase/migrations/20260919071405_entry_diagnostic_bundles.sql",
 );
+const diagnosticTruthMigration = read(
+  "supabase/migrations/20260919075037_entry_diagnostic_truth_hardening.sql",
+);
+const queueOutcomeMigration = read(
+  "supabase/migrations/20260919075210_entry_observability_queue_outcome_truth.sql",
+);
 const diagnosticApi = read("app/api/entry/observability/diagnostic/route.ts");
 const diagnosticControl = read(
   "features/entry/observability/DiagnosticBundleControl.tsx",
@@ -291,7 +297,7 @@ test("read model is superadmin-only, bounded, and server-side aggregated", () =>
   assert.match(capabilityMigration, /v_end - v_start > interval '31 days'/);
   assert.match(capabilityMigration, /returns jsonb/);
   assert.match(capabilityMigration, /public\.sa_get_entry_observability_v1/);
-  assert.match(queries, /supabase\.rpc\("sa_get_entry_observability_v4"/);
+  assert.match(queries, /supabase\.rpc\("sa_get_entry_observability_v5"/);
   assert.doesNotMatch(page, /\.from\("system_event_log"\)/);
   assert.doesNotMatch(page, /\.from\("entry_usage_ledger"\)/);
 });
@@ -614,6 +620,30 @@ test("diagnostic snapshots preserve incident detection and recovery fail-open", 
   assert.match(diagnosticMigration, /now\(\) \+ interval '180 days'/);
   assert.match(diagnosticMigration, /Diagnostics are fail-open and must never interfere with incident reconciliation/);
   assert.match(diagnosticMigration, /delete from public\.entry_diagnostic_snapshots[\s\S]*expires_at < now\(\)/);
+});
+
+
+test("diagnostic truth separates current incidents from historical selected-window signals", () => {
+  assert.match(diagnosticTruthMigration, /'current_incidents'/);
+  assert.match(diagnosticTruthMigration, /'historical_failure_signals'/);
+  assert.match(diagnosticTruthMigration, /'window_status'/);
+  assert.match(diagnosticTruthMigration, /v_current_start := greatest\(v_start, v_end - interval '6 hours'\)/);
+  assert.match(diagnosticTruthMigration, /i\.status = 'open'/);
+  assert.match(diagnosticControl, /Current incidents:/);
+  assert.match(diagnosticControl, /Historical failure signals in selected window:/);
+  assert.match(diagnosticControl, /not currently open/);
+  assert.match(diagnosticControl, /Selected-window health:/);
+});
+
+test("push queue truth does not count missing-device delivery as a system failure", () => {
+  assert.match(queueOutcomeMigration, /create or replace function public\.sa_get_entry_observability_v5/);
+  assert.match(queueOutcomeMigration, /No active push tokens found for audience/);
+  assert.match(queueOutcomeMigration, /delivery_unavailable_count/);
+  assert.match(queueOutcomeMigration, /failed_count/);
+  assert.match(queries, /deliveryUnavailableCount/);
+  assert.match(page, /system failed/);
+  assert.match(page, /delivery unavailable/);
+  assert.match(diagnosticControl, /delivery unavailable \(no active device\)/);
 });
 
 test("diagnostic UI supports copy, download, save, custom windows, and saved references", () => {

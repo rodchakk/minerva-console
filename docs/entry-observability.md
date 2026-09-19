@@ -378,3 +378,16 @@ The bundle excludes passwords, activation PINs, QR tokens, raw push tokens, visi
 Manual snapshots are retained for 180 days. ERROR/CRITICAL incident lifecycle transitions automatically capture 90-day snapshots when the incident is first detected and when it recovers. Automatic capture is fail-open: a diagnostic failure must never interfere with incident reconciliation or product operations.
 
 Saved snapshot references are visible in the Observability dashboard. The snapshot reference is the preferred support handoff identifier because it points to a frozen view of ENTRY at the time of investigation.
+
+
+### Diagnostic current-state truth
+
+Diagnostic bundles intentionally separate **current operational state** from **historical signals inside the selected window**.
+
+- `current_incidents` contains only durable incidents that are still open now.
+- `historical_failure_signals` contains selected-window incident evidence that is no longer open.
+- `triage_summary.system_status` represents the recent/current state used for troubleshooting.
+- `triage_summary.window_status` preserves the historical selected-window assessment for context.
+- Critical flows in the copied troubleshooting summary use the recent/current view; performance still describes the selected window.
+
+Queue outcomes also distinguish **system failure** from **delivery unavailable**. For mobile push, `No active push tokens found for audience` means ENTRY processed the queue item but had no registered device to target. It is surfaced as `delivery_unavailable_count`, not `failed_count`. This prevents missing-device rollout state from being reported as a backend failure.
