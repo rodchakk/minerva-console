@@ -572,6 +572,18 @@ test("observability hardening adds durable incidents, administration, performanc
   assert.match(page, /Incident history/);
 });
 
+test("operational infrastructure stays bounded and scrollable as workers and queues grow", () => {
+  assert.match(page, /xl:h-\[clamp\(22rem,42dvh,34rem\)\]/);
+  assert.match(page, /overflow-y-auto overscroll-contain/);
+  assert.match(page, /scrollbar-gutter:stable/);
+  assert.match(page, /infrastructure\.workers\.length/);
+  assert.match(page, /infrastructure\.queues\.length/);
+  assert.match(page, /workerStatusClass/);
+  assert.match(page, /queueOpenClass/);
+  assert.match(page, /No worker telemetry recorded/);
+  assert.match(page, /No queue telemetry recorded/);
+});
+
 test("mobile push acceptance is verified with Expo receipts without persisting raw tokens", () => {
   assert.match(receiptMigration, /entry_mobile_push_receipts/);
   assert.match(receiptMigration, /expo_push_token_hash/);
