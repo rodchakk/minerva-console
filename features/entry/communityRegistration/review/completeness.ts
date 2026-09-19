@@ -45,13 +45,13 @@ export function getResidentMissingFields(
   resident: RegistrationCompletenessResident,
 ): RegistrationMissingField[] {
   const fields: RegistrationMissingField[] = [];
-  const residentName = clean(resident.fullName) || `Residente ${resident.position}`;
+  const residentName = clean(resident.fullName) || `Resident ${resident.position}`;
 
   if (clean(resident.fullName).length < 2) {
     fields.push({
       code: "full_name",
-      label: "Nombre pendiente",
-      message: "Falta nombre válido",
+      label: "Name missing",
+      message: "Valid name missing",
       residentName,
       residentPosition: resident.position,
     });
@@ -60,10 +60,10 @@ export function getResidentMissingFields(
   if (!hasUsableEmail(resident.email)) {
     fields.push({
       code: "email",
-      label: "Correo pendiente",
+      label: "Email missing",
       message: clean(resident.email)
-        ? "Correo electrónico inválido"
-        : "Falta correo electrónico",
+        ? "Invalid email address"
+        : "Email missing",
       residentName,
       residentPosition: resident.position,
     });
@@ -72,8 +72,8 @@ export function getResidentMissingFields(
   if (!clean(resident.phone)) {
     fields.push({
       code: "phone",
-      label: "Teléfono pendiente",
-      message: "Falta teléfono",
+      label: "Phone missing",
+      message: "Phone missing",
       residentName,
       residentPosition: resident.position,
     });
@@ -90,8 +90,8 @@ export function getUnitMissingFields(
   if (!clean(unit.reference)) {
     fields.push({
       code: "unit_reference",
-      label: "Referencia pendiente",
-      message: "Falta referencia de la vivienda",
+      label: "Reference missing",
+      message: "Unit reference missing",
     });
   }
 
@@ -110,7 +110,7 @@ export function getResidentCompletenessStatus(
   if (missingFields.length === 0) {
     return {
       complete: true,
-      label: "Datos completos",
+      label: "Data complete",
       missingFields,
     } as const;
   }
@@ -120,7 +120,7 @@ export function getResidentCompletenessStatus(
     label:
       missingFields.length === 1
         ? missingFields[0].label
-        : `${missingFields.length} datos pendientes`,
+        : `${missingFields.length} missing fields`,
     missingFields,
   } as const;
 }

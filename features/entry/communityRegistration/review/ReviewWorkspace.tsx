@@ -393,7 +393,7 @@ function ActivationHandoffDialog({
             </Button>
             {result.activationQueueUrl && result.status === "processed" ? (
               <Link href={result.activationQueueUrl}>
-                <Button type="button">Ver en Activation Queue</Button>
+                <Button type="button">View in Activation Queue</Button>
               </Link>
             ) : null}
           </div>
@@ -412,7 +412,7 @@ function ActivationHandoffDialog({
           Patronato confirmation
         </p>
         <h3 className="mt-2 text-xl font-semibold text-white">
-          Confirmar y preparar activación
+          Confirm and prepare activation
         </h3>
         <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
           Use this after Patronato has approved the resident information outside
@@ -423,10 +423,10 @@ function ActivationHandoffDialog({
 
         {emailWarningNames.length > 0 ? (
           <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
-            <span className="font-semibold">Correo pendiente:</span>{" "}
-            {emailWarningNames.join(", ")}. Estas personas pueden prepararse según
-            las reglas actuales, pero no podrán recibir una invitación por correo
-            hasta que se agregue una dirección válida.
+            <span className="font-semibold">Email missing:</span>{" "}
+            {emailWarningNames.join(", ")}. These residents can be prepared under
+            the current rules, but they cannot receive an email invitation until
+            a valid address is added.
           </div>
         ) : null}
 
@@ -446,7 +446,7 @@ function ActivationHandoffDialog({
             Cancel
           </Button>
           <Button type="submit" disabled={pending}>
-            {pending ? "Preparing..." : "Confirmar y preparar activación"}
+            {pending ? "Preparing..." : "Confirm and prepare activation"}
           </Button>
         </div>
       </form>
@@ -803,7 +803,7 @@ export function ReviewWorkspace({
         </div>
       ) : null}
 
-      <section aria-label="Resumen de registro" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
         <Metric icon={Check} label="Reviewed" value={summary.reviewed} tone="emerald" />
         <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
@@ -831,16 +831,16 @@ export function ReviewWorkspace({
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-white">
-                {selectedReportUnitIds.length} vivienda{selectedReportUnitIds.length === 1 ? "" : "s"} seleccionada{selectedReportUnitIds.length === 1 ? "" : "s"}
-                <span className="font-normal text-[var(--text-muted)]"> · {selectedResidentCount} residentes</span>
+                {selectedReportUnitIds.length} {selectedReportUnitIds.length === 1 ? "unit" : "units"} selected
+                <span className="font-normal text-[var(--text-muted)]"> · {selectedResidentCount} {selectedResidentCount === 1 ? "resident" : "residents"}</span>
               </p>
               <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
                 <span className={selectionMissingFieldCount > 0 ? "text-amber-300" : "text-emerald-300"}>
-                  {selectionLoading ? "Calculando" : selectionMissingFieldCount} datos pendientes
+                  Missing fields: {selectionLoading ? "Calculating..." : selectionMissingFieldCount}
                 </span>
                 <span> · </span>
                 <span className={selectionMissingEmailCount > 0 ? "text-amber-300" : "text-emerald-300"}>
-                  {selectionLoading ? "Calculando" : selectionMissingEmailCount} correos faltantes
+                  Missing emails: {selectionLoading ? "Calculating..." : selectionMissingEmailCount}
                 </span>
               </p>
             </div>
@@ -852,7 +852,7 @@ export function ReviewWorkspace({
               onClick={selectAllReportableUnits}
               disabled={reportableUnitIds.length === 0 || selectionLoading}
             >
-              Seleccionar todas
+              Select all
             </Button>
             <Button
               type="button"
@@ -860,7 +860,7 @@ export function ReviewWorkspace({
               onClick={clearReportSelection}
               disabled={selectedReportUnitIds.length === 0 || selectionLoading}
             >
-              Limpiar
+              Clear
             </Button>
             <span className="mx-1 hidden h-7 w-px bg-[var(--border)] lg:block" aria-hidden />
             <Button
@@ -875,7 +875,7 @@ export function ReviewWorkspace({
               disabled={selectedReportUnitIds.length === 0 || reportLoading}
             >
               <FileText className="size-4" aria-hidden />
-              {reportLoading ? "Generando..." : "Generar informe"}
+              {reportLoading ? "Generating..." : "Generate report"}
             </Button>
           </div>
         </div>
@@ -892,32 +892,32 @@ export function ReviewWorkspace({
           <div className="border-b border-[var(--border)] p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-base font-semibold text-white">Viviendas</h2>
+                <h2 className="text-base font-semibold text-white">Units</h2>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Abre una vivienda o marca su cuadro para el informe.
+                  Open a unit or select its checkbox for the report.
                 </p>
               </div>
               <Badge tone="default">{summary.totalUnits}</Badge>
             </div>
 
             <label className="relative mt-4 block">
-              <span className="sr-only">Buscar vivienda</span>
+              <span className="sr-only">Search units</span>
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
               <input
                 type="search"
                 value={unitSearch}
                 onChange={(event) => setUnitSearch(event.target.value)}
-                placeholder="Buscar vivienda..."
+                placeholder="Search units..."
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
               />
             </label>
 
-            <div className="mt-3 flex gap-1 overflow-x-auto pb-1" aria-label="Filtros de viviendas">
+            <div className="mt-3 flex gap-1 overflow-x-auto pb-1" aria-label="Unit filters">
               {([
-                ["all", "Todas"],
-                ["pending", "Pendientes"],
-                ["reviewed", "Revisadas"],
-                ["activation", "Activación"],
+                ["all", "All"],
+                ["pending", "Pending"],
+                ["reviewed", "Reviewed"],
+                ["activation", "Activation"],
               ] as const).map(([value, label]) => (
                 <button
                   key={value}
@@ -947,12 +947,12 @@ export function ReviewWorkspace({
                     <div className="flex items-center gap-2">
                       <p className="truncate text-sm font-semibold text-white">{unit.label}</p>
                       {active ? (
-                        <span className="text-[10px] font-semibold uppercase text-violet-200">Abierta</span>
+                        <span className="text-[10px] font-semibold uppercase text-violet-200">Open</span>
                       ) : null}
                     </div>
                     <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      {unit.residentCount} residente{unit.residentCount === 1 ? "" : "s"}
-                      {unit.hasPendingObservation ? " · observación pendiente" : ""}
+                      {unit.residentCount} {unit.residentCount === 1 ? "resident" : "residents"}
+                      {unit.hasPendingObservation ? " · pending observation" : ""}
                     </p>
                   </div>
                   <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
@@ -972,14 +972,14 @@ export function ReviewWorkspace({
                 >
                   <label
                     className={`grid w-11 shrink-0 cursor-pointer place-items-center border-r border-white/[0.07] transition ${selectedForReport ? "bg-violet-500/12" : "hover:bg-white/[0.03]"}`}
-                    title="Seleccionar para informe"
+                    title="Select for report"
                   >
                     <input
                       type="checkbox"
                       checked={selectedForReport}
                       onChange={() => toggleReportUnit(unit.id)}
                       className="size-4 accent-violet-500"
-                      aria-label={`Seleccionar ${unit.label} para informe`}
+                      aria-label={`Select ${unit.label} for report`}
                     />
                   </label>
                   <Link
@@ -1005,7 +1005,7 @@ export function ReviewWorkspace({
             })}
             {visibleUnits.length === 0 ? (
               <div className="grid min-h-32 place-items-center px-4 text-center text-sm text-[var(--text-muted)]">
-                No hay viviendas que coincidan con este filtro.
+                No units match this filter.
               </div>
             ) : null}
           </div>
@@ -1014,7 +1014,7 @@ export function ReviewWorkspace({
         <section className="relative flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0" aria-busy={detailPending}>
           {detailPending ? (
             <div className="absolute inset-0 z-20 grid place-items-center bg-[var(--surface)]/92 p-6 backdrop-blur-sm">
-              <div className="w-full max-w-xl animate-pulse space-y-4" aria-label="Cargando vivienda">
+              <div className="w-full max-w-xl animate-pulse space-y-4" aria-label="Loading unit">
                 <div className="h-6 w-40 rounded bg-white/10" />
                 <div className="h-16 rounded-lg bg-white/[0.06]" />
                 <div className="grid grid-cols-4 gap-3">
@@ -1033,9 +1033,9 @@ export function ReviewWorkspace({
                 <span className="mx-auto grid size-12 place-items-center rounded-full bg-violet-500/10 text-violet-200 ring-1 ring-inset ring-violet-400/20">
                   <Home className="size-5" aria-hidden />
                 </span>
-                <p className="mt-4 text-base font-semibold text-white">Selecciona una vivienda</p>
+                <p className="mt-4 text-base font-semibold text-white">Select a unit</p>
                 <p className="mt-2 max-w-md text-sm leading-6 text-[var(--text-muted)]">
-                  Abre una vivienda de la lista para revisar su envío y residentes.
+                  Open a unit from the list to review its submission and residents.
                 </p>
               </div>
             </div>
@@ -1059,10 +1059,10 @@ export function ReviewWorkspace({
                   </div>
                   <div className="min-w-0 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2 sm:max-w-[280px]">
                     <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase text-[var(--text-muted)]">
-                      <MapPin className="size-3" aria-hidden /> Referencia de la vivienda
+                      <MapPin className="size-3" aria-hidden /> Unit reference
                     </p>
                     <p className="mt-1 truncate text-sm font-medium text-white" title={selectedUnitReference ?? undefined}>
-                      {selectedUnitReference ?? "Referencia pendiente"}
+                      {selectedUnitReference ?? "Reference missing"}
                     </p>
                   </div>
                 </div>
@@ -1081,7 +1081,7 @@ export function ReviewWorkspace({
                 <HandoffProgress selectedUnit={selectedUnit} />
 
                 <div className="mt-5 flex items-center justify-between gap-3">
-                  <h3 className="text-sm font-semibold text-white">Residente(s)</h3>
+                  <h3 className="text-sm font-semibold text-white">Residents</h3>
                   <Badge tone="default">{selectedUnit.residents.length}</Badge>
                 </div>
 
@@ -1109,7 +1109,7 @@ export function ReviewWorkspace({
                             </p>
                             {resident.position === 1 ? (
                               <span className="rounded-full border border-violet-300/30 bg-violet-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-100">
-                                Titular
+                                Primary resident
                               </span>
                             ) : null}
                           </div>
@@ -1134,8 +1134,8 @@ export function ReviewWorkspace({
                               type="button"
                               onClick={() => setEditingResident(quickResident)}
                               className="grid size-8 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition hover:bg-white/5 hover:text-white"
-                              title="Editar residente"
-                              aria-label={`Editar ${resident.fullName}`}
+                              title="Edit resident"
+                              aria-label={`Edit ${resident.fullName}`}
                             >
                               <Pencil className="size-3.5" aria-hidden />
                             </button>
@@ -1145,11 +1145,11 @@ export function ReviewWorkspace({
                       <div className="mt-3 grid gap-2 border-t border-white/[0.06] pt-3 text-xs sm:grid-cols-2">
                         <p className="flex min-w-0 items-center gap-2 text-[var(--text-muted)]">
                           <Mail className="size-3.5 shrink-0" aria-hidden />
-                          <span className="truncate text-slate-200">{resident.email ?? "Correo pendiente"}</span>
+                          <span className="truncate text-slate-200">{resident.email ?? "Email missing"}</span>
                         </p>
                         <p className="flex items-center gap-2 text-[var(--text-muted)]">
                           <Phone className="size-3.5 shrink-0" aria-hidden />
-                          <span className="text-slate-200">{resident.phone ?? "Teléfono pendiente"}</span>
+                          <span className="text-slate-200">{resident.phone ?? "Phone missing"}</span>
                         </p>
                       </div>
                     </div>
@@ -1162,10 +1162,10 @@ export function ReviewWorkspace({
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
-                        Datos faltantes
+                        Missing data
                       </p>
                       <p className="mt-1 text-xs text-amber-50/75">
-                        Información que conviene resolver antes de confirmar o activar.
+                        Information to resolve before confirmation or activation.
                       </p>
                     </div>
                     <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-semibold text-amber-300">
@@ -1192,8 +1192,8 @@ export function ReviewWorkspace({
                   <div className="mt-4 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
                     <CheckCircle2 className="size-5 shrink-0 text-emerald-300" aria-hidden />
                     <div>
-                      <p className="text-sm font-semibold text-emerald-100">Todos los datos requeridos están completos.</p>
-                      <p className="mt-0.5 text-xs text-emerald-100/65">La vivienda está lista para continuar con la revisión.</p>
+                      <p className="text-sm font-semibold text-emerald-100">All required data is complete.</p>
+                      <p className="mt-0.5 text-xs text-emerald-100/65">This unit is ready to continue through review.</p>
                     </div>
                   </div>
                 )}
@@ -1215,19 +1215,19 @@ export function ReviewWorkspace({
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-white">{selectedUnit.unitLabel}</p>
                   <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                    {selectedUnit.residents.length} residente{selectedUnit.residents.length === 1 ? "" : "s"} · {selectedUnitMissingFields.length === 0 ? "Datos completos" : `${selectedUnitMissingFields.length} pendientes`}
+                    {selectedUnit.residents.length} {selectedUnit.residents.length === 1 ? "resident" : "residents"} · {selectedUnitMissingFields.length === 0 ? "Data complete" : `${selectedUnitMissingFields.length} missing`}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {canQuickEditUnit ? (
                     <Button type="button" variant="secondary" className="gap-2" onClick={() => setEditingUnit(true)}>
-                      <Pencil className="size-3.5" aria-hidden /> Editar
+                      <Pencil className="size-3.5" aria-hidden /> Edit
                     </Button>
                   ) : null}
 
                 {isPreparedForActivation ? (
                   <Link href={activationQueueUrl}>
-                      <Button type="button" className="gap-2">Ver en Activation Queue <ArrowRight className="size-3.5" aria-hidden /></Button>
+                      <Button type="button" className="gap-2">View in Activation Queue <ArrowRight className="size-3.5" aria-hidden /></Button>
                   </Link>
                 ) : null}
 
@@ -1237,7 +1237,7 @@ export function ReviewWorkspace({
                     variant="secondary"
                     onClick={() => setShowCorrectionRequest(true)}
                   >
-                      <TriangleAlert className="mr-2 size-3.5" aria-hidden /> Solicitar corrección
+                      <TriangleAlert className="mr-2 size-3.5" aria-hidden /> Request correction
                   </Button>
                 ) : null}
 
@@ -1266,7 +1266,7 @@ export function ReviewWorkspace({
                     onClick={() => setShowActivationHandoff(true)}
                     disabled={Boolean(loadError)}
                   >
-                      Confirmar y preparar activación
+                      Confirm and prepare activation
                   </Button>
                 ) : null}
 
@@ -1275,7 +1275,7 @@ export function ReviewWorkspace({
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
                     <input type="hidden" name="community_id" value={communityId} />
                     <Button type="submit" disabled={reviewPending || Boolean(loadError)}>
-                        {reviewPending ? "Confirmando..." : "Confirmar revisión"}
+                        {reviewPending ? "Confirming..." : "Confirm review"}
                     </Button>
                   </form>
                 ) : null}

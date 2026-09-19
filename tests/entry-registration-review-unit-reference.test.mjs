@@ -32,8 +32,8 @@ test("selected household review visibly presents the unit reference", () => {
   assert.match(page, /selectedUnitReference=\{selectedUnitReference\}/);
   assert.doesNotMatch(page, /Referencia de la vivienda/);
   assert.match(workspace, /selectedUnitReference: string \| null/);
-  assert.match(workspace, /Referencia de la vivienda/);
-  assert.match(workspace, /selectedUnitReference \?\? "Referencia pendiente"/);
+  assert.match(workspace, /Unit reference/);
+  assert.match(workspace, /selectedUnitReference \?\? "Reference missing"/);
   assert.match(workspace, /scroll=\{false\}/);
   assert.match(workspace, /detailPending/);
 });

@@ -58,23 +58,26 @@ test("registration review exposes stable master-detail selection and report prev
   );
 
   assert.match(workspace, /type="checkbox"/);
-  assert.match(workspace, /Generar informe/);
-  assert.match(workspace, /correos faltantes/);
-  assert.match(workspace, /Datos faltantes/);
+  assert.match(workspace, /Generate report/);
+  assert.match(workspace, /Missing emails/);
+  assert.match(workspace, /Missing data/);
   assert.match(workspace, /ConfirmationReportDrawer/);
   assert.match(workspace, /loadCommunityRegistrationConfirmationReport/);
-  assert.match(workspace, /Seleccionar todas/);
+  assert.match(workspace, /Select all/);
   assert.match(workspace, /sessionStorage/);
   assert.match(workspace, /scroll=\{false\}/);
   assert.match(workspace, /detailPending/);
-  assert.match(workspace, /Buscar vivienda/);
-  assert.match(workspace, /Abierta/);
+  assert.match(workspace, /Search units/);
+  assert.match(workspace, />Open</);
   assert.match(workspace, /100dvh/);
   assert.match(workspace, /scrollbar-gutter:stable/);
   assert.equal(workspace.match(/overflow-y-auto overscroll-contain/g)?.length, 2);
   assert.doesNotMatch(workspace, /xl:min-h-\[620px\]/);
   assert.doesNotMatch(page, /selectedUnit && selectedUnitReference/);
-  assert.doesNotMatch(workspace, /Generar informe de selección/);
+  assert.doesNotMatch(
+    workspace,
+    /Generar informe|Seleccionar todas|Limpiar|Viviendas|Pendientes|Revisadas|Activación|Buscar vivienda|Abierta|Datos faltantes|Solicitar corrección|Confirmar revisión|Referencia de la vivienda|Correo pendiente|Teléfono pendiente/,
+  );
 });
 
 test("preview is deterministic DOM output with PNG and PDF export", () => {
@@ -100,8 +103,10 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
   assert.match(drawer, /Unidades fuertes/);
   assert.match(drawer, /html-to-image/);
   assert.match(drawer, /pdf-lib/);
-  assert.match(drawer, /Exportar PNG/);
-  assert.match(drawer, /Exportar PDF/);
+  assert.match(drawer, /Report preview/);
+  assert.match(drawer, /Selected units/);
+  assert.match(drawer, /Export PNG/);
+  assert.match(drawer, /Export PDF/);
   assert.match(drawer, /ref=\{reportRef\}/);
   assert.match(drawer, /renderNodeToPng\(node\)/);
   assert.doesNotMatch(drawer, /openai|image_gen|generative ai/i);
@@ -112,8 +117,8 @@ test("activation handoff warns about missing email without disabling complete re
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
 
-  assert.match(workspace, /Correo pendiente:/);
-  assert.match(workspace, /no podrán recibir una invitación por correo/);
+  assert.match(workspace, /Email missing:/);
+  assert.match(workspace, /cannot receive an email invitation/);
   assert.match(workspace, /emailWarningNames/);
   assert.doesNotMatch(
     workspace,
