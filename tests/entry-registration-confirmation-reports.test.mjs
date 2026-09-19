@@ -87,7 +87,7 @@ test("preview is deterministic DOM output with PNG and PDF export", () => {
 
   assert.match(drawer, /Revisión de residentes/);
   assert.match(drawer, /por confirmar/);
-  assert.match(drawer, /By Minerva/);
+  assert.match(drawer, /By Minerva Technologies/);
   assert.match(drawer, /Gestión de residentes/);
   assert.match(drawer, /Tecnología que conecta/);
   assert.match(drawer, /y protege comunidades/);
