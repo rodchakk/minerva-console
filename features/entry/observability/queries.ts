@@ -981,7 +981,7 @@ export async function getEntryNotificationObservability(input: {
   const limit = Math.max(1, Math.min(Math.trunc(input.limit ?? 100), 200));
 
   const { data, error } = await supabase.rpc(
-    "sa_get_entry_notification_observability_v1",
+    "sa_get_entry_notification_observability_v2",
     {
       p_community_id: communityId,
       p_ends_at: endsAt,
