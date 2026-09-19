@@ -371,6 +371,9 @@ exception when others then
 end;
 $$;
 
+revoke all on function public._entry_capture_incident_diagnostic_v1()
+  from public, anon, authenticated;
+
 drop trigger if exists trg_entry_capture_incident_diagnostic_open_v1
   on public.entry_observability_incidents;
 create trigger trg_entry_capture_incident_diagnostic_open_v1
