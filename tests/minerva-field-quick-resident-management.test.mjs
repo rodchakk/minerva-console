@@ -98,7 +98,8 @@ test("quick create keeps password transient and requires confirmation", () => {
   const form = read(formPath);
   const page = read(createPagePath);
 
-  assert.match(form, /Minimum 8 characters/);
+  assert.match(form, /ENTRY_ADMIN_TEMP_PASSWORD_HELPER/);
+  assert.match(form, /ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
   assert.match(form, /phase === "form"/);
   assert.match(form, /setPhase\("confirm"\)/);
   assert.match(form, /Create resident/);
