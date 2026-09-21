@@ -20,6 +20,10 @@ import {
   type FieldQuickResidentCreateResult,
 } from "@/features/entry/field/quickResidentActions";
 import {
+  ENTRY_ADMIN_TEMP_PASSWORD_HELPER,
+  ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH,
+} from "@/features/entry/passwordPolicy";
+import {
   inviteFieldQuickResident,
   type FieldResidentInviteResult,
 } from "@/features/entry/field/quickResidentInviteActions";
@@ -109,7 +113,7 @@ export function FieldQuickResidentForm({
     fullName.trim() &&
       (accessMode === "email"
         ? /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())
-        : password.length >= 8 && (username.trim() || email.trim())),
+        : password.length >= ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH && (username.trim() || email.trim())),
   );
 
   const credentialsMessage = useMemo(() => {
@@ -154,8 +158,10 @@ export function FieldQuickResidentForm({
       return;
     }
 
-    if (password.length < 8) {
-      setMessage("Password must be at least 8 characters.");
+    if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+      setMessage(
+        `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      );
       return;
     }
 
@@ -516,7 +522,7 @@ export function FieldQuickResidentForm({
                   </button>
                 </div>
                 <p className="mt-1 text-xs leading-5 text-[var(--console-text-soft)]">
-                  Minimum 8 characters. Enter one or generate it.
+                  {ENTRY_ADMIN_TEMP_PASSWORD_HELPER}. Enter one or generate it.
                 </p>
               </div>
             </>
