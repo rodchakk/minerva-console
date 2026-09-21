@@ -3,6 +3,10 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { createFieldGuardAction } from "@/features/entry/field/accessActions";
+import {
+  ENTRY_ADMIN_TEMP_PASSWORD_HELPER,
+  ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH,
+} from "@/features/entry/passwordPolicy";
 import type { StaffActionState } from "@/features/entry/staff/actions";
 
 export type FieldGuardCommunityOption = {
@@ -98,10 +102,10 @@ export function FieldCreateGuardForm({
           name="password"
           type="text"
           required
-          minLength={8}
+          minLength={ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH}
           autoComplete="off"
           className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-3 text-base text-[var(--console-text)] outline-none placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
-          placeholder="Minimum 8 characters"
+          placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
         />
       </label>
 
