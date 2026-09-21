@@ -11,6 +11,9 @@ function read(path) {
 
 const actionPath = "features/entry/field/residentProfileActions.ts";
 const editorPath = "features/entry/field/FieldResidentProfileEditor.tsx";
+const quickActionsPath = "features/entry/field/FieldResidentActions.tsx";
+const accessActionPath = "features/entry/field/residentAccessActions.ts";
+const roleActionPath = "features/entry/field/accessActions.ts";
 const residentPagePath =
   "app/(field)/field/entry/communities/[communityId]/people/residents/[userId]/page.tsx";
 
@@ -53,4 +56,43 @@ test("resident detail renders the profile editor only for residents", () => {
   assert.match(page, /data\.resident\.role === "RESIDENT"/);
   assert.match(page, /resident=\{data\.resident\}/);
   assert.match(page, /isReadOnlyPreview=\{isReadOnlyPreview\}/);
+});
+
+
+test("resident quick actions expose direct password, unit, profile, and role management", () => {
+  const actions = read(quickActionsPath);
+
+  assert.match(actions, /grid grid-cols-2 gap-2/);
+  assert.match(actions, /Edit profile/);
+  assert.match(actions, /Reset password/);
+  assert.match(actions, /Change unit/);
+  assert.match(actions, /Set role/);
+  assert.match(actions, /setFieldResidentPassword/);
+  assert.match(actions, /changeFieldUserRoleAction/);
+  assert.match(actions, /Generate temporary PIN/);
+});
+
+test("direct Field password reset preserves admin authorization and shared six-character policy", () => {
+  const action = read(accessActionPath);
+
+  assert.match(action, /setFieldResidentPassword/);
+  assert.match(action, /requireSuperadmin/);
+  assert.match(action, /getEntryPreviewReadOnlyError/);
+  assert.match(action, /ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
+  assert.match(action, /loadCanonicalResident/);
+  assert.match(action, /resident\.role !== "RESIDENT"/);
+  assert.match(action, /createAdminClient/);
+  assert.match(action, /auth\.admin\.updateUserById/);
+});
+
+test("inline role change reuses the protected Field role action", () => {
+  const actions = read(quickActionsPath);
+  const roleAction = read(roleActionPath);
+
+  assert.match(actions, /formData\.set\("role", selectedRole\)/);
+  assert.match(actions, /Confirm role change/);
+  assert.match(actions, /Changing this resident to Guard removes the current unit assignment/);
+  assert.match(roleAction, /userId === actor\.id/);
+  assert.match(roleAction, /is_superadmin/);
+  assert.match(roleAction, /sa_change_user_role/);
 });
