@@ -5,19 +5,28 @@ import { useRouter } from "next/navigation";
 import {
   Check,
   Copy,
+  Eye,
+  EyeOff,
   House,
   KeyRound,
   Pencil,
   Save,
   Share2,
+  ShieldCheck,
   X,
 } from "lucide-react";
+import { changeFieldUserRoleAction } from "@/features/entry/field/accessActions";
 import { assignFieldResidentToUnit } from "@/features/entry/field/peopleActions";
 import {
   resetFieldResidentAccess,
+  setFieldResidentPassword,
   type FieldResetAccessResult,
 } from "@/features/entry/field/residentAccessActions";
 import { updateFieldResidentProfile } from "@/features/entry/field/residentProfileActions";
+import {
+  ENTRY_ADMIN_TEMP_PASSWORD_HELPER,
+  ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH,
+} from "@/features/entry/passwordPolicy";
 import {
   canSendResidentResetEmail,
   canUseResidentRecoveryCode,
@@ -34,7 +43,8 @@ type FieldResidentActionsProps = {
   units: FieldUnit[];
 };
 
-type ActionPanel = "profile" | "access" | "unit" | null;
+type ActionPanel = "profile" | "password" | "unit" | "role" | null;
+type MutableRole = "ADMIN" | "GUARD" | "RESIDENT";
 
 function subscribe() {
   return () => {};
@@ -76,6 +86,10 @@ export function FieldResidentActions({
   const [panel, setPanel] = useState<ActionPanel>(null);
   const [fullName, setFullName] = useState(resident.fullName);
   const [phone, setPhone] = useState(resident.phone);
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [selectedRole, setSelectedRole] = useState<MutableRole>("RESIDENT");
+  const [confirmingRole, setConfirmingRole] = useState(false);
   const [selectedUnitId, setSelectedUnitId] = useState(resident.houseId);
   const [confirmingMove, setConfirmingMove] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
@@ -121,10 +135,16 @@ export function FieldResidentActions({
       setSelectedUnitId(resident.houseId);
       setConfirmingMove(false);
     }
-    if (next === "access") {
+    if (next === "password") {
+      setPassword("");
+      setShowPassword(false);
       setConfirmingReset(false);
       setResetResult(null);
       setCopied(false);
+    }
+    if (next === "role") {
+      setSelectedRole("RESIDENT");
+      setConfirmingRole(false);
     }
   }
 
@@ -168,6 +188,59 @@ export function FieldResidentActions({
       setConfirmingMove(false);
       setPanel(null);
       setMessage("Unit assignment updated.");
+      router.refresh();
+    });
+  }
+
+  function handleSetPassword() {
+    setMessage(null);
+
+    if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+      setMessage(
+        `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      );
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await setFieldResidentPassword({
+        communityId,
+        password,
+        userId: resident.userId,
+      });
+
+      if (!result.success) {
+        setMessage(result.error || "Could not update password.");
+        return;
+      }
+
+      setPassword("");
+      setShowPassword(false);
+      setPanel(null);
+      setMessage("Password updated.");
+    });
+  }
+
+  function handleRoleChange() {
+    if (selectedRole === resident.role) return;
+    setMessage(null);
+
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("communityId", communityId);
+      formData.set("userId", resident.userId);
+      formData.set("role", selectedRole);
+
+      const result = await changeFieldUserRoleAction({}, formData);
+
+      if (!result.ok) {
+        setMessage(result.message || "Could not update role.");
+        return;
+      }
+
+      setConfirmingRole(false);
+      setPanel(null);
+      setMessage(result.message || "Role updated.");
       router.refresh();
     });
   }
@@ -235,22 +308,22 @@ export function FieldResidentActions({
         </h2>
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <button type="button" onClick={() => openPanel("profile")} className={actionButtonClass}>
           <Pencil aria-hidden="true" className="h-5 w-5 text-[var(--console-accent)]" />
           Edit profile
         </button>
-        <button
-          type="button"
-          onClick={() => openPanel("access")}
-          className={actionButtonClass}
-        >
+        <button type="button" onClick={() => openPanel("password")} className={actionButtonClass}>
           <KeyRound aria-hidden="true" className="h-5 w-5 text-[var(--console-accent)]" />
-          {resetMode === "recovery_code" ? "Reset PIN" : "Reset access"}
+          Reset password
         </button>
         <button type="button" onClick={() => openPanel("unit")} className={actionButtonClass}>
           <House aria-hidden="true" className="h-5 w-5 text-[var(--console-accent)]" />
           Change unit
+        </button>
+        <button type="button" onClick={() => openPanel("role")} className={actionButtonClass}>
+          <ShieldCheck aria-hidden="true" className="h-5 w-5 text-[var(--console-accent)]" />
+          Set role
         </button>
       </div>
 
@@ -365,87 +438,214 @@ export function FieldResidentActions({
         </div>
       ) : null}
 
-      {panel === "access" ? (
-        <div className="space-y-3 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
-          <h3 className="text-base font-semibold text-[var(--console-text)]">
-            {resetMode === "recovery_code" ? "Reset access PIN" : "Reset access"}
-          </h3>
-          {resetMode === "email" ? (
-            <p className="break-words text-sm leading-6 text-[var(--console-text-muted)]">
-              A password reset email will be sent to {resident.email}.
-            </p>
-          ) : resetMode === "recovery_code" ? (
-            <p className="text-sm leading-6 text-[var(--console-text-muted)]">
-              Generate a temporary six-digit access PIN for this username-only account. It is shown once and expires after 24 hours.
-            </p>
-          ) : (
-            <p className="text-sm leading-6 text-[var(--console-text-muted)]">
-              This account does not support the resident recovery flow from Field.
-            </p>
-          )}
-
-          {resetMode !== "unsupported" && !confirmingReset && !resetResult?.code ? (
+      {panel === "password" ? (
+        <div className="space-y-4 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--console-text)]">Reset password</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--console-text-soft)]">
+                Set a new password directly for this resident.
+              </p>
+            </div>
             <button
               type="button"
-              onClick={() => setConfirmingReset(true)}
-              disabled={isPending || isReadOnlyPreview}
-              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-[var(--console-border)] bg-white/5 px-4 text-sm font-semibold text-[var(--console-text)] hover:bg-white/10 disabled:opacity-50"
+              onClick={() => setPanel(null)}
+              className="rounded-md p-2 text-[var(--console-text-muted)] hover:bg-white/5"
+              aria-label="Close password reset"
             >
-              <KeyRound aria-hidden="true" className="h-4 w-4" />
-              {resetMode === "email" ? "Send password reset email" : "Generate temporary PIN"}
+              <X aria-hidden="true" className="h-4 w-4" />
             </button>
-          ) : null}
+          </div>
 
-          {confirmingReset ? (
-            <div className="space-y-3 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
-              <p className="text-sm leading-6 text-amber-100">
-                Confirm reset access for {resident.fullName}.
-              </p>
+          <label className="grid gap-2 text-sm font-semibold text-[var(--console-text)]">
+            New password
+            <div className="relative">
+              <input
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                type={showPassword ? "text" : "password"}
+                maxLength={128}
+                autoComplete="new-password"
+                placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
+                className="min-h-12 w-full rounded-lg border border-[var(--console-border)] bg-[var(--console-bg)] px-3 pr-12 text-base font-normal outline-none focus:border-[var(--console-accent)]"
+              />
               <button
                 type="button"
-                onClick={handleReset}
-                disabled={isPending || isReadOnlyPreview}
-                className="min-h-12 w-full rounded-lg bg-amber-300 px-4 text-sm font-black text-slate-950 disabled:opacity-50"
+                onClick={() => setShowPassword((current) => !current)}
+                disabled={!password}
+                className="absolute right-1 top-1 flex h-10 w-10 items-center justify-center rounded-md text-[var(--console-text-muted)] hover:bg-white/5 disabled:opacity-30"
+                aria-label={showPassword ? "Hide password" : "Show password"}
               >
-                {isPending ? "Working..." : "Confirm reset access"}
+                {showPassword ? (
+                  <EyeOff aria-hidden="true" className="h-4 w-4" />
+                ) : (
+                  <Eye aria-hidden="true" className="h-4 w-4" />
+                )}
               </button>
             </div>
+          </label>
+
+          <button
+            type="button"
+            onClick={handleSetPassword}
+            disabled={
+              isPending ||
+              isReadOnlyPreview ||
+              password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH
+            }
+            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-4 text-sm font-bold text-white disabled:opacity-50"
+          >
+            <KeyRound aria-hidden="true" className="h-4 w-4" />
+            {isPending ? "Updating..." : "Update password"}
+          </button>
+
+          {isReadOnlyPreview ? (
+            <p className="text-xs leading-5 text-amber-200">Preview is read-only. Password changes are disabled.</p>
           ) : null}
 
-          {resetResult?.code ? (
-            <div className="space-y-3 rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3">
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100">
-                Temporary access PIN
-              </p>
-              <p className="break-all font-mono text-3xl font-semibold text-white">
-                {resetResult.code}
-              </p>
-              {resetResult.expiresAt ? (
-                <p className="text-sm text-emerald-100">Expires: {resetResult.expiresAt}</p>
-              ) : null}
-              <p className="text-sm leading-6 text-emerald-100">
-                Save or share this now. It may not be shown again.
-              </p>
-              <button
-                type="button"
-                onClick={handleCopyRecovery}
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-slate-950"
-              >
-                <Copy aria-hidden="true" className="h-4 w-4" />
-                {copied ? "Copied" : "Copy temporary PIN"}
-              </button>
-              {canShare ? (
+          {resetMode !== "unsupported" ? (
+            <div className="space-y-3 border-t border-[var(--console-border)] pt-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--console-text-soft)]">
+                  Alternative recovery
+                </p>
+                <p className="mt-1 text-xs leading-5 text-[var(--console-text-muted)]">
+                  {resetMode === "email"
+                    ? "Send the resident the normal password recovery email instead."
+                    : "Generate a temporary recovery PIN instead of setting the password yourself."}
+                </p>
+              </div>
+
+              {!confirmingReset && !resetResult?.code ? (
                 <button
                   type="button"
-                  onClick={handleShareRecovery}
-                  className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border border-emerald-200/60 px-4 text-sm font-semibold text-white"
+                  onClick={() => setConfirmingReset(true)}
+                  disabled={isPending || isReadOnlyPreview}
+                  className="min-h-11 w-full rounded-lg border border-[var(--console-border)] bg-white/[0.03] px-4 text-sm font-semibold text-[var(--console-text)] hover:bg-white/[0.06] disabled:opacity-50"
                 >
-                  <Share2 aria-hidden="true" className="h-4 w-4" />
-                  Share temporary PIN
+                  {resetMode === "email" ? "Send recovery email" : "Generate temporary PIN"}
                 </button>
+              ) : null}
+
+              {confirmingReset ? (
+                <div className="space-y-3 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
+                  <p className="text-sm leading-6 text-amber-100">
+                    Confirm alternative recovery for {resident.fullName}.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    disabled={isPending || isReadOnlyPreview}
+                    className="min-h-11 w-full rounded-lg bg-amber-300 px-4 text-sm font-black text-slate-950 disabled:opacity-50"
+                  >
+                    {isPending ? "Working..." : "Confirm recovery"}
+                  </button>
+                </div>
+              ) : null}
+
+              {resetResult?.code ? (
+                <div className="space-y-3 rounded-lg border border-emerald-400/30 bg-emerald-400/10 p-3">
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-100">
+                    Temporary access PIN
+                  </p>
+                  <p className="break-all font-mono text-3xl font-semibold text-white">
+                    {resetResult.code}
+                  </p>
+                  {resetResult.expiresAt ? (
+                    <p className="text-sm text-emerald-100">Expires: {resetResult.expiresAt}</p>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={handleCopyRecovery}
+                    className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-white px-4 text-sm font-black text-slate-950"
+                  >
+                    <Copy aria-hidden="true" className="h-4 w-4" />
+                    {copied ? "Copied" : "Copy temporary PIN"}
+                  </button>
+                  {canShare ? (
+                    <button
+                      type="button"
+                      onClick={handleShareRecovery}
+                      className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-emerald-200/60 px-4 text-sm font-semibold text-white"
+                    >
+                      <Share2 aria-hidden="true" className="h-4 w-4" />
+                      Share temporary PIN
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </div>
           ) : null}
+        </div>
+      ) : null}
+
+      {panel === "role" ? (
+        <div className="space-y-4 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--console-text)]">Set role</h3>
+              <p className="mt-1 text-xs leading-5 text-[var(--console-text-soft)]">
+                Current role: {resident.role}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPanel(null)}
+              className="rounded-md p-2 text-[var(--console-text-muted)] hover:bg-white/5"
+              aria-label="Close role editor"
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
+          </div>
+
+          <label className="grid gap-2 text-sm font-semibold text-[var(--console-text)]">
+            New role
+            <select
+              value={selectedRole}
+              onChange={(event) => {
+                setSelectedRole(event.target.value as MutableRole);
+                setConfirmingRole(false);
+              }}
+              disabled={isPending || isReadOnlyPreview}
+              className="min-h-12 rounded-lg border border-[var(--console-border)] bg-black/20 px-3 text-base font-normal text-[var(--console-text)] outline-none focus:border-[var(--console-accent)] disabled:opacity-60"
+            >
+              <option value="RESIDENT">Resident</option>
+              <option value="ADMIN">Admin</option>
+              <option value="GUARD">Guard</option>
+            </select>
+          </label>
+
+          {selectedRole === "GUARD" ? (
+            <p className="rounded-lg border border-amber-300/25 bg-amber-300/10 p-3 text-sm leading-6 text-amber-100">
+              Changing this resident to Guard removes the current unit assignment.
+            </p>
+          ) : null}
+
+          {!confirmingRole ? (
+            <button
+              type="button"
+              onClick={() => setConfirmingRole(true)}
+              disabled={isPending || isReadOnlyPreview || selectedRole === resident.role}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-[var(--console-accent)] px-4 text-sm font-bold text-white disabled:opacity-50"
+            >
+              <ShieldCheck aria-hidden="true" className="h-4 w-4" />
+              Continue
+            </button>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-amber-300/30 bg-amber-300/10 p-3">
+              <p className="text-sm leading-6 text-amber-100">
+                Change {resident.fullName} from {resident.role} to {selectedRole}?
+              </p>
+              <button
+                type="button"
+                onClick={handleRoleChange}
+                disabled={isPending || isReadOnlyPreview || selectedRole === resident.role}
+                className="min-h-12 w-full rounded-lg bg-amber-300 px-4 text-sm font-black text-slate-950 disabled:opacity-50"
+              >
+                {isPending ? "Updating..." : "Confirm role change"}
+              </button>
+            </div>
+          )}
         </div>
       ) : null}
     </section>
