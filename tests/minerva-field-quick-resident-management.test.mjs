@@ -83,6 +83,9 @@ test("quick create reuses canonical username identity and cleans up partial fail
   const source = read(actionPath);
 
   assert.match(source, /resident-\$\{username\}@entry\.internal/);
+  assert.ok(source.includes('.replace(/[^a-z0-9._]+/g, "_")'));
+  assert.ok(source.includes('.replace(/\\.{2,}/g, ".")'));
+  assert.ok(source.includes('.replace(/^[._]+|[._]+$/g, "")'));
   assert.match(source, /auth_type: authType/);
   assert.match(source, /synthetic_email: syntheticEmail/);
   assert.match(source, /username_login_enabled: authType === "username"/);
