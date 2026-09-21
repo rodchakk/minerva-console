@@ -58,6 +58,8 @@ test("Field guard creation reuses the established guard action without a unit", 
   assert.match(form, /name="fullName"/);
   assert.match(form, /name="username"/);
   assert.match(form, /name="password"/);
+  assert.match(form, /ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
+  assert.match(form, /ENTRY_ADMIN_TEMP_PASSWORD_HELPER/);
   assert.match(form, /Guard accounts are created without a unit assignment/);
   assert.doesNotMatch(form, /name="houseId"/);
 });

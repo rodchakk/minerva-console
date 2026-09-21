@@ -83,6 +83,9 @@ test("quick create reuses canonical username identity and cleans up partial fail
   const source = read(actionPath);
 
   assert.match(source, /resident-\$\{username\}@entry\.internal/);
+  assert.ok(source.includes('.replace(/[^a-z0-9._]+/g, "_")'));
+  assert.ok(source.includes('.replace(/\\.{2,}/g, ".")'));
+  assert.ok(source.includes('.replace(/^[._]+|[._]+$/g, "")'));
   assert.match(source, /auth_type: authType/);
   assert.match(source, /synthetic_email: syntheticEmail/);
   assert.match(source, /username_login_enabled: authType === "username"/);
@@ -98,7 +101,8 @@ test("quick create keeps password transient and requires confirmation", () => {
   const form = read(formPath);
   const page = read(createPagePath);
 
-  assert.match(form, /Minimum 8 characters/);
+  assert.match(form, /ENTRY_ADMIN_TEMP_PASSWORD_HELPER/);
+  assert.match(form, /ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH/);
   assert.match(form, /phase === "form"/);
   assert.match(form, /setPhase\("confirm"\)/);
   assert.match(form, /Create resident/);
