@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
+import { ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH } from "@/features/entry/passwordPolicy";
 import { getCommunityUsersPage } from "@/features/entry/users/queries";
 import { setCommunityUserActiveStatusAction } from "@/features/entry/users/actions";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -41,7 +42,10 @@ function normalizeResidentUsername(value: string) {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "")
+    .replace(/[^a-z0-9._]+/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/\.{2,}/g, ".")
+    .replace(/^[._]+|[._]+$/g, "")
     .slice(0, 32);
 }
 
@@ -201,14 +205,14 @@ export async function createFieldQuickResident(
 
   if (username && username.length < 3) {
     return {
-      error: "Username must contain at least 3 letters or numbers.",
+      error: "Username must be at least 3 characters after normalization. Use letters, numbers, periods, or underscores.",
       success: false,
     };
   }
 
-  if (password.length < 8) {
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
     return {
-      error: "Password must be at least 8 characters.",
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
       success: false,
     };
   }
