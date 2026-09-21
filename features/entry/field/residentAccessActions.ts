@@ -4,10 +4,12 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { getPasswordResetRedirectTo } from "@/features/entry/passwordResetRedirect";
+import { ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH } from "@/features/entry/passwordPolicy";
 import {
   canSendResidentResetEmail,
   canUseResidentRecoveryCode,
 } from "@/features/entry/field/peopleModel";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import {
   coerceBoolean,
@@ -82,6 +84,57 @@ async function loadCanonicalResident(
       .map(mapResident)
       .find((resident) => resident?.userId === userId) ?? null
   );
+}
+
+export async function setFieldResidentPassword(input: {
+  communityId: string;
+  password: string;
+  userId: string;
+}): Promise<{ error?: string; success: boolean }> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  const password = input.password;
+
+  if (!communityId || !userId || !password) {
+    return {
+      error: "Community, resident, and password are required.",
+      success: false,
+    };
+  }
+
+  if (password.length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+    return {
+      error: `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      success: false,
+    };
+  }
+
+  const resident = await loadCanonicalResident(communityId, userId);
+
+  if (!resident || resident.role !== "RESIDENT") {
+    return {
+      error: "Resident was not found in this community.",
+      success: false,
+    };
+  }
+
+  const adminSupabase = createAdminClient();
+  const { error } = await adminSupabase.auth.admin.updateUserById(userId, {
+    password,
+  });
+
+  if (error) {
+    return { error: error.message, success: false };
+  }
+
+  return { success: true };
 }
 
 export async function resetFieldResidentAccess(input: {
