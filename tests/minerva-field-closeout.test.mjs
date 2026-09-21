@@ -55,17 +55,21 @@ test("resident detail is person-first and follows approved visual hierarchy", ()
   assert.doesNotMatch(residentPage, /FieldResidentProfileEditor/);
 });
 
-test("resident quick actions are compact and reset mode adapts to login identity", () => {
+test("resident quick actions stay compact with direct password and role controls", () => {
   assert.match(residentActions, /Quick actions/);
+  assert.match(residentActions, /grid grid-cols-2 gap-2/);
   assert.match(residentActions, /Edit profile/);
-  assert.match(residentActions, /Reset PIN/);
-  assert.match(residentActions, /Reset access/);
+  assert.match(residentActions, /Reset password/);
   assert.match(residentActions, /Change unit/);
+  assert.match(residentActions, /Set role/);
   assert.match(residentActions, /Temporary access PIN/);
-  assert.match(residentActions, /Confirm reset access/);
+  assert.match(residentActions, /Alternative recovery/);
   assert.match(residentActions, /Confirm unit change/);
+  assert.match(residentActions, /Confirm role change/);
   assert.match(residentActions, /updateFieldResidentProfile/);
+  assert.match(residentActions, /setFieldResidentPassword/);
   assert.match(residentActions, /resetFieldResidentAccess/);
+  assert.match(residentActions, /changeFieldUserRoleAction/);
 });
 
 test("username-only recovery invokes Edge Function with the authenticated operator session", () => {
@@ -74,7 +78,10 @@ test("username-only recovery invokes Edge Function with the authenticated operat
   assert.match(residentAccess, /supabase\.functions\.invoke\(/);
   assert.match(residentAccess, /admin-generate-recovery-code/);
   assert.match(residentAccess, /target_user_id: userId/);
-  assert.doesNotMatch(residentAccess, /createAdminClient|SERVICE_ROLE/);
+  assert.match(residentAccess, /setFieldResidentPassword/);
+  assert.match(residentAccess, /createAdminClient/);
+  assert.match(residentAccess, /auth\.admin\.updateUserById/);
+  assert.doesNotMatch(residentAccess, /SERVICE_ROLE/);
 
   assert.match(recoveryFunction, /admin\.rpc\("is_superadmin"/);
   assert.match(recoveryFunction, /isCommunityAdmin/);
