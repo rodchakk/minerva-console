@@ -80,3 +80,24 @@ test("Patronato review bypasses Console session auth but remains no-store", () =
   assert.match(middleware, /pathname\.startsWith\("\/entry\/patronato\/"\)/);
   assert.match(middleware, /protectPublicRegistrationResponse/);
 });
+
+
+test("Console makes Patronato approval explicit before Activation Queue handoff", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /data-testid="patronato-approval-banner"/);
+  assert.match(workspace, /Approved by Patronato/);
+  assert.match(
+    workspace,
+    /This household is authorized and ready to move to Activation Queue\./,
+  );
+  assert.match(workspace, /Approval history/);
+  assert.match(workspace, /label="Ready for Patronato"/);
+  assert.match(workspace, /label="Patronato approved"/);
+  assert.match(workspace, /approvalAlreadyRecorded/);
+  assert.match(workspace, /Patronato approval is already recorded\./);
+  assert.match(workspace, /Move to Activation Queue/);
+  assert.match(workspace, /normalized === "confirmed"/);
+});
