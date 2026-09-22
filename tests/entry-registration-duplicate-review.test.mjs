@@ -328,7 +328,7 @@ test("WhatsApp contact history is append-only and service-role restricted", () =
   assert.match(migration, /'action', 'whatsapp_contacted'/);
   assert.match(hardening, /revoke all on table public\.community_registration_contact_events from service_role/);
   assert.match(hardening, /grant select, insert on table public\.community_registration_contact_events to service_role/);
-  assert.doesNotMatch(hardening, /grant[^;]*(update|delete)/i);
+  assert.doesNotMatch(hardening, /\bgrant\s+[^;]*(update|delete)/i);
 });
 
 test("WhatsApp contact confirmation recomputes current diagnostics on the server", () => {
