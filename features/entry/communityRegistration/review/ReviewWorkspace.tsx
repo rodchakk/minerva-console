@@ -523,13 +523,17 @@ function HandoffProgress({
 }
 
 function Metric({
+  active = false,
   icon: Icon,
   label,
+  onClick,
   tone = "violet",
   value,
 }: {
+  active?: boolean;
   icon?: LucideIcon;
   label: string;
+  onClick?: () => void;
   tone?: "violet" | "emerald" | "amber";
   value: number;
 }) {
@@ -539,9 +543,13 @@ function Metric({
       : tone === "amber"
         ? "bg-amber-500/12 text-amber-300 ring-amber-400/15"
         : "bg-violet-500/12 text-violet-200 ring-violet-400/15";
-
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
+  const className = `flex min-w-0 items-center gap-3 rounded-lg border px-3 py-3 text-left ${
+    active
+      ? "border-amber-400/35 bg-amber-500/[0.07] ring-1 ring-inset ring-amber-400/10"
+      : "border-[var(--border)] bg-[var(--surface-strong)]"
+  } ${onClick ? "transition hover:border-white/15 hover:bg-white/[0.025]" : ""}`;
+  const content = (
+    <>
       {Icon ? (
         <span className={`grid size-9 shrink-0 place-items-center rounded-full ring-1 ring-inset ${iconClass}`}>
           <Icon className="size-4" aria-hidden />
@@ -551,7 +559,15 @@ function Metric({
         <p className="truncate text-[11px] text-[var(--text-muted)]">{label}</p>
         <p className="mt-0.5 text-lg font-semibold leading-none text-white">{value}</p>
       </div>
-    </div>
+    </>
+  );
+
+  return onClick ? (
+    <button type="button" onClick={onClick} aria-pressed={active} className={className}>
+      {content}
+    </button>
+  ) : (
+    <div className={className}>{content}</div>
   );
 }
 
