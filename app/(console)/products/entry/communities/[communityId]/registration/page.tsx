@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
 import { ReviewWorkspace } from "@/features/entry/communityRegistration/review/ReviewWorkspace";
 import { getCommunityRegistrationQuickEditData } from "@/features/entry/communityRegistration/review/quickEditQueries";
+import { getCommunityRegistrationDuplicateReviewData } from "@/features/entry/communityRegistration/review/duplicateQueries";
 import {
   getCommunityRegistrationReviewOverview,
   getCommunityRegistrationReviewUnit,
@@ -66,8 +67,29 @@ export default async function RegistrationReviewPage(
     );
   }
 
+  const duplicateData = await getCommunityRegistrationDuplicateReviewData(
+    overview.campaign.id,
+    community.id,
+  );
+  const unitSummaryById = new Map(overview.units.map((unit) => [unit.id, unit]));
+
+  for (const unit of duplicateData.units) {
+    if (unitSummaryById.has(unit.id)) continue;
+    unitSummaryById.set(unit.id, {
+      hasPendingObservation: false,
+      id: unit.id,
+      label: unit.label,
+      patronatoConfirmedAt: unit.patronatoConfirmedAt,
+      residentCount: unit.residents.length,
+      reviewedAt: unit.reviewedAt,
+      status: unit.status,
+      submittedAt: unit.submittedAt,
+    });
+  }
+
+  const reviewUnits = Array.from(unitSummaryById.values());
   const selectedUnitSummary = requestedUnitId
-    ? overview.units.find((unit) => unit.id === requestedUnitId) ?? null
+    ? reviewUnits.find((unit) => unit.id === requestedUnitId) ?? null
     : null;
   const selectedUnitId =
     selectedUnitSummary &&
@@ -75,13 +97,17 @@ export default async function RegistrationReviewPage(
     selectedUnitSummary.residentCount > 0
       ? selectedUnitSummary.id
       : null;
-  const [selectedUnit, quickEditData, selectedUnitReference] = selectedUnitId
-    ? await Promise.all([
-        getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId),
-        getCommunityRegistrationQuickEditData(selectedUnitId),
-        getCommunityRegistrationUnitReference(selectedUnitId),
-      ])
-    : [null, null, null];
+  const [selectedUnit, quickEditData, selectedUnitReference] = await Promise.all([
+    selectedUnitId
+      ? getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId)
+      : Promise.resolve(null),
+    selectedUnitId
+      ? getCommunityRegistrationQuickEditData(selectedUnitId)
+      : Promise.resolve(null),
+    selectedUnitId
+      ? getCommunityRegistrationUnitReference(selectedUnitId)
+      : Promise.resolve(null),
+  ]);
 
   return (
     <div className="relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]">
@@ -102,13 +128,14 @@ export default async function RegistrationReviewPage(
       <ReviewWorkspace
         campaign={overview.campaign}
         communityId={community.id}
+        duplicateData={duplicateData}
         loadError={overview.loadError}
         quickEditData={quickEditData}
         selectedUnit={selectedUnit}
         selectedUnitId={selectedUnitId}
         selectedUnitReference={selectedUnitReference}
         summary={overview.summary}
-        units={overview.units}
+        units={reviewUnits}
       />
     </div>
   );

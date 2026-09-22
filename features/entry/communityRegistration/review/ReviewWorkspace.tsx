@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -8,6 +9,7 @@ import {
   ClipboardList,
   Clock3,
   FileText,
+  GitMerge,
   Home,
   Mail,
   MapPin,
@@ -36,6 +38,15 @@ import {
   type CommunityRegistrationReviewActionResult,
 } from "@/features/entry/communityRegistration/review/actions";
 import { QuickEditResidentDialog } from "@/features/entry/communityRegistration/review/QuickEditResidentDialog";
+import { DuplicateReviewDialog } from "@/features/entry/communityRegistration/review/DuplicateReviewDialog";
+import {
+  dismissCommunityRegistrationDuplicate,
+  type RegistrationDuplicateActionResult,
+} from "@/features/entry/communityRegistration/review/duplicateActions";
+import type {
+  RegistrationDuplicateCandidate,
+  RegistrationDuplicateReviewData,
+} from "@/features/entry/communityRegistration/review/duplicateQueries";
 import { QuickEditUnitDialog } from "@/features/entry/communityRegistration/review/QuickEditUnitDialog";
 import { ConfirmationReportDrawer } from "@/features/entry/communityRegistration/review/ConfirmationReportDrawer";
 import {
@@ -58,6 +69,7 @@ import type {
 type ReviewWorkspaceProps = {
   campaign: CommunityRegistrationReviewCampaign;
   communityId: string;
+  duplicateData: RegistrationDuplicateReviewData;
   loadError: string | null;
   quickEditData: CommunityRegistrationQuickEditData | null;
   selectedUnit: CommunityRegistrationReviewUnitDetail | null;
@@ -68,6 +80,7 @@ type ReviewWorkspaceProps = {
 };
 
 const initialActionState: CommunityRegistrationReviewActionResult | null = null;
+const initialDuplicateActionState: RegistrationDuplicateActionResult | null = null;
 
 function statusLabel(status: string) {
   switch (status.trim().toLowerCase()) {
@@ -111,6 +124,23 @@ function formatDate(value: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
+}
+
+function normalizedSearchText(value: string | null | undefined) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-HN")
+    .replace(/[^a-z0-9@.]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function normalizedSearchPhone(value: string | null | undefined) {
+  const digits = String(value ?? "").replace(/\D+/g, "");
+  if (digits.length === 11 && digits.startsWith("504")) return digits.slice(3);
+  if (digits.length === 12 && digits.startsWith("504")) return digits.slice(3);
+  return digits;
 }
 
 function Overlay({ children }: { children: React.ReactNode }) {
@@ -510,13 +540,17 @@ function HandoffProgress({
 }
 
 function Metric({
+  active = false,
   icon: Icon,
   label,
+  onClick,
   tone = "violet",
   value,
 }: {
+  active?: boolean;
   icon?: LucideIcon;
   label: string;
+  onClick?: () => void;
   tone?: "violet" | "emerald" | "amber";
   value: number;
 }) {
@@ -526,9 +560,13 @@ function Metric({
       : tone === "amber"
         ? "bg-amber-500/12 text-amber-300 ring-amber-400/15"
         : "bg-violet-500/12 text-violet-200 ring-violet-400/15";
-
-  return (
-    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
+  const className = `flex min-w-0 items-center gap-3 rounded-lg border px-3 py-3 text-left ${
+    active
+      ? "border-amber-400/35 bg-amber-500/[0.07] ring-1 ring-inset ring-amber-400/10"
+      : "border-[var(--border)] bg-[var(--surface-strong)]"
+  } ${onClick ? "transition hover:border-white/15 hover:bg-white/[0.025]" : ""}`;
+  const content = (
+    <>
       {Icon ? (
         <span className={`grid size-9 shrink-0 place-items-center rounded-full ring-1 ring-inset ${iconClass}`}>
           <Icon className="size-4" aria-hidden />
@@ -538,15 +576,30 @@ function Metric({
         <p className="truncate text-[11px] text-[var(--text-muted)]">{label}</p>
         <p className="mt-0.5 text-lg font-semibold leading-none text-white">{value}</p>
       </div>
-    </div>
+    </>
+  );
+
+  return onClick ? (
+    <button type="button" onClick={onClick} aria-pressed={active} className={className}>
+      {content}
+    </button>
+  ) : (
+    <div className={className}>{content}</div>
   );
 }
 
-type UnitFilter = "all" | "pending" | "reviewed" | "activation";
+type UnitFilter =
+  | "pending"
+  | "duplicates"
+  | "reviewed"
+  | "activation"
+  | "all"
+  | "resolved";
 
 export function ReviewWorkspace({
   campaign,
   communityId,
+  duplicateData,
   loadError,
   quickEditData,
   selectedUnit,
@@ -555,6 +608,7 @@ export function ReviewWorkspace({
   summary,
   units,
 }: ReviewWorkspaceProps) {
+  const router = useRouter();
   const [showCorrectionRequest, setShowCorrectionRequest] = useState(false);
   const [correctionLinkMode, setCorrectionLinkMode] = useState<
     "create" | "replace" | null
@@ -563,6 +617,8 @@ export function ReviewWorkspace({
   const [editingResident, setEditingResident] =
     useState<CommunityRegistrationQuickEditResident | null>(null);
   const [editingUnit, setEditingUnit] = useState(false);
+  const [duplicateDialogCandidateId, setDuplicateDialogCandidateId] =
+    useState<string | null>(null);
   const [selectedReportUnitIds, setSelectedReportUnitIds] = useState<string[]>([]);
   const [selectionMissingFieldCount, setSelectionMissingFieldCount] = useState(0);
   const [selectionMissingEmailCount, setSelectionMissingEmailCount] = useState(0);
@@ -570,7 +626,7 @@ export function ReviewWorkspace({
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [unitFilter, setUnitFilter] = useState<UnitFilter>("all");
+  const [unitFilter, setUnitFilter] = useState<UnitFilter>("pending");
   const [unitSearch, setUnitSearch] = useState("");
   const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
   const [previewReport, setPreviewReport] =
@@ -581,6 +637,11 @@ export function ReviewWorkspace({
     markCommunityRegistrationUnitReviewed,
     initialActionState,
   );
+  const [duplicateDismissState, duplicateDismissAction, duplicateDismissPending] =
+    useActionState(
+      dismissCommunityRegistrationDuplicate,
+      initialDuplicateActionState,
+    );
   const campaignStatus = campaign.status.trim().toLowerCase();
   const reviewCapable = ["open", "review"].includes(campaignStatus);
   const selectedStatus = selectedUnit?.status.trim().toLowerCase() ?? "";
@@ -618,42 +679,171 @@ export function ReviewWorkspace({
         .map((field) => field.residentName as string),
     ),
   );
+  const mergedUnitIdSet = useMemo(
+    () => new Set(duplicateData.mergedUnitIds),
+    [duplicateData.mergedUnitIds],
+  );
+  const activeUnits = useMemo(
+    () =>
+      units.filter(
+        (unit) =>
+          unit.status.trim().toLowerCase() !== "merged" &&
+          !mergedUnitIdSet.has(unit.id),
+      ),
+    [mergedUnitIdSet, units],
+  );
+  const resolvedUnits = useMemo(
+    () =>
+      duplicateData.units
+        .filter((unit) => unit.resolutionType === "resolved_duplicate")
+        .map((unit) => ({
+          hasPendingObservation: false,
+          id: unit.id,
+          label: unit.label,
+          patronatoConfirmedAt: unit.patronatoConfirmedAt,
+          residentCount: unit.residents.length,
+          reviewedAt: unit.reviewedAt,
+          status: unit.status,
+          submittedAt: unit.submittedAt,
+        })),
+    [duplicateData.units],
+  );
+  const selectedDuplicateUnitModel = selectedUnitId
+    ? duplicateData.units.find((unit) => unit.id === selectedUnitId) ?? null
+    : null;
+  const selectedResolvedRegistration =
+    selectedDuplicateUnitModel?.resolutionType === "resolved_duplicate"
+      ? selectedDuplicateUnitModel
+      : null;
+  const relatedResolvedRegistrations = selectedUnitId
+    ? duplicateData.units.filter(
+        (unit) =>
+          unit.resolutionType === "resolved_duplicate" &&
+          unit.canonicalUnitId === selectedUnitId,
+      )
+    : [];
+  const duplicateCandidatesByUnit = useMemo(() => {
+    const map = new Map<string, RegistrationDuplicateCandidate[]>();
+
+    for (const candidate of duplicateData.candidates) {
+      for (const unitId of [candidate.unitAId, candidate.unitBId]) {
+        const current = map.get(unitId) ?? [];
+        current.push(candidate);
+        current.sort((left, right) => right.score - left.score);
+        map.set(unitId, current);
+      }
+    }
+
+    return map;
+  }, [duplicateData.candidates]);
+  const selectedDuplicateCandidate =
+    selectedUnitId
+      ? duplicateCandidatesByUnit.get(selectedUnitId)?.[0] ?? null
+      : null;
+  const selectedDuplicateTargetId =
+    selectedDuplicateCandidate && selectedUnitId
+      ? selectedDuplicateCandidate.unitAId === selectedUnitId
+        ? selectedDuplicateCandidate.unitBId
+        : selectedDuplicateCandidate.unitAId
+      : null;
+  const selectedDuplicateTarget =
+    selectedDuplicateTargetId
+      ? duplicateData.units.find((unit) => unit.id === selectedDuplicateTargetId) ??
+        null
+      : null;
+  const selectedDuplicateSameResidentCount =
+    selectedDuplicateCandidate?.residentMatches.filter(
+      (match) => match.kind === "same_resident",
+    ).length ?? 0;
+  const selectedDuplicateContactCount =
+    selectedDuplicateCandidate
+      ? Math.max(
+          selectedDuplicateCandidate.emailMatchCount,
+          selectedDuplicateCandidate.phoneMatchCount,
+        )
+      : 0;
+  const duplicateDialogCandidate =
+    duplicateDialogCandidateId
+      ? duplicateData.candidates.find(
+          (candidate) => candidate.id === duplicateDialogCandidateId,
+        ) ?? null
+      : null;
+  const registrationSearchByUnitId = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const unit of duplicateData.units) {
+      const textParts = [
+        unit.label,
+        unit.reference,
+        ...unit.residents.flatMap((resident) => [
+          resident.fullName,
+          resident.email,
+          resident.phone,
+          resident.normalizedFullName,
+          resident.normalizedEmail,
+        ]),
+      ];
+      const phoneParts = unit.residents.flatMap((resident) => [
+        resident.phone,
+        resident.normalizedPhone,
+      ]);
+
+      map.set(
+        unit.id,
+        `${textParts.map(normalizedSearchText).join(" ")} ${phoneParts
+          .map(normalizedSearchPhone)
+          .join(" ")}`,
+      );
+    }
+
+    return map;
+  }, [duplicateData.units]);
   const reportableUnitIds = useMemo(
     () =>
-      units
+      activeUnits
         .filter((unit) => unit.status !== "unregistered" && unit.residentCount > 0)
         .map((unit) => unit.id),
-    [units],
+    [activeUnits],
   );
   const selectionStorageKey =
     `entry-confirmation-report-selection:${campaign.id}:${communityId}`;
-  const selectedResidentCount = units
+  const selectedResidentCount = activeUnits
     .filter((unit) => selectedReportUnitIds.includes(unit.id))
     .reduce((total, unit) => total + unit.residentCount, 0);
   const unitFilterCounts = useMemo(
     () => ({
-      activation: units.filter(
+      activation: activeUnits.filter(
         (unit) => unit.status.trim().toLowerCase() === "processed",
       ).length,
-      all: units.length,
-      pending: units.filter((unit) =>
+      all: activeUnits.length,
+      duplicates: activeUnits.filter((unit) =>
+        duplicateCandidatesByUnit.has(unit.id),
+      ).length,
+      pending: activeUnits.filter((unit) =>
         ["submitted", "needs_correction", "edit_enabled"].includes(
           unit.status.trim().toLowerCase(),
         ),
       ).length,
-      reviewed: units.filter((unit) =>
+      resolved: resolvedUnits.length,
+      reviewed: activeUnits.filter((unit) =>
         ["reviewed", "confirmed"].includes(unit.status.trim().toLowerCase()),
       ).length,
     }),
-    [units],
+    [activeUnits, duplicateCandidatesByUnit, resolvedUnits.length],
   );
   const visibleUnits = useMemo(() => {
-    const normalizedSearch = unitSearch.trim().toLocaleLowerCase();
+    const normalizedSearch = normalizedSearchText(unitSearch);
+    const normalizedPhone = normalizedSearchPhone(unitSearch);
+    const sourceUnits = unitFilter === "resolved" ? resolvedUnits : activeUnits;
 
-    return units.filter((unit) => {
+    return sourceUnits.filter((unit) => {
+      const searchable = `${normalizedSearchText(unit.label)} ${
+        registrationSearchByUnitId.get(unit.id) ?? ""
+      }`;
       const matchesSearch =
         normalizedSearch.length === 0 ||
-        unit.label.toLocaleLowerCase().includes(normalizedSearch);
+        searchable.includes(normalizedSearch) ||
+        (normalizedPhone.length > 0 && searchable.includes(normalizedPhone));
       const normalizedStatus = unit.status.trim().toLowerCase();
       const matchesFilter =
         unitFilter === "all" ||
@@ -663,11 +853,20 @@ export function ReviewWorkspace({
           )) ||
         (unitFilter === "reviewed" &&
           ["reviewed", "confirmed"].includes(normalizedStatus)) ||
-        (unitFilter === "activation" && normalizedStatus === "processed");
+        (unitFilter === "activation" && normalizedStatus === "processed") ||
+        (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id)) ||
+        unitFilter === "resolved";
 
       return matchesSearch && matchesFilter;
     });
-  }, [unitFilter, unitSearch, units]);
+  }, [
+    activeUnits,
+    duplicateCandidatesByUnit,
+    registrationSearchByUnitId,
+    resolvedUnits,
+    unitFilter,
+    unitSearch,
+  ]);
   const detailPending = Boolean(
     pendingUnitId && pendingUnitId !== selectedUnitId,
   );
@@ -772,6 +971,12 @@ export function ReviewWorkspace({
     return () => window.cancelAnimationFrame(frame);
   }, [selectedUnitId]);
 
+  useEffect(() => {
+    if (duplicateDismissState?.success) {
+      router.refresh();
+    }
+  }, [duplicateDismissState, router]);
+
   async function openReport(unitIds: string[], mode: "single" | "selection") {
     if (unitIds.length === 0) return;
 
@@ -803,12 +1008,20 @@ export function ReviewWorkspace({
         </div>
       ) : null}
 
-      <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
         <Metric icon={Check} label="Reviewed" value={summary.reviewed} tone="emerald" />
         <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
         <Metric icon={Clock3} label="Correction open" value={summary.editEnabled} tone="amber" />
         <Metric icon={CheckCircle2} label="Confirmed" value={summary.confirmed} tone="emerald" />
+        <Metric
+          active={unitFilter === "duplicates"}
+          icon={TriangleAlert}
+          label="Duplicates"
+          onClick={() => setUnitFilter("duplicates")}
+          tone="amber"
+          value={duplicateData.candidateCount}
+        />
         <Metric icon={Users} label="Residents" value={summary.currentResidentCount} />
       </section>
 
@@ -887,7 +1100,7 @@ export function ReviewWorkspace({
         ) : null}
       </section>
 
-      <div className="grid gap-3 xl:h-[clamp(30rem,calc(100dvh-22rem),42rem)] xl:grid-cols-[minmax(320px,0.64fr)_minmax(0,1.56fr)]">
+      <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-20rem),50rem)] xl:grid-cols-[minmax(460px,0.92fr)_minmax(0,1.08fr)]">
         <section className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
           <div className="border-b border-[var(--border)] p-4">
             <div className="flex items-start justify-between gap-3">
@@ -907,17 +1120,19 @@ export function ReviewWorkspace({
                 type="search"
                 value={unitSearch}
                 onChange={(event) => setUnitSearch(event.target.value)}
-                placeholder="Search units..."
+                placeholder="Search unit, resident, email or phone..."
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
               />
             </label>
 
             <div className="mt-3 flex gap-1 overflow-x-auto pb-1" aria-label="Unit filters">
               {([
-                ["all", "All"],
                 ["pending", "Pending"],
+                ["duplicates", "Duplicates"],
                 ["reviewed", "Reviewed"],
                 ["activation", "Activation"],
+                ["all", "All"],
+                ["resolved", "Resolved"],
               ] as const).map(([value, label]) => (
                 <button
                   key={value}
@@ -941,6 +1156,7 @@ export function ReviewWorkspace({
               const canOpen = unit.status !== "unregistered" && unit.residentCount > 0;
               const active = selectedUnitId === unit.id;
               const selectedForReport = selectedReportUnitIds.includes(unit.id);
+              const duplicateMatches = duplicateCandidatesByUnit.get(unit.id) ?? [];
               const content = (
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -955,7 +1171,19 @@ export function ReviewWorkspace({
                       {unit.hasPendingObservation ? " · pending observation" : ""}
                     </p>
                   </div>
-                  <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {duplicateMatches.length > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
+                        <TriangleAlert className="size-3" aria-hidden />
+                        {duplicateMatches.length === 1
+                          ? "Possible duplicate"
+                          : `${duplicateMatches.length} matches`}
+                      </span>
+                    ) : null}
+                    <Badge tone={statusTone(unit.status)}>
+                      {unitFilter === "resolved" ? "Resolved duplicate" : statusLabel(unit.status)}
+                    </Badge>
+                  </div>
                 </div>
               );
 
@@ -1050,7 +1278,17 @@ export function ReviewWorkspace({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl font-semibold text-white">{selectedUnit.unitLabel}</h2>
-                        <Badge tone={statusTone(selectedUnit.status)}>{statusLabel(selectedUnit.status)}</Badge>
+                        <Badge tone={statusTone(selectedUnit.status)}>
+                          {selectedResolvedRegistration
+                            ? "Resolved duplicate"
+                            : statusLabel(selectedUnit.status)}
+                        </Badge>
+                        {selectedDuplicateCandidate ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
+                            <TriangleAlert className="size-3" aria-hidden />
+                            Under duplicate review
+                          </span>
+                        ) : null}
                       </div>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
                         Version {selectedUnit.version} · Submitted {formatDate(selectedUnit.submittedAt)}
@@ -1066,6 +1304,118 @@ export function ReviewWorkspace({
                     </p>
                   </div>
                 </div>
+
+                {selectedDuplicateCandidate && selectedDuplicateTarget ? (
+                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-amber-400/30 bg-amber-500/[0.07] p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-300 ring-1 ring-inset ring-amber-400/20">
+                          <TriangleAlert className="size-5" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                            Duplicate alert
+                          </p>
+                          <p className="mt-1 text-base font-semibold text-white">
+                            Possible duplicate found
+                          </p>
+                          <p className="mt-1 text-xs text-amber-50/80">
+                            Possible match with{" "}
+                            <span className="font-semibold text-white">
+                              {selectedDuplicateTarget.label}
+                            </span>
+                          </p>
+                          <p className="mt-1 text-xs text-amber-100/65">
+                            {selectedDuplicateSameResidentCount} resident{" "}
+                            {selectedDuplicateSameResidentCount === 1 ? "match" : "matches"}
+                            {" · "}
+                            {selectedDuplicateContactCount} contact{" "}
+                            {selectedDuplicateContactCount === 1 ? "match" : "matches"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          className="gap-2"
+                          onClick={() =>
+                            setDuplicateDialogCandidateId(selectedDuplicateCandidate.id)
+                          }
+                        >
+                          <GitMerge className="size-4" aria-hidden />
+                          Compare & review
+                        </Button>
+                        <form action={duplicateDismissAction}>
+                          <input type="hidden" name="campaign_id" value={campaign.id} />
+                          <input type="hidden" name="community_id" value={communityId} />
+                          <input
+                            type="hidden"
+                            name="left_unit_id"
+                            value={selectedDuplicateCandidate.unitAId}
+                          />
+                          <input
+                            type="hidden"
+                            name="right_unit_id"
+                            value={selectedDuplicateCandidate.unitBId}
+                          />
+                          <Button
+                            type="submit"
+                            variant="secondary"
+                            disabled={duplicateDismissPending}
+                          >
+                            {duplicateDismissPending ? "Saving..." : "Mark not duplicate"}
+                          </Button>
+                        </form>
+                      </div>
+                      <p className="mt-3 border-t border-amber-300/10 pt-3 text-xs leading-5 text-amber-50/65">
+                        This record can be reviewed as a duplicate, but advanced
+                        activation records should not be merged automatically.
+                      </p>
+                      {duplicateDismissState && !duplicateDismissState.success ? (
+                        <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+                          {duplicateDismissState.error}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-cyan-500/10 text-cyan-200 ring-1 ring-inset ring-cyan-400/20">
+                          <CheckCircle2 className="size-5" aria-hidden />
+                        </span>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+                            Activation status
+                          </p>
+                          <p className="mt-1 text-base font-semibold text-white">
+                            {selectedDuplicateUnitModel?.lifecycle.label ??
+                              statusLabel(selectedUnit.status)}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-cyan-50/70">
+                            {selectedDuplicateUnitModel?.lifecycle.label === "Activated"
+                              ? "This household already has an activated ENTRY identity."
+                              : selectedDuplicateUnitModel?.lifecycle.label ===
+                                  "Prepared for activation"
+                                ? "This household has already advanced to Activation Queue."
+                                : "This household has not reached Activation Queue yet."}
+                          </p>
+                        </div>
+                      </div>
+                      {["Prepared for activation", "Activated"].includes(
+                        selectedDuplicateUnitModel?.lifecycle.label ?? "",
+                      ) ? (
+                        <div className="mt-4">
+                          <Link href={activationQueueUrl}>
+                            <Button type="button" variant="secondary" className="gap-2">
+                              Open Activation Queue
+                              <ArrowRight className="size-3.5" aria-hidden />
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
 
                 {selectedUnit.review?.observation ? (
                   <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3">
@@ -1193,6 +1543,108 @@ export function ReviewWorkspace({
                     </div>
                   </div>
                 )}
+
+                {selectedDuplicateCandidate && selectedDuplicateTarget ? (
+                  <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="grid size-7 place-items-center rounded-full bg-amber-500/10 text-amber-300">
+                            <GitMerge className="size-3.5" aria-hidden />
+                          </span>
+                          <p className="text-sm font-semibold text-white">Likely match</p>
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Review the other household before deciding whether to merge.
+                        </p>
+                      </div>
+                      <Link
+                        href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(
+                          selectedDuplicateTarget.id,
+                        )}`}
+                        scroll={false}
+                      >
+                        <Button type="button" variant="secondary">
+                          View unit
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-200">
+                          <Home className="size-4" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {selectedDuplicateTarget.label}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                            {selectedDuplicateTarget.residents.length}{" "}
+                            {selectedDuplicateTarget.residents.length === 1
+                              ? "resident"
+                              : "residents"}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="size-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedResolvedRegistration ? (
+                  <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.05] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+                      Resolved duplicate
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      Archived registration · {selectedResolvedRegistration.label}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                      Canonical unit:{" "}
+                      {selectedResolvedRegistration.canonicalUnitId ?? "Unknown"} · Resolved{" "}
+                      {formatDate(selectedResolvedRegistration.resolvedAt)}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-slate-300">
+                      This registration remains available for audit and search. It was
+                      archived without rewriting the surviving operational identity.
+                    </p>
+                  </div>
+                ) : null}
+
+                {relatedResolvedRegistrations.length > 0 ? (
+                  <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                      Related registrations
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {relatedResolvedRegistrations.map((registration) => (
+                        <div
+                          key={registration.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2.5"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              Resolved duplicate · {registration.label}
+                            </p>
+                            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                              Archived {formatDate(registration.resolvedAt)}
+                            </p>
+                          </div>
+                          <Link
+                            href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(
+                              registration.id,
+                            )}`}
+                            scroll={false}
+                          >
+                            <Button type="button" variant="secondary">
+                              View archived
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {reviewState && !reviewState.success ? (
                   <p className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -1329,6 +1781,17 @@ export function ReviewWorkspace({
           onClose={() => setEditingResident(null)}
           resident={editingResident}
           submissionId={quickEditData.submissionId}
+        />
+      ) : null}
+
+      {duplicateDialogCandidate && selectedUnitId ? (
+        <DuplicateReviewDialog
+          campaignId={campaign.id}
+          candidate={duplicateDialogCandidate}
+          communityId={communityId}
+          onClose={() => setDuplicateDialogCandidateId(null)}
+          selectedUnitId={selectedUnitId}
+          units={duplicateData.units}
         />
       ) : null}
 

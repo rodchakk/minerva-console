@@ -132,8 +132,8 @@ test("resident registration uses a wider page-specific workspace on desktop", ()
 
   assert.match(page, /max-w-\[2200px\]/);
   assert.match(page, /w-\[calc\(100vw-19rem\)\]/);
-  assert.match(workspace, /minmax\(320px,0\.64fr\)/);
-  assert.match(workspace, /minmax\(0,1\.56fr\)/);
+  assert.match(workspace, /minmax\(460px,0\.92fr\)/);
+  assert.match(workspace, /minmax\(0,1\.08fr\)/);
 });
 
 test("activation handoff warns about missing email without disabling complete residents", () => {
