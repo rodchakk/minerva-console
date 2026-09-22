@@ -76,19 +76,22 @@ export default async function RegistrationReviewPage(
     selectedUnitSummary.residentCount > 0
       ? selectedUnitSummary.id
       : null;
-  const duplicateDataPromise = getCommunityRegistrationDuplicateReviewData(
-    overview.campaign.id,
-    community.id,
-  );
-  const [selectedUnit, quickEditData, selectedUnitReference, duplicateData] =
-    selectedUnitId
-      ? await Promise.all([
-          getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId),
-          getCommunityRegistrationQuickEditData(selectedUnitId),
-          getCommunityRegistrationUnitReference(selectedUnitId),
-          duplicateDataPromise,
-        ])
-      : [null, null, null, await duplicateDataPromise];
+  const [duplicateData, selectedUnit, quickEditData, selectedUnitReference] =
+    await Promise.all([
+      getCommunityRegistrationDuplicateReviewData(
+        overview.campaign.id,
+        community.id,
+      ),
+      selectedUnitId
+        ? getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId)
+        : Promise.resolve(null),
+      selectedUnitId
+        ? getCommunityRegistrationQuickEditData(selectedUnitId)
+        : Promise.resolve(null),
+      selectedUnitId
+        ? getCommunityRegistrationUnitReference(selectedUnitId)
+        : Promise.resolve(null),
+    ]);
 
   return (
     <div className="relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]">
