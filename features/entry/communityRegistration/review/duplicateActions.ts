@@ -1,0 +1,156 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
+import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export type RegistrationDuplicateActionResult =
+  | {
+      success: true;
+      data: {
+        canonicalUnitId?: string;
+        kind: "dismissed" | "merged";
+        message: string;
+        mergedResidentCount?: number;
+      };
+    }
+  | {
+      success: false;
+      error: string;
+    };
+
+function formString(formData: FormData, key: string) {
+  return String(formData.get(key) ?? "").trim();
+}
+
+function revalidateRegistration(communityId: string) {
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/products/entry/communities/${communityId}/registration`);
+  revalidatePath("/products/entry/activation");
+}
+
+function previewReadOnlyResult(): RegistrationDuplicateActionResult | null {
+  const error = getEntryPreviewReadOnlyError();
+  return error ? { success: false, error } : null;
+}
+
+function mapDuplicateError(error: { code?: string | null; message?: string | null }) {
+  const message = error.message ?? "";
+
+  if (/ENTRY_CR_DUPLICATE_ALREADY_ACTIVATED/.test(message)) {
+    return "These records already reached Activation Queue. Resolve the active identity before merging registration records.";
+  }
+  if (/ENTRY_CR_DUPLICATE_INVALID_STATE/.test(message)) {
+    return "Both units must still be in Submitted status before they can be merged.";
+  }
+  if (/ENTRY_CR_DUPLICATE_DIFFERENT_CAMPAIGN|ENTRY_CR_DUPLICATE_INVALID_PAIR/.test(message)) {
+    return "These units cannot be merged because they do not belong to the same active registration campaign.";
+  }
+  if (/ENTRY_CR_DUPLICATE_NOT_RESIDENT_PROVIDED/.test(message)) {
+    return "Unit merging is only available for resident-provided registration campaigns.";
+  }
+  if (/ENTRY_CR_DUPLICATE_RESIDENT_LIMIT/.test(message)) {
+    return "The combined household is larger than the safe resident limit. Review the residents before merging.";
+  }
+  if (/ENTRY_CR_UNAUTHORIZED/i.test(message) || error.code === "42501") {
+    return "Superadmin permission is required.";
+  }
+  if (/does not exist|PGRST205|42883/i.test(message)) {
+    return "Duplicate merge is not available in this environment until the reviewed database migration is deployed.";
+  }
+
+  return "The duplicate action could not be completed. Refresh and try again.";
+}
+
+export async function dismissCommunityRegistrationDuplicate(
+  _previousState: RegistrationDuplicateActionResult | null,
+  formData: FormData,
+): Promise<RegistrationDuplicateActionResult> {
+  const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+  if (previewResult) return previewResult;
+
+  const campaignId = formString(formData, "campaign_id");
+  const communityId = formString(formData, "community_id");
+  const leftUnitId = formString(formData, "left_unit_id");
+  const rightUnitId = formString(formData, "right_unit_id");
+
+  if (!campaignId || !communityId || !leftUnitId || !rightUnitId || leftUnitId === rightUnitId) {
+    return { success: false, error: "Duplicate comparison information is incomplete." };
+  }
+
+  const supabase = createAdminClient();
+  const { error } = await supabase.rpc(
+    "resolve_community_registration_duplicate_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_id: campaignId,
+      p_left_unit_id: leftUnitId,
+      p_right_unit_id: rightUnitId,
+      p_resolution: "dismissed",
+    },
+  );
+
+  if (error) return { success: false, error: mapDuplicateError(error) };
+
+  revalidateRegistration(communityId);
+  return {
+    success: true,
+    data: {
+      kind: "dismissed",
+      message: "The pair was marked as not duplicate.",
+    },
+  };
+}
+
+export async function mergeCommunityRegistrationDuplicateUnits(
+  _previousState: RegistrationDuplicateActionResult | null,
+  formData: FormData,
+): Promise<RegistrationDuplicateActionResult> {
+  const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+  if (previewResult) return previewResult;
+
+  const campaignId = formString(formData, "campaign_id");
+  const communityId = formString(formData, "community_id");
+  const canonicalUnitId = formString(formData, "canonical_unit_id");
+  const duplicateUnitId = formString(formData, "duplicate_unit_id");
+
+  if (
+    !campaignId ||
+    !communityId ||
+    !canonicalUnitId ||
+    !duplicateUnitId ||
+    canonicalUnitId === duplicateUnitId
+  ) {
+    return { success: false, error: "Choose two different units and select which one should remain." };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "merge_community_registration_units_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_id: campaignId,
+      p_canonical_unit_id: canonicalUnitId,
+      p_duplicate_unit_id: duplicateUnitId,
+    },
+  );
+
+  if (error) return { success: false, error: mapDuplicateError(error) };
+
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+
+  revalidateRegistration(communityId);
+  return {
+    success: true,
+    data: {
+      canonicalUnitId,
+      kind: "merged",
+      mergedResidentCount: Number(result.merged_resident_count ?? 0),
+      message: "The household records were merged into one canonical unit.",
+    },
+  };
+}
