@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
+  archiveCommunityRegistrationDuplicate,
   mergeCommunityRegistrationDuplicateUnits,
   type RegistrationDuplicateActionResult,
 } from "@/features/entry/communityRegistration/review/duplicateActions";
@@ -345,16 +346,56 @@ export function DuplicateReviewDialog({
   const router = useRouter();
   const unitA = units.find((unit) => unit.id === candidate.unitAId) ?? null;
   const unitB = units.find((unit) => unit.id === candidate.unitBId) ?? null;
+
+  const isOperational = (unit: RegistrationDuplicateUnit | null) =>
+    Boolean(
+      unit &&
+        ["Prepared for activation", "Activated"].includes(unit.lifecycle.label),
+    );
+  const unitAOperational = isOperational(unitA);
+  const unitBOperational = isOperational(unitB);
+  const unitASubmitted = unitA?.status.trim().toLowerCase() === "submitted";
+  const unitBSubmitted = unitB?.status.trim().toLowerCase() === "submitted";
+  const resolveMode =
+    Boolean(unitA && unitB) &&
+    ((unitAOperational && unitBSubmitted && !unitBOperational) ||
+      (unitBOperational && unitASubmitted && !unitAOperational));
+  const manualIdentityReview = unitAOperational && unitBOperational;
+  const safeMergeMode =
+    Boolean(unitA && unitB) &&
+    unitASubmitted &&
+    unitBSubmitted &&
+    !unitAOperational &&
+    !unitBOperational;
+
+  const forcedCanonicalId = resolveMode
+    ? unitAOperational
+      ? candidate.unitAId
+      : candidate.unitBId
+    : null;
   const defaultCanonical =
-    selectedUnitId === candidate.unitAId || selectedUnitId === candidate.unitBId
+    forcedCanonicalId ??
+    (selectedUnitId === candidate.unitAId || selectedUnitId === candidate.unitBId
       ? selectedUnitId
-      : candidate.unitAId;
+      : candidate.unitAId);
+
   const [canonicalUnitId, setCanonicalUnitId] = useState(defaultCanonical);
   const [decisions, setDecisions] = useState<Record<string, ResidentDecision>>({});
-  const [state, formAction, pending] = useActionState(
+  const [uniqueDataAcknowledged, setUniqueDataAcknowledged] = useState(false);
+  const [mergeState, mergeAction, mergePending] = useActionState(
     mergeCommunityRegistrationDuplicateUnits,
     initialState,
   );
+  const [archiveState, archiveAction, archivePending] = useActionState(
+    archiveCommunityRegistrationDuplicate,
+    initialState,
+  );
+
+  useEffect(() => {
+    if (forcedCanonicalId && canonicalUnitId !== forcedCanonicalId) {
+      setCanonicalUnitId(forcedCanonicalId);
+    }
+  }, [canonicalUnitId, forcedCanonicalId]);
 
   const duplicateUnitId =
     canonicalUnitId === candidate.unitAId ? candidate.unitBId : candidate.unitAId;
@@ -401,7 +442,7 @@ export function DuplicateReviewDialog({
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null),
-    [candidate, canonicalUnitId, decisions, residentById],
+    [candidate.residentMatches, canonicalUnitId, decisions, residentById],
   );
 
   const contactOnlyMatches = useMemo(
@@ -449,17 +490,6 @@ export function DuplicateReviewDialog({
     (unitA?.residents.length ?? 0) +
     (unitB?.residents.length ?? 0) -
     duplicateResidentsUnified;
-  const lifecycleBlockers = [unitA, unitB]
-    .filter((unit): unit is RegistrationDuplicateUnit => Boolean(unit?.lifecycle.blocksMerge))
-    .map((unit) => unit.lifecycle.reason)
-    .filter((reason): reason is string => Boolean(reason));
-  const canMerge = Boolean(
-    unitA &&
-      unitB &&
-      lifecycleBlockers.length === 0 &&
-      unresolvedCount === 0 &&
-      conflictCount === 0,
-  );
 
   const mergePlan = useMemo(
     () => ({
@@ -491,9 +521,76 @@ export function DuplicateReviewDialog({
     ],
   );
 
-  useEffect(() => {
-    if (!state?.success || state.data.kind !== "merged") return;
+  if (!unitA || !unitB) return null;
 
+  const canonicalUnit = canonicalUnitId === unitA.id ? unitA : unitB;
+  const duplicateUnit = canonicalUnitId === unitA.id ? unitB : unitA;
+
+  const uniqueDataItems = (() => {
+    if (!resolveMode) return [] as string[];
+    const items: string[] = [];
+    const canonicalResidents = canonicalUnit.residents;
+    const duplicateResidents = duplicateUnit.residents;
+
+    for (const resident of duplicateResidents) {
+      const match = candidate.residentMatches.find(
+        (item) =>
+          item.leftResidentId === resident.id || item.rightResidentId === resident.id,
+      );
+      if (!match) {
+        items.push(`${resident.fullName} exists only in ${duplicateUnit.label}`);
+        continue;
+      }
+
+      const otherId =
+        match.leftResidentId === resident.id
+          ? match.rightResidentId
+          : match.leftResidentId;
+      const canonicalResident = canonicalResidents.find(
+        (item) => item.id === otherId,
+      );
+      if (!canonicalResident) {
+        items.push(`${resident.fullName} is not represented in the canonical registration`);
+        continue;
+      }
+
+      if (!canonicalResident.email && resident.email) {
+        items.push(`${resident.fullName}: email exists only in the duplicate`);
+      }
+      if (!canonicalResident.phone && resident.phone) {
+        items.push(`${resident.fullName}: phone exists only in the duplicate`);
+      }
+      if (
+        normalizedText(resident.fullName).length >
+          normalizedText(canonicalResident.fullName).length &&
+        isCompatibleName(resident.fullName, canonicalResident.fullName)
+      ) {
+        items.push(`${resident.fullName}: more complete name exists in the duplicate`);
+      }
+    }
+
+    if (
+      duplicateUnit.reference &&
+      normalizedText(duplicateUnit.reference) !==
+        normalizedText(canonicalUnit.reference)
+    ) {
+      items.push(`Unit reference from ${duplicateUnit.label}: ${duplicateUnit.reference}`);
+    }
+
+    return Array.from(new Set(items));
+  })();
+
+  const canMerge =
+    safeMergeMode && unresolvedCount === 0 && conflictCount === 0;
+  const canArchive =
+    resolveMode &&
+    canonicalUnit.id === forcedCanonicalId &&
+    (!uniqueDataItems.length || uniqueDataAcknowledged);
+  const state = resolveMode ? archiveState : mergeState;
+  const pending = resolveMode ? archivePending : mergePending;
+
+  useEffect(() => {
+    if (!state?.success) return;
     const canonicalId = state.data.canonicalUnitId ?? canonicalUnitId;
     onClose();
     router.replace(
@@ -505,10 +602,10 @@ export function DuplicateReviewDialog({
     router.refresh();
   }, [canonicalUnitId, communityId, onClose, router, state]);
 
-  if (!unitA || !unitB) return null;
-
-  const canonicalUnit = canonicalUnitId === unitA.id ? unitA : unitB;
-  const duplicateUnit = canonicalUnitId === unitA.id ? unitB : unitA;
+  const chooseCanonical = (unitId: string) => {
+    if (forcedCanonicalId && unitId !== forcedCanonicalId) return;
+    setCanonicalUnitId(unitId);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
@@ -524,14 +621,14 @@ export function DuplicateReviewDialog({
                   Duplicate review
                 </p>
                 <h3 className="mt-0.5 text-xl font-semibold text-white">
-                  Compare & merge household
+                  Compare & resolve household
                 </h3>
               </div>
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
-              Choose the unit that should remain, then review resident matches.
-              Shared email or phone alone is preserved as evidence, but it will not
-              merge two residents without a confirmed same-person decision.
+              Choose the registration that should survive. ENTRY will merge only
+              safe pre-activation records; advanced operational identities are
+              preserved and the lower-stage duplicate is archived instead.
             </p>
           </div>
           <button
@@ -556,17 +653,23 @@ export function DuplicateReviewDialog({
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Resident matches
+                Resolution path
               </p>
               <p className="mt-1 text-sm font-semibold text-white">
-                {duplicateResidentsUnified}
+                {manualIdentityReview
+                  ? "Manual identity review"
+                  : resolveMode
+                    ? "Archive duplicate"
+                    : "Merge registration"}
               </p>
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Needs review
+                Resident matches
               </p>
-              <p className="mt-1 text-sm font-semibold text-white">{unresolvedCount}</p>
+              <p className="mt-1 text-sm font-semibold text-white">
+                {candidate.residentMatches.filter((item) => item.kind === "same_resident").length}
+              </p>
             </div>
           </div>
 
@@ -574,202 +677,240 @@ export function DuplicateReviewDialog({
             <UnitComparisonCard
               candidate={candidate}
               canonicalUnitId={canonicalUnitId}
-              onChoose={setCanonicalUnitId}
+              onChoose={chooseCanonical}
               unit={unitA}
             />
             <UnitComparisonCard
               candidate={candidate}
               canonicalUnitId={canonicalUnitId}
-              onChoose={setCanonicalUnitId}
+              onChoose={chooseCanonical}
               unit={unitB}
             />
           </div>
 
-          <section className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
-                  Resolve resident matches
-                </p>
-                <h4 className="mt-1 text-base font-semibold text-white">
-                  Resident-level resolution
-                </h4>
-              </div>
-              <Badge tone={unresolvedCount > 0 ? "warning" : "success"}>
-                {unresolvedCount > 0 ? `${unresolvedCount} unresolved` : "Resolved"}
-              </Badge>
-            </div>
+          {resolveMode ? (
+            <section className="mt-5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+                Safe resolution
+              </p>
+              <h4 className="mt-1 text-base font-semibold text-white">
+                Keep {canonicalUnit.label}
+              </h4>
+              <p className="mt-2 text-sm leading-6 text-slate-300">
+                {duplicateUnit.label} will be archived as a resolved duplicate.
+                The {canonicalUnit.lifecycle.label.toLowerCase()} household, its
+                Activation Queue state, users, house identity, PINs and access
+                identity will not be changed.
+              </p>
 
-            <div className="mt-4 space-y-3">
-              {reviewMatches.map((item) => (
-                <div
-                  key={item.decisionKey}
-                  className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3"
-                >
-                  <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {item.left.fullName}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        {item.left.email ?? "Email missing"} · {item.left.phone ?? "Phone missing"}
-                      </p>
-                    </div>
-                    <ArrowRight className="hidden size-4 text-[var(--text-muted)] lg:block" aria-hidden />
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-white">
-                        {item.right.fullName}
-                      </p>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">
-                        {item.right.email ?? "Email missing"} · {item.right.phone ?? "Phone missing"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <Badge tone={item.match.kind === "same_resident" ? "success" : "warning"}>
-                      {item.match.kind === "same_resident" ? "Same person" : "Needs review"}
-                    </Badge>
-                    <span className="text-xs text-[var(--text-muted)]">
-                      {item.match.explanation}
-                    </span>
-                  </div>
-
-                  {item.match.kind === "needs_review" ? (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant={item.decision === "merge" ? "primary" : "secondary"}
-                        onClick={() =>
-                          setDecisions((current) => ({
-                            ...current,
-                            [item.decisionKey]: "merge",
-                          }))
-                        }
-                      >
-                        Merge as same person
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={item.decision === "keep_separate" ? "primary" : "secondary"}
-                        onClick={() =>
-                          setDecisions((current) => ({
-                            ...current,
-                            [item.decisionKey]: "keep_separate",
-                          }))
-                        }
-                      >
-                        Keep separate
-                      </Button>
-                    </div>
-                  ) : null}
-
-                  {item.result ? <ResidentResultPreview result={item.result} /> : null}
-                </div>
-              ))}
-
-              {contactOnlyMatches.length > 0 ? (
-                <div className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
+              {uniqueDataItems.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-amber-400/25 bg-amber-500/[0.07] p-3">
                   <div className="flex items-start gap-2">
                     <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
-                    <div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-amber-100">
+                        Unique information found in {duplicateUnit.label}
+                      </p>
+                      <ul className="mt-2 space-y-1 text-xs leading-5 text-amber-50/75">
+                        {uniqueDataItems.map((item) => (
+                          <li key={item}>• {item}</li>
+                        ))}
+                      </ul>
+                      <label className="mt-3 flex cursor-pointer items-start gap-2 text-xs text-amber-50">
+                        <input
+                          type="checkbox"
+                          checked={uniqueDataAcknowledged}
+                          onChange={(event) =>
+                            setUniqueDataAcknowledged(event.target.checked)
+                          }
+                          className="mt-0.5 size-4 accent-violet-500"
+                        />
+                        <span>
+                          I reviewed this information. Preserve it in archived
+                          registration history without changing the operational household.
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.06] px-3 py-3">
+                  <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
+                  <p className="text-xs leading-5 text-emerald-100">
+                    No unique registration information was detected on the lower-stage duplicate.
+                  </p>
+                </div>
+              )}
+            </section>
+          ) : safeMergeMode ? (
+            <>
+              <section className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                      Resolve resident matches
+                    </p>
+                    <h4 className="mt-1 text-base font-semibold text-white">
+                      Resident-level resolution
+                    </h4>
+                  </div>
+                  <Badge tone={unresolvedCount > 0 ? "warning" : "success"}>
+                    {unresolvedCount > 0 ? `${unresolvedCount} unresolved` : "Resolved"}
+                  </Badge>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  {reviewMatches.map((item) => (
+                    <div
+                      key={item.decisionKey}
+                      className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3"
+                    >
+                      <div className="grid gap-3 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {item.left.fullName}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {item.left.email ?? "Email missing"} · {item.left.phone ?? "Phone missing"}
+                          </p>
+                        </div>
+                        <ArrowRight className="hidden size-4 text-[var(--text-muted)] lg:block" aria-hidden />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {item.right.fullName}
+                          </p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {item.right.email ?? "Email missing"} · {item.right.phone ?? "Phone missing"}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge tone={item.match.kind === "same_resident" ? "success" : "warning"}>
+                          {item.match.kind === "same_resident" ? "Same person" : "Needs review"}
+                        </Badge>
+                        <span className="text-xs text-[var(--text-muted)]">
+                          {item.match.explanation}
+                        </span>
+                      </div>
+
+                      {item.match.kind === "needs_review" ? (
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <Button
+                            type="button"
+                            variant={item.decision === "merge" ? "primary" : "secondary"}
+                            onClick={() =>
+                              setDecisions((current) => ({
+                                ...current,
+                                [item.decisionKey]: "merge",
+                              }))
+                            }
+                          >
+                            Merge as same person
+                          </Button>
+                          <Button
+                            type="button"
+                            variant={item.decision === "keep_separate" ? "primary" : "secondary"}
+                            onClick={() =>
+                              setDecisions((current) => ({
+                                ...current,
+                                [item.decisionKey]: "keep_separate",
+                              }))
+                            }
+                          >
+                            Keep separate
+                          </Button>
+                        </div>
+                      ) : null}
+
+                      {item.result ? <ResidentResultPreview result={item.result} /> : null}
+                    </div>
+                  ))}
+
+                  {contactOnlyMatches.length > 0 ? (
+                    <div className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
                       <p className="text-sm font-semibold text-white">
                         Contact overlap kept separate
                       </p>
                       <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                        Shared email, shared phone, or name-only evidence is shown
-                        for review but does not auto-collapse residents.
+                        Shared email, phone, or name-only evidence never auto-collapses residents.
                       </p>
                     </div>
-                  </div>
-                </div>
-              ) : null}
+                  ) : null}
 
-              {unmatchedResidents.length > 0 ? (
-                <div className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
-                  <div className="flex items-start gap-2">
-                    <Users className="mt-0.5 size-4 shrink-0 text-slate-300" aria-hidden />
-                    <div>
+                  {unmatchedResidents.length > 0 ? (
+                    <div className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
                       <p className="text-sm font-semibold text-white">No match</p>
                       <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                         {unmatchedResidents.length} resident
                         {unmatchedResidents.length === 1 ? "" : "s"} will remain separate.
                       </p>
                     </div>
+                  ) : null}
+                </div>
+              </section>
+
+              <section className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                  Merge result
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-4">
+                  <div>
+                    <p className="text-[11px] text-[var(--text-muted)]">Keep</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-white">
+                      {canonicalUnit.label}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-[var(--text-muted)]">Audit history</p>
+                    <p className="mt-1 truncate text-sm font-semibold text-white">
+                      {duplicateUnit.label}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-[var(--text-muted)]">Residents after merge</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {residentsAfterMerge}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-[var(--text-muted)]">Missing fields recovered</p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      {recoveredFieldCount}
+                    </p>
                   </div>
                 </div>
-              ) : null}
-            </div>
-          </section>
-
-          <section className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
-              Merge result
-            </p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-4">
-              <div>
-                <p className="text-[11px] text-[var(--text-muted)]">Keep</p>
-                <p className="mt-1 truncate text-sm font-semibold text-white">
-                  {canonicalUnit.label}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] text-[var(--text-muted)]">Audit history</p>
-                <p className="mt-1 truncate text-sm font-semibold text-white">
-                  {duplicateUnit.label}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] text-[var(--text-muted)]">Residents after merge</p>
-                <p className="mt-1 text-sm font-semibold text-white">
-                  {residentsAfterMerge}
-                </p>
-              </div>
-              <div>
-                <p className="text-[11px] text-[var(--text-muted)]">Missing fields recovered</p>
-                <p className="mt-1 text-sm font-semibold text-white">
-                  {recoveredFieldCount}
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-200">
-                Duplicate residents unified: {duplicateResidentsUnified}
-              </span>
-              <span className="rounded-full border border-white/10 px-2.5 py-1 text-slate-200">
-                Conflicts: {conflictCount}
-              </span>
-            </div>
-          </section>
-
-          {!canMerge ? (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-4 py-3">
+              </section>
+            </>
+          ) : (
+            <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-4 py-4">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
               <div>
                 <p className="text-sm font-semibold text-amber-100">
-                  Merge is locked for this pair
+                  Manual identity review required
                 </p>
-                <div className="mt-1 space-y-1 text-xs leading-5 text-amber-50/70">
-                  {lifecycleBlockers.length > 0
-                    ? lifecycleBlockers.map((reason) => <p key={reason}>{reason}</p>)
-                    : null}
-                  {unresolvedCount > 0 ? (
-                    <p>Merge is locked because resident decisions are still unresolved.</p>
-                  ) : null}
-                  {conflictCount > 0 ? (
-                    <p>Merge is locked because conflicting resident contact data needs review.</p>
-                  ) : null}
-                </div>
+                <p className="mt-1 text-xs leading-5 text-amber-50/70">
+                  Both registrations have advanced beyond a safe staging merge, or this
+                  lifecycle combination cannot be resolved automatically. ENTRY will not
+                  rewrite an operational identity.
+                </p>
               </div>
             </div>
-          ) : (
-            <div className="mt-4 flex items-start gap-3 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
-              <p className="text-sm font-semibold text-emerald-100">
-                Resident decisions are ready for merge.
-              </p>
-            </div>
           )}
+
+          {safeMergeMode && !canMerge ? (
+            <div className="mt-4 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-4 py-3">
+              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
+              <div className="text-xs leading-5 text-amber-50/75">
+                {unresolvedCount > 0 ? (
+                  <p>Merge is locked because resident decisions are still unresolved.</p>
+                ) : null}
+                {conflictCount > 0 ? (
+                  <p>Merge is locked because conflicting resident contact data needs review.</p>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           {state && !state.success ? (
             <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
@@ -778,33 +919,77 @@ export function DuplicateReviewDialog({
           ) : null}
         </div>
 
-        <form
-          action={formAction}
-          className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-white">
-              Keep {canonicalUnit.label}
+        {resolveMode ? (
+          <form
+            action={archiveAction}
+            className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                Keep {canonicalUnit.label}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {duplicateUnit.label} will be archived as a resolved duplicate. The
+                operational household will not be changed.
+              </p>
+            </div>
+            <input type="hidden" name="campaign_id" value={campaignId} />
+            <input type="hidden" name="community_id" value={communityId} />
+            <input type="hidden" name="canonical_unit_id" value={canonicalUnit.id} />
+            <input type="hidden" name="duplicate_unit_id" value={duplicateUnit.id} />
+            <input
+              type="hidden"
+              name="unique_data_acknowledged"
+              value={uniqueDataAcknowledged ? "true" : "false"}
+            />
+            <div className="flex shrink-0 gap-2">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" className="gap-2" disabled={!canArchive || pending}>
+                <CheckCircle2 className="size-4" aria-hidden />
+                {pending ? "Resolving..." : "Resolve duplicate"}
+              </Button>
+            </div>
+          </form>
+        ) : safeMergeMode ? (
+          <form
+            action={mergeAction}
+            className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                Keep {canonicalUnit.label}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {duplicateUnit.label} stays traceable as merged registration history.
+              </p>
+            </div>
+            <input type="hidden" name="campaign_id" value={campaignId} />
+            <input type="hidden" name="community_id" value={communityId} />
+            <input type="hidden" name="canonical_unit_id" value={canonicalUnitId} />
+            <input type="hidden" name="duplicate_unit_id" value={duplicateUnitId} />
+            <input type="hidden" name="resident_merge_plan" value={JSON.stringify(mergePlan)} />
+            <div className="flex shrink-0 gap-2">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" className="gap-2" disabled={!canMerge || pending}>
+                <GitMerge className="size-4" aria-hidden />
+                {pending ? "Merging..." : "Merge units"}
+              </Button>
+            </div>
+          </form>
+        ) : (
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4">
+            <p className="text-xs text-[var(--text-muted)]">
+              No automatic mutation is available for this pair.
             </p>
-            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-              {duplicateUnit.label} stays traceable as merged registration history.
-            </p>
-          </div>
-          <input type="hidden" name="campaign_id" value={campaignId} />
-          <input type="hidden" name="community_id" value={communityId} />
-          <input type="hidden" name="canonical_unit_id" value={canonicalUnitId} />
-          <input type="hidden" name="duplicate_unit_id" value={duplicateUnitId} />
-          <input type="hidden" name="resident_merge_plan" value={JSON.stringify(mergePlan)} />
-          <div className="flex shrink-0 gap-2">
-            <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
-              Cancel
-            </Button>
-            <Button type="submit" className="gap-2" disabled={!canMerge || pending}>
-              <GitMerge className="size-4" aria-hidden />
-              {pending ? "Merging..." : "Merge units"}
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Close
             </Button>
           </div>
-        </form>
+        )}
       </div>
     </div>
   );
