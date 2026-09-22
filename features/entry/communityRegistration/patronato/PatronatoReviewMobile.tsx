@@ -71,7 +71,16 @@ export function PatronatoReviewMobile({
   const units = useMemo(
     () =>
       session.units.filter((unit) => {
-        if (filter !== "all" && unit.reviewState !== filter) return false;
+        if (
+          filter !== "all" &&
+          !(
+            filter === "approved" &&
+            ["approved", "processed"].includes(unit.reviewState)
+          ) &&
+          unit.reviewState !== filter
+        ) {
+          return false;
+        }
         if (!normalizedSearch) return true;
 
         return [
