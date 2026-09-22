@@ -8,11 +8,13 @@ import {
   CheckCircle2,
   ClipboardList,
   Clock3,
+  Copy,
   FileText,
   GitMerge,
   Home,
   Mail,
   MapPin,
+  MessageCircle,
   Pencil,
   Phone,
   Search,
@@ -53,6 +55,7 @@ import { ConfirmationReportDrawer } from "@/features/entry/communityRegistration
 import {
   getResidentCompletenessStatus,
   getUnitMissingFields,
+  type RegistrationMissingField,
 } from "@/features/entry/communityRegistration/review/completeness";
 import { loadCommunityRegistrationConfirmationReport } from "@/features/entry/communityRegistration/review/reportActions";
 import {
@@ -74,6 +77,7 @@ import type {
 type ReviewWorkspaceProps = {
   campaign: CommunityRegistrationReviewCampaign;
   communityId: string;
+  communityName: string;
   duplicateData: RegistrationDuplicateReviewData;
   loadError: string | null;
   quickEditData: CommunityRegistrationQuickEditData | null;
@@ -192,6 +196,84 @@ function getSharedContactIssues(
         value: group.value,
       }),
     );
+}
+
+function residentLabel(field: RegistrationMissingField) {
+  return (
+    field.residentName?.trim() ||
+    `Residente ${field.residentPosition ?? ""}`.trim()
+  );
+}
+
+function buildResidentContactItems(
+  missingFields: RegistrationMissingField[],
+  sharedContactIssues: SharedContactIssue[],
+) {
+  const items: string[] = [];
+
+  for (const field of missingFields) {
+    if (field.code === "unit_reference") {
+      items.push("Referencia o ubicación de la vivienda");
+      continue;
+    }
+
+    const name = residentLabel(field);
+    if (field.code === "email") {
+      items.push(
+        `${name} — ${
+          field.message === "Invalid email address"
+            ? "correo electrónico válido"
+            : "correo electrónico"
+        }`,
+      );
+    } else if (field.code === "phone") {
+      items.push(`${name} — número de teléfono`);
+    } else if (field.code === "full_name") {
+      items.push(`${name} — nombre completo`);
+    }
+  }
+
+  for (const issue of sharedContactIssues) {
+    const names = issue.residentNames.join(" y ");
+    items.push(
+      issue.kind === "email"
+        ? `Confirmar correo electrónico de ${names} (actualmente comparten el mismo correo)`
+        : `Confirmar número de teléfono de ${names} (actualmente comparten el mismo número)`,
+    );
+  }
+
+  return Array.from(new Set(items));
+}
+
+function buildResidentContactMessage(input: {
+  communityName: string;
+  items: string[];
+  unitLabel: string;
+}) {
+  const list = input.items.map((item) => `• ${item}`).join("\n");
+
+  return [
+    `*ENTRY · ${input.communityName}*`,
+    `*Vivienda: ${input.unitLabel}*`,
+    "",
+    "Este es un mensaje generado por ENTRY para completar la información registrada de su vivienda.",
+    "",
+    "Para finalizar el proceso necesitamos:",
+    "",
+    list,
+    "",
+    "Por favor, responda directamente a este mensaje con la información solicitada. Su respuesta será revisada por nuestro equipo.",
+    "",
+    "Gracias.",
+    "*ENTRY by Minerva Technologies*",
+  ].join("\n");
+}
+
+function normalizeWhatsAppNumber(value: string | null | undefined) {
+  let digits = String(value ?? "").replace(/\D+/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (digits.length === 8) digits = `504${digits}`;
+  return digits.length >= 8 && digits.length <= 15 ? digits : null;
 }
 
 function Overlay({ children }: { children: React.ReactNode }) {
@@ -735,6 +817,7 @@ type UnitFilter =
 export function ReviewWorkspace({
   campaign,
   communityId,
+  communityName,
   duplicateData,
   loadError,
   quickEditData,
@@ -769,6 +852,8 @@ export function ReviewWorkspace({
   const [unitFilter, setUnitFilter] = useState<UnitFilter>("pending");
   const [unitSearch, setUnitSearch] = useState("");
   const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
+  const [selectedContactPhone, setSelectedContactPhone] = useState("");
+  const [contactMessageCopied, setContactMessageCopied] = useState(false);
   const [previewReport, setPreviewReport] =
     useState<CommunityRegistrationConfirmationReport | null>(null);
   const [previewMode, setPreviewMode] = useState<"single" | "selection">("single");
@@ -1036,6 +1121,31 @@ export function ReviewWorkspace({
 
   const selectedSharedContactIssues =
     selectedUnitId ? sharedContactIssuesByUnitId.get(selectedUnitId) ?? [] : [];
+  const residentContactItems = buildResidentContactItems(
+    selectedUnitMissingFields,
+    selectedSharedContactIssues,
+  );
+  const residentContactMessage =
+    selectedUnit && residentContactItems.length > 0
+      ? buildResidentContactMessage({
+          communityName,
+          items: residentContactItems,
+          unitLabel: selectedUnit.unitLabel,
+        })
+      : "";
+  const contactCandidates =
+    selectedUnit?.residents
+      .filter((resident) => normalizeWhatsAppNumber(resident.phone))
+      .map((resident) => ({
+        fullName: resident.fullName,
+        phone: resident.phone as string,
+        position: resident.position,
+        whatsappNumber: normalizeWhatsAppNumber(resident.phone) as string,
+      })) ?? [];
+  const effectiveContact =
+    contactCandidates.find((candidate) => candidate.phone === selectedContactPhone) ??
+    contactCandidates[0] ??
+    null;
   const reportableUnitIds = useMemo(
     () =>
       activeUnits
@@ -1150,6 +1260,21 @@ export function ReviewWorkspace({
     [campaign.id, communityId],
   );
 
+  async function copyResidentContactMessage() {
+    if (!residentContactMessage) return;
+    await navigator.clipboard.writeText(residentContactMessage);
+    setContactMessageCopied(true);
+    window.setTimeout(() => setContactMessageCopied(false), 2200);
+  }
+
+  function openResidentWhatsApp() {
+    if (!effectiveContact || !residentContactMessage) return;
+    const url = `https://wa.me/${effectiveContact.whatsappNumber}?text=${encodeURIComponent(
+      residentContactMessage,
+    )}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
   function saveReportSelection(unitIds: string[]) {
     setSelectedReportUnitIds(unitIds);
     window.sessionStorage.setItem(selectionStorageKey, JSON.stringify(unitIds));
@@ -1211,7 +1336,11 @@ export function ReviewWorkspace({
   ]);
 
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => setPendingUnitId(null));
+    const frame = window.requestAnimationFrame(() => {
+      setPendingUnitId(null);
+      setSelectedContactPhone("");
+      setContactMessageCopied(false);
+    });
 
     return () => window.cancelAnimationFrame(frame);
   }, [selectedUnitId]);
@@ -1628,6 +1757,88 @@ export function ReviewWorkspace({
                     </p>
                   </div>
                 </div>
+
+                {residentContactItems.length > 0 ? (
+                  <div
+                    className="mt-4 rounded-xl border border-emerald-400/25 bg-emerald-500/[0.055] p-4"
+                    data-testid="resident-contact-panel"
+                  >
+                    <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/12 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+                          <MessageCircle className="size-5" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                            Resident contact
+                          </p>
+                          <p className="mt-1 text-base font-semibold text-white">
+                            WhatsApp follow-up
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-emerald-50/70">
+                            Generated only from resident-actionable diagnostics. Internal duplicate and workflow signals are never included.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="min-w-0 xl:w-[320px]">
+                        <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                          WhatsApp recipient
+                        </label>
+                        {contactCandidates.length > 0 ? (
+                          <select
+                            value={effectiveContact?.phone ?? ""}
+                            onChange={(event) => setSelectedContactPhone(event.target.value)}
+                            className="mt-1.5 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2 text-sm text-white outline-none transition focus:border-emerald-400/40"
+                          >
+                            {contactCandidates.map((candidate) => (
+                              <option
+                                key={`${candidate.position}:${candidate.phone}`}
+                                value={candidate.phone}
+                              >
+                                {candidate.fullName} · {candidate.phone}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <p className="mt-1.5 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-3 py-2 text-xs text-amber-100">
+                            No usable phone is registered. Copy the message and contact the household manually.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 rounded-xl border border-white/[0.07] bg-black/15 p-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                        Message preview
+                      </p>
+                      <pre className="mt-3 whitespace-pre-wrap break-words font-sans text-xs leading-5 text-white/85">
+                        {residentContactMessage}
+                      </pre>
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        className="gap-2"
+                        onClick={openResidentWhatsApp}
+                        disabled={!effectiveContact}
+                      >
+                        <MessageCircle className="size-4" aria-hidden />
+                        Open WhatsApp
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="gap-2"
+                        onClick={() => void copyResidentContactMessage()}
+                      >
+                        <Copy className="size-4" aria-hidden />
+                        {contactMessageCopied ? "Copied" : "Copy message"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
 
                 {selectedSharedContactIssues.length > 0 ? (
                   <div
