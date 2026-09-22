@@ -6,6 +6,8 @@
 -- Also align server-side name compatibility with the UI: the previous regex was
 -- double-escaped, so expanded names such as `Jorge Armando Aguilar` vs
 -- `Jorge Armando Aguilar Ayala` were not tokenized and could be appended twice.
+-- Finally, nullable contact comparisons are coerced to false so a missing email
+-- plus matching phone produces an explicit ambiguous match instead of SQL NULL.
 
 create or replace function public._cr_normalize_name_v1(
   p_name text
@@ -422,19 +424,22 @@ begin
      limit 1;
 
     if v_source_match.id is not null then
-      v_same_name :=
-        v_source_match.normalized_full_name is not null
-        and v_source_match.normalized_full_name = v_resident.normalized_full_name;
+      v_same_name := coalesce(
+        v_source_match.normalized_full_name = v_resident.normalized_full_name,
+        false
+      );
       v_names_compatible := public._cr_duplicate_names_compatible_v1(
         v_source_match.full_name,
         v_resident.full_name
       );
-      v_same_email :=
-        v_source_match.normalized_email is not null
-        and v_source_match.normalized_email = v_resident.normalized_email;
-      v_same_phone :=
-        v_source_match.normalized_phone is not null
-        and v_source_match.normalized_phone = v_resident.normalized_phone;
+      v_same_email := coalesce(
+        v_source_match.normalized_email = v_resident.normalized_email,
+        false
+      );
+      v_same_phone := coalesce(
+        v_source_match.normalized_phone = v_resident.normalized_phone,
+        false
+      );
 
       v_auto_merge :=
         (v_same_name and (v_same_email or v_same_phone))
