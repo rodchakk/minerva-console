@@ -71,3 +71,12 @@ test("Console can generate a secure Patronato link and batch hand off approved u
     /record_community_registration_unit_external_approval_v1/,
   );
 });
+
+
+test("Patronato review bypasses Console session auth but remains no-store", () => {
+  const middleware = read("lib/supabase/middleware.ts");
+
+  assert.match(middleware, /pathname === "\/entry\/patronato"/);
+  assert.match(middleware, /pathname\.startsWith\("\/entry\/patronato\/"\)/);
+  assert.match(middleware, /protectPublicRegistrationResponse/);
+});
