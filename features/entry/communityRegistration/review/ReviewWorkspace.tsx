@@ -588,7 +588,13 @@ function Metric({
   );
 }
 
-type UnitFilter = "all" | "pending" | "reviewed" | "activation" | "duplicates";
+type UnitFilter =
+  | "pending"
+  | "duplicates"
+  | "reviewed"
+  | "activation"
+  | "all"
+  | "resolved";
 
 export function ReviewWorkspace({
   campaign,
@@ -620,7 +626,7 @@ export function ReviewWorkspace({
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
-  const [unitFilter, setUnitFilter] = useState<UnitFilter>("all");
+  const [unitFilter, setUnitFilter] = useState<UnitFilter>("pending");
   const [unitSearch, setUnitSearch] = useState("");
   const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
   const [previewReport, setPreviewReport] =
@@ -686,6 +692,36 @@ export function ReviewWorkspace({
       ),
     [mergedUnitIdSet, units],
   );
+  const resolvedUnits = useMemo(
+    () =>
+      duplicateData.units
+        .filter((unit) => unit.resolutionType === "resolved_duplicate")
+        .map((unit) => ({
+          hasPendingObservation: false,
+          id: unit.id,
+          label: unit.label,
+          patronatoConfirmedAt: unit.patronatoConfirmedAt,
+          residentCount: unit.residents.length,
+          reviewedAt: unit.reviewedAt,
+          status: unit.status,
+          submittedAt: unit.submittedAt,
+        })),
+    [duplicateData.units],
+  );
+  const selectedDuplicateUnitModel = selectedUnitId
+    ? duplicateData.units.find((unit) => unit.id === selectedUnitId) ?? null
+    : null;
+  const selectedResolvedRegistration =
+    selectedDuplicateUnitModel?.resolutionType === "resolved_duplicate"
+      ? selectedDuplicateUnitModel
+      : null;
+  const relatedResolvedRegistrations = selectedUnitId
+    ? duplicateData.units.filter(
+        (unit) =>
+          unit.resolutionType === "resolved_duplicate" &&
+          unit.canonicalUnitId === selectedUnitId,
+      )
+    : [];
   const duplicateCandidatesByUnit = useMemo(() => {
     const map = new Map<string, RegistrationDuplicateCandidate[]>();
 
@@ -788,17 +824,19 @@ export function ReviewWorkspace({
           unit.status.trim().toLowerCase(),
         ),
       ).length,
+      resolved: resolvedUnits.length,
       reviewed: activeUnits.filter((unit) =>
         ["reviewed", "confirmed"].includes(unit.status.trim().toLowerCase()),
       ).length,
     }),
-    [activeUnits, duplicateCandidatesByUnit],
+    [activeUnits, duplicateCandidatesByUnit, resolvedUnits.length],
   );
   const visibleUnits = useMemo(() => {
     const normalizedSearch = normalizedSearchText(unitSearch);
     const normalizedPhone = normalizedSearchPhone(unitSearch);
+    const sourceUnits = unitFilter === "resolved" ? resolvedUnits : activeUnits;
 
-    return activeUnits.filter((unit) => {
+    return sourceUnits.filter((unit) => {
       const searchable = `${normalizedSearchText(unit.label)} ${
         registrationSearchByUnitId.get(unit.id) ?? ""
       }`;
@@ -816,7 +854,8 @@ export function ReviewWorkspace({
         (unitFilter === "reviewed" &&
           ["reviewed", "confirmed"].includes(normalizedStatus)) ||
         (unitFilter === "activation" && normalizedStatus === "processed") ||
-        (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id));
+        (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id)) ||
+        unitFilter === "resolved";
 
       return matchesSearch && matchesFilter;
     });
@@ -824,6 +863,7 @@ export function ReviewWorkspace({
     activeUnits,
     duplicateCandidatesByUnit,
     registrationSearchByUnitId,
+    resolvedUnits,
     unitFilter,
     unitSearch,
   ]);
@@ -1087,11 +1127,12 @@ export function ReviewWorkspace({
 
             <div className="mt-3 flex gap-1 overflow-x-auto pb-1" aria-label="Unit filters">
               {([
-                ["all", "All"],
                 ["pending", "Pending"],
+                ["duplicates", "Duplicates"],
                 ["reviewed", "Reviewed"],
                 ["activation", "Activation"],
-                ["duplicates", "Duplicates"],
+                ["all", "All"],
+                ["resolved", "Resolved"],
               ] as const).map(([value, label]) => (
                 <button
                   key={value}
@@ -1139,7 +1180,9 @@ export function ReviewWorkspace({
                           : `${duplicateMatches.length} matches`}
                       </span>
                     ) : null}
-                    <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
+                    <Badge tone={statusTone(unit.status)}>
+                      {unitFilter === "resolved" ? "Resolved duplicate" : statusLabel(unit.status)}
+                    </Badge>
                   </div>
                 </div>
               );
@@ -1235,7 +1278,11 @@ export function ReviewWorkspace({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl font-semibold text-white">{selectedUnit.unitLabel}</h2>
-                        <Badge tone={statusTone(selectedUnit.status)}>{statusLabel(selectedUnit.status)}</Badge>
+                        <Badge tone={statusTone(selectedUnit.status)}>
+                          {selectedResolvedRegistration
+                            ? "Resolved duplicate"
+                            : statusLabel(selectedUnit.status)}
+                        </Badge>
                         {selectedDuplicateCandidate ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
                             <TriangleAlert className="size-3" aria-hidden />
@@ -1259,68 +1306,114 @@ export function ReviewWorkspace({
                 </div>
 
                 {selectedDuplicateCandidate && selectedDuplicateTarget ? (
-                  <div className="mt-4 flex flex-col gap-4 rounded-xl border border-amber-400/35 bg-amber-500/[0.08] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="flex min-w-0 items-start gap-3">
-                      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-300 ring-1 ring-inset ring-amber-400/20">
-                        <TriangleAlert className="size-5" aria-hidden />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-amber-50">
-                          Possible duplicate detected
-                        </p>
-                        <p className="mt-1 text-xs leading-5 text-amber-50/80">
-                          {selectedDuplicateCandidate.confidence === "strong"
-                            ? "Strong match"
-                            : "Possible match"}{" "}
-                          with <span className="font-semibold text-white">{selectedDuplicateTarget.label}</span>
-                        </p>
-                        <p className="mt-0.5 text-xs text-amber-100/65">
-                          {selectedDuplicateSameResidentCount} resident{" "}
-                          {selectedDuplicateSameResidentCount === 1 ? "match" : "matches"}
-                          {" · "}
-                          {selectedDuplicateContactCount} contact{" "}
-                          {selectedDuplicateContactCount === 1 ? "match" : "matches"}
-                        </p>
+                  <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                    <div className="rounded-xl border border-amber-400/30 bg-amber-500/[0.07] p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-300 ring-1 ring-inset ring-amber-400/20">
+                          <TriangleAlert className="size-5" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                            Duplicate alert
+                          </p>
+                          <p className="mt-1 text-base font-semibold text-white">
+                            Possible duplicate found
+                          </p>
+                          <p className="mt-1 text-xs text-amber-50/80">
+                            Possible match with{" "}
+                            <span className="font-semibold text-white">
+                              {selectedDuplicateTarget.label}
+                            </span>
+                          </p>
+                          <p className="mt-1 text-xs text-amber-100/65">
+                            {selectedDuplicateSameResidentCount} resident{" "}
+                            {selectedDuplicateSameResidentCount === 1 ? "match" : "matches"}
+                            {" · "}
+                            {selectedDuplicateContactCount} contact{" "}
+                            {selectedDuplicateContactCount === 1 ? "match" : "matches"}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        className="gap-2"
-                        onClick={() =>
-                          setDuplicateDialogCandidateId(selectedDuplicateCandidate.id)
-                        }
-                      >
-                        <GitMerge className="size-4" aria-hidden />
-                        Compare & merge
-                      </Button>
-                      <form action={duplicateDismissAction}>
-                        <input type="hidden" name="campaign_id" value={campaign.id} />
-                        <input type="hidden" name="community_id" value={communityId} />
-                        <input
-                          type="hidden"
-                          name="left_unit_id"
-                          value={selectedDuplicateCandidate.unitAId}
-                        />
-                        <input
-                          type="hidden"
-                          name="right_unit_id"
-                          value={selectedDuplicateCandidate.unitBId}
-                        />
+                      <div className="mt-4 flex flex-wrap gap-2">
                         <Button
-                          type="submit"
-                          variant="secondary"
-                          disabled={duplicateDismissPending}
+                          type="button"
+                          className="gap-2"
+                          onClick={() =>
+                            setDuplicateDialogCandidateId(selectedDuplicateCandidate.id)
+                          }
                         >
-                          {duplicateDismissPending ? "Saving..." : "Not duplicate"}
+                          <GitMerge className="size-4" aria-hidden />
+                          Compare & review
                         </Button>
-                      </form>
-                    </div>
-                    {duplicateDismissState && !duplicateDismissState.success ? (
-                      <p className="basis-full rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
-                        {duplicateDismissState.error}
+                        <form action={duplicateDismissAction}>
+                          <input type="hidden" name="campaign_id" value={campaign.id} />
+                          <input type="hidden" name="community_id" value={communityId} />
+                          <input
+                            type="hidden"
+                            name="left_unit_id"
+                            value={selectedDuplicateCandidate.unitAId}
+                          />
+                          <input
+                            type="hidden"
+                            name="right_unit_id"
+                            value={selectedDuplicateCandidate.unitBId}
+                          />
+                          <Button
+                            type="submit"
+                            variant="secondary"
+                            disabled={duplicateDismissPending}
+                          >
+                            {duplicateDismissPending ? "Saving..." : "Mark not duplicate"}
+                          </Button>
+                        </form>
+                      </div>
+                      <p className="mt-3 border-t border-amber-300/10 pt-3 text-xs leading-5 text-amber-50/65">
+                        This record can be reviewed as a duplicate, but advanced
+                        activation records should not be merged automatically.
                       </p>
-                    ) : null}
+                      {duplicateDismissState && !duplicateDismissState.success ? (
+                        <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+                          {duplicateDismissState.error}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
+                      <div className="flex items-start gap-3">
+                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-cyan-500/10 text-cyan-200 ring-1 ring-inset ring-cyan-400/20">
+                          <CheckCircle2 className="size-5" aria-hidden />
+                        </span>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+                            Activation status
+                          </p>
+                          <p className="mt-1 text-base font-semibold text-white">
+                            {selectedDuplicateUnitModel?.lifecycle.label ??
+                              statusLabel(selectedUnit.status)}
+                          </p>
+                          <p className="mt-1 text-xs leading-5 text-cyan-50/70">
+                            {selectedDuplicateUnitModel?.lifecycle.label === "Activated"
+                              ? "This household already has an activated ENTRY identity."
+                              : selectedDuplicateUnitModel?.lifecycle.label ===
+                                  "Prepared for activation"
+                                ? "This household has already advanced to Activation Queue."
+                                : "This household has not reached Activation Queue yet."}
+                          </p>
+                        </div>
+                      </div>
+                      {["Prepared for activation", "Activated"].includes(
+                        selectedDuplicateUnitModel?.lifecycle.label ?? "",
+                      ) ? (
+                        <div className="mt-4">
+                          <Link href={activationQueueUrl}>
+                            <Button type="button" variant="secondary" className="gap-2">
+                              Open Activation Queue
+                              <ArrowRight className="size-3.5" aria-hidden />
+                            </Button>
+                          </Link>
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
 
@@ -1494,6 +1587,61 @@ export function ReviewWorkspace({
                         </div>
                       </div>
                       <ArrowRight className="size-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
+                    </div>
+                  </div>
+                ) : null}
+
+                {selectedResolvedRegistration ? (
+                  <div className="mt-4 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.05] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+                      Resolved duplicate
+                    </p>
+                    <p className="mt-1 text-sm font-semibold text-white">
+                      Archived registration · {selectedResolvedRegistration.label}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+                      Canonical unit:{" "}
+                      {selectedResolvedRegistration.canonicalUnitId ?? "Unknown"} · Resolved{" "}
+                      {formatDate(selectedResolvedRegistration.resolvedAt)}
+                    </p>
+                    <p className="mt-2 text-xs leading-5 text-slate-300">
+                      This registration remains available for audit and search. It was
+                      archived without rewriting the surviving operational identity.
+                    </p>
+                  </div>
+                ) : null}
+
+                {relatedResolvedRegistrations.length > 0 ? (
+                  <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-violet-200">
+                      Related registrations
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {relatedResolvedRegistrations.map((registration) => (
+                        <div
+                          key={registration.id}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2.5"
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-white">
+                              Resolved duplicate · {registration.label}
+                            </p>
+                            <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                              Archived {formatDate(registration.resolvedAt)}
+                            </p>
+                          </div>
+                          <Link
+                            href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(
+                              registration.id,
+                            )}`}
+                            scroll={false}
+                          >
+                            <Button type="button" variant="secondary">
+                              View archived
+                            </Button>
+                          </Link>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 ) : null}
