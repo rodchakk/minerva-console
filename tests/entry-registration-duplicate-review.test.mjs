@@ -252,3 +252,54 @@ test("shared contact warnings stay separate from duplicate candidate logic", () 
   assert.match(duplicateSource, /A shared family email by itself is not enough/);
   assert.match(duplicateSource, /Shared email only; not enough to merge residents/);
 });
+
+
+test("Resident Registration builds WhatsApp follow-up from resident-actionable diagnostics", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+  const page = read(
+    "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
+  );
+
+  assert.match(workspace, /function buildResidentContactItems/);
+  assert.match(workspace, /function buildResidentContactMessage/);
+  assert.match(workspace, /Referencia o ubicación de la vivienda/);
+  assert.match(workspace, /correo electrónico válido/);
+  assert.match(workspace, /número de teléfono/);
+  assert.match(workspace, /Confirmar correo electrónico de/);
+  assert.match(workspace, /Confirmar número de teléfono de/);
+  assert.match(workspace, /Este es un mensaje generado por ENTRY/);
+  assert.match(workspace, /Vivienda: \${input\.unitLabel}/);
+  assert.match(workspace, /ENTRY by Minerva Technologies/);
+  assert.match(page, /communityName=\{community\.name\}/);
+});
+
+test("WhatsApp follow-up remains operator-controlled and excludes internal diagnostics", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /https:\/\/wa\.me\//);
+  assert.match(workspace, /encodeURIComponent\(\s*residentContactMessage/);
+  assert.match(workspace, /Open WhatsApp/);
+  assert.match(workspace, /Copy message/);
+  assert.match(workspace, /Generated only from resident-actionable diagnostics/);
+  assert.match(workspace, /Internal duplicate and workflow signals are never included/);
+
+  const messageBuilderStart = workspace.indexOf("function buildResidentContactMessage");
+  const messageBuilderEnd = workspace.indexOf("function normalizeWhatsAppNumber");
+  assert.ok(messageBuilderStart >= 0 && messageBuilderEnd > messageBuilderStart);
+  const messageBuilder = workspace.slice(messageBuilderStart, messageBuilderEnd);
+  assert.doesNotMatch(messageBuilder, /Possible duplicate|Patronato|Activation Queue/);
+});
+
+test("WhatsApp normalizer adds Honduras country code to local eight-digit numbers", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /if \(digits\.length === 8\) digits = `504\${digits}`/);
+  assert.match(workspace, /digits\.length >= 8 && digits\.length <= 15/);
+  assert.match(workspace, /No usable phone is registered/);
+});
