@@ -3,6 +3,96 @@
 -- idx_cr_submissions_one_active_per_unit correctly rejected that order.
 -- Supersede the canonical source first; the function runs transactionally, so
 -- any downstream failure restores the original active submission automatically.
+-- Also align server-side name compatibility with the UI: the previous regex was
+-- double-escaped, so expanded names such as `Jorge Armando Aguilar` vs
+-- `Jorge Armando Aguilar Ayala` were not tokenized and could be appended twice.
+
+create or replace function public._cr_normalize_name_v1(
+  p_name text
+)
+returns text
+language sql
+immutable
+set search_path to 'public'
+as $function$
+  select nullif(
+    lower(
+      regexp_replace(
+        btrim(coalesce(p_name, '')),
+        '\s+',
+        ' ',
+        'g'
+      )
+    ),
+    ''
+  );
+$function$;
+
+create or replace function public._cr_duplicate_names_compatible_v1(
+  p_left text,
+  p_right text
+)
+returns boolean
+language plpgsql
+immutable
+set search_path to 'public'
+as $function$
+declare
+  v_left text := public._cr_normalize_name_v1(p_left);
+  v_right text := public._cr_normalize_name_v1(p_right);
+  v_left_tokens text[];
+  v_right_tokens text[];
+  v_small text[];
+  v_large text[];
+  v_differences integer := 0;
+  v_index integer;
+begin
+  if v_left is null or v_right is null or v_left = '' or v_right = '' then
+    return false;
+  end if;
+
+  if v_left = v_right then
+    return true;
+  end if;
+
+  v_left_tokens := regexp_split_to_array(v_left, '\s+');
+  v_right_tokens := regexp_split_to_array(v_right, '\s+');
+
+  if array_length(v_left_tokens, 1) >= 2
+     and array_length(v_right_tokens, 1) >= 2 then
+    if array_length(v_left_tokens, 1) <= array_length(v_right_tokens, 1) then
+      v_small := v_left_tokens;
+      v_large := v_right_tokens;
+    else
+      v_small := v_right_tokens;
+      v_large := v_left_tokens;
+    end if;
+
+    if v_small <@ v_large then
+      return true;
+    end if;
+  end if;
+
+  if array_length(v_left_tokens, 1) = array_length(v_right_tokens, 1)
+     and array_length(v_left_tokens, 1) >= 2 then
+    for v_index in 1..array_length(v_left_tokens, 1) loop
+      if v_left_tokens[v_index] <> v_right_tokens[v_index] then
+        if not public._cr_text_one_edit_apart_v1(
+          v_left_tokens[v_index],
+          v_right_tokens[v_index]
+        ) then
+          return false;
+        end if;
+        v_differences := v_differences + 1;
+      end if;
+    end loop;
+
+    return v_differences = 1;
+  end if;
+
+  return false;
+end;
+$function$;
 
 create or replace function public.merge_community_registration_units_v1(
   p_campaign_id uuid,
