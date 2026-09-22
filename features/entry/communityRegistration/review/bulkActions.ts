@@ -46,48 +46,33 @@ export async function markRegistrationUnitsReadyForPatronato(input: {
   }
 
   const supabase = createAdminClient();
-  const { data: units, error: unitsError } = await supabase
-    .from("community_registration_units")
-    .select("id,status")
-    .eq("community_id", communityId)
-    .in("id", unitIds);
+  const { data, error } = await supabase.rpc(
+    "mark_community_registration_units_reviewed_v2",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_ids: unitIds,
+      p_community_id: communityId,
+    },
+  );
 
-  if (
-    unitsError ||
-    !Array.isArray(units) ||
-    units.length !== unitIds.length ||
-    units.some((unit) => unit.status !== "submitted")
-  ) {
+  if (error) {
     return {
       success: false,
-      error: "Only current Submitted units can be sent to Patronato.",
+      error:
+        "One or more units changed before the batch was committed. Refresh and review the current state.",
     };
   }
 
-  for (const unitId of [...unitIds].sort()) {
-    const { error } = await supabase.rpc(
-      "mark_community_registration_unit_reviewed_v1",
-      {
-        p_actor_user_id: auth.user.id,
-        p_campaign_unit_id: unitId,
-      },
-    );
-
-    if (error) {
-      return {
-        success: false,
-        error:
-          "One unit changed while the batch was running. Refresh and review the current state.",
-      };
-    }
-  }
+  const record =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const changedCount = Number(record.reviewed_count ?? 0);
 
   revalidate(communityId);
 
   return {
     success: true,
-    changedCount: unitIds.length,
-    message: `${unitIds.length} ${unitIds.length === 1 ? "unit is" : "units are"} ready for Patronato.`,
+    changedCount,
+    message: `${changedCount} ${changedCount === 1 ? "unit is" : "units are"} ready for Patronato.`,
   };
 }
 
@@ -108,54 +93,28 @@ export async function prepareApprovedRegistrationUnitsForActivation(input: {
   }
 
   const supabase = createAdminClient();
-  const { data: units, error: unitsError } = await supabase
-    .from("community_registration_units")
-    .select("id,status")
-    .eq("community_id", communityId)
-    .in("id", unitIds);
+  const { data, error } = await supabase.rpc(
+    "convert_community_registration_units_to_activation_v2",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_ids: unitIds,
+      p_community_id: communityId,
+      p_reason: "Patronato approved · batch handoff from Resident Registration",
+    },
+  );
 
-  if (
-    unitsError ||
-    !Array.isArray(units) ||
-    units.length !== unitIds.length ||
-    units.some((unit) => unit.status !== "confirmed")
-  ) {
+  if (error) {
     return {
       success: false,
-      error: "Only Patronato-approved units can move to Activation Queue.",
+      error:
+        "The Activation Queue batch was rolled back because one or more units changed. Refresh before retrying.",
     };
   }
 
-  let changedCount = 0;
-  let blockedCount = 0;
-
-  for (const unitId of [...unitIds].sort()) {
-    const { data, error } = await supabase.rpc(
-      "convert_community_registration_unit_to_activation_v1",
-      {
-        p_actor_user_id: auth.user.id,
-        p_campaign_unit_id: unitId,
-        p_reason: "Patronato approved · batch handoff from Resident Registration",
-      },
-    );
-
-    if (error) {
-      return {
-        success: false,
-        error:
-          "Activation Queue preparation stopped because one unit changed. Refresh before retrying.",
-      };
-    }
-
-    const record =
-      data && typeof data === "object" ? (data as Record<string, unknown>) : {};
-
-    if (String(record.status) === "blocked") {
-      blockedCount += 1;
-    } else {
-      changedCount += 1;
-    }
-  }
+  const record =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const changedCount = Number(record.processed_count ?? 0);
+  const blockedCount = Number(record.blocked_count ?? 0);
 
   revalidate(communityId);
 
