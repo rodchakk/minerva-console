@@ -108,7 +108,20 @@ test("merge backend derives truth from source residents rather than client resul
   assert.match(migration, /client_resident_plan/);
   assert.match(migration, /ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED/);
   assert.match(migration, /ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT/);
-  assert.match(migration, /v_result_email := coalesce\(v_source_match\.email, v_resident\.email\)/);
+  assert.match(
+    migration,
+    /ENTRY_CR_DUPLICATE_RESIDENT_FIELD_CONFLICT_UNRESOLVED/,
+  );
+  assert.match(migration, /v_email_choice not in \('canonical', 'duplicate'\)/);
+  assert.match(migration, /v_phone_choice not in \('canonical', 'duplicate'\)/);
+  assert.match(
+    migration,
+    /when v_email_choice = 'duplicate' then v_resident\.email/,
+  );
+  assert.match(
+    migration,
+    /when v_phone_choice = 'duplicate' then v_resident\.phone/,
+  );
   assert.doesNotMatch(
     migration,
     /v_result_email := nullif\(btrim\(coalesce\(v_plan_decision->>'resultEmail'/,
@@ -161,4 +174,51 @@ test("duplicate mutations remain behind Preview read-only boundary", () => {
   assert.match(source, /merge_community_registration_units_v1/);
   assert.match(source, /resolve_community_registration_archived_duplicate_v1/);
   assert.match(source, /resolve_community_registration_duplicate_v1/);
+});
+
+
+test("resident contact conflicts expose source-only choices and keep-separate escape hatch", () => {
+  const source = read(
+    "features/entry/communityRegistration/review/DuplicateReviewDialog.tsx",
+  );
+
+  assert.match(source, /Choose which contact value to keep/);
+  assert.match(source, /Email conflict/);
+  assert.match(source, /Phone conflict/);
+  assert.match(source, /Keep from \{label\}/);
+  assert.match(source, /Keep residents separate/);
+  assert.match(source, /emailChoice: conflictChoices/);
+  assert.match(source, /phoneChoice: conflictChoices/);
+  assert.match(source, /unresolvedCount \+ conflictCount/);
+});
+
+test("server only accepts canonical or duplicate source for conflicting contact fields", () => {
+  const migration = read(
+    "supabase/migrations/20260922023000_entry_registration_duplicate_resolution.sql",
+  );
+
+  assert.match(
+    migration,
+    /v_email_choice not in \('canonical', 'duplicate'\)/,
+  );
+  assert.match(
+    migration,
+    /v_phone_choice not in \('canonical', 'duplicate'\)/,
+  );
+  assert.match(
+    migration,
+    /'email_choice', v_email_choice/,
+  );
+  assert.match(
+    migration,
+    /'phone_choice', v_phone_choice/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /v_result_email := .*resultEmail/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /v_result_phone := .*resultPhone/,
+  );
 });
