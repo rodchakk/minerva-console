@@ -83,8 +83,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run confirmation report regressions
-        run: node --test tests/entry-registration-confirmation-reports.test.mjs
+      - name: Run registration review regressions
+        run: |
+          node --test \
+            tests/entry-registration-confirmation-reports.test.mjs \
+            tests/entry-registration-duplicate-review.test.mjs
 
   entry-outrider-tests:
     name: ENTRY Outrider regressions
