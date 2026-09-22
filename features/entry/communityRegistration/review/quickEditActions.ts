@@ -82,6 +82,93 @@ export async function quickEditCommunityRegistrationResident(
 }
 
 
+
+export async function removeCommunityRegistrationResident(
+  _previousState: RegistrationQuickEditActionResult | null,
+  formData: FormData,
+): Promise<RegistrationQuickEditActionResult> {
+  const auth = await requireSuperadmin();
+  const previewError = getEntryPreviewReadOnlyError();
+  if (previewError) return { success: false, error: previewError };
+
+  const communityId = formString(formData, "community_id");
+  const campaignUnitId = formString(formData, "campaign_unit_id");
+  const submissionId = formString(formData, "submission_id");
+  const residentId = formString(formData, "resident_id");
+  const reason = normalizeOptional(
+    formString(formData, "removal_reason").replace(/\s+/g, " "),
+  );
+
+  if (!communityId || !campaignUnitId || !submissionId || !residentId) {
+    return { success: false, error: "Resident and registration context are required." };
+  }
+
+  if ((reason?.length ?? 0) > 500) {
+    return { success: false, error: "Removal reason must be 500 characters or fewer." };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "remove_community_registration_resident_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_unit_id: campaignUnitId,
+      p_submission_id: submissionId,
+      p_resident_id: residentId,
+      p_reason: reason,
+    },
+  );
+
+  if (error) {
+    const message = error.message ?? "";
+    if (/ENTRY_CR_RESIDENT_REMOVAL_LAST_RESIDENT/.test(message)) {
+      return {
+        success: false,
+        error: "A household must keep at least one resident.",
+      };
+    }
+    if (/ENTRY_CR_RESIDENT_REMOVAL_ACTIVATION_LINKED/.test(message)) {
+      return {
+        success: false,
+        error:
+          "This resident already has Activation Queue history and cannot be removed here.",
+      };
+    }
+    if (/ENTRY_CR_INVALID_REVIEW_STATE/.test(message)) {
+      return {
+        success: false,
+        error:
+          "This household changed state. Resident removal is only available while it is Submitted.",
+      };
+    }
+    if (/ENTRY_CR_INVALID_RESIDENT/.test(message)) {
+      return {
+        success: false,
+        error: "This resident is no longer part of the current household submission.",
+      };
+    }
+    if (error.code === "42501" || /ENTRY_CR_UNAUTHORIZED/i.test(message)) {
+      return { success: false, error: "Superadmin permission is required." };
+    }
+    return { success: false, error: "Resident could not be removed from this household." };
+  }
+
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+  const removedName = String(result.removed_resident_name ?? "").trim();
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  revalidatePath(`/products/entry/communities/${communityId}/registration`);
+
+  return {
+    success: true,
+    message: removedName
+      ? `${removedName} was removed from the active household and preserved in audit history.`
+      : "Resident removed from the active household and preserved in audit history.",
+  };
+}
+
+
 export async function quickEditCommunityRegistrationUnitLabel(
   _previousState: RegistrationQuickEditActionResult | null,
   formData: FormData,

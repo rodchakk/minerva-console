@@ -88,6 +88,8 @@ jobs:
           node --test \
             tests/entry-registration-confirmation-reports.test.mjs \
             tests/entry-registration-duplicate-review.test.mjs \
+            tests/entry-registration-quick-edit.test.mjs \
+            tests/entry-registration-unit-label-quick-edit.test.mjs \
             tests/entry-patronato-progressive-review.test.mjs
 
   entry-outrider-tests:
