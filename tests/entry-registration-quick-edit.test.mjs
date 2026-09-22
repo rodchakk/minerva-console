@@ -111,5 +111,8 @@ test("resident removal is service-role only and exposed through the same quick e
   assert.match(dialog, /Danger zone/);
   assert.match(dialog, /Remove resident from household/);
   assert.match(dialog, /original record is preserved in[\s\S]*private audit history/i);
-  assert.match(dialog, /will not be shown to Patronato or moved to Activation Queue/);
+  assert.match(
+    dialog,
+    /will\s+not\s+be shown to Patronato or moved to Activation Queue/,
+  );
 });
