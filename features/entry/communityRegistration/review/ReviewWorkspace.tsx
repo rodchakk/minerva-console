@@ -116,10 +116,12 @@ function statusLabel(status: string) {
 
 function statusTone(status: string): "default" | "success" | "warning" | "info" {
   const normalized = status.trim().toLowerCase();
-  if (["reviewed", "confirmed", "processed"].includes(normalized)) return "success";
-  if (["submitted", "review", "open"].includes(normalized)) return "info";
-  if (["needs_correction", "edit_enabled", "paused"].includes(normalized)) {
+  if (normalized === "confirmed") return "success";
+  if (["reviewed", "needs_correction", "edit_enabled", "paused"].includes(normalized)) {
     return "warning";
+  }
+  if (["processed", "submitted", "review", "open"].includes(normalized)) {
+    return "info";
   }
   return "default";
 }
@@ -383,6 +385,7 @@ function CorrectionLinkDialog({
 }
 
 function ActivationHandoffDialog({
+  approvalAlreadyRecorded,
   campaignId,
   communityId,
   emailWarningNames,
@@ -390,6 +393,7 @@ function ActivationHandoffDialog({
   unitId,
   unitLabel,
 }: {
+  approvalAlreadyRecorded: boolean;
   campaignId: string;
   communityId: string;
   emailWarningNames: string[];
@@ -444,16 +448,17 @@ function ActivationHandoffDialog({
         className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-          Patronato confirmation
+          {approvalAlreadyRecorded ? "Activation handoff" : "Manual approval override"}
         </p>
         <h3 className="mt-2 text-xl font-semibold text-white">
-          Confirm and prepare activation
+          {approvalAlreadyRecorded
+            ? "Move to Activation Queue"
+            : "Confirm and prepare activation"}
         </h3>
         <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-          Use this after Patronato has approved the resident information outside
-          ENTRY. ENTRY will record that confirmation and prepare eligible
-          residents in Activation Queue. It will not create users, PINs, or
-          activation messages.
+          {approvalAlreadyRecorded
+            ? "Patronato approval is already recorded. This final Minerva action prepares eligible residents in Activation Queue. It will not create users, PINs, or activation messages."
+            : "Use this only when Patronato approved outside the ENTRY review page. ENTRY will record that manual approval and prepare eligible residents in Activation Queue. It will not create users, PINs, or activation messages."}
         </p>
 
         {emailWarningNames.length > 0 ? (
@@ -480,12 +485,94 @@ function ActivationHandoffDialog({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Preparing..." : "Confirm and prepare activation"}
+          <Button type="submit" disabled={pending} className="gap-2">
+            {pending
+              ? "Preparing..."
+              : approvalAlreadyRecorded
+                ? "Move to Activation Queue"
+                : "Confirm and prepare activation"}
+            {!pending && approvalAlreadyRecorded ? (
+              <ArrowRight className="size-3.5" aria-hidden />
+            ) : null}
           </Button>
         </div>
       </form>
     </Overlay>
+  );
+}
+
+function PatronatoApprovalBanner({
+  selectedUnit,
+}: {
+  selectedUnit: CommunityRegistrationReviewUnitDetail;
+}) {
+  if (!selectedUnit.patronatoConfirmedAt) return null;
+
+  const processed = selectedUnit.status.trim().toLowerCase() === "processed";
+
+  return (
+    <div
+      className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/[0.09] p-4 shadow-[inset_0_1px_0_rgba(52,211,153,0.08)]"
+      data-testid="patronato-approval-banner"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_6px_rgba(16,185,129,0.10)]">
+            <Check className="size-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-emerald-50">
+              Approved by Patronato
+            </p>
+            <p className="mt-1 text-sm leading-5 text-emerald-100/75">
+              {processed
+                ? "This household was authorized by Patronato and has already been handed off to Activation Queue."
+                : "This household is authorized and ready to move to Activation Queue."}
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-emerald-300/15 pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/70">
+            Approval recorded
+          </p>
+          <p className="mt-1 text-sm font-semibold text-emerald-50">
+            {formatDate(selectedUnit.patronatoConfirmedAt)}
+          </p>
+          <p className="mt-1 text-xs text-emerald-100/55">Patronato review</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PatronatoApprovalHistory({
+  selectedUnit,
+}: {
+  selectedUnit: CommunityRegistrationReviewUnitDetail;
+}) {
+  if (!selectedUnit.patronatoConfirmedAt) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        Approval history
+      </p>
+      <div className="mt-3 flex items-start gap-3">
+        <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+          <Check className="size-3" aria-hidden />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-white">Approved by Patronato</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            {formatDate(selectedUnit.patronatoConfirmedAt)}
+          </p>
+          <p className="mt-1 text-xs text-emerald-200/70">
+            Approval recorded through the Patronato review workflow.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -1080,10 +1167,10 @@ export function ReviewWorkspace({
 
       <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
-        <Metric icon={Check} label="Reviewed" value={summary.reviewed} tone="emerald" />
+        <Metric icon={Clock3} label="Ready for Patronato" value={summary.reviewed} tone="amber" />
         <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
         <Metric icon={Clock3} label="Correction open" value={summary.editEnabled} tone="amber" />
-        <Metric icon={CheckCircle2} label="Confirmed" value={summary.confirmed} tone="emerald" />
+        <Metric icon={CheckCircle2} label="Patronato approved" value={summary.confirmed} tone="emerald" />
         <Metric
           active={unitFilter === "duplicates"}
           icon={TriangleAlert}
@@ -1094,6 +1181,16 @@ export function ReviewWorkspace({
         />
         <Metric icon={Users} label="Residents" value={summary.currentResidentCount} />
       </section>
+
+      {summary.confirmed > 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-2.5 text-sm text-emerald-50/90">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-300" aria-hidden />
+            {summary.confirmed} {summary.confirmed === 1 ? "unit is" : "units are"} approved by Patronato and ready to move to Activation Queue.
+          </span>
+          <Badge tone="success">Ready for handoff</Badge>
+        </div>
+      ) : null}
 
       {campaignStatus === "open" || campaignStatus === "paused" ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-4 py-2.5 text-sm text-amber-50/85">
@@ -1530,6 +1627,8 @@ export function ReviewWorkspace({
                   </div>
                 ) : null}
 
+                <PatronatoApprovalBanner selectedUnit={selectedUnit} />
+
                 {selectedUnit.review?.observation ? (
                   <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
@@ -1542,6 +1641,7 @@ export function ReviewWorkspace({
                 ) : null}
 
                 <HandoffProgress selectedUnit={selectedUnit} />
+                <PatronatoApprovalHistory selectedUnit={selectedUnit} />
 
                 <div className="mt-5 flex items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-white">Residents</h3>
@@ -1826,10 +1926,14 @@ export function ReviewWorkspace({
                     type="button"
                     onClick={() => setShowActivationHandoff(true)}
                     disabled={Boolean(loadError)}
+                    className="gap-2"
                   >
-                      {selectedStatus === "confirmed"
-                        ? "Move to Activation Queue"
-                        : "Manual approval override"}
+                    {selectedStatus === "confirmed"
+                      ? "Move to Activation Queue"
+                      : "Manual approval override"}
+                    {selectedStatus === "confirmed" ? (
+                      <ArrowRight className="size-3.5" aria-hidden />
+                    ) : null}
                   </Button>
                 ) : null}
 
@@ -1871,6 +1975,7 @@ export function ReviewWorkspace({
 
       {showActivationHandoff && selectedUnit && selectedUnitId ? (
         <ActivationHandoffDialog
+          approvalAlreadyRecorded={selectedStatus === "confirmed"}
           campaignId={campaign.id}
           communityId={communityId}
           emailWarningNames={missingEmailNames}
