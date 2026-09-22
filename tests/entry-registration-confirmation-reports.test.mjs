@@ -149,3 +149,19 @@ test("activation handoff warns about missing email without disabling complete re
     /disabled=\{emailWarningNames\.length > 0\}/,
   );
 });
+
+
+test("complete registrations are visibly labeled and prioritized in the unit list", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /const dataCompleteByUnitId = useMemo/);
+  assert.match(workspace, /getUnitMissingFields\(\{/);
+  assert.match(workspace, /missingFields\.length === 0/);
+  assert.match(workspace, /Information complete/);
+  assert.match(
+    workspace,
+    /Number\(dataCompleteByUnitId\.get\(right\.id\) === true\)[\s\S]*Number\(dataCompleteByUnitId\.get\(left\.id\) === true\)/,
+  );
+});
