@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
 import { ReviewWorkspace } from "@/features/entry/communityRegistration/review/ReviewWorkspace";
 import { getCommunityRegistrationQuickEditData } from "@/features/entry/communityRegistration/review/quickEditQueries";
+import { getCommunityRegistrationDuplicateReviewData } from "@/features/entry/communityRegistration/review/duplicateQueries";
 import {
   getCommunityRegistrationReviewOverview,
   getCommunityRegistrationReviewUnit,
@@ -75,13 +76,19 @@ export default async function RegistrationReviewPage(
     selectedUnitSummary.residentCount > 0
       ? selectedUnitSummary.id
       : null;
-  const [selectedUnit, quickEditData, selectedUnitReference] = selectedUnitId
-    ? await Promise.all([
-        getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId),
-        getCommunityRegistrationQuickEditData(selectedUnitId),
-        getCommunityRegistrationUnitReference(selectedUnitId),
-      ])
-    : [null, null, null];
+  const duplicateDataPromise = getCommunityRegistrationDuplicateReviewData(
+    overview.campaign.id,
+    community.id,
+  );
+  const [selectedUnit, quickEditData, selectedUnitReference, duplicateData] =
+    selectedUnitId
+      ? await Promise.all([
+          getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId),
+          getCommunityRegistrationQuickEditData(selectedUnitId),
+          getCommunityRegistrationUnitReference(selectedUnitId),
+          duplicateDataPromise,
+        ])
+      : [null, null, null, await duplicateDataPromise];
 
   return (
     <div className="relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]">
@@ -102,6 +109,7 @@ export default async function RegistrationReviewPage(
       <ReviewWorkspace
         campaign={overview.campaign}
         communityId={community.id}
+        duplicateData={duplicateData}
         loadError={overview.loadError}
         quickEditData={quickEditData}
         selectedUnit={selectedUnit}
