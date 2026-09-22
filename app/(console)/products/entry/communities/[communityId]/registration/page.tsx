@@ -13,6 +13,10 @@ import {
   getCommunityRegistrationReviewUnit,
 } from "@/features/entry/communityRegistration/review/queries";
 import { getCommunityRegistrationUnitReference } from "@/features/entry/communityRegistration/review/unitReferenceQuery";
+import {
+  getCommunityRegistrationContactHistory,
+  getCommunityRegistrationLatestContactStatuses,
+} from "@/features/entry/communityRegistration/review/contactQueries";
 
 type RegistrationReviewPageProps = {
   params: Promise<{ communityId: string }>;
@@ -68,10 +72,16 @@ export default async function RegistrationReviewPage(
     );
   }
 
-  const duplicateData = await getCommunityRegistrationDuplicateReviewData(
-    overview.campaign.id,
-    community.id,
-  );
+  const [duplicateData, contactStatuses] = await Promise.all([
+    getCommunityRegistrationDuplicateReviewData(
+      overview.campaign.id,
+      community.id,
+    ),
+    getCommunityRegistrationLatestContactStatuses(
+      overview.campaign.id,
+      community.id,
+    ),
+  ]);
   const unitSummaryById = new Map(overview.units.map((unit) => [unit.id, unit]));
 
   for (const unit of duplicateData.units) {
@@ -98,7 +108,7 @@ export default async function RegistrationReviewPage(
     selectedUnitSummary.residentCount > 0
       ? selectedUnitSummary.id
       : null;
-  const [selectedUnit, quickEditData, selectedUnitReference] = await Promise.all([
+  const [selectedUnit, quickEditData, selectedUnitReference, selectedContactHistory] = await Promise.all([
     selectedUnitId
       ? getCommunityRegistrationReviewUnit(overview.campaign.id, selectedUnitId)
       : Promise.resolve(null),
@@ -108,6 +118,9 @@ export default async function RegistrationReviewPage(
     selectedUnitId
       ? getCommunityRegistrationUnitReference(selectedUnitId)
       : Promise.resolve(null),
+    selectedUnitId
+      ? getCommunityRegistrationContactHistory(selectedUnitId)
+      : Promise.resolve([]),
   ]);
 
   return (
@@ -138,12 +151,15 @@ export default async function RegistrationReviewPage(
       <ReviewWorkspace
         campaign={overview.campaign}
         communityId={community.id}
+        communityName={community.name}
+        contactStatuses={contactStatuses}
         duplicateData={duplicateData}
         loadError={overview.loadError}
         quickEditData={quickEditData}
         selectedUnit={selectedUnit}
         selectedUnitId={selectedUnitId}
         selectedUnitReference={selectedUnitReference}
+        selectedContactHistory={selectedContactHistory}
         summary={overview.summary}
         units={reviewUnits}
       />
