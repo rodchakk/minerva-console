@@ -406,5 +406,22 @@
     "pr": "#25",
     "commit": "a7d261dbc7ef685c4ada8edffa9443293d079cdd",
     "phase": "loop"
+  },
+  {
+    "id": "MCB-0024",
+    "title": "Brain Desktop Extraction & Local-First Foundation",
+    "type": "mission",
+    "status": "planned",
+    "summary": "Future-near mission to extract Brain from Minerva Console into an independent Windows/macOS desktop app: local processing and workspace awareness, cloud persistence, and model-agnostic context delivery for GPT, Claude, Codex, and future local AI.",
+    "created": "2026-09-19",
+    "updated": "2026-09-19",
+    "tags": ["brain", "mission", "desktop", "electron", "local-first", "context", "memory", "architecture"],
+    "related": ["MCB-0020", "MCB-0021", "MCB-0022", "MCB-0023"],
+    "path": "content/brain/missions/mcb-0024.md",
+    "agent": "unassigned",
+    "branch": "",
+    "pr": "",
+    "commit": "",
+    "phase": "planning"
   }
 ]
