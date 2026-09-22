@@ -848,7 +848,9 @@ export function ReviewWorkspace({
       !(duplicateCandidatesByUnit.get(unitId)?.length),
   );
   const selectedApprovedForActivationIds = selectedReportUnitIds.filter(
-    (unitId) => statusByUnitId.get(unitId) === "confirmed",
+    (unitId) =>
+      statusByUnitId.get(unitId) === "confirmed" &&
+      !(duplicateCandidatesByUnit.get(unitId)?.length),
   );
 
   function runReadyForPatronatoBatch() {
@@ -1301,11 +1303,11 @@ export function ReviewWorkspace({
         ) : null}
         {selectedReportUnitIds.some(
           (unitId) =>
-            statusByUnitId.get(unitId) === "submitted" &&
+            ["submitted", "confirmed"].includes(statusByUnitId.get(unitId) ?? "") &&
             Boolean(duplicateCandidatesByUnit.get(unitId)?.length),
         ) ? (
           <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
-            Units with unresolved duplicate matches are excluded from Ready for Patronato.
+            Units with unresolved duplicate matches are excluded from Patronato and Activation Queue workflow actions.
           </p>
         ) : null}
       </section>
@@ -1921,7 +1923,7 @@ export function ReviewWorkspace({
                   </Button>
                 ) : null}
 
-                {canConfirmAndPrepare ? (
+                {canConfirmAndPrepare && !selectedDuplicateCandidate ? (
                   <Button
                     type="button"
                     onClick={() => setShowActivationHandoff(true)}
@@ -1937,7 +1939,15 @@ export function ReviewWorkspace({
                   </Button>
                 ) : null}
 
-                {canMarkReviewed ? (
+                {selectedDuplicateCandidate &&
+                ["submitted", "reviewed", "confirmed"].includes(selectedStatus) ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                    <TriangleAlert className="size-3.5" aria-hidden />
+                    Resolve duplicate before Patronato or Activation
+                  </span>
+                ) : null}
+
+                {canMarkReviewed && !selectedDuplicateCandidate ? (
                   <form action={reviewAction}>
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
                     <input type="hidden" name="community_id" value={communityId} />
