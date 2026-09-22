@@ -873,6 +873,12 @@ export function ReviewWorkspace({
     return () => window.cancelAnimationFrame(frame);
   }, [selectedUnitId]);
 
+  useEffect(() => {
+    if (duplicateDismissState?.success) {
+      router.refresh();
+    }
+  }, [duplicateDismissState, router]);
+
   async function openReport(unitIds: string[], mode: "single" | "selection") {
     if (unitIds.length === 0) return;
 
@@ -1172,6 +1178,12 @@ export function ReviewWorkspace({
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl font-semibold text-white">{selectedUnit.unitLabel}</h2>
                         <Badge tone={statusTone(selectedUnit.status)}>{statusLabel(selectedUnit.status)}</Badge>
+                        {selectedDuplicateCandidate ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
+                            <TriangleAlert className="size-3" aria-hidden />
+                            Under duplicate review
+                          </span>
+                        ) : null}
                       </div>
                       <p className="mt-1 text-xs text-[var(--text-muted)]">
                         Version {selectedUnit.version} · Submitted {formatDate(selectedUnit.submittedAt)}
@@ -1187,6 +1199,72 @@ export function ReviewWorkspace({
                     </p>
                   </div>
                 </div>
+
+                {selectedDuplicateCandidate && selectedDuplicateTarget ? (
+                  <div className="mt-4 flex flex-col gap-4 rounded-xl border border-amber-400/35 bg-amber-500/[0.08] px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-300 ring-1 ring-inset ring-amber-400/20">
+                        <TriangleAlert className="size-5" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-amber-50">
+                          Possible duplicate detected
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-amber-50/80">
+                          {selectedDuplicateCandidate.confidence === "strong"
+                            ? "Strong match"
+                            : "Possible match"}{" "}
+                          with <span className="font-semibold text-white">{selectedDuplicateTarget.label}</span>
+                        </p>
+                        <p className="mt-0.5 text-xs text-amber-100/65">
+                          {selectedDuplicateSameResidentCount} resident{" "}
+                          {selectedDuplicateSameResidentCount === 1 ? "match" : "matches"}
+                          {" · "}
+                          {selectedDuplicateContactCount} contact{" "}
+                          {selectedDuplicateContactCount === 1 ? "match" : "matches"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        className="gap-2"
+                        onClick={() =>
+                          setDuplicateDialogCandidateId(selectedDuplicateCandidate.id)
+                        }
+                      >
+                        <GitMerge className="size-4" aria-hidden />
+                        Compare & merge
+                      </Button>
+                      <form action={duplicateDismissAction}>
+                        <input type="hidden" name="campaign_id" value={campaign.id} />
+                        <input type="hidden" name="community_id" value={communityId} />
+                        <input
+                          type="hidden"
+                          name="left_unit_id"
+                          value={selectedDuplicateCandidate.unitAId}
+                        />
+                        <input
+                          type="hidden"
+                          name="right_unit_id"
+                          value={selectedDuplicateCandidate.unitBId}
+                        />
+                        <Button
+                          type="submit"
+                          variant="secondary"
+                          disabled={duplicateDismissPending}
+                        >
+                          {duplicateDismissPending ? "Saving..." : "Not duplicate"}
+                        </Button>
+                      </form>
+                    </div>
+                    {duplicateDismissState && !duplicateDismissState.success ? (
+                      <p className="basis-full rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
+                        {duplicateDismissState.error}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {selectedUnit.review?.observation ? (
                   <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3">
