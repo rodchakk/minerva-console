@@ -91,6 +91,17 @@ test("resident-side actions do not require an unrelated bulk selection", () => {
   );
 });
 
+test("resident email action preserves an existing multi-selection for batch invites", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(
+    source,
+    /function runResidentEmail\(rowId: string\) \{[\s\S]*if \(selectedIds\.length > 1\) \{[\s\S]*setPhase\("confirmingEmail"\);[\s\S]*return;[\s\S]*setSelectedIds\(\[rowId\]\)/,
+  );
+  assert.match(source, /selectedCount > 1[\s\S]*selectedCount} invites/);
+  assert.match(source, /selectedCount > 1[\s\S]*selectedCount} selected/);
+});
+
 test("Activation Queue resident detail shows derived progress and queue blockers without backend changes", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
 

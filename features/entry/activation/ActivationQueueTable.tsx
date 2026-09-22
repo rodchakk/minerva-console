@@ -926,6 +926,11 @@ export function ActivationQueueTable({
   }
 
   function runResidentEmail(rowId: string) {
+    if (selectedIds.length > 1) {
+      setPhase("confirmingEmail");
+      return;
+    }
+
     setSelectedIds([rowId]);
     setActiveRowId(rowId);
     setPhase("confirmingEmail");
@@ -1137,7 +1142,11 @@ export function ActivationQueueTable({
               className="gap-2"
             >
               <Send className="size-4" aria-hidden />
-              {allSelectedAreInvited ? "Resend invite" : "Send invite"}
+              {selectedCount > 1
+                ? `${allSelectedAreInvited ? "Resend" : "Send"} ${selectedCount} invites`
+                : allSelectedAreInvited
+                  ? "Resend invite"
+                  : "Send invite"}
             </Button>
           </div>
         </div>
@@ -1549,7 +1558,9 @@ export function ActivationQueueTable({
                       className="gap-2"
                     >
                       <Mail className="size-3.5" aria-hidden />
-                      Send invite
+                      {selectedCount > 1
+                        ? `${allSelectedAreInvited ? "Resend" : "Send"} ${selectedCount} selected`
+                        : "Send invite"}
                     </Button>
                     <Button
                       type="button"
