@@ -1417,6 +1417,11 @@ export function ReviewWorkspace({
                         <CheckCircle2 className="size-3" aria-hidden />
                         Information complete
                       </span>
+                    ) : dataCompleteByUnitId.get(unit.id) === false ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/25 bg-rose-500/10 px-2.5 py-1 text-[10px] font-semibold text-rose-200">
+                        <TriangleAlert className="size-3" aria-hidden />
+                        Information incomplete
+                      </span>
                     ) : null}
                     {duplicateMatches.length > 0 ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
