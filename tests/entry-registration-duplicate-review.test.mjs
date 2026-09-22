@@ -50,7 +50,7 @@ test("resolved duplicate history stays distinct from a real merge", () => {
   assert.match(source, /resolvedUnitIds/);
   assert.match(workspace, /Resolved duplicate/);
   assert.match(workspace, /Related registrations/);
-  assert.match(migration, /resolution_type\s*=\s*'resolved_duplicate'\s+is authoritative/i);
+  assert.match(migration, /resolution_type\s*=\s*'resolved_duplicate'\s+is (?:the )?authoritative/i);
 });
 
 test("duplicate matcher keeps shared family contacts conservative", () => {
