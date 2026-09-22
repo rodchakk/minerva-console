@@ -377,6 +377,8 @@ declare
   v_same_phone boolean;
   v_same_name boolean;
   v_names_compatible boolean;
+  v_email_choice text;
+  v_phone_choice text;
   v_result_email text;
   v_result_phone text;
   v_result_full_name text;
@@ -686,7 +688,12 @@ begin
        limit 1;
 
       if v_auto_merge then
-        v_decision := 'merge';
+        if v_plan_decision is not null
+           and v_plan_decision->>'decision' = 'keep_separate' then
+          v_decision := 'keep_separate';
+        else
+          v_decision := 'merge';
+        end if;
       elsif v_ambiguous then
         if v_plan_decision is null then
           perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED', 'P0409');
@@ -706,20 +713,6 @@ begin
     end if;
 
     if v_decision = 'merge' and v_source_match.id is not null then
-      if v_source_match.email is not null
-         and v_resident.email is not null
-         and public._cr_normalize_email_v1(v_source_match.email)
-             <> public._cr_normalize_email_v1(v_resident.email) then
-        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
-      end if;
-
-      if v_source_match.phone is not null
-         and v_resident.phone is not null
-         and public._cr_normalize_phone_v1(v_source_match.phone)
-             <> public._cr_normalize_phone_v1(v_resident.phone) then
-        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
-      end if;
-
       if not public._cr_duplicate_names_compatible_v1(
         v_source_match.full_name,
         v_resident.full_name
@@ -727,8 +720,48 @@ begin
         perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
       end if;
 
-      v_result_email := coalesce(v_source_match.email, v_resident.email);
-      v_result_phone := coalesce(v_source_match.phone, v_resident.phone);
+      v_email_choice := lower(btrim(coalesce(v_plan_decision->>'emailChoice', '')));
+      v_phone_choice := lower(btrim(coalesce(v_plan_decision->>'phoneChoice', '')));
+
+      if v_source_match.email is not null
+         and v_resident.email is not null
+         and public._cr_normalize_email_v1(v_source_match.email)
+             <> public._cr_normalize_email_v1(v_resident.email) then
+        if v_email_choice not in ('canonical', 'duplicate') then
+          perform public._cr_raise_v1(
+            'ENTRY_CR_DUPLICATE_RESIDENT_FIELD_CONFLICT_UNRESOLVED',
+            'P0409'
+          );
+        end if;
+
+        v_result_email := case
+          when v_email_choice = 'duplicate' then v_resident.email
+          else v_source_match.email
+        end;
+      else
+        v_result_email := coalesce(v_source_match.email, v_resident.email);
+        v_email_choice := null;
+      end if;
+
+      if v_source_match.phone is not null
+         and v_resident.phone is not null
+         and public._cr_normalize_phone_v1(v_source_match.phone)
+             <> public._cr_normalize_phone_v1(v_resident.phone) then
+        if v_phone_choice not in ('canonical', 'duplicate') then
+          perform public._cr_raise_v1(
+            'ENTRY_CR_DUPLICATE_RESIDENT_FIELD_CONFLICT_UNRESOLVED',
+            'P0409'
+          );
+        end if;
+
+        v_result_phone := case
+          when v_phone_choice = 'duplicate' then v_resident.phone
+          else v_source_match.phone
+        end;
+      else
+        v_result_phone := coalesce(v_source_match.phone, v_resident.phone);
+        v_phone_choice := null;
+      end if;
       v_result_full_name := case
         when length(public._cr_normalize_name_v1(v_resident.full_name))
              > length(public._cr_normalize_name_v1(v_source_match.full_name))
@@ -768,6 +801,8 @@ begin
         'result_full_name', v_result_full_name,
         'result_email', v_result_email,
         'result_phone', v_result_phone,
+        'email_choice', v_email_choice,
+        'phone_choice', v_phone_choice,
         'auto', v_auto_merge
       ));
     else
