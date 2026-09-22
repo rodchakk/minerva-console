@@ -160,6 +160,8 @@ test("complete registrations are visibly labeled and prioritized in the unit lis
   assert.match(workspace, /getUnitMissingFields\(\{/);
   assert.match(workspace, /missingFields\.length === 0/);
   assert.match(workspace, /Information complete/);
+  assert.match(workspace, /Information incomplete/);
+  assert.match(workspace, /border-rose-400\/25/);
   assert.match(
     workspace,
     /Number\(dataCompleteByUnitId\.get\(right\.id\) === true\)[\s\S]*Number\(dataCompleteByUnitId\.get\(left\.id\) === true\)/,
