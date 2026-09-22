@@ -35,7 +35,7 @@ create table if not exists public.community_registration_duplicate_resolutions (
   unit_low_id uuid not null references public.community_registration_units(id) on delete restrict,
   unit_high_id uuid not null references public.community_registration_units(id) on delete restrict,
   resolution_type text not null
-    check (resolution_type in ('dismissed', 'merged')),
+    check (resolution_type in ('dismissed', 'merged', 'resolved_duplicate')),
   canonical_unit_id uuid references public.community_registration_units(id) on delete restrict,
   duplicate_unit_id uuid references public.community_registration_units(id) on delete restrict,
   metadata jsonb not null default '{}'::jsonb,
@@ -53,7 +53,7 @@ create table if not exists public.community_registration_duplicate_resolutions (
       (resolution_type = 'dismissed' and canonical_unit_id is null and duplicate_unit_id is null)
       or
       (
-        resolution_type = 'merged'
+        resolution_type in ('merged', 'resolved_duplicate')
         and canonical_unit_id is not null
         and duplicate_unit_id is not null
         and canonical_unit_id <> duplicate_unit_id
@@ -74,7 +74,7 @@ create index if not exists idx_cr_duplicate_resolutions_campaign
 
 create index if not exists idx_cr_duplicate_resolutions_duplicate_unit
   on public.community_registration_duplicate_resolutions (duplicate_unit_id)
-  where resolution_type = 'merged';
+  where resolution_type in ('merged', 'resolved_duplicate');
 
 alter table public.community_registration_duplicate_resolutions enable row level security;
 
@@ -221,6 +221,123 @@ $function$;
 
 drop function if exists public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid);
 
+create or replace function public._cr_text_one_edit_apart_v1(
+  p_left text,
+  p_right text
+)
+returns boolean
+language plpgsql
+immutable
+set search_path to 'public'
+as $function$
+declare
+  v_left text := coalesce(p_left, '');
+  v_right text := coalesce(p_right, '');
+  v_left_len integer := length(v_left);
+  v_right_len integer := length(v_right);
+  v_left_index integer := 1;
+  v_right_index integer := 1;
+  v_edits integer := 0;
+begin
+  if v_left = v_right or abs(v_left_len - v_right_len) > 1 then
+    return false;
+  end if;
+
+  while v_left_index <= v_left_len and v_right_index <= v_right_len loop
+    if substr(v_left, v_left_index, 1) = substr(v_right, v_right_index, 1) then
+      v_left_index := v_left_index + 1;
+      v_right_index := v_right_index + 1;
+    else
+      v_edits := v_edits + 1;
+      if v_edits > 1 then
+        return false;
+      end if;
+
+      if v_left_len > v_right_len then
+        v_left_index := v_left_index + 1;
+      elsif v_right_len > v_left_len then
+        v_right_index := v_right_index + 1;
+      else
+        v_left_index := v_left_index + 1;
+        v_right_index := v_right_index + 1;
+      end if;
+    end if;
+  end loop;
+
+  if v_left_index <= v_left_len or v_right_index <= v_right_len then
+    v_edits := v_edits + 1;
+  end if;
+
+  return v_edits = 1;
+end;
+$function$;
+
+create or replace function public._cr_duplicate_names_compatible_v1(
+  p_left text,
+  p_right text
+)
+returns boolean
+language plpgsql
+immutable
+set search_path to 'public'
+as $function$
+declare
+  v_left text := public._cr_normalize_name_v1(p_left);
+  v_right text := public._cr_normalize_name_v1(p_right);
+  v_left_tokens text[];
+  v_right_tokens text[];
+  v_small text[];
+  v_large text[];
+  v_differences integer := 0;
+  v_index integer;
+begin
+  if v_left is null or v_right is null or v_left = '' or v_right = '' then
+    return false;
+  end if;
+
+  if v_left = v_right then
+    return true;
+  end if;
+
+  v_left_tokens := regexp_split_to_array(v_left, '\\s+');
+  v_right_tokens := regexp_split_to_array(v_right, '\\s+');
+
+  if array_length(v_left_tokens, 1) >= 2
+     and array_length(v_right_tokens, 1) >= 2 then
+    if array_length(v_left_tokens, 1) <= array_length(v_right_tokens, 1) then
+      v_small := v_left_tokens;
+      v_large := v_right_tokens;
+    else
+      v_small := v_right_tokens;
+      v_large := v_left_tokens;
+    end if;
+
+    if v_small <@ v_large then
+      return true;
+    end if;
+  end if;
+
+  if array_length(v_left_tokens, 1) = array_length(v_right_tokens, 1)
+     and array_length(v_left_tokens, 1) >= 2 then
+    for v_index in 1..array_length(v_left_tokens, 1) loop
+      if v_left_tokens[v_index] <> v_right_tokens[v_index] then
+        if not public._cr_text_one_edit_apart_v1(
+          v_left_tokens[v_index],
+          v_right_tokens[v_index]
+        ) then
+          return false;
+        end if;
+        v_differences := v_differences + 1;
+      end if;
+    end loop;
+
+    return v_differences = 1;
+  end if;
+
+  return false;
+end;
+$function$;
+
 create or replace function public.merge_community_registration_units_v1(
   p_campaign_id uuid,
   p_canonical_unit_id uuid,
@@ -251,12 +368,19 @@ declare
   v_match_id uuid;
   v_plan_decision jsonb;
   v_plan_decisions jsonb;
-  v_plan_conflict_count integer := 0;
   v_decision text;
-  v_result_email text;
-  v_result_full_name text;
-  v_result_phone text;
   v_resident public.community_registration_residents%rowtype;
+  v_source_match public.community_registration_residents%rowtype;
+  v_auto_merge boolean;
+  v_ambiguous boolean;
+  v_same_email boolean;
+  v_same_phone boolean;
+  v_same_name boolean;
+  v_names_compatible boolean;
+  v_result_email text;
+  v_result_phone text;
+  v_result_full_name text;
+  v_server_plan jsonb := '[]'::jsonb;
 begin
   perform public._cr_service_role_only_v1();
   perform public._cr_validate_actor_v1(p_actor_user_id);
@@ -277,18 +401,8 @@ begin
   end if;
 
   v_plan_decisions := coalesce(p_resident_plan->'decisions', '[]'::jsonb);
-
   if jsonb_typeof(v_plan_decisions) <> 'array' then
     perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
-  end if;
-
-  if coalesce((p_resident_plan->>'hasUnresolved')::boolean, false) then
-    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED', 'P0409');
-  end if;
-
-  v_plan_conflict_count := coalesce(nullif(p_resident_plan->>'conflicts', '')::integer, 0);
-  if v_plan_conflict_count > 0 then
-    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
   end if;
 
   select * into v_campaign
@@ -329,34 +443,6 @@ begin
      or v_canonical.community_id <> v_campaign.community_id
      or v_duplicate.community_id <> v_campaign.community_id then
     perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_DIFFERENT_CAMPAIGN', 'P0409');
-  end if;
-
-  if p_canonical_unit_id::text < p_duplicate_unit_id::text then
-    v_low := p_canonical_unit_id;
-    v_high := p_duplicate_unit_id;
-  else
-    v_low := p_duplicate_unit_id;
-    v_high := p_canonical_unit_id;
-  end if;
-
-  select * into v_existing_resolution
-    from public.community_registration_duplicate_resolutions
-   where campaign_id = v_campaign.id
-     and unit_low_id = v_low
-     and unit_high_id = v_high
-   for update;
-
-  if found and v_existing_resolution.resolution_type = 'merged' then
-    if v_existing_resolution.canonical_unit_id = p_canonical_unit_id
-       and v_existing_resolution.duplicate_unit_id = p_duplicate_unit_id then
-      return jsonb_build_object(
-        'already_complete', true,
-        'canonical_unit_id', p_canonical_unit_id,
-        'duplicate_unit_id', p_duplicate_unit_id
-      );
-    end if;
-
-    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_STATE', 'P0409');
   end if;
 
   if v_canonical.status <> 'submitted'
@@ -405,22 +491,55 @@ begin
     perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_STATE', 'P0409');
   end if;
 
+  if exists (
+    select 1
+      from jsonb_array_elements(v_plan_decisions) item(value)
+      left join public.community_registration_residents duplicate_resident
+        on duplicate_resident.id = nullif(item.value->>'duplicateResidentId', '')::uuid
+       and duplicate_resident.submission_id = v_duplicate_submission.id
+      left join public.community_registration_residents canonical_resident
+        on canonical_resident.id = nullif(item.value->>'canonicalResidentId', '')::uuid
+       and canonical_resident.submission_id = v_canonical_submission.id
+     where coalesce(item.value->>'decision', '') not in ('merge', 'keep_separate')
+        or duplicate_resident.id is null
+        or canonical_resident.id is null
+  ) then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
+  end if;
+
+  if p_canonical_unit_id::text < p_duplicate_unit_id::text then
+    v_low := p_canonical_unit_id;
+    v_high := p_duplicate_unit_id;
+  else
+    v_low := p_duplicate_unit_id;
+    v_high := p_canonical_unit_id;
+  end if;
+
+  select * into v_existing_resolution
+    from public.community_registration_duplicate_resolutions
+   where campaign_id = v_campaign.id
+     and unit_low_id = v_low
+     and unit_high_id = v_high
+   for update;
+
+  if found and v_existing_resolution.resolution_type in ('merged', 'resolved_duplicate') then
+    if v_existing_resolution.resolution_type = 'merged'
+       and v_existing_resolution.canonical_unit_id = p_canonical_unit_id
+       and v_existing_resolution.duplicate_unit_id = p_duplicate_unit_id then
+      return jsonb_build_object(
+        'already_complete', true,
+        'canonical_unit_id', p_canonical_unit_id,
+        'duplicate_unit_id', p_duplicate_unit_id
+      );
+    end if;
+
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_STATE', 'P0409');
+  end if;
+
   select coalesce(max(version_number), 0) + 1
     into v_next_version
     from public.community_registration_submissions
    where campaign_unit_id = v_canonical.id;
-
-  update public.community_registration_submissions
-     set status = 'superseded',
-         updated_at = now()
-   where id = v_canonical_submission.id;
-
-  update public.community_registration_submissions
-     set status = 'invalidated',
-         invalidated_at = now(),
-         invalidated_reason = 'Merged duplicate registration into ' || v_canonical.id::text,
-         updated_at = now()
-   where id = v_duplicate_submission.id;
 
   insert into public.community_registration_submissions (
     campaign_unit_id,
@@ -494,72 +613,165 @@ begin
      where submission_id = v_duplicate_submission.id
      order by position, id
   loop
-    v_match_id := null;
+    v_source_match := null;
     v_plan_decision := null;
     v_decision := 'keep_separate';
-    v_result_email := null;
-    v_result_full_name := null;
-    v_result_phone := null;
+    v_auto_merge := false;
+    v_ambiguous := false;
 
-    select decision_item.value
-      into v_plan_decision
-      from jsonb_array_elements(v_plan_decisions) as decision_item(value)
-     where decision_item.value->>'duplicateResidentId' = v_resident.id::text
+    select source.*
+      into v_source_match
+      from public.community_registration_residents source
+     where source.submission_id = v_canonical_submission.id
+       and public._cr_duplicate_names_compatible_v1(
+         source.full_name,
+         v_resident.full_name
+       )
+       and (
+         (
+           source.normalized_email is not null
+           and source.normalized_email = v_resident.normalized_email
+         )
+         or
+         (
+           source.normalized_phone is not null
+           and source.normalized_phone = v_resident.normalized_phone
+         )
+       )
+     order by
+       case
+         when source.normalized_full_name = v_resident.normalized_full_name
+              and source.normalized_email is not null
+              and source.normalized_email = v_resident.normalized_email
+              and source.normalized_phone is not null
+              and source.normalized_phone = v_resident.normalized_phone then 100
+         when source.normalized_full_name = v_resident.normalized_full_name then 90
+         when source.normalized_email is not null
+              and source.normalized_email = v_resident.normalized_email
+              and source.normalized_phone is not null
+              and source.normalized_phone = v_resident.normalized_phone then 80
+         else 60
+       end desc,
+       source.position,
+       source.id
      limit 1;
 
-    if v_plan_decision is not null then
-      v_decision := coalesce(nullif(v_plan_decision->>'decision', ''), 'keep_separate');
-      v_result_email := nullif(btrim(coalesce(v_plan_decision->>'resultEmail', '')), '');
-      v_result_full_name := nullif(btrim(coalesce(v_plan_decision->>'resultFullName', '')), '');
-      v_result_phone := nullif(btrim(coalesce(v_plan_decision->>'resultPhone', '')), '');
+    if v_source_match.id is not null then
+      v_same_name :=
+        v_source_match.normalized_full_name is not null
+        and v_source_match.normalized_full_name = v_resident.normalized_full_name;
+      v_names_compatible := public._cr_duplicate_names_compatible_v1(
+        v_source_match.full_name,
+        v_resident.full_name
+      );
+      v_same_email :=
+        v_source_match.normalized_email is not null
+        and v_source_match.normalized_email = v_resident.normalized_email;
+      v_same_phone :=
+        v_source_match.normalized_phone is not null
+        and v_source_match.normalized_phone = v_resident.normalized_phone;
+
+      v_auto_merge :=
+        (v_same_name and (v_same_email or v_same_phone))
+        or (v_names_compatible and v_same_email and v_same_phone);
+      v_ambiguous :=
+        not v_auto_merge
+        and v_names_compatible
+        and (v_same_email or v_same_phone);
+
+      select item.value
+        into v_plan_decision
+        from jsonb_array_elements(v_plan_decisions) item(value)
+       where item.value->>'duplicateResidentId' = v_resident.id::text
+       limit 1;
+
+      if v_auto_merge then
+        v_decision := 'merge';
+      elsif v_ambiguous then
+        if v_plan_decision is null then
+          perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED', 'P0409');
+        end if;
+        v_decision := v_plan_decision->>'decision';
+      else
+        v_decision := 'keep_separate';
+      end if;
+
+      if v_decision = 'merge'
+         and (
+           v_plan_decision is not null
+           and nullif(v_plan_decision->>'canonicalResidentId', '')::uuid <> v_source_match.id
+         ) then
+        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
+      end if;
     end if;
 
-    if v_decision = 'unresolved' then
-      perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED', 'P0409');
-    elsif v_decision not in ('merge', 'keep_separate') then
-      perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
-    end if;
+    if v_decision = 'merge' and v_source_match.id is not null then
+      if v_source_match.email is not null
+         and v_resident.email is not null
+         and public._cr_normalize_email_v1(v_source_match.email)
+             <> public._cr_normalize_email_v1(v_resident.email) then
+        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
+      end if;
 
-    if v_decision = 'merge' then
+      if v_source_match.phone is not null
+         and v_resident.phone is not null
+         and public._cr_normalize_phone_v1(v_source_match.phone)
+             <> public._cr_normalize_phone_v1(v_resident.phone) then
+        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
+      end if;
+
+      if not public._cr_duplicate_names_compatible_v1(
+        v_source_match.full_name,
+        v_resident.full_name
+      ) then
+        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
+      end if;
+
+      v_result_email := coalesce(v_source_match.email, v_resident.email);
+      v_result_phone := coalesce(v_source_match.phone, v_resident.phone);
+      v_result_full_name := case
+        when length(public._cr_normalize_name_v1(v_resident.full_name))
+             > length(public._cr_normalize_name_v1(v_source_match.full_name))
+          then v_resident.full_name
+        else v_source_match.full_name
+      end;
+
       select copied.id
         into v_match_id
-        from public.community_registration_residents source
-        join public.community_registration_residents copied
-          on copied.submission_id = v_new_submission_id
-         and copied.position = source.position
-       where source.id = nullif(v_plan_decision->>'canonicalResidentId', '')::uuid
-         and source.submission_id = v_canonical_submission.id
+        from public.community_registration_residents copied
+       where copied.submission_id = v_new_submission_id
+         and copied.position = v_source_match.position
        order by copied.id
        limit 1;
 
       if v_match_id is null then
         perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
       end if;
-    end if;
 
-    if v_match_id is not null then
       update public.community_registration_residents
-         set full_name = coalesce(v_result_full_name, full_name),
-             email = coalesce(v_result_email, email, v_resident.email),
-             phone = coalesce(v_result_phone, phone, v_resident.phone),
-             normalized_full_name = public._cr_normalize_name_v1(
-               coalesce(v_result_full_name, full_name)
-             ),
-             normalized_email = public._cr_normalize_email_v1(
-               coalesce(v_result_email, email, v_resident.email)
-             ),
-             normalized_phone = public._cr_normalize_phone_v1(
-               coalesce(v_result_phone, phone, v_resident.phone)
-             ),
+         set full_name = v_result_full_name,
+             email = v_result_email,
+             phone = v_result_phone,
+             normalized_full_name = public._cr_normalize_name_v1(v_result_full_name),
+             normalized_email = public._cr_normalize_email_v1(v_result_email),
+             normalized_phone = public._cr_normalize_phone_v1(v_result_phone),
              is_owner_reference = is_owner_reference or v_resident.is_owner_reference,
              validation_status = 'valid',
              updated_at = now()
        where id = v_match_id;
 
       v_unified_count := v_unified_count + 1;
+      v_server_plan := v_server_plan || jsonb_build_array(jsonb_build_object(
+        'canonical_resident_id', v_source_match.id,
+        'duplicate_resident_id', v_resident.id,
+        'decision', 'merge',
+        'result_full_name', v_result_full_name,
+        'result_email', v_result_email,
+        'result_phone', v_result_phone,
+        'auto', v_auto_merge
+      ));
     else
       v_next_position := v_next_position + 1;
-
       if v_next_position > 20 then
         perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_LIMIT', 'P0409');
       end if;
@@ -600,6 +812,11 @@ begin
       );
 
       v_appended_count := v_appended_count + 1;
+      v_server_plan := v_server_plan || jsonb_build_array(jsonb_build_object(
+        'duplicate_resident_id', v_resident.id,
+        'decision', 'keep_separate',
+        'auto', not v_ambiguous
+      ));
     end if;
   end loop;
 
@@ -612,6 +829,18 @@ begin
     perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_LIMIT', 'P0409');
   end if;
 
+  update public.community_registration_submissions
+     set status = 'superseded',
+         updated_at = now()
+   where id = v_canonical_submission.id;
+
+  update public.community_registration_submissions
+     set status = 'invalidated',
+         invalidated_at = now(),
+         invalidated_reason = 'Merged duplicate registration into ' || v_canonical.id::text,
+         updated_at = now()
+   where id = v_duplicate_submission.id;
+
   update public.community_registration_units
      set status = 'submitted',
          last_submitted_at = now(),
@@ -620,7 +849,10 @@ begin
            nullif(btrim(v_duplicate.unit_reference_snapshot), '')
          ),
          resident_limit_override = case
-           when v_merged_resident_count > coalesce(v_canonical.resident_limit_override, v_campaign.default_resident_limit)
+           when v_merged_resident_count > coalesce(
+             v_canonical.resident_limit_override,
+             v_campaign.default_resident_limit
+           )
              then v_merged_resident_count
            else v_canonical.resident_limit_override
          end,
@@ -662,7 +894,8 @@ begin
       'merged_resident_count', v_merged_resident_count,
       'unified_resident_count', v_unified_count,
       'appended_resident_count', v_appended_count,
-      'resident_resolution_plan', p_resident_plan
+      'client_resident_plan', p_resident_plan,
+      'server_resolved_plan', v_server_plan
     ),
     p_actor_user_id,
     now(),
@@ -1134,3 +1367,350 @@ comment on table public.community_registration_duplicate_resolutions is
 
 comment on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid, jsonb) is
   'ENTRY internal RPC. Consolidates two Submitted resident-provided registration units into one canonical unit using an explicit reviewed resident resolution plan while preserving both original submissions as history. Blocks after Activation Queue handoff. service_role only.';
+
+
+
+-- Final duplicate-resolution hardening: archive-style resolution for a lower-stage
+-- duplicate when the canonical registration has already crossed into operational
+-- activation. The duplicate staging record is terminalized using status='merged',
+-- while resolution_type='resolved_duplicate' is the authoritative business meaning.
+create or replace function public.resolve_community_registration_archived_duplicate_v1(
+  p_campaign_id uuid,
+  p_canonical_unit_id uuid,
+  p_duplicate_unit_id uuid,
+  p_actor_user_id uuid,
+  p_unique_data_acknowledged boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public'
+as $function$
+declare
+  v_campaign public.community_registration_campaigns%rowtype;
+  v_canonical public.community_registration_units%rowtype;
+  v_duplicate public.community_registration_units%rowtype;
+  v_canonical_submission public.community_registration_submissions%rowtype;
+  v_duplicate_submission public.community_registration_submissions%rowtype;
+  v_low uuid;
+  v_high uuid;
+  v_canonical_operational boolean := false;
+  v_duplicate_operational boolean := false;
+  v_canonical_activated boolean := false;
+  v_unique_count integer := 0;
+  v_unique_residents integer := 0;
+  v_unique_contacts integer := 0;
+  v_unique_reference boolean := false;
+begin
+  perform public._cr_service_role_only_v1();
+  perform public._cr_validate_actor_v1(p_actor_user_id);
+
+  if p_actor_user_id is null then
+    perform public._cr_raise_v1('ENTRY_CR_UNAUTHORIZED', '42501');
+  end if;
+
+  if p_campaign_id is null
+     or p_canonical_unit_id is null
+     or p_duplicate_unit_id is null
+     or p_canonical_unit_id = p_duplicate_unit_id then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_PAIR', 'P0409');
+  end if;
+
+  select * into v_campaign
+    from public.community_registration_campaigns
+   where id = p_campaign_id
+   for update;
+
+  if not found
+     or v_campaign.registration_mode <> 'resident_provided_units'
+     or v_campaign.status not in ('open', 'review', 'confirmed') then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_STATE', 'P0409');
+  end if;
+
+  perform 1
+    from public.community_registration_units
+   where id in (p_canonical_unit_id, p_duplicate_unit_id)
+   order by id
+   for update;
+
+  select * into v_canonical
+    from public.community_registration_units
+   where id = p_canonical_unit_id;
+
+  select * into v_duplicate
+    from public.community_registration_units
+   where id = p_duplicate_unit_id;
+
+  if v_canonical.id is null
+     or v_duplicate.id is null
+     or v_canonical.campaign_id <> v_campaign.id
+     or v_duplicate.campaign_id <> v_campaign.id
+     or v_canonical.community_id <> v_campaign.community_id
+     or v_duplicate.community_id <> v_campaign.community_id then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_DIFFERENT_CAMPAIGN', 'P0409');
+  end if;
+
+  select exists (
+    select 1
+      from public.resident_activation_queue q
+      left join public.community_registration_residents r
+        on r.id = q.community_registration_resident_id
+     where q.community_id = v_campaign.community_id
+       and (
+         r.campaign_unit_id = v_canonical.id
+         or public.normalize_unit_label(q.unit_label)
+            = public.normalize_unit_label(v_canonical.unit_label_snapshot)
+       )
+       and q.status in ('pending', 'invited', 'pin_generated', 'activated', 'failed', 'skipped')
+  ) or v_canonical.status = 'processed'
+  into v_canonical_operational;
+
+  select exists (
+    select 1
+      from public.resident_activation_queue q
+      left join public.community_registration_residents r
+        on r.id = q.community_registration_resident_id
+     where q.community_id = v_campaign.community_id
+       and (
+         r.campaign_unit_id = v_duplicate.id
+         or public.normalize_unit_label(q.unit_label)
+            = public.normalize_unit_label(v_duplicate.unit_label_snapshot)
+       )
+       and q.status in ('pending', 'invited', 'pin_generated', 'activated', 'failed', 'skipped')
+  ) or v_duplicate.status = 'processed'
+  into v_duplicate_operational;
+
+  select exists (
+    select 1
+      from public.resident_activation_queue q
+      left join public.community_registration_residents r
+        on r.id = q.community_registration_resident_id
+     where q.community_id = v_campaign.community_id
+       and (
+         r.campaign_unit_id = v_canonical.id
+         or public.normalize_unit_label(q.unit_label)
+            = public.normalize_unit_label(v_canonical.unit_label_snapshot)
+       )
+       and q.status = 'activated'
+  )
+  into v_canonical_activated;
+
+  if v_canonical_operational and v_duplicate_operational then
+    perform public._cr_raise_v1(
+      'ENTRY_CR_DUPLICATE_MANUAL_IDENTITY_REVIEW_REQUIRED',
+      'P0409'
+    );
+  end if;
+
+  if not v_canonical_operational
+     or v_duplicate_operational
+     or v_duplicate.status <> 'submitted'
+     or v_duplicate.house_id is not null then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_STATE', 'P0409');
+  end if;
+
+  select * into v_canonical_submission
+    from public.community_registration_submissions
+   where campaign_unit_id = v_canonical.id
+     and status in ('submitted', 'edit_enabled', 'reviewed', 'confirmed', 'converted')
+   order by version_number desc
+   limit 1;
+
+  select * into v_duplicate_submission
+    from public.community_registration_submissions
+   where campaign_unit_id = v_duplicate.id
+     and status = 'submitted'
+   order by version_number desc
+   limit 1;
+
+  if v_duplicate_submission.id is null then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_STATE', 'P0409');
+  end if;
+
+  if v_canonical_submission.id is not null then
+    select count(*)::integer
+      into v_unique_residents
+      from public.community_registration_residents duplicate_resident
+     where duplicate_resident.submission_id = v_duplicate_submission.id
+       and not exists (
+         select 1
+           from public.community_registration_residents canonical_resident
+          where canonical_resident.submission_id = v_canonical_submission.id
+            and public._cr_duplicate_names_compatible_v1(
+              canonical_resident.full_name,
+              duplicate_resident.full_name
+            )
+            and (
+              (
+                canonical_resident.normalized_email is not null
+                and canonical_resident.normalized_email = duplicate_resident.normalized_email
+              )
+              or
+              (
+                canonical_resident.normalized_phone is not null
+                and canonical_resident.normalized_phone = duplicate_resident.normalized_phone
+              )
+            )
+       );
+
+    select count(*)::integer
+      into v_unique_contacts
+      from public.community_registration_residents duplicate_resident
+      join lateral (
+        select canonical_resident.*
+          from public.community_registration_residents canonical_resident
+         where canonical_resident.submission_id = v_canonical_submission.id
+           and public._cr_duplicate_names_compatible_v1(
+             canonical_resident.full_name,
+             duplicate_resident.full_name
+           )
+           and (
+             (
+               canonical_resident.normalized_email is not null
+               and canonical_resident.normalized_email = duplicate_resident.normalized_email
+             )
+             or
+             (
+               canonical_resident.normalized_phone is not null
+               and canonical_resident.normalized_phone = duplicate_resident.normalized_phone
+             )
+           )
+         order by canonical_resident.position
+         limit 1
+      ) canonical_match on true
+     where duplicate_resident.submission_id = v_duplicate_submission.id
+       and (
+         (canonical_match.email is null and duplicate_resident.email is not null)
+         or (canonical_match.phone is null and duplicate_resident.phone is not null)
+         or (
+           length(public._cr_normalize_name_v1(duplicate_resident.full_name))
+           > length(public._cr_normalize_name_v1(canonical_match.full_name))
+         )
+       );
+  else
+    select count(*)::integer
+      into v_unique_residents
+      from public.community_registration_residents
+     where submission_id = v_duplicate_submission.id;
+  end if;
+
+  v_unique_reference :=
+    nullif(btrim(coalesce(v_duplicate.unit_reference_snapshot, '')), '') is not null
+    and (
+      nullif(btrim(coalesce(v_canonical.unit_reference_snapshot, '')), '') is null
+      or public._cr_normalize_unit_label(v_duplicate.unit_reference_snapshot)
+         <> public._cr_normalize_unit_label(v_canonical.unit_reference_snapshot)
+    );
+
+  v_unique_count :=
+    coalesce(v_unique_residents, 0)
+    + coalesce(v_unique_contacts, 0)
+    + case when v_unique_reference then 1 else 0 end;
+
+  if v_unique_count > 0 and not coalesce(p_unique_data_acknowledged, false) then
+    perform public._cr_raise_v1(
+      'ENTRY_CR_DUPLICATE_UNIQUE_DATA_REVIEW_REQUIRED',
+      'P0409'
+    );
+  end if;
+
+  if p_canonical_unit_id::text < p_duplicate_unit_id::text then
+    v_low := p_canonical_unit_id;
+    v_high := p_duplicate_unit_id;
+  else
+    v_low := p_duplicate_unit_id;
+    v_high := p_canonical_unit_id;
+  end if;
+
+  update public.community_registration_units
+     set status = 'merged',
+         updated_at = now()
+   where id = v_duplicate.id;
+
+  insert into public.community_registration_duplicate_resolutions (
+    campaign_id,
+    community_id,
+    unit_low_id,
+    unit_high_id,
+    resolution_type,
+    canonical_unit_id,
+    duplicate_unit_id,
+    metadata,
+    resolved_by,
+    resolved_at,
+    updated_at
+  )
+  values (
+    v_campaign.id,
+    v_campaign.community_id,
+    v_low,
+    v_high,
+    'resolved_duplicate',
+    v_canonical.id,
+    v_duplicate.id,
+    jsonb_build_object(
+      'canonical_label', v_canonical.unit_label_snapshot,
+      'duplicate_label', v_duplicate.unit_label_snapshot,
+      'canonical_status_at_resolution', v_canonical.status,
+      'duplicate_status_at_resolution', v_duplicate.status,
+      'canonical_lifecycle', case
+        when v_canonical_activated then 'Activated'
+        else 'Prepared for activation'
+      end,
+      'duplicate_lifecycle', 'Submitted',
+      'resolution_reason', 'Advanced registration retained; lower-stage duplicate archived without operational identity mutation',
+      'unique_data_detected', v_unique_count > 0,
+      'unique_data_count', v_unique_count,
+      'unique_resident_count', v_unique_residents,
+      'unique_contact_or_name_count', v_unique_contacts,
+      'unique_reference', v_unique_reference,
+      'unique_data_acknowledged', coalesce(p_unique_data_acknowledged, false)
+    ),
+    p_actor_user_id,
+    now(),
+    now()
+  )
+  on conflict (campaign_id, unit_low_id, unit_high_id)
+  do update set
+    resolution_type = excluded.resolution_type,
+    canonical_unit_id = excluded.canonical_unit_id,
+    duplicate_unit_id = excluded.duplicate_unit_id,
+    metadata = excluded.metadata,
+    resolved_by = excluded.resolved_by,
+    resolved_at = excluded.resolved_at,
+    updated_at = now();
+
+  return jsonb_build_object(
+    'resolution', 'resolved_duplicate',
+    'canonical_unit_id', v_canonical.id,
+    'duplicate_unit_id', v_duplicate.id,
+    'canonical_lifecycle', case
+      when v_canonical_activated then 'Activated'
+      else 'Prepared for activation'
+    end,
+    'unique_data_detected', v_unique_count > 0,
+    'unique_data_count', v_unique_count
+  );
+end;
+$function$;
+
+revoke all on function public.resolve_community_registration_archived_duplicate_v1(
+  uuid, uuid, uuid, uuid, boolean
+) from public;
+revoke all on function public.resolve_community_registration_archived_duplicate_v1(
+  uuid, uuid, uuid, uuid, boolean
+) from anon;
+revoke all on function public.resolve_community_registration_archived_duplicate_v1(
+  uuid, uuid, uuid, uuid, boolean
+) from authenticated;
+grant execute on function public.resolve_community_registration_archived_duplicate_v1(
+  uuid, uuid, uuid, uuid, boolean
+) to service_role;
+
+comment on function public.resolve_community_registration_archived_duplicate_v1(
+  uuid, uuid, uuid, uuid, boolean
+) is
+  'ENTRY internal RPC. Archives a lower-stage Submitted duplicate when the canonical registration is already operational. Does not mutate auth, Activation Queue, house identity, or canonical resident records. resolution_type=resolved_duplicate is authoritative; unit status=merged is only the terminal staging state.';
+
+comment on table public.community_registration_duplicate_resolutions is
+  'Auditable operator decisions for Resident Registration duplicate candidates. resolution_type=merged means a true registration merge; resolution_type=resolved_duplicate means the duplicate was archived without merging operational identity/data; dismissed suppresses a false positive.';
