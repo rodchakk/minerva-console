@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
 import { ReviewWorkspace } from "@/features/entry/communityRegistration/review/ReviewWorkspace";
+import { PatronatoReviewControls } from "@/features/entry/communityRegistration/patronato/PatronatoReviewControls";
 import { getCommunityRegistrationQuickEditData } from "@/features/entry/communityRegistration/review/quickEditQueries";
 import { getCommunityRegistrationDuplicateReviewData } from "@/features/entry/communityRegistration/review/duplicateQueries";
 import {
@@ -124,6 +125,15 @@ export default async function RegistrationReviewPage(
           }
         />
       </section>
+
+      <PatronatoReviewControls
+        campaignId={overview.campaign.id}
+        campaignStatus={overview.campaign.status}
+        communityId={community.id}
+        confirmedCount={overview.summary.confirmed}
+        processedCount={overview.summary.processed}
+        reviewedCount={overview.summary.reviewed}
+      />
 
       <ReviewWorkspace
         campaign={overview.campaign}
