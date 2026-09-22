@@ -1393,6 +1393,53 @@ export function ReviewWorkspace({
                   </div>
                 )}
 
+                {selectedDuplicateCandidate && selectedDuplicateTarget ? (
+                  <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="grid size-7 place-items-center rounded-full bg-amber-500/10 text-amber-300">
+                            <GitMerge className="size-3.5" aria-hidden />
+                          </span>
+                          <p className="text-sm font-semibold text-white">Likely match</p>
+                        </div>
+                        <p className="mt-1 text-xs text-[var(--text-muted)]">
+                          Review the other household before deciding whether to merge.
+                        </p>
+                      </div>
+                      <Link
+                        href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(
+                          selectedDuplicateTarget.id,
+                        )}`}
+                        scroll={false}
+                      >
+                        <Button type="button" variant="secondary">
+                          View unit
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/10 text-violet-200">
+                          <Home className="size-4" aria-hidden />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-white">
+                            {selectedDuplicateTarget.label}
+                          </p>
+                          <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                            {selectedDuplicateTarget.residents.length}{" "}
+                            {selectedDuplicateTarget.residents.length === 1
+                              ? "resident"
+                              : "residents"}
+                          </p>
+                        </div>
+                      </div>
+                      <ArrowRight className="size-4 shrink-0 text-[var(--text-muted)]" aria-hidden />
+                    </div>
+                  </div>
+                ) : null}
+
                 {reviewState && !reviewState.success ? (
                   <p className="mt-4 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
                     {reviewState.error}
@@ -1528,6 +1575,17 @@ export function ReviewWorkspace({
           onClose={() => setEditingResident(null)}
           resident={editingResident}
           submissionId={quickEditData.submissionId}
+        />
+      ) : null}
+
+      {duplicateDialogCandidate && selectedUnitId ? (
+        <DuplicateReviewDialog
+          campaignId={campaign.id}
+          candidate={duplicateDialogCandidate}
+          communityId={communityId}
+          onClose={() => setDuplicateDialogCandidateId(null)}
+          selectedUnitId={selectedUnitId}
+          units={duplicateData.units}
         />
       ) : null}
 
