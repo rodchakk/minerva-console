@@ -904,12 +904,20 @@ export function ReviewWorkspace({
         </div>
       ) : null}
 
-      <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
         <Metric icon={Check} label="Reviewed" value={summary.reviewed} tone="emerald" />
         <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
         <Metric icon={Clock3} label="Correction open" value={summary.editEnabled} tone="amber" />
         <Metric icon={CheckCircle2} label="Confirmed" value={summary.confirmed} tone="emerald" />
+        <Metric
+          active={unitFilter === "duplicates"}
+          icon={TriangleAlert}
+          label="Duplicates"
+          onClick={() => setUnitFilter("duplicates")}
+          tone="amber"
+          value={duplicateData.candidateCount}
+        />
         <Metric icon={Users} label="Residents" value={summary.currentResidentCount} />
       </section>
 
@@ -988,7 +996,7 @@ export function ReviewWorkspace({
         ) : null}
       </section>
 
-      <div className="grid gap-3 xl:h-[clamp(30rem,calc(100dvh-22rem),42rem)] xl:grid-cols-[minmax(320px,0.64fr)_minmax(0,1.56fr)]">
+      <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-20rem),50rem)] xl:grid-cols-[minmax(460px,0.92fr)_minmax(0,1.08fr)]">
         <section className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
           <div className="border-b border-[var(--border)] p-4">
             <div className="flex items-start justify-between gap-3">
@@ -1008,7 +1016,7 @@ export function ReviewWorkspace({
                 type="search"
                 value={unitSearch}
                 onChange={(event) => setUnitSearch(event.target.value)}
-                placeholder="Search units..."
+                placeholder="Search units, street, or unit number..."
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
               />
             </label>
@@ -1019,6 +1027,7 @@ export function ReviewWorkspace({
                 ["pending", "Pending"],
                 ["reviewed", "Reviewed"],
                 ["activation", "Activation"],
+                ["duplicates", "Duplicates"],
               ] as const).map(([value, label]) => (
                 <button
                   key={value}
@@ -1042,6 +1051,7 @@ export function ReviewWorkspace({
               const canOpen = unit.status !== "unregistered" && unit.residentCount > 0;
               const active = selectedUnitId === unit.id;
               const selectedForReport = selectedReportUnitIds.includes(unit.id);
+              const duplicateMatches = duplicateCandidatesByUnit.get(unit.id) ?? [];
               const content = (
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -1056,7 +1066,17 @@ export function ReviewWorkspace({
                       {unit.hasPendingObservation ? " · pending observation" : ""}
                     </p>
                   </div>
-                  <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {duplicateMatches.length > 0 ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
+                        <TriangleAlert className="size-3" aria-hidden />
+                        {duplicateMatches.length === 1
+                          ? "Possible duplicate"
+                          : `${duplicateMatches.length} matches`}
+                      </span>
+                    ) : null}
+                    <Badge tone={statusTone(unit.status)}>{statusLabel(unit.status)}</Badge>
+                  </div>
                 </div>
               );
 
