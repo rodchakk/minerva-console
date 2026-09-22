@@ -138,6 +138,7 @@ export default async function RegistrationReviewPage(
       <ReviewWorkspace
         campaign={overview.campaign}
         communityId={community.id}
+        communityName={community.name}
         duplicateData={duplicateData}
         loadError={overview.loadError}
         quickEditData={quickEditData}
