@@ -17,7 +17,7 @@ test("Resident Registration opens as a Pending-first operational queue", () => {
   assert.match(source, /useState<UnitFilter>\("pending"\)/);
   assert.match(
     source,
-    /\["pending", "Pending"\][\s\S]*\["duplicates", "Duplicates"\][\s\S]*\["reviewed", "Reviewed"\][\s\S]*\["activation", "Activation"\][\s\S]*\["all", "All"\][\s\S]*\["resolved", "Resolved"\]/,
+    /\["pending", "Pending"\][\s\S]*\["duplicates", "Duplicates"\][\s\S]*\["reviewed", "Patronato"\][\s\S]*\["activation", "Activation"\][\s\S]*\["all", "All"\][\s\S]*\["resolved", "Resolved"\]/,
   );
   assert.match(source, /Search unit, resident, email or phone/);
 });

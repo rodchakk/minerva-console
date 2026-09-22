@@ -8,6 +8,7 @@ import {
   getEntryPreviewReadOnlyError,
   getResidentFacingBaseUrl,
 } from "@/features/entry/deploymentBoundary";
+import { getCommunityRegistrationDuplicateReviewData } from "@/features/entry/communityRegistration/review/duplicateQueries";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { coerceNumber, coerceString } from "@/lib/supabase/utils";
 
@@ -152,6 +153,19 @@ function correctionExpiry() {
   return new Date(Date.now() + CORRECTION_LINK_LIFETIME_HOURS * 60 * 60 * 1000).toISOString();
 }
 
+async function hasUnresolvedDuplicateCandidate(input: {
+  campaignId: string;
+  communityId: string;
+  unitId: string;
+}) {
+  const duplicateData = await getCommunityRegistrationDuplicateReviewData(
+    input.campaignId,
+    input.communityId,
+  );
+
+  return duplicateData.duplicateUnitIds.includes(input.unitId);
+}
+
 function previewReadOnlyResult(): CommunityRegistrationReviewActionResult | null {
   const error = getEntryPreviewReadOnlyError();
 
@@ -224,6 +238,36 @@ export async function markCommunityRegistrationUnitReviewed(
   }
 
   const supabase = createAdminClient();
+  const { data: unitRow, error: unitError } = await supabase
+    .from("community_registration_units")
+    .select("id,campaign_id")
+    .eq("id", campaignUnitId)
+    .eq("community_id", communityId)
+    .maybeSingle();
+
+  if (unitError || !unitRow?.campaign_id) {
+    return {
+      code: "not_ready",
+      error: "This unit is no longer available for review. Refresh and try again.",
+      success: false,
+    };
+  }
+
+  if (
+    await hasUnresolvedDuplicateCandidate({
+      campaignId: String(unitRow.campaign_id),
+      communityId,
+      unitId: campaignUnitId,
+    })
+  ) {
+    return {
+      code: "not_ready",
+      error:
+        "Resolve the possible duplicate before sending this household to Patronato.",
+      success: false,
+    };
+  }
+
   const { data, error } = await supabase.rpc(
     "mark_community_registration_unit_reviewed_v1",
     {
@@ -401,6 +445,22 @@ export async function confirmAndPrepareCommunityRegistrationActivation(
   }
 
   const supabase = createAdminClient();
+
+  if (
+    await hasUnresolvedDuplicateCandidate({
+      campaignId,
+      communityId,
+      unitId: campaignUnitId,
+    })
+  ) {
+    return {
+      code: "not_ready",
+      error:
+        "Resolve the possible duplicate before approving or moving this household to Activation Queue.",
+      success: false,
+    };
+  }
+
   const activationQueueUrl = `/products/entry/activation?community_id=${encodeURIComponent(
     communityId,
   )}`;

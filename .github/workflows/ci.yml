@@ -87,7 +87,8 @@ jobs:
         run: |
           node --test \
             tests/entry-registration-confirmation-reports.test.mjs \
-            tests/entry-registration-duplicate-review.test.mjs
+            tests/entry-registration-duplicate-review.test.mjs \
+            tests/entry-patronato-progressive-review.test.mjs
 
   entry-outrider-tests:
     name: ENTRY Outrider regressions

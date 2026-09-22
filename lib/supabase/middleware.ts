@@ -31,7 +31,9 @@ export async function updateSession(request: NextRequest) {
     pathname === "/entry/register" ||
     pathname.startsWith("/entry/register/") ||
     pathname === "/entry/outrider" ||
-    pathname.startsWith("/entry/outrider/");
+    pathname.startsWith("/entry/outrider/") ||
+    pathname === "/entry/patronato" ||
+    pathname.startsWith("/entry/patronato/");
 
   if (isPublicEntryIntakeRoute) {
     return protectPublicRegistrationResponse(NextResponse.next({ request }));

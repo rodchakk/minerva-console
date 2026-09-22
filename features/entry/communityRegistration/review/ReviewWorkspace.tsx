@@ -27,6 +27,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
 } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -54,6 +55,10 @@ import {
   getUnitMissingFields,
 } from "@/features/entry/communityRegistration/review/completeness";
 import { loadCommunityRegistrationConfirmationReport } from "@/features/entry/communityRegistration/review/reportActions";
+import {
+  markRegistrationUnitsReadyForPatronato,
+  prepareApprovedRegistrationUnitsForActivation,
+} from "@/features/entry/communityRegistration/review/bulkActions";
 import type {
   CommunityRegistrationQuickEditData,
   CommunityRegistrationQuickEditResident,
@@ -93,11 +98,11 @@ function statusLabel(status: string) {
     case "needs_correction":
       return "Needs correction";
     case "reviewed":
-      return "Reviewed";
+      return "Ready for Patronato";
     case "confirmed":
-      return "Patronato confirmed";
+      return "Patronato approved";
     case "processed":
-      return "Prepared for activation";
+      return "In Activation Queue";
     case "open":
       return "Campaign open";
     case "paused":
@@ -111,10 +116,12 @@ function statusLabel(status: string) {
 
 function statusTone(status: string): "default" | "success" | "warning" | "info" {
   const normalized = status.trim().toLowerCase();
-  if (["reviewed", "confirmed", "processed"].includes(normalized)) return "success";
-  if (["submitted", "review", "open"].includes(normalized)) return "info";
-  if (["needs_correction", "edit_enabled", "paused"].includes(normalized)) {
+  if (normalized === "confirmed") return "success";
+  if (["reviewed", "needs_correction", "edit_enabled", "paused"].includes(normalized)) {
     return "warning";
+  }
+  if (["processed", "submitted", "review", "open"].includes(normalized)) {
+    return "info";
   }
   return "default";
 }
@@ -378,6 +385,7 @@ function CorrectionLinkDialog({
 }
 
 function ActivationHandoffDialog({
+  approvalAlreadyRecorded,
   campaignId,
   communityId,
   emailWarningNames,
@@ -385,6 +393,7 @@ function ActivationHandoffDialog({
   unitId,
   unitLabel,
 }: {
+  approvalAlreadyRecorded: boolean;
   campaignId: string;
   communityId: string;
   emailWarningNames: string[];
@@ -439,16 +448,17 @@ function ActivationHandoffDialog({
         className="w-full max-w-xl rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
       >
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-          Patronato confirmation
+          {approvalAlreadyRecorded ? "Activation handoff" : "Manual approval override"}
         </p>
         <h3 className="mt-2 text-xl font-semibold text-white">
-          Confirm and prepare activation
+          {approvalAlreadyRecorded
+            ? "Move to Activation Queue"
+            : "Confirm and prepare activation"}
         </h3>
         <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
-          Use this after Patronato has approved the resident information outside
-          ENTRY. ENTRY will record that confirmation and prepare eligible
-          residents in Activation Queue. It will not create users, PINs, or
-          activation messages.
+          {approvalAlreadyRecorded
+            ? "Patronato approval is already recorded. This final Minerva action prepares eligible residents in Activation Queue. It will not create users, PINs, or activation messages."
+            : "Use this only when Patronato approved outside the ENTRY review page. ENTRY will record that manual approval and prepare eligible residents in Activation Queue. It will not create users, PINs, or activation messages."}
         </p>
 
         {emailWarningNames.length > 0 ? (
@@ -475,12 +485,94 @@ function ActivationHandoffDialog({
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Preparing..." : "Confirm and prepare activation"}
+          <Button type="submit" disabled={pending} className="gap-2">
+            {pending
+              ? "Preparing..."
+              : approvalAlreadyRecorded
+                ? "Move to Activation Queue"
+                : "Confirm and prepare activation"}
+            {!pending && approvalAlreadyRecorded ? (
+              <ArrowRight className="size-3.5" aria-hidden />
+            ) : null}
           </Button>
         </div>
       </form>
     </Overlay>
+  );
+}
+
+function PatronatoApprovalBanner({
+  selectedUnit,
+}: {
+  selectedUnit: CommunityRegistrationReviewUnitDetail;
+}) {
+  if (!selectedUnit.patronatoConfirmedAt) return null;
+
+  const processed = selectedUnit.status.trim().toLowerCase() === "processed";
+
+  return (
+    <div
+      className="mt-4 rounded-xl border border-emerald-400/35 bg-emerald-500/[0.09] p-4 shadow-[inset_0_1px_0_rgba(52,211,153,0.08)]"
+      data-testid="patronato-approval-banner"
+    >
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-full bg-emerald-500 text-white shadow-[0_0_0_6px_rgba(16,185,129,0.10)]">
+            <Check className="size-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <p className="text-base font-semibold text-emerald-50">
+              Approved by Patronato
+            </p>
+            <p className="mt-1 text-sm leading-5 text-emerald-100/75">
+              {processed
+                ? "This household was authorized by Patronato and has already been handed off to Activation Queue."
+                : "This household is authorized and ready to move to Activation Queue."}
+            </p>
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-emerald-300/15 pt-3 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-200/70">
+            Approval recorded
+          </p>
+          <p className="mt-1 text-sm font-semibold text-emerald-50">
+            {formatDate(selectedUnit.patronatoConfirmedAt)}
+          </p>
+          <p className="mt-1 text-xs text-emerald-100/55">Patronato review</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PatronatoApprovalHistory({
+  selectedUnit,
+}: {
+  selectedUnit: CommunityRegistrationReviewUnitDetail;
+}) {
+  if (!selectedUnit.patronatoConfirmedAt) return null;
+
+  return (
+    <div className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        Approval history
+      </p>
+      <div className="mt-3 flex items-start gap-3">
+        <span className="mt-1 grid size-5 shrink-0 place-items-center rounded-full bg-emerald-500 text-white">
+          <Check className="size-3" aria-hidden />
+        </span>
+        <div>
+          <p className="text-sm font-semibold text-white">Approved by Patronato</p>
+          <p className="mt-1 text-xs text-[var(--text-muted)]">
+            {formatDate(selectedUnit.patronatoConfirmedAt)}
+          </p>
+          <p className="mt-1 text-xs text-emerald-200/70">
+            Approval recorded through the Patronato review workflow.
+          </p>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -497,15 +589,15 @@ function HandoffProgress({
     },
     {
       done: Boolean(selectedUnit.reviewedAt),
-      label: "Reviewed",
+      label: "Ready for Patronato",
     },
     {
       done: Boolean(selectedUnit.patronatoConfirmedAt),
-      label: "Patronato confirmed",
+      label: "Patronato approved",
     },
     {
       done: normalized === "processed",
-      label: "Prepared for activation",
+      label: "In Activation Queue",
     },
   ];
 
@@ -626,6 +718,10 @@ export function ReviewWorkspace({
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [bulkFeedback, setBulkFeedback] = useState<
+    { tone: "error" | "success"; text: string } | null
+  >(null);
+  const [bulkPending, startBulkTransition] = useTransition();
   const [unitFilter, setUnitFilter] = useState<UnitFilter>("pending");
   const [unitSearch, setUnitSearch] = useState("");
   const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
@@ -736,6 +832,69 @@ export function ReviewWorkspace({
 
     return map;
   }, [duplicateData.candidates]);
+  const statusByUnitId = useMemo(
+    () =>
+      new Map(
+        activeUnits.map((unit) => [
+          unit.id,
+          unit.status.trim().toLowerCase(),
+        ]),
+      ),
+    [activeUnits],
+  );
+  const selectedReadyForPatronatoIds = selectedReportUnitIds.filter(
+    (unitId) =>
+      statusByUnitId.get(unitId) === "submitted" &&
+      !(duplicateCandidatesByUnit.get(unitId)?.length),
+  );
+  const selectedApprovedForActivationIds = selectedReportUnitIds.filter(
+    (unitId) =>
+      statusByUnitId.get(unitId) === "confirmed" &&
+      !(duplicateCandidatesByUnit.get(unitId)?.length),
+  );
+
+  function runReadyForPatronatoBatch() {
+    if (selectedReadyForPatronatoIds.length === 0 || bulkPending) return;
+
+    setBulkFeedback(null);
+    startBulkTransition(async () => {
+      const result = await markRegistrationUnitsReadyForPatronato({
+        communityId,
+        unitIds: selectedReadyForPatronatoIds,
+      });
+
+      if (!result.success) {
+        setBulkFeedback({ tone: "error", text: result.error });
+        return;
+      }
+
+      setBulkFeedback({ tone: "success", text: result.message });
+      setSelectedReportUnitIds([]);
+      router.refresh();
+    });
+  }
+
+  function runActivationQueueBatch() {
+    if (selectedApprovedForActivationIds.length === 0 || bulkPending) return;
+
+    setBulkFeedback(null);
+    startBulkTransition(async () => {
+      const result = await prepareApprovedRegistrationUnitsForActivation({
+        communityId,
+        unitIds: selectedApprovedForActivationIds,
+      });
+
+      if (!result.success) {
+        setBulkFeedback({ tone: "error", text: result.error });
+        return;
+      }
+
+      setBulkFeedback({ tone: "success", text: result.message });
+      setSelectedReportUnitIds([]);
+      router.refresh();
+    });
+  }
+
   const selectedDuplicateCandidate =
     selectedUnitId
       ? duplicateCandidatesByUnit.get(selectedUnitId)?.[0] ?? null
@@ -1010,10 +1169,10 @@ export function ReviewWorkspace({
 
       <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
         <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
-        <Metric icon={Check} label="Reviewed" value={summary.reviewed} tone="emerald" />
+        <Metric icon={Clock3} label="Ready for Patronato" value={summary.reviewed} tone="amber" />
         <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
         <Metric icon={Clock3} label="Correction open" value={summary.editEnabled} tone="amber" />
-        <Metric icon={CheckCircle2} label="Confirmed" value={summary.confirmed} tone="emerald" />
+        <Metric icon={CheckCircle2} label="Patronato approved" value={summary.confirmed} tone="emerald" />
         <Metric
           active={unitFilter === "duplicates"}
           icon={TriangleAlert}
@@ -1024,6 +1183,16 @@ export function ReviewWorkspace({
         />
         <Metric icon={Users} label="Residents" value={summary.currentResidentCount} />
       </section>
+
+      {summary.confirmed > 0 ? (
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-2.5 text-sm text-emerald-50/90">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-300" aria-hidden />
+            {summary.confirmed} {summary.confirmed === 1 ? "unit is" : "units are"} approved by Patronato and ready to move to Activation Queue.
+          </span>
+          <Badge tone="success">Ready for handoff</Badge>
+        </div>
+      ) : null}
 
       {campaignStatus === "open" || campaignStatus === "paused" ? (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-4 py-2.5 text-sm text-amber-50/85">
@@ -1075,6 +1244,29 @@ export function ReviewWorkspace({
             >
               Clear
             </Button>
+            {selectedReadyForPatronatoIds.length > 0 ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={runReadyForPatronatoBatch}
+                disabled={bulkPending || Boolean(loadError)}
+              >
+                {bulkPending
+                  ? "Updating..."
+                  : `Ready for Patronato (${selectedReadyForPatronatoIds.length})`}
+              </Button>
+            ) : null}
+            {selectedApprovedForActivationIds.length > 0 ? (
+              <Button
+                type="button"
+                onClick={runActivationQueueBatch}
+                disabled={bulkPending || Boolean(loadError)}
+              >
+                {bulkPending
+                  ? "Moving..."
+                  : `Move to Activation Queue (${selectedApprovedForActivationIds.length})`}
+              </Button>
+            ) : null}
             <span className="mx-1 hidden h-7 w-px bg-[var(--border)] lg:block" aria-hidden />
             <Button
               type="button"
@@ -1098,6 +1290,26 @@ export function ReviewWorkspace({
             {reportError}
           </p>
         ) : null}
+        {bulkFeedback ? (
+          <p
+            className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+              bulkFeedback.tone === "success"
+                ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-100"
+                : "border-rose-400/20 bg-rose-500/10 text-rose-100"
+            }`}
+          >
+            {bulkFeedback.text}
+          </p>
+        ) : null}
+        {selectedReportUnitIds.some(
+          (unitId) =>
+            ["submitted", "confirmed"].includes(statusByUnitId.get(unitId) ?? "") &&
+            Boolean(duplicateCandidatesByUnit.get(unitId)?.length),
+        ) ? (
+          <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
+            Units with unresolved duplicate matches are excluded from Patronato and Activation Queue workflow actions.
+          </p>
+        ) : null}
       </section>
 
       <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-20rem),50rem)] xl:grid-cols-[minmax(460px,0.92fr)_minmax(0,1.08fr)]">
@@ -1107,7 +1319,7 @@ export function ReviewWorkspace({
               <div>
                 <h2 className="text-base font-semibold text-white">Units</h2>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Open a unit or select its checkbox for the report.
+                  Open a unit or use its checkbox for reports and bulk workflow actions.
                 </p>
               </div>
               <Badge tone="default">{summary.totalUnits}</Badge>
@@ -1129,7 +1341,7 @@ export function ReviewWorkspace({
               {([
                 ["pending", "Pending"],
                 ["duplicates", "Duplicates"],
-                ["reviewed", "Reviewed"],
+                ["reviewed", "Patronato"],
                 ["activation", "Activation"],
                 ["all", "All"],
                 ["resolved", "Resolved"],
@@ -1200,14 +1412,14 @@ export function ReviewWorkspace({
                 >
                   <label
                     className={`grid w-11 shrink-0 cursor-pointer place-items-center border-r border-white/[0.07] transition ${selectedForReport ? "bg-violet-500/12" : "hover:bg-white/[0.03]"}`}
-                    title="Select for report"
+                    title="Select unit"
                   >
                     <input
                       type="checkbox"
                       checked={selectedForReport}
                       onChange={() => toggleReportUnit(unit.id)}
                       className="size-4 accent-violet-500"
-                      aria-label={`Select ${unit.label} for report`}
+                      aria-label={`Select ${unit.label}`}
                     />
                   </label>
                   <Link
@@ -1417,6 +1629,8 @@ export function ReviewWorkspace({
                   </div>
                 ) : null}
 
+                <PatronatoApprovalBanner selectedUnit={selectedUnit} />
+
                 {selectedUnit.review?.observation ? (
                   <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3">
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
@@ -1429,6 +1643,7 @@ export function ReviewWorkspace({
                 ) : null}
 
                 <HandoffProgress selectedUnit={selectedUnit} />
+                <PatronatoApprovalHistory selectedUnit={selectedUnit} />
 
                 <div className="mt-5 flex items-center justify-between gap-3">
                   <h3 className="text-sm font-semibold text-white">Residents</h3>
@@ -1708,22 +1923,36 @@ export function ReviewWorkspace({
                   </Button>
                 ) : null}
 
-                {canConfirmAndPrepare ? (
+                {canConfirmAndPrepare && !selectedDuplicateCandidate ? (
                   <Button
                     type="button"
                     onClick={() => setShowActivationHandoff(true)}
                     disabled={Boolean(loadError)}
+                    className="gap-2"
                   >
-                      Confirm and prepare activation
+                    {selectedStatus === "confirmed"
+                      ? "Move to Activation Queue"
+                      : "Manual approval override"}
+                    {selectedStatus === "confirmed" ? (
+                      <ArrowRight className="size-3.5" aria-hidden />
+                    ) : null}
                   </Button>
                 ) : null}
 
-                {canMarkReviewed ? (
+                {selectedDuplicateCandidate &&
+                ["submitted", "reviewed", "confirmed"].includes(selectedStatus) ? (
+                  <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-100">
+                    <TriangleAlert className="size-3.5" aria-hidden />
+                    Resolve duplicate before Patronato or Activation
+                  </span>
+                ) : null}
+
+                {canMarkReviewed && !selectedDuplicateCandidate ? (
                   <form action={reviewAction}>
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
                     <input type="hidden" name="community_id" value={communityId} />
                     <Button type="submit" disabled={reviewPending || Boolean(loadError)}>
-                        {reviewPending ? "Confirming..." : "Confirm review"}
+                        {reviewPending ? "Updating..." : "Ready for Patronato"}
                     </Button>
                   </form>
                 ) : null}
@@ -1756,6 +1985,7 @@ export function ReviewWorkspace({
 
       {showActivationHandoff && selectedUnit && selectedUnitId ? (
         <ActivationHandoffDialog
+          approvalAlreadyRecorded={selectedStatus === "confirmed"}
           campaignId={campaign.id}
           communityId={communityId}
           emailWarningNames={missingEmailNames}
