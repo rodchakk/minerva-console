@@ -228,8 +228,11 @@ test("shared contacts inside one household are surfaced without becoming duplica
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
+  const contactSource = read(
+    "features/entry/communityRegistration/review/residentContact.ts",
+  );
 
-  assert.match(workspace, /function getSharedContactIssues/);
+  assert.match(contactSource, /function getSharedContactIssues/);
   assert.match(workspace, /Shared email/);
   assert.match(workspace, /Shared phone/);
   assert.match(workspace, /Shared contact review/);
@@ -255,29 +258,32 @@ test("shared contact warnings stay separate from duplicate candidate logic", () 
 
 
 test("Resident Registration builds WhatsApp follow-up from resident-actionable diagnostics", () => {
-  const workspace = read(
-    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  const contactSource = read(
+    "features/entry/communityRegistration/review/residentContact.ts",
   );
   const page = read(
     "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
   );
 
-  assert.match(workspace, /function buildResidentContactItems/);
-  assert.match(workspace, /function buildResidentContactMessage/);
-  assert.match(workspace, /Referencia o ubicación de la vivienda/);
-  assert.match(workspace, /correo electrónico válido/);
-  assert.match(workspace, /número de teléfono/);
-  assert.match(workspace, /Confirmar correo electrónico de/);
-  assert.match(workspace, /Confirmar número de teléfono de/);
-  assert.match(workspace, /Este es un mensaje generado por ENTRY/);
-  assert.match(workspace, /Vivienda: \${input\.unitLabel}/);
-  assert.match(workspace, /ENTRY by Minerva Technologies/);
+  assert.match(contactSource, /function buildResidentContactIssues/);
+  assert.match(contactSource, /function buildResidentContactMessage/);
+  assert.match(contactSource, /Referencia o ubicación de la vivienda/);
+  assert.match(contactSource, /correo electrónico válido/);
+  assert.match(contactSource, /número de teléfono/);
+  assert.match(contactSource, /Confirmar correo electrónico de/);
+  assert.match(contactSource, /Confirmar número de teléfono de/);
+  assert.match(contactSource, /Este es un mensaje generado por ENTRY/);
+  assert.match(contactSource, /Vivienda: ${input\.unitLabel}/);
+  assert.match(contactSource, /ENTRY by Minerva Technologies/);
   assert.match(page, /communityName=\{community\.name\}/);
 });
 
 test("WhatsApp follow-up remains operator-controlled and excludes internal diagnostics", () => {
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+  const contactSource = read(
+    "features/entry/communityRegistration/review/residentContact.ts",
   );
 
   assert.match(workspace, /https:\/\/wa\.me\//);
@@ -287,10 +293,9 @@ test("WhatsApp follow-up remains operator-controlled and excludes internal diagn
   assert.match(workspace, /Generated only from resident-actionable diagnostics/);
   assert.match(workspace, /Internal duplicate and workflow signals are never included/);
 
-  const messageBuilderStart = workspace.indexOf("function buildResidentContactMessage");
-  const messageBuilderEnd = workspace.indexOf("function normalizeWhatsAppNumber");
-  assert.ok(messageBuilderStart >= 0 && messageBuilderEnd > messageBuilderStart);
-  const messageBuilder = workspace.slice(messageBuilderStart, messageBuilderEnd);
+  const messageBuilderStart = contactSource.indexOf("function buildResidentContactMessage");
+  assert.ok(messageBuilderStart >= 0);
+  const messageBuilder = contactSource.slice(messageBuilderStart);
   assert.doesNotMatch(messageBuilder, /Possible duplicate|Patronato|Activation Queue/);
 });
 
@@ -298,8 +303,59 @@ test("WhatsApp normalizer adds Honduras country code to local eight-digit number
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
+  const contactSource = read(
+    "features/entry/communityRegistration/review/residentContact.ts",
+  );
 
-  assert.match(workspace, /if \(digits\.length === 8\) digits = `504\${digits}`/);
-  assert.match(workspace, /digits\.length >= 8 && digits\.length <= 15/);
+  assert.match(contactSource, /if \(digits\.length === 8\) digits = `504\${digits}`/);
+  assert.match(contactSource, /digits\.length >= 8 && digits\.length <= 15/);
   assert.match(workspace, /No usable phone is registered/);
+});
+
+test("WhatsApp contact history is append-only and service-role restricted", () => {
+  const migration = read(
+    "supabase/migrations/20260922184500_entry_registration_whatsapp_contact_history.sql",
+  );
+
+  assert.match(migration, /create table if not exists public\.community_registration_contact_events/);
+  assert.match(migration, /alter table public\.community_registration_contact_events enable row level security/);
+  assert.match(migration, /grant select, insert on table public\.community_registration_contact_events to service_role/);
+  assert.doesNotMatch(migration, /grant[^;]*(update|delete)[^;]*community_registration_contact_events/i);
+  assert.match(migration, /record_community_registration_whatsapp_contact_v1/);
+  assert.match(migration, /_cr_service_role_only_v1/);
+  assert.match(migration, /_cr_validate_actor_v1/);
+  assert.match(migration, /'action', 'whatsapp_contacted'/);
+});
+
+test("WhatsApp contact confirmation recomputes current diagnostics on the server", () => {
+  const action = read(
+    "features/entry/communityRegistration/review/contactActions.ts",
+  );
+
+  assert.match(action, /getEntryPreviewReadOnlyError/);
+  assert.match(action, /community_registration_units/);
+  assert.match(action, /community_registration_submissions/);
+  assert.match(action, /community_registration_residents/);
+  assert.match(action, /buildResidentContactIssues/);
+  assert.match(action, /buildResidentContactIssueSignature/);
+  assert.match(action, /recipientPosition/);
+  assert.match(action, /record_community_registration_whatsapp_contact_v1/);
+});
+
+test("Resident Registration distinguishes contacted households from new follow-up issues", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+  const page = read(
+    "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
+  );
+
+  assert.match(workspace, /contactStateByUnitId/);
+  assert.match(workspace, /Contacted via WhatsApp/);
+  assert.match(workspace, /New information needed/);
+  assert.match(workspace, /Mark as contacted/);
+  assert.match(workspace, /Contact history/);
+  assert.match(workspace, /data-testid="mark-resident-contacted"/);
+  assert.match(page, /getCommunityRegistrationLatestContactStatuses/);
+  assert.match(page, /getCommunityRegistrationContactHistory/);
 });
