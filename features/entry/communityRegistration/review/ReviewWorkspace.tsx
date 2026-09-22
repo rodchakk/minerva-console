@@ -150,6 +150,50 @@ function normalizedSearchPhone(value: string | null | undefined) {
   return digits;
 }
 
+type SharedContactIssue = {
+  kind: "email" | "phone";
+  residentNames: string[];
+  value: string;
+};
+
+function getSharedContactIssues(
+  residents: Array<{
+    email: string | null;
+    fullName: string;
+    phone: string | null;
+  }>,
+) {
+  const groups = new Map<string, { kind: "email" | "phone"; names: string[]; value: string }>();
+
+  for (const resident of residents) {
+    const email = resident.email?.trim().toLocaleLowerCase("es-HN") || "";
+    if (email) {
+      const key = `email:${email}`;
+      const current = groups.get(key) ?? { kind: "email" as const, names: [], value: email };
+      current.names.push(resident.fullName);
+      groups.set(key, current);
+    }
+
+    const phone = normalizedSearchPhone(resident.phone);
+    if (phone) {
+      const key = `phone:${phone}`;
+      const current = groups.get(key) ?? { kind: "phone" as const, names: [], value: phone };
+      current.names.push(resident.fullName);
+      groups.set(key, current);
+    }
+  }
+
+  return Array.from(groups.values())
+    .filter((group) => group.names.length > 1)
+    .map(
+      (group): SharedContactIssue => ({
+        kind: group.kind,
+        residentNames: Array.from(new Set(group.names)),
+        value: group.value,
+      }),
+    );
+}
+
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -978,6 +1022,20 @@ export function ReviewWorkspace({
 
     return map;
   }, [duplicateData.units]);
+
+  const sharedContactIssuesByUnitId = useMemo(() => {
+    const map = new Map<string, SharedContactIssue[]>();
+
+    for (const unit of duplicateData.units) {
+      const issues = getSharedContactIssues(unit.residents);
+      if (issues.length > 0) map.set(unit.id, issues);
+    }
+
+    return map;
+  }, [duplicateData.units]);
+
+  const selectedSharedContactIssues =
+    selectedUnitId ? sharedContactIssuesByUnitId.get(selectedUnitId) ?? [] : [];
   const reportableUnitIds = useMemo(
     () =>
       activeUnits
@@ -1397,6 +1455,9 @@ export function ReviewWorkspace({
               const active = selectedUnitId === unit.id;
               const selectedForReport = selectedReportUnitIds.includes(unit.id);
               const duplicateMatches = duplicateCandidatesByUnit.get(unit.id) ?? [];
+              const sharedContactIssues = sharedContactIssuesByUnitId.get(unit.id) ?? [];
+              const hasSharedEmail = sharedContactIssues.some((issue) => issue.kind === "email");
+              const hasSharedPhone = sharedContactIssues.some((issue) => issue.kind === "phone");
               const content = (
                 <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -1411,7 +1472,7 @@ export function ReviewWorkspace({
                       {unit.hasPendingObservation ? " · pending observation" : ""}
                     </p>
                   </div>
-                  <div className="flex shrink-0 items-center gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
                     {dataCompleteByUnitId.get(unit.id) === true ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">
                         <CheckCircle2 className="size-3" aria-hidden />
@@ -1421,6 +1482,18 @@ export function ReviewWorkspace({
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/25 bg-rose-500/10 px-2.5 py-1 text-[10px] font-semibold text-rose-200">
                         <TriangleAlert className="size-3" aria-hidden />
                         Information incomplete
+                      </span>
+                    ) : null}
+                    {hasSharedEmail ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
+                        <Mail className="size-3" aria-hidden />
+                        Shared email
+                      </span>
+                    ) : null}
+                    {hasSharedPhone ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
+                        <Phone className="size-3" aria-hidden />
+                        Shared phone
                       </span>
                     ) : null}
                     {duplicateMatches.length > 0 ? (
@@ -1555,6 +1628,52 @@ export function ReviewWorkspace({
                     </p>
                   </div>
                 </div>
+
+                {selectedSharedContactIssues.length > 0 ? (
+                  <div
+                    className="mt-4 rounded-xl border border-amber-400/25 bg-amber-500/[0.07] p-4"
+                    data-testid="shared-contact-warning"
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="grid size-10 shrink-0 place-items-center rounded-full bg-amber-500/12 text-amber-300 ring-1 ring-inset ring-amber-400/20">
+                        <TriangleAlert className="size-5" aria-hidden />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-amber-200">
+                          Shared contact review
+                        </p>
+                        <p className="mt-1 text-base font-semibold text-white">
+                          Multiple residents use the same contact
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-amber-50/75">
+                          This does not mean they are the same person. Review the login identity before activation because separate ENTRY accounts cannot share the same email identity.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      {selectedSharedContactIssues.map((issue) => (
+                        <div
+                          key={`${issue.kind}:${issue.value}`}
+                          className="rounded-lg border border-amber-300/15 bg-black/10 px-3 py-2.5"
+                        >
+                          <p className="flex items-center gap-2 text-xs font-semibold text-amber-100">
+                            {issue.kind === "email" ? (
+                              <Mail className="size-3.5" aria-hidden />
+                            ) : (
+                              <Phone className="size-3.5" aria-hidden />
+                            )}
+                            {issue.kind === "email" ? "Shared email" : "Shared phone"}
+                          </p>
+                          <p className="mt-1 break-all text-xs text-white/85">{issue.value}</p>
+                          <p className="mt-1 text-xs text-[var(--text-muted)]">
+                            {issue.residentNames.join(" · ")}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 {selectedDuplicateCandidate && selectedDuplicateTarget ? (
                   <div className="mt-4 grid gap-3 lg:grid-cols-2">
