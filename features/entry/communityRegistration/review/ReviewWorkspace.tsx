@@ -957,6 +957,27 @@ export function ReviewWorkspace({
 
     return map;
   }, [duplicateData.units]);
+
+  const dataCompleteByUnitId = useMemo(() => {
+    const map = new Map<string, boolean>();
+
+    for (const unit of duplicateData.units) {
+      const missingFields = getUnitMissingFields({
+        reference: unit.reference,
+        residents: unit.residents.map((resident) => ({
+          email: resident.email,
+          fullName: resident.fullName,
+          phone: resident.phone,
+          position: resident.position,
+        })),
+        unitLabel: unit.label,
+      });
+
+      map.set(unit.id, missingFields.length === 0);
+    }
+
+    return map;
+  }, [duplicateData.units]);
   const reportableUnitIds = useMemo(
     () =>
       activeUnits
@@ -995,31 +1016,38 @@ export function ReviewWorkspace({
     const normalizedPhone = normalizedSearchPhone(unitSearch);
     const sourceUnits = unitFilter === "resolved" ? resolvedUnits : activeUnits;
 
-    return sourceUnits.filter((unit) => {
-      const searchable = `${normalizedSearchText(unit.label)} ${
-        registrationSearchByUnitId.get(unit.id) ?? ""
-      }`;
-      const matchesSearch =
-        normalizedSearch.length === 0 ||
-        searchable.includes(normalizedSearch) ||
-        (normalizedPhone.length > 0 && searchable.includes(normalizedPhone));
-      const normalizedStatus = unit.status.trim().toLowerCase();
-      const matchesFilter =
-        unitFilter === "all" ||
-        (unitFilter === "pending" &&
-          ["submitted", "needs_correction", "edit_enabled"].includes(
-            normalizedStatus,
-          )) ||
-        (unitFilter === "reviewed" &&
-          ["reviewed", "confirmed"].includes(normalizedStatus)) ||
-        (unitFilter === "activation" && normalizedStatus === "processed") ||
-        (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id)) ||
-        unitFilter === "resolved";
+    return sourceUnits
+      .filter((unit) => {
+        const searchable = `${normalizedSearchText(unit.label)} ${
+          registrationSearchByUnitId.get(unit.id) ?? ""
+        }`;
+        const matchesSearch =
+          normalizedSearch.length === 0 ||
+          searchable.includes(normalizedSearch) ||
+          (normalizedPhone.length > 0 && searchable.includes(normalizedPhone));
+        const normalizedStatus = unit.status.trim().toLowerCase();
+        const matchesFilter =
+          unitFilter === "all" ||
+          (unitFilter === "pending" &&
+            ["submitted", "needs_correction", "edit_enabled"].includes(
+              normalizedStatus,
+            )) ||
+          (unitFilter === "reviewed" &&
+            ["reviewed", "confirmed"].includes(normalizedStatus)) ||
+          (unitFilter === "activation" && normalizedStatus === "processed") ||
+          (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id)) ||
+          unitFilter === "resolved";
 
-      return matchesSearch && matchesFilter;
-    });
+        return matchesSearch && matchesFilter;
+      })
+      .sort(
+        (left, right) =>
+          Number(dataCompleteByUnitId.get(right.id) === true) -
+          Number(dataCompleteByUnitId.get(left.id) === true),
+      );
   }, [
     activeUnits,
+    dataCompleteByUnitId,
     duplicateCandidatesByUnit,
     registrationSearchByUnitId,
     resolvedUnits,
@@ -1384,6 +1412,17 @@ export function ReviewWorkspace({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {dataCompleteByUnitId.get(unit.id) === true ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">
+                        <CheckCircle2 className="size-3" aria-hidden />
+                        Information complete
+                      </span>
+                    ) : dataCompleteByUnitId.get(unit.id) === false ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/25 bg-rose-500/10 px-2.5 py-1 text-[10px] font-semibold text-rose-200">
+                        <TriangleAlert className="size-3" aria-hidden />
+                        Information incomplete
+                      </span>
+                    ) : null}
                     {duplicateMatches.length > 0 ? (
                       <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
                         <TriangleAlert className="size-3" aria-hidden />
