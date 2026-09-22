@@ -49,6 +49,13 @@ test("public Patronato page is mobile-first, token mediated, and preview read-on
   assert.match(mobile, /Habitantes de la unidad/);
   assert.match(mobile, /Aprobar/);
   assert.match(mobile, /En espera/);
+  assert.match(mobile, /useState<Filter>\("pending"\)/);
+  assert.match(
+    mobile,
+    /\["pending", "Pendientes"\][\s\S]*\["approved", "Aprobadas"\][\s\S]*\["hold", "En espera"\][\s\S]*\["all", "Todas"\]/,
+  );
+  assert.match(mobile, /Minerva Technologies/);
+  assert.match(mobile, /Tus datos están protegidos/);
   assert.match(actions, /getEntryPreviewReadOnlyError/);
 });
 
