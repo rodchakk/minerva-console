@@ -1242,7 +1242,7 @@ export function ReviewWorkspace({
               {([
                 ["pending", "Pending"],
                 ["duplicates", "Duplicates"],
-                ["reviewed", "Reviewed"],
+                ["reviewed", "Patronato"],
                 ["activation", "Activation"],
                 ["all", "All"],
                 ["resolved", "Resolved"],
@@ -1313,14 +1313,14 @@ export function ReviewWorkspace({
                 >
                   <label
                     className={`grid w-11 shrink-0 cursor-pointer place-items-center border-r border-white/[0.07] transition ${selectedForReport ? "bg-violet-500/12" : "hover:bg-white/[0.03]"}`}
-                    title="Select for report"
+                    title="Select unit"
                   >
                     <input
                       type="checkbox"
                       checked={selectedForReport}
                       onChange={() => toggleReportUnit(unit.id)}
                       className="size-4 accent-violet-500"
-                      aria-label={`Select ${unit.label} for report`}
+                      aria-label={`Select ${unit.label}`}
                     />
                   </label>
                   <Link
@@ -1838,7 +1838,7 @@ export function ReviewWorkspace({
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
                     <input type="hidden" name="community_id" value={communityId} />
                     <Button type="submit" disabled={reviewPending || Boolean(loadError)}>
-                        {reviewPending ? "Confirming..." : "Confirm review"}
+                        {reviewPending ? "Updating..." : "Ready for Patronato"}
                     </Button>
                   </form>
                 ) : null}
