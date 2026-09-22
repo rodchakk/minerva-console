@@ -29,6 +29,11 @@ import type {
 const initialState: RegistrationDuplicateActionResult | null = null;
 
 type ResidentDecision = "merge" | "keep_separate";
+type FieldConflictChoice = "canonical" | "duplicate";
+type ResidentConflictChoices = {
+  email?: FieldConflictChoice;
+  phone?: FieldConflictChoice;
+};
 
 type ResolvedResident = {
   conflicts: string[];
@@ -67,6 +72,7 @@ function fieldValue(
   canonical: string | null,
   duplicate: string | null,
   normalize: (value: string | null | undefined) => string,
+  choice?: FieldConflictChoice,
 ) {
   const canonicalValue = clean(canonical) || null;
   const duplicateValue = clean(duplicate) || null;
@@ -103,6 +109,22 @@ function fieldValue(
     };
   }
 
+  if (choice === "canonical") {
+    return {
+      conflict: false,
+      recovered: false,
+      value: canonicalValue,
+    };
+  }
+
+  if (choice === "duplicate") {
+    return {
+      conflict: false,
+      recovered: false,
+      value: duplicateValue,
+    };
+  }
+
   return {
     conflict: true,
     recovered: false,
@@ -126,6 +148,7 @@ function isCompatibleName(left: string, right: string) {
 function resolvedResident(
   canonical: RegistrationDuplicateResident,
   duplicate: RegistrationDuplicateResident,
+  choices: ResidentConflictChoices = {},
 ): ResolvedResident {
   const canonicalName = clean(canonical.fullName);
   const duplicateName = clean(duplicate.fullName);
@@ -134,8 +157,18 @@ function resolvedResident(
     normalizedText(duplicateName).length > normalizedText(canonicalName).length
       ? duplicateName
       : canonicalName || duplicateName;
-  const email = fieldValue(canonical.email, duplicate.email, normalizedEmail);
-  const phone = fieldValue(canonical.phone, duplicate.phone, normalizedPhone);
+  const email = fieldValue(
+    canonical.email,
+    duplicate.email,
+    normalizedEmail,
+    choices.email,
+  );
+  const phone = fieldValue(
+    canonical.phone,
+    duplicate.phone,
+    normalizedPhone,
+    choices.phone,
+  );
   const conflicts = [
     email.conflict ? "Email conflict" : null,
     phone.conflict ? "Phone conflict" : null,
@@ -381,6 +414,9 @@ export function DuplicateReviewDialog({
   const [canonicalUnitId, setCanonicalUnitId] = useState(defaultCanonical);
   const effectiveCanonicalUnitId = forcedCanonicalId ?? canonicalUnitId;
   const [decisions, setDecisions] = useState<Record<string, ResidentDecision>>({});
+  const [conflictChoices, setConflictChoices] = useState<
+    Record<string, ResidentConflictChoices>
+  >({});
   const [uniqueDataAcknowledged, setUniqueDataAcknowledged] = useState(false);
   const [mergeState, mergeAction, mergePending] = useActionState(
     mergeCommunityRegistrationDuplicateUnits,
@@ -415,7 +451,7 @@ export function DuplicateReviewDialog({
           const decisionKey = `${match.leftResidentId}:${match.rightResidentId}`;
           const decision =
             match.kind === "same_resident"
-              ? "merge"
+              ? decisions[decisionKey] ?? "merge"
               : decisions[decisionKey] ?? null;
           const canonicalResident =
             effectiveCanonicalUnitId === candidate.unitAId ? left : right;
@@ -423,7 +459,11 @@ export function DuplicateReviewDialog({
             effectiveCanonicalUnitId === candidate.unitAId ? right : left;
           const result =
             decision === "merge"
-              ? resolvedResident(canonicalResident, duplicateResident)
+              ? resolvedResident(
+                  canonicalResident,
+                  duplicateResident,
+                  conflictChoices[decisionKey],
+                )
               : null;
 
           return {
@@ -441,6 +481,7 @@ export function DuplicateReviewDialog({
     [
       candidate.residentMatches,
       candidate.unitAId,
+      conflictChoices,
       decisions,
       effectiveCanonicalUnitId,
       residentById,
@@ -506,6 +547,8 @@ export function DuplicateReviewDialog({
         resultEmail: item.result?.email ?? null,
         resultFullName: item.result?.fullName ?? null,
         resultPhone: item.result?.phone ?? null,
+        emailChoice: conflictChoices[item.decisionKey]?.email ?? null,
+        phoneChoice: conflictChoices[item.decisionKey]?.phone ?? null,
         rightResidentId: item.right.id,
       })),
       hasUnresolved: unresolvedCount > 0,
@@ -514,6 +557,7 @@ export function DuplicateReviewDialog({
       unifiedResidentCount: duplicateResidentsUnified,
     }),
     [
+      conflictChoices,
       conflictCount,
       duplicateResidentsUnified,
       recoveredFieldCount,
@@ -768,8 +812,12 @@ export function DuplicateReviewDialog({
                       Resident-level resolution
                     </h4>
                   </div>
-                  <Badge tone={unresolvedCount > 0 ? "warning" : "success"}>
-                    {unresolvedCount > 0 ? `${unresolvedCount} unresolved` : "Resolved"}
+                  <Badge
+                    tone={unresolvedCount + conflictCount > 0 ? "warning" : "success"}
+                  >
+                    {unresolvedCount + conflictCount > 0
+                      ? `${unresolvedCount + conflictCount} needs review`
+                      : "Resolved"}
                   </Badge>
                 </div>
 
@@ -800,8 +848,20 @@ export function DuplicateReviewDialog({
                       </div>
 
                       <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Badge tone={item.match.kind === "same_resident" ? "success" : "warning"}>
-                          {item.match.kind === "same_resident" ? "Same person" : "Needs review"}
+                        <Badge
+                          tone={
+                            item.result?.conflicts.length
+                              ? "warning"
+                              : item.match.kind === "same_resident"
+                                ? "success"
+                                : "warning"
+                          }
+                        >
+                          {item.result?.conflicts.length
+                            ? "Contact conflict"
+                            : item.match.kind === "same_resident"
+                              ? "Same person"
+                              : "Needs review"}
                         </Badge>
                         <span className="text-xs text-[var(--text-muted)]">
                           {item.match.explanation}
@@ -834,6 +894,157 @@ export function DuplicateReviewDialog({
                           >
                             Keep separate
                           </Button>
+                        </div>
+                      ) : null}
+
+                      {item.decision === "merge" &&
+                      item.result?.conflicts.length ? (
+                        <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] p-3">
+                          <div className="flex items-start gap-2">
+                            <TriangleAlert
+                              className="mt-0.5 size-4 shrink-0 text-amber-300"
+                              aria-hidden
+                            />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-amber-100">
+                                Choose which contact value to keep
+                              </p>
+                              <p className="mt-1 text-xs leading-5 text-amber-50/70">
+                                ENTRY only accepts values that already exist in one of
+                                these two source registrations.
+                              </p>
+
+                              {item.result.conflicts.includes("Email conflict") ? (
+                                <fieldset className="mt-3">
+                                  <legend className="text-xs font-semibold text-white">
+                                    Email conflict
+                                  </legend>
+                                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                    {([
+                                      [
+                                        "canonical",
+                                        item.canonicalResident.email,
+                                        canonicalUnit.label,
+                                      ],
+                                      [
+                                        "duplicate",
+                                        item.duplicateResident.email,
+                                        duplicateUnit.label,
+                                      ],
+                                    ] as const).map(([choice, value, label]) => (
+                                      <label
+                                        key={choice}
+                                        className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/[0.08] bg-black/10 px-3 py-2.5 text-xs"
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`${item.decisionKey}-email-choice`}
+                                          checked={
+                                            conflictChoices[item.decisionKey]?.email ===
+                                            choice
+                                          }
+                                          onChange={() => {
+                                            setDecisions((current) => ({
+                                              ...current,
+                                              [item.decisionKey]: "merge",
+                                            }));
+                                            setConflictChoices((current) => ({
+                                              ...current,
+                                              [item.decisionKey]: {
+                                                ...current[item.decisionKey],
+                                                email: choice,
+                                              },
+                                            }));
+                                          }}
+                                          className="mt-0.5 size-4 accent-violet-500"
+                                        />
+                                        <span className="min-w-0">
+                                          <span className="block font-semibold text-white">
+                                            {value}
+                                          </span>
+                                          <span className="mt-0.5 block text-[var(--text-muted)]">
+                                            Keep from {label}
+                                          </span>
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </fieldset>
+                              ) : null}
+
+                              {item.result.conflicts.includes("Phone conflict") ? (
+                                <fieldset className="mt-3">
+                                  <legend className="text-xs font-semibold text-white">
+                                    Phone conflict
+                                  </legend>
+                                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                    {([
+                                      [
+                                        "canonical",
+                                        item.canonicalResident.phone,
+                                        canonicalUnit.label,
+                                      ],
+                                      [
+                                        "duplicate",
+                                        item.duplicateResident.phone,
+                                        duplicateUnit.label,
+                                      ],
+                                    ] as const).map(([choice, value, label]) => (
+                                      <label
+                                        key={choice}
+                                        className="flex cursor-pointer items-start gap-2 rounded-lg border border-white/[0.08] bg-black/10 px-3 py-2.5 text-xs"
+                                      >
+                                        <input
+                                          type="radio"
+                                          name={`${item.decisionKey}-phone-choice`}
+                                          checked={
+                                            conflictChoices[item.decisionKey]?.phone ===
+                                            choice
+                                          }
+                                          onChange={() => {
+                                            setDecisions((current) => ({
+                                              ...current,
+                                              [item.decisionKey]: "merge",
+                                            }));
+                                            setConflictChoices((current) => ({
+                                              ...current,
+                                              [item.decisionKey]: {
+                                                ...current[item.decisionKey],
+                                                phone: choice,
+                                              },
+                                            }));
+                                          }}
+                                          className="mt-0.5 size-4 accent-violet-500"
+                                        />
+                                        <span className="min-w-0">
+                                          <span className="block font-semibold text-white">
+                                            {value}
+                                          </span>
+                                          <span className="mt-0.5 block text-[var(--text-muted)]">
+                                            Keep from {label}
+                                          </span>
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </fieldset>
+                              ) : null}
+
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                className="mt-3"
+                                onClick={() =>
+                                  setDecisions((current) => ({
+                                    ...current,
+                                    [item.decisionKey]: "keep_separate",
+                                  }))
+                                }
+                              >
+                                Keep residents separate
+                              </Button>
+                            </div>
+                          </div>
                         </div>
                       ) : null}
 
