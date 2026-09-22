@@ -8,7 +8,6 @@ import {
   Mail,
   Phone,
   TriangleAlert,
-  Users,
   X,
 } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState } from "react";
@@ -380,6 +379,7 @@ export function DuplicateReviewDialog({
       : candidate.unitAId);
 
   const [canonicalUnitId, setCanonicalUnitId] = useState(defaultCanonical);
+  const effectiveCanonicalUnitId = forcedCanonicalId ?? canonicalUnitId;
   const [decisions, setDecisions] = useState<Record<string, ResidentDecision>>({});
   const [uniqueDataAcknowledged, setUniqueDataAcknowledged] = useState(false);
   const [mergeState, mergeAction, mergePending] = useActionState(
@@ -391,14 +391,10 @@ export function DuplicateReviewDialog({
     initialState,
   );
 
-  useEffect(() => {
-    if (forcedCanonicalId && canonicalUnitId !== forcedCanonicalId) {
-      setCanonicalUnitId(forcedCanonicalId);
-    }
-  }, [canonicalUnitId, forcedCanonicalId]);
-
   const duplicateUnitId =
-    canonicalUnitId === candidate.unitAId ? candidate.unitBId : candidate.unitAId;
+    effectiveCanonicalUnitId === candidate.unitAId
+      ? candidate.unitBId
+      : candidate.unitAId;
 
   const residentById = useMemo(() => {
     const map = new Map<string, RegistrationDuplicateResident>();
@@ -422,9 +418,9 @@ export function DuplicateReviewDialog({
               ? "merge"
               : decisions[decisionKey] ?? null;
           const canonicalResident =
-            canonicalUnitId === candidate.unitAId ? left : right;
+            effectiveCanonicalUnitId === candidate.unitAId ? left : right;
           const duplicateResident =
-            canonicalUnitId === candidate.unitAId ? right : left;
+            effectiveCanonicalUnitId === candidate.unitAId ? right : left;
           const result =
             decision === "merge"
               ? resolvedResident(canonicalResident, duplicateResident)
@@ -442,7 +438,13 @@ export function DuplicateReviewDialog({
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null),
-    [candidate.residentMatches, canonicalUnitId, decisions, residentById],
+    [
+      candidate.residentMatches,
+      candidate.unitAId,
+      decisions,
+      effectiveCanonicalUnitId,
+      residentById,
+    ],
   );
 
   const contactOnlyMatches = useMemo(
@@ -521,13 +523,21 @@ export function DuplicateReviewDialog({
     ],
   );
 
-  if (!unitA || !unitB) return null;
-
-  const canonicalUnit = canonicalUnitId === unitA.id ? unitA : unitB;
-  const duplicateUnit = canonicalUnitId === unitA.id ? unitB : unitA;
+  const canonicalUnit =
+    unitA && unitB
+      ? effectiveCanonicalUnitId === unitA.id
+        ? unitA
+        : unitB
+      : null;
+  const duplicateUnit =
+    unitA && unitB
+      ? effectiveCanonicalUnitId === unitA.id
+        ? unitB
+        : unitA
+      : null;
 
   const uniqueDataItems = (() => {
-    if (!resolveMode) return [] as string[];
+    if (!resolveMode || !canonicalUnit || !duplicateUnit) return [] as string[];
     const items: string[] = [];
     const canonicalResidents = canonicalUnit.residents;
     const duplicateResidents = duplicateUnit.residents;
@@ -584,14 +594,16 @@ export function DuplicateReviewDialog({
     safeMergeMode && unresolvedCount === 0 && conflictCount === 0;
   const canArchive =
     resolveMode &&
-    canonicalUnit.id === forcedCanonicalId &&
+    Boolean(canonicalUnit) &&
+    canonicalUnit?.id === forcedCanonicalId &&
     (!uniqueDataItems.length || uniqueDataAcknowledged);
   const state = resolveMode ? archiveState : mergeState;
   const pending = resolveMode ? archivePending : mergePending;
 
   useEffect(() => {
     if (!state?.success) return;
-    const canonicalId = state.data.canonicalUnitId ?? canonicalUnitId;
+    const canonicalId =
+      state.data.canonicalUnitId ?? effectiveCanonicalUnitId;
     onClose();
     router.replace(
       `/products/entry/communities/${encodeURIComponent(
@@ -600,7 +612,9 @@ export function DuplicateReviewDialog({
       { scroll: false },
     );
     router.refresh();
-  }, [canonicalUnitId, communityId, onClose, router, state]);
+  }, [communityId, effectiveCanonicalUnitId, onClose, router, state]);
+
+  if (!unitA || !unitB || !canonicalUnit || !duplicateUnit) return null;
 
   const chooseCanonical = (unitId: string) => {
     if (forcedCanonicalId && unitId !== forcedCanonicalId) return;
@@ -676,13 +690,13 @@ export function DuplicateReviewDialog({
           <div className="grid gap-4 lg:grid-cols-2">
             <UnitComparisonCard
               candidate={candidate}
-              canonicalUnitId={canonicalUnitId}
+              canonicalUnitId={effectiveCanonicalUnitId}
               onChoose={chooseCanonical}
               unit={unitA}
             />
             <UnitComparisonCard
               candidate={candidate}
-              canonicalUnitId={canonicalUnitId}
+              canonicalUnitId={effectiveCanonicalUnitId}
               onChoose={chooseCanonical}
               unit={unitB}
             />
@@ -967,7 +981,7 @@ export function DuplicateReviewDialog({
             </div>
             <input type="hidden" name="campaign_id" value={campaignId} />
             <input type="hidden" name="community_id" value={communityId} />
-            <input type="hidden" name="canonical_unit_id" value={canonicalUnitId} />
+            <input type="hidden" name="canonical_unit_id" value={effectiveCanonicalUnitId} />
             <input type="hidden" name="duplicate_unit_id" value={duplicateUnitId} />
             <input type="hidden" name="resident_merge_plan" value={JSON.stringify(mergePlan)} />
             <div className="flex shrink-0 gap-2">
