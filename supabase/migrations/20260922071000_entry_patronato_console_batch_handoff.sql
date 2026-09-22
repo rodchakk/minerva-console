@@ -16,7 +16,6 @@ declare
   v_ids uuid[];
   v_id uuid;
   v_unit public.community_registration_units%rowtype;
-  v_campaign_status text;
   v_count integer := 0;
   v_result jsonb;
 begin
@@ -41,17 +40,19 @@ begin
 
   -- Validate the entire batch before mutating any unit.
   foreach v_id in array v_ids loop
-    select u.*, c.status
-      into v_unit, v_campaign_status
+    select u.*
+      into v_unit
       from public.community_registration_units u
-      join public.community_registration_campaigns c
-        on c.id = u.campaign_id
      where u.id = v_id
-       and u.community_id = p_community_id;
+       and u.community_id = p_community_id
+       and exists (
+         select 1
+           from public.community_registration_campaigns c
+          where c.id = u.campaign_id
+            and c.status in ('open', 'review')
+       );
 
-    if not found
-       or v_unit.status <> 'submitted'
-       or v_campaign_status not in ('open', 'review') then
+    if not found or v_unit.status <> 'submitted' then
       perform public._cr_raise_v1('ENTRY_CR_REVIEW_NOT_READY', 'P0409');
     end if;
   end loop;
