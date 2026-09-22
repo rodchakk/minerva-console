@@ -316,15 +316,19 @@ test("WhatsApp contact history is append-only and service-role restricted", () =
   const migration = read(
     "supabase/migrations/20260922184500_entry_registration_whatsapp_contact_history.sql",
   );
+  const hardening = read(
+    "supabase/migrations/20260922190500_harden_entry_registration_contact_history.sql",
+  );
 
   assert.match(migration, /create table if not exists public\.community_registration_contact_events/);
   assert.match(migration, /alter table public\.community_registration_contact_events enable row level security/);
-  assert.match(migration, /grant select, insert on table public\.community_registration_contact_events to service_role/);
-  assert.doesNotMatch(migration, /grant[^;]*(update|delete)[^;]*community_registration_contact_events/i);
   assert.match(migration, /record_community_registration_whatsapp_contact_v1/);
   assert.match(migration, /_cr_service_role_only_v1/);
   assert.match(migration, /_cr_validate_actor_v1/);
   assert.match(migration, /'action', 'whatsapp_contacted'/);
+  assert.match(hardening, /revoke all on table public\.community_registration_contact_events from service_role/);
+  assert.match(hardening, /grant select, insert on table public\.community_registration_contact_events to service_role/);
+  assert.doesNotMatch(hardening, /grant[^;]*(update|delete)/i);
 });
 
 test("WhatsApp contact confirmation recomputes current diagnostics on the server", () => {
