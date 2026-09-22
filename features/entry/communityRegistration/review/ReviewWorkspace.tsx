@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
@@ -8,6 +9,7 @@ import {
   ClipboardList,
   Clock3,
   FileText,
+  GitMerge,
   Home,
   Mail,
   MapPin,
@@ -36,6 +38,15 @@ import {
   type CommunityRegistrationReviewActionResult,
 } from "@/features/entry/communityRegistration/review/actions";
 import { QuickEditResidentDialog } from "@/features/entry/communityRegistration/review/QuickEditResidentDialog";
+import { DuplicateReviewDialog } from "@/features/entry/communityRegistration/review/DuplicateReviewDialog";
+import {
+  dismissCommunityRegistrationDuplicate,
+  type RegistrationDuplicateActionResult,
+} from "@/features/entry/communityRegistration/review/duplicateActions";
+import type {
+  RegistrationDuplicateCandidate,
+  RegistrationDuplicateReviewData,
+} from "@/features/entry/communityRegistration/review/duplicateQueries";
 import { QuickEditUnitDialog } from "@/features/entry/communityRegistration/review/QuickEditUnitDialog";
 import { ConfirmationReportDrawer } from "@/features/entry/communityRegistration/review/ConfirmationReportDrawer";
 import {
@@ -58,6 +69,7 @@ import type {
 type ReviewWorkspaceProps = {
   campaign: CommunityRegistrationReviewCampaign;
   communityId: string;
+  duplicateData: RegistrationDuplicateReviewData;
   loadError: string | null;
   quickEditData: CommunityRegistrationQuickEditData | null;
   selectedUnit: CommunityRegistrationReviewUnitDetail | null;
@@ -542,11 +554,12 @@ function Metric({
   );
 }
 
-type UnitFilter = "all" | "pending" | "reviewed" | "activation";
+type UnitFilter = "all" | "pending" | "reviewed" | "activation" | "duplicates";
 
 export function ReviewWorkspace({
   campaign,
   communityId,
+  duplicateData,
   loadError,
   quickEditData,
   selectedUnit,
