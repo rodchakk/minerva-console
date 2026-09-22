@@ -177,18 +177,40 @@ function buildCandidate(
   const sameResidentCount = residentMatches.filter(
     (match) => match.kind === "same_resident",
   ).length;
-  const emailMatchCount = residentMatches.filter(
-    (match) =>
-      match.kind === "same_resident" || match.kind === "shared_email",
-  ).length;
-  const phoneMatchCount = residentMatches.filter(
-    (match) =>
-      match.kind === "same_resident" || match.kind === "shared_phone",
-  ).length;
-  const nameMatchCount = residentMatches.filter(
-    (match) =>
-      match.kind === "same_resident" || match.kind === "same_name",
-  ).length;
+  const rightEmails = new Set(
+    unitB.residents
+      .map((resident) => resident.normalizedEmail)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const rightPhones = new Set(
+    unitB.residents
+      .map((resident) => resident.normalizedPhone)
+      .filter((value): value is string => Boolean(value)),
+  );
+  const rightNames = new Set(
+    unitB.residents
+      .map((resident) => resident.normalizedFullName)
+      .filter(Boolean),
+  );
+  const emailMatchCount = new Set(
+    unitA.residents
+      .map((resident) => resident.normalizedEmail)
+      .filter(
+        (value): value is string => Boolean(value) && rightEmails.has(value as string),
+      ),
+  ).size;
+  const phoneMatchCount = new Set(
+    unitA.residents
+      .map((resident) => resident.normalizedPhone)
+      .filter(
+        (value): value is string => Boolean(value) && rightPhones.has(value as string),
+      ),
+  ).size;
+  const nameMatchCount = new Set(
+    unitA.residents
+      .map((resident) => resident.normalizedFullName)
+      .filter((value) => Boolean(value) && rightNames.has(value)),
+  ).size;
 
   const evidenceScore = residentMatches.reduce(
     (total, match) => total + match.score,
@@ -202,7 +224,8 @@ function buildCandidate(
   const hasIndependentSignals =
     sameResidentCount > 0 ||
     unitIdentityMatch ||
-    (emailMatchCount > 0 && (nameMatchCount > 0 || phoneMatchCount > 0));
+    (emailMatchCount > 0 && (nameMatchCount > 0 || phoneMatchCount > 0)) ||
+    (phoneMatchCount > 0 && nameMatchCount > 0);
 
   if (!hasIndependentSignals || score < 6) return null;
 
