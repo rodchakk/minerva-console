@@ -52,3 +52,21 @@ Approved sequencing: Voice (reuses existing infra, near-zero backend change) shi
 
 - Confirm PR/branch status of `feature/entry-voice-mvp` and the two other branches.
 - Proceed to ENTRY-I001-QA (see [entry-next-missions.md](entry-next-missions.md)).
+
+## Production-readiness closure — ENTRY public-link branding — 2026-09-08
+
+**Status: ✅ Closed / production verified.**
+
+- The ENTRY public-link branding issue is closed. Fresh ENTRY links no longer depend on the Vercel/default preview identity.
+- Final production asset: `public/brand/minerva-entry-og-v5-baseline-1200x630.jpg`.
+- Final asset format is a **1200×630 RGB baseline JPEG** with a black background and centered Minerva Technologies branding, chosen after WhatsApp rejected or inconsistently rendered earlier social-preview image variants.
+- **ENTRY Outrider** and **ENTRY Campaign Registration** both publish the same absolute HTTPS social-preview asset with `og:image`, `og:image:secure_url`, `image/jpeg`, 1200×630 dimensions, and `summary_large_image` Twitter metadata.
+- Final implementation shipped in Minerva Console PR **#155** (`Use final Minerva baseline JPEG for ENTRY link previews`) and merged to `master` at commit `3013daf28871297d1de2769d1b3df0096fc08ebc`.
+- Vercel production deployment for that merge reached **READY** and serves the final image from `https://console.minervatechs.com/brand/minerva-entry-og-v5-baseline-1200x630.jpg` with HTTP 200 and `Content-Type: image/jpeg`.
+- Production HTML for both Outrider and Campaign Registration was verified to contain the final Open Graph/Twitter image metadata.
+- A **fresh Outrider URL was pasted into WhatsApp after deployment and the branded Minerva image rendered successfully**. This is the acceptance test that closes the issue.
+- Campaign Registration uses the same production asset and metadata path; its HTML metadata was verified in production. A separate WhatsApp spot-check can be repeated later if desired, but it is not considered a blocker for this closed item.
+
+### Durable implementation note
+
+For future WhatsApp/Open Graph previews on Minerva public links, prefer a new filename plus a simple **baseline JPEG**, RGB, 1200×630, absolute HTTPS URL, and explicit `og:image:secure_url`/type/dimensions. Do not assume that a valid PNG/JPEG or a previously cached URL will render consistently in WhatsApp.
