@@ -80,6 +80,7 @@ type ReviewWorkspaceProps = {
 };
 
 const initialActionState: CommunityRegistrationReviewActionResult | null = null;
+const initialDuplicateActionState: RegistrationDuplicateActionResult | null = null;
 
 function statusLabel(status: string) {
   switch (status.trim().toLowerCase()) {
@@ -568,6 +569,7 @@ export function ReviewWorkspace({
   summary,
   units,
 }: ReviewWorkspaceProps) {
+  const router = useRouter();
   const [showCorrectionRequest, setShowCorrectionRequest] = useState(false);
   const [correctionLinkMode, setCorrectionLinkMode] = useState<
     "create" | "replace" | null
@@ -576,6 +578,8 @@ export function ReviewWorkspace({
   const [editingResident, setEditingResident] =
     useState<CommunityRegistrationQuickEditResident | null>(null);
   const [editingUnit, setEditingUnit] = useState(false);
+  const [duplicateDialogCandidateId, setDuplicateDialogCandidateId] =
+    useState<string | null>(null);
   const [selectedReportUnitIds, setSelectedReportUnitIds] = useState<string[]>([]);
   const [selectionMissingFieldCount, setSelectionMissingFieldCount] = useState(0);
   const [selectionMissingEmailCount, setSelectionMissingEmailCount] = useState(0);
@@ -594,6 +598,11 @@ export function ReviewWorkspace({
     markCommunityRegistrationUnitReviewed,
     initialActionState,
   );
+  const [duplicateDismissState, duplicateDismissAction, duplicateDismissPending] =
+    useActionState(
+      dismissCommunityRegistrationDuplicate,
+      initialDuplicateActionState,
+    );
   const campaignStatus = campaign.status.trim().toLowerCase();
   const reviewCapable = ["open", "review"].includes(campaignStatus);
   const selectedStatus = selectedUnit?.status.trim().toLowerCase() ?? "";
@@ -631,39 +640,101 @@ export function ReviewWorkspace({
         .map((field) => field.residentName as string),
     ),
   );
+  const mergedUnitIdSet = useMemo(
+    () => new Set(duplicateData.mergedUnitIds),
+    [duplicateData.mergedUnitIds],
+  );
+  const activeUnits = useMemo(
+    () =>
+      units.filter(
+        (unit) =>
+          unit.status.trim().toLowerCase() !== "merged" &&
+          !mergedUnitIdSet.has(unit.id),
+      ),
+    [mergedUnitIdSet, units],
+  );
+  const duplicateCandidatesByUnit = useMemo(() => {
+    const map = new Map<string, RegistrationDuplicateCandidate[]>();
+
+    for (const candidate of duplicateData.candidates) {
+      for (const unitId of [candidate.unitAId, candidate.unitBId]) {
+        const current = map.get(unitId) ?? [];
+        current.push(candidate);
+        current.sort((left, right) => right.score - left.score);
+        map.set(unitId, current);
+      }
+    }
+
+    return map;
+  }, [duplicateData.candidates]);
+  const selectedDuplicateCandidate =
+    selectedUnitId
+      ? duplicateCandidatesByUnit.get(selectedUnitId)?.[0] ?? null
+      : null;
+  const selectedDuplicateTargetId =
+    selectedDuplicateCandidate && selectedUnitId
+      ? selectedDuplicateCandidate.unitAId === selectedUnitId
+        ? selectedDuplicateCandidate.unitBId
+        : selectedDuplicateCandidate.unitAId
+      : null;
+  const selectedDuplicateTarget =
+    selectedDuplicateTargetId
+      ? duplicateData.units.find((unit) => unit.id === selectedDuplicateTargetId) ??
+        null
+      : null;
+  const selectedDuplicateSameResidentCount =
+    selectedDuplicateCandidate?.residentMatches.filter(
+      (match) => match.kind === "same_resident",
+    ).length ?? 0;
+  const selectedDuplicateContactCount =
+    selectedDuplicateCandidate
+      ? Math.max(
+          selectedDuplicateCandidate.emailMatchCount,
+          selectedDuplicateCandidate.phoneMatchCount,
+        )
+      : 0;
+  const duplicateDialogCandidate =
+    duplicateDialogCandidateId
+      ? duplicateData.candidates.find(
+          (candidate) => candidate.id === duplicateDialogCandidateId,
+        ) ?? null
+      : null;
   const reportableUnitIds = useMemo(
     () =>
-      units
+      activeUnits
         .filter((unit) => unit.status !== "unregistered" && unit.residentCount > 0)
         .map((unit) => unit.id),
-    [units],
+    [activeUnits],
   );
   const selectionStorageKey =
     `entry-confirmation-report-selection:${campaign.id}:${communityId}`;
-  const selectedResidentCount = units
+  const selectedResidentCount = activeUnits
     .filter((unit) => selectedReportUnitIds.includes(unit.id))
     .reduce((total, unit) => total + unit.residentCount, 0);
   const unitFilterCounts = useMemo(
     () => ({
-      activation: units.filter(
+      activation: activeUnits.filter(
         (unit) => unit.status.trim().toLowerCase() === "processed",
       ).length,
-      all: units.length,
-      pending: units.filter((unit) =>
+      all: activeUnits.length,
+      duplicates: activeUnits.filter((unit) =>
+        duplicateCandidatesByUnit.has(unit.id),
+      ).length,
+      pending: activeUnits.filter((unit) =>
         ["submitted", "needs_correction", "edit_enabled"].includes(
           unit.status.trim().toLowerCase(),
         ),
       ).length,
-      reviewed: units.filter((unit) =>
+      reviewed: activeUnits.filter((unit) =>
         ["reviewed", "confirmed"].includes(unit.status.trim().toLowerCase()),
       ).length,
     }),
-    [units],
+    [activeUnits, duplicateCandidatesByUnit],
   );
   const visibleUnits = useMemo(() => {
     const normalizedSearch = unitSearch.trim().toLocaleLowerCase();
 
-    return units.filter((unit) => {
+    return activeUnits.filter((unit) => {
       const matchesSearch =
         normalizedSearch.length === 0 ||
         unit.label.toLocaleLowerCase().includes(normalizedSearch);
@@ -676,11 +747,12 @@ export function ReviewWorkspace({
           )) ||
         (unitFilter === "reviewed" &&
           ["reviewed", "confirmed"].includes(normalizedStatus)) ||
-        (unitFilter === "activation" && normalizedStatus === "processed");
+        (unitFilter === "activation" && normalizedStatus === "processed") ||
+        (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id));
 
       return matchesSearch && matchesFilter;
     });
-  }, [unitFilter, unitSearch, units]);
+  }, [activeUnits, duplicateCandidatesByUnit, unitFilter, unitSearch]);
   const detailPending = Boolean(
     pendingUnitId && pendingUnitId !== selectedUnitId,
   );
