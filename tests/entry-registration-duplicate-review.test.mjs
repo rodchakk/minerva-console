@@ -273,7 +273,7 @@ test("Resident Registration builds WhatsApp follow-up from resident-actionable d
   assert.match(contactSource, /Confirmar correo electrónico de/);
   assert.match(contactSource, /Confirmar número de teléfono de/);
   assert.match(contactSource, /Este es un mensaje generado por ENTRY/);
-  assert.match(contactSource, /Vivienda: ${input\.unitLabel}/);
+  assert.match(contactSource, /Vivienda:.*input\.unitLabel/);
   assert.match(contactSource, /ENTRY by Minerva Technologies/);
   assert.match(page, /communityName=\{community\.name\}/);
 });
