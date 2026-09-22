@@ -222,3 +222,33 @@ test("server only accepts canonical or duplicate source for conflicting contact 
     /v_result_phone := .*resultPhone/,
   );
 });
+
+
+test("shared contacts inside one household are surfaced without becoming duplicate matches", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+
+  assert.match(workspace, /function getSharedContactIssues/);
+  assert.match(workspace, /Shared email/);
+  assert.match(workspace, /Shared phone/);
+  assert.match(workspace, /Shared contact review/);
+  assert.match(workspace, /This does not mean they are the same person/);
+  assert.match(workspace, /separate ENTRY accounts cannot share the same email identity/);
+  assert.match(workspace, /data-testid="shared-contact-warning"/);
+});
+
+test("shared contact warnings stay separate from duplicate candidate logic", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+  const duplicateSource = read(
+    "features/entry/communityRegistration/review/duplicateQueries.ts",
+  );
+
+  assert.match(workspace, /sharedContactIssuesByUnitId/);
+  assert.match(workspace, /hasSharedEmail/);
+  assert.match(workspace, /hasSharedPhone/);
+  assert.match(duplicateSource, /A shared family email by itself is not enough/);
+  assert.match(duplicateSource, /Shared email only; not enough to merge residents/);
+});
