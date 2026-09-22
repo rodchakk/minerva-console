@@ -126,6 +126,23 @@ function formatDate(value: string | null) {
   return date.toLocaleString();
 }
 
+function normalizedSearchText(value: string | null | undefined) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLocaleLowerCase("es-HN")
+    .replace(/[^a-z0-9@.]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function normalizedSearchPhone(value: string | null | undefined) {
+  const digits = String(value ?? "").replace(/\D+/g, "");
+  if (digits.length === 11 && digits.startsWith("504")) return digits.slice(3);
+  if (digits.length === 12 && digits.startsWith("504")) return digits.slice(3);
+  return digits;
+}
+
 function Overlay({ children }: { children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
@@ -715,6 +732,36 @@ export function ReviewWorkspace({
           (candidate) => candidate.id === duplicateDialogCandidateId,
         ) ?? null
       : null;
+  const registrationSearchByUnitId = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const unit of duplicateData.units) {
+      const textParts = [
+        unit.label,
+        unit.reference,
+        ...unit.residents.flatMap((resident) => [
+          resident.fullName,
+          resident.email,
+          resident.phone,
+          resident.normalizedFullName,
+          resident.normalizedEmail,
+        ]),
+      ];
+      const phoneParts = unit.residents.flatMap((resident) => [
+        resident.phone,
+        resident.normalizedPhone,
+      ]);
+
+      map.set(
+        unit.id,
+        `${textParts.map(normalizedSearchText).join(" ")} ${phoneParts
+          .map(normalizedSearchPhone)
+          .join(" ")}`,
+      );
+    }
+
+    return map;
+  }, [duplicateData.units]);
   const reportableUnitIds = useMemo(
     () =>
       activeUnits
@@ -748,12 +795,17 @@ export function ReviewWorkspace({
     [activeUnits, duplicateCandidatesByUnit],
   );
   const visibleUnits = useMemo(() => {
-    const normalizedSearch = unitSearch.trim().toLocaleLowerCase();
+    const normalizedSearch = normalizedSearchText(unitSearch);
+    const normalizedPhone = normalizedSearchPhone(unitSearch);
 
     return activeUnits.filter((unit) => {
+      const searchable = `${normalizedSearchText(unit.label)} ${
+        registrationSearchByUnitId.get(unit.id) ?? ""
+      }`;
       const matchesSearch =
         normalizedSearch.length === 0 ||
-        unit.label.toLocaleLowerCase().includes(normalizedSearch);
+        searchable.includes(normalizedSearch) ||
+        (normalizedPhone.length > 0 && searchable.includes(normalizedPhone));
       const normalizedStatus = unit.status.trim().toLowerCase();
       const matchesFilter =
         unitFilter === "all" ||
@@ -768,7 +820,13 @@ export function ReviewWorkspace({
 
       return matchesSearch && matchesFilter;
     });
-  }, [activeUnits, duplicateCandidatesByUnit, unitFilter, unitSearch]);
+  }, [
+    activeUnits,
+    duplicateCandidatesByUnit,
+    registrationSearchByUnitId,
+    unitFilter,
+    unitSearch,
+  ]);
   const detailPending = Boolean(
     pendingUnitId && pendingUnitId !== selectedUnitId,
   );
@@ -1022,7 +1080,7 @@ export function ReviewWorkspace({
                 type="search"
                 value={unitSearch}
                 onChange={(event) => setUnitSearch(event.target.value)}
-                placeholder="Search units, street, or unit number..."
+                placeholder="Search unit, resident, email or phone..."
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
               />
             </label>

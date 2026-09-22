@@ -219,11 +219,14 @@ begin
 end;
 $function$;
 
+drop function if exists public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid);
+
 create or replace function public.merge_community_registration_units_v1(
   p_campaign_id uuid,
   p_canonical_unit_id uuid,
   p_duplicate_unit_id uuid,
-  p_actor_user_id uuid
+  p_actor_user_id uuid,
+  p_resident_plan jsonb default '{}'::jsonb
 )
 returns jsonb
 language plpgsql
@@ -246,6 +249,13 @@ declare
   v_unified_count integer := 0;
   v_appended_count integer := 0;
   v_match_id uuid;
+  v_plan_decision jsonb;
+  v_plan_decisions jsonb;
+  v_plan_conflict_count integer := 0;
+  v_decision text;
+  v_result_email text;
+  v_result_full_name text;
+  v_result_phone text;
   v_resident public.community_registration_residents%rowtype;
 begin
   perform public._cr_service_role_only_v1();
@@ -260,6 +270,25 @@ begin
      or p_duplicate_unit_id is null
      or p_canonical_unit_id = p_duplicate_unit_id then
     perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_INVALID_PAIR', 'P0409');
+  end if;
+
+  if p_resident_plan is null or jsonb_typeof(p_resident_plan) <> 'object' then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
+  end if;
+
+  v_plan_decisions := coalesce(p_resident_plan->'decisions', '[]'::jsonb);
+
+  if jsonb_typeof(v_plan_decisions) <> 'array' then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
+  end if;
+
+  if coalesce((p_resident_plan->>'hasUnresolved')::boolean, false) then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED', 'P0409');
+  end if;
+
+  v_plan_conflict_count := coalesce(nullif(p_resident_plan->>'conflicts', '')::integer, 0);
+  if v_plan_conflict_count > 0 then
+    perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT', 'P0409');
   end if;
 
   select * into v_campaign
@@ -466,40 +495,61 @@ begin
      order by position, id
   loop
     v_match_id := null;
+    v_plan_decision := null;
+    v_decision := 'keep_separate';
+    v_result_email := null;
+    v_result_full_name := null;
+    v_result_phone := null;
 
-    select existing.id into v_match_id
-      from public.community_registration_residents existing
-     where existing.submission_id = v_new_submission_id
-       and existing.normalized_full_name is not null
-       and v_resident.normalized_full_name is not null
-       and existing.normalized_full_name = v_resident.normalized_full_name
-       and (
-         (
-           existing.normalized_email is not null
-           and v_resident.normalized_email is not null
-           and existing.normalized_email = v_resident.normalized_email
-         )
-         or
-         (
-           existing.normalized_phone is not null
-           and v_resident.normalized_phone is not null
-           and existing.normalized_phone = v_resident.normalized_phone
-         )
-       )
-     order by existing.position, existing.id
+    select decision_item.value
+      into v_plan_decision
+      from jsonb_array_elements(v_plan_decisions) as decision_item(value)
+     where decision_item.value->>'duplicateResidentId' = v_resident.id::text
      limit 1;
+
+    if v_plan_decision is not null then
+      v_decision := coalesce(nullif(v_plan_decision->>'decision', ''), 'keep_separate');
+      v_result_email := nullif(btrim(coalesce(v_plan_decision->>'resultEmail', '')), '');
+      v_result_full_name := nullif(btrim(coalesce(v_plan_decision->>'resultFullName', '')), '');
+      v_result_phone := nullif(btrim(coalesce(v_plan_decision->>'resultPhone', '')), '');
+    end if;
+
+    if v_decision = 'unresolved' then
+      perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED', 'P0409');
+    elsif v_decision not in ('merge', 'keep_separate') then
+      perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
+    end if;
+
+    if v_decision = 'merge' then
+      select copied.id
+        into v_match_id
+        from public.community_registration_residents source
+        join public.community_registration_residents copied
+          on copied.submission_id = v_new_submission_id
+         and copied.position = source.position
+       where source.id = nullif(v_plan_decision->>'canonicalResidentId', '')::uuid
+         and source.submission_id = v_canonical_submission.id
+       order by copied.id
+       limit 1;
+
+      if v_match_id is null then
+        perform public._cr_raise_v1('ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED', 'P0409');
+      end if;
+    end if;
 
     if v_match_id is not null then
       update public.community_registration_residents
-         set email = coalesce(email, v_resident.email),
-             phone = coalesce(phone, v_resident.phone),
-             normalized_email = coalesce(
-               normalized_email,
-               public._cr_normalize_email_v1(v_resident.email)
+         set full_name = coalesce(v_result_full_name, full_name),
+             email = coalesce(v_result_email, email, v_resident.email),
+             phone = coalesce(v_result_phone, phone, v_resident.phone),
+             normalized_full_name = public._cr_normalize_name_v1(
+               coalesce(v_result_full_name, full_name)
              ),
-             normalized_phone = coalesce(
-               normalized_phone,
-               public._cr_normalize_phone_v1(v_resident.phone)
+             normalized_email = public._cr_normalize_email_v1(
+               coalesce(v_result_email, email, v_resident.email)
+             ),
+             normalized_phone = public._cr_normalize_phone_v1(
+               coalesce(v_result_phone, phone, v_resident.phone)
              ),
              is_owner_reference = is_owner_reference or v_resident.is_owner_reference,
              validation_status = 'valid',
@@ -611,7 +661,8 @@ begin
       'merged_submission_id', v_new_submission_id,
       'merged_resident_count', v_merged_resident_count,
       'unified_resident_count', v_unified_count,
-      'appended_resident_count', v_appended_count
+      'appended_resident_count', v_appended_count,
+      'resident_resolution_plan', p_resident_plan
     ),
     p_actor_user_id,
     now(),
@@ -645,10 +696,10 @@ revoke all on function public.resolve_community_registration_duplicate_v1(uuid, 
 revoke all on function public.resolve_community_registration_duplicate_v1(uuid, uuid, uuid, text, uuid) from authenticated;
 grant execute on function public.resolve_community_registration_duplicate_v1(uuid, uuid, uuid, text, uuid) to service_role;
 
-revoke all on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid) from public;
-revoke all on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid) from anon;
-revoke all on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid) from authenticated;
-grant execute on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid) to service_role;
+revoke all on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid, jsonb) from public;
+revoke all on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid, jsonb) from anon;
+revoke all on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid, jsonb) from authenticated;
+grant execute on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid, jsonb) to service_role;
 
 create or replace function public.get_community_registration_review_summary_v1(
   p_campaign_id uuid,
@@ -1081,5 +1132,5 @@ $function$;
 comment on table public.community_registration_duplicate_resolutions is
   'Auditable operator decisions for Resident Registration duplicate candidates. merged rows identify the surviving canonical unit; dismissed rows suppress a reviewed false positive.';
 
-comment on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid) is
-  'ENTRY internal RPC. Consolidates two Submitted resident-provided registration units into one canonical unit while preserving both original submissions as history. Blocks after Activation Queue handoff. service_role only.';
+comment on function public.merge_community_registration_units_v1(uuid, uuid, uuid, uuid, jsonb) is
+  'ENTRY internal RPC. Consolidates two Submitted resident-provided registration units into one canonical unit using an explicit reviewed resident resolution plan while preserving both original submissions as history. Blocks after Activation Queue handoff. service_role only.';

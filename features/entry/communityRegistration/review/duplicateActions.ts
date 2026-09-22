@@ -24,6 +24,18 @@ function formString(formData: FormData, key: string) {
   return String(formData.get(key) ?? "").trim();
 }
 
+function parseResidentMergePlan(value: string): Record<string, unknown> | null {
+  if (!value) return null;
+
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    return parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
+
 function revalidateRegistration(communityId: string) {
   revalidatePath(`/products/entry/communities/${communityId}`);
   revalidatePath(`/products/entry/communities/${communityId}/registration`);
@@ -52,6 +64,15 @@ function mapDuplicateError(error: { code?: string | null; message?: string | nul
   }
   if (/ENTRY_CR_DUPLICATE_RESIDENT_LIMIT/.test(message)) {
     return "The combined household is larger than the safe resident limit. Review the residents before merging.";
+  }
+  if (/ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED/.test(message)) {
+    return "Resolve every resident match before merging these units.";
+  }
+  if (/ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT/.test(message)) {
+    return "Resolve conflicting resident contact data before merging these units.";
+  }
+  if (/ENTRY_CR_DUPLICATE_RESIDENT_PLAN_REQUIRED/.test(message)) {
+    return "Resident merge decisions are incomplete. Review the resident matches again.";
   }
   if (/ENTRY_CR_UNAUTHORIZED/i.test(message) || error.code === "42501") {
     return "Superadmin permission is required.";
@@ -116,6 +137,9 @@ export async function mergeCommunityRegistrationDuplicateUnits(
   const communityId = formString(formData, "community_id");
   const canonicalUnitId = formString(formData, "canonical_unit_id");
   const duplicateUnitId = formString(formData, "duplicate_unit_id");
+  const residentMergePlan = parseResidentMergePlan(
+    formString(formData, "resident_merge_plan"),
+  );
 
   if (
     !campaignId ||
@@ -127,6 +151,18 @@ export async function mergeCommunityRegistrationDuplicateUnits(
     return { success: false, error: "Choose two different units and select which one should remain." };
   }
 
+  if (!residentMergePlan || !Array.isArray(residentMergePlan.decisions)) {
+    return { success: false, error: "Resident merge decisions are incomplete. Review the resident matches again." };
+  }
+
+  if (residentMergePlan.hasUnresolved === true) {
+    return { success: false, error: "Resolve every resident match before merging these units." };
+  }
+
+  if (Number(residentMergePlan.conflicts ?? 0) > 0) {
+    return { success: false, error: "Resolve conflicting resident contact data before merging these units." };
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase.rpc(
     "merge_community_registration_units_v1",
@@ -135,6 +171,7 @@ export async function mergeCommunityRegistrationDuplicateUnits(
       p_campaign_id: campaignId,
       p_canonical_unit_id: canonicalUnitId,
       p_duplicate_unit_id: duplicateUnitId,
+      p_resident_plan: residentMergePlan,
     },
   );
 

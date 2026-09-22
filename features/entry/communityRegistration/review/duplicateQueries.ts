@@ -31,16 +31,34 @@ export type RegistrationDuplicateResident = {
   unitId: string;
 };
 
+export type RegistrationDuplicateLifecycle = {
+  blocksMerge: boolean;
+  label: string;
+  reason: string | null;
+  step: number;
+  totalSteps: number;
+};
+
 export type RegistrationDuplicateUnit = {
   id: string;
   label: string;
+  lifecycle: RegistrationDuplicateLifecycle;
+  patronatoConfirmedAt: string | null;
   reference: string | null;
   residents: RegistrationDuplicateResident[];
+  reviewedAt: string | null;
   status: string;
+  submittedAt: string | null;
 };
 
 export type RegistrationDuplicateResidentMatch = {
-  kind: "same_resident" | "shared_email" | "shared_phone" | "same_name";
+  explanation: string;
+  kind:
+    | "same_resident"
+    | "needs_review"
+    | "shared_email"
+    | "shared_phone"
+    | "same_name";
   leftResidentId: string;
   rightResidentId: string;
   score: number;
@@ -83,6 +101,18 @@ function normalizedText(value: unknown) {
     .replace(/\s+/g, " ");
 }
 
+function normalizedEmail(value: unknown) {
+  const email = clean(value).toLocaleLowerCase("es-HN");
+  return email || null;
+}
+
+function normalizedPhone(value: unknown) {
+  const digits = clean(value).replace(/\D+/g, "");
+  if (digits.length === 11 && digits.startsWith("504")) return digits.slice(3);
+  if (digits.length === 12 && digits.startsWith("504")) return digits.slice(3);
+  return digits || null;
+}
+
 function normalizedUnitIdentity(value: unknown) {
   return normalizedText(value)
     .replace(/^(casa|unidad|apto|apartamento|lote)\s+/i, "")
@@ -94,6 +124,21 @@ function pairKey(leftId: string, rightId: string) {
   return [leftId, rightId].sort().join("::");
 }
 
+function nameTokens(value: string) {
+  return value.split(" ").filter((token) => token.length > 1);
+}
+
+function isExpandedNameMatch(leftName: string, rightName: string) {
+  if (!leftName || !rightName || leftName === rightName) return false;
+  const left = nameTokens(leftName);
+  const right = nameTokens(rightName);
+  if (left.length < 2 || right.length < 2) return false;
+
+  const smaller = left.length <= right.length ? left : right;
+  const larger = new Set(left.length <= right.length ? right : left);
+  return smaller.every((token) => larger.has(token));
+}
+
 function residentMatchScore(
   left: RegistrationDuplicateResident,
   right: RegistrationDuplicateResident,
@@ -101,6 +146,10 @@ function residentMatchScore(
   const sameName =
     Boolean(left.normalizedFullName) &&
     left.normalizedFullName === right.normalizedFullName;
+  const expandedName = isExpandedNameMatch(
+    left.normalizedFullName,
+    right.normalizedFullName,
+  );
   const sameEmail =
     Boolean(left.normalizedEmail) &&
     left.normalizedEmail === right.normalizedEmail;
@@ -111,15 +160,44 @@ function residentMatchScore(
   if (sameName && (sameEmail || samePhone)) {
     return {
       kind: "same_resident",
+      explanation:
+        sameEmail && samePhone
+          ? "Matched by normalized name, email, and phone"
+          : sameEmail
+            ? "Matched by normalized name and email"
+            : "Matched by normalized name and phone",
       leftResidentId: left.id,
       rightResidentId: right.id,
       score: 8 + (sameEmail && samePhone ? 2 : 0),
     };
   }
 
+  if (expandedName && sameEmail && samePhone) {
+    return {
+      kind: "same_resident",
+      explanation: "Matched by compatible names with the same email and phone",
+      leftResidentId: left.id,
+      rightResidentId: right.id,
+      score: 9,
+    };
+  }
+
+  if (expandedName && (sameEmail || samePhone)) {
+    return {
+      kind: "needs_review",
+      explanation: sameEmail
+        ? "Compatible names share an email; operator must confirm"
+        : "Compatible names share a phone; operator must confirm",
+      leftResidentId: left.id,
+      rightResidentId: right.id,
+      score: sameEmail ? 6 : 5,
+    };
+  }
+
   if (sameEmail) {
     return {
       kind: "shared_email",
+      explanation: "Shared email only; not enough to merge residents",
       leftResidentId: left.id,
       rightResidentId: right.id,
       score: 4,
@@ -129,6 +207,7 @@ function residentMatchScore(
   if (samePhone) {
     return {
       kind: "shared_phone",
+      explanation: "Shared phone only; not enough to merge residents",
       leftResidentId: left.id,
       rightResidentId: right.id,
       score: 3,
@@ -138,6 +217,7 @@ function residentMatchScore(
   if (sameName) {
     return {
       kind: "same_name",
+      explanation: "Same normalized name without a matching contact",
       leftResidentId: left.id,
       rightResidentId: right.id,
       score: 2,
@@ -176,6 +256,9 @@ function buildCandidate(
 
   const sameResidentCount = residentMatches.filter(
     (match) => match.kind === "same_resident",
+  ).length;
+  const needsReviewCount = residentMatches.filter(
+    (match) => match.kind === "needs_review",
   ).length;
   const rightEmails = new Set(
     unitB.residents
@@ -223,6 +306,7 @@ function buildCandidate(
   // independent signals before surfacing the candidate.
   const hasIndependentSignals =
     sameResidentCount > 0 ||
+    needsReviewCount > 0 ||
     unitIdentityMatch ||
     (emailMatchCount > 0 && (nameMatchCount > 0 || phoneMatchCount > 0)) ||
     (phoneMatchCount > 0 && nameMatchCount > 0);
@@ -265,7 +349,9 @@ export async function getCommunityRegistrationDuplicateReviewData(
   const [unitsResponse, submissionsResponse] = await Promise.all([
     supabase
       .from("community_registration_units")
-      .select("id,unit_label_snapshot,unit_reference_snapshot,status")
+      .select(
+        "id,unit_label_snapshot,unit_reference_snapshot,status,last_submitted_at,reviewed_at,patronato_confirmed_at",
+      )
       .eq("campaign_id", campaignId)
       .eq("community_id", communityId),
     supabase
@@ -293,12 +379,14 @@ export async function getCommunityRegistrationDuplicateReviewData(
   }
 
   const latestSubmissionByUnit = new Map<string, string>();
+  const latestSubmittedAtByUnit = new Map<string, string | null>();
   for (const rawSubmission of submissionsResponse.data) {
     const row = rawSubmission as Record<string, unknown>;
     const unitId = clean(row.campaign_unit_id);
     const submissionId = clean(row.id);
     if (unitId && submissionId && !latestSubmissionByUnit.has(unitId)) {
       latestSubmissionByUnit.set(unitId, submissionId);
+      latestSubmittedAtByUnit.set(unitId, clean(row.submitted_at) || null);
     }
   }
 
@@ -322,6 +410,29 @@ export async function getCommunityRegistrationDuplicateReviewData(
       units: [],
     };
   }
+
+  const residentIds = residentsResponse.data
+    .map((rawResident) => clean((rawResident as Record<string, unknown>).id))
+    .filter(Boolean);
+  const activationResponse =
+    residentIds.length > 0
+      ? await supabase
+          .from("resident_activation_queue")
+          .select("community_registration_resident_id,status")
+          .in("community_registration_resident_id", residentIds)
+          .eq("status", "activated")
+      : { data: [], error: null };
+  const activatedResidentIds = new Set(
+    !activationResponse.error && Array.isArray(activationResponse.data)
+      ? activationResponse.data
+          .map((row) =>
+            clean(
+              (row as Record<string, unknown>).community_registration_resident_id,
+            ),
+          )
+          .filter(Boolean)
+      : [],
+  );
 
   // This table is introduced by the duplicate-resolution migration. Keeping
   // this read soft-failing lets Vercel previews render before the migration is
@@ -358,6 +469,7 @@ export async function getCommunityRegistrationDuplicateReviewData(
   );
 
   const residentsByUnit = new Map<string, RegistrationDuplicateResident[]>();
+  const activatedUnitIds = new Set<string>();
   for (const rawResident of residentsResponse.data) {
     const row = rawResident as Record<string, unknown>;
     const unitId = clean(row.campaign_unit_id);
@@ -369,14 +481,19 @@ export async function getCommunityRegistrationDuplicateReviewData(
       fullName: clean(row.full_name),
       id,
       normalizedEmail:
-        clean(row.normalized_email).toLocaleLowerCase("es-HN") || null,
+        normalizedEmail(row.normalized_email) ?? normalizedEmail(row.email),
       normalizedFullName:
         normalizedText(row.normalized_full_name || row.full_name),
-      normalizedPhone: clean(row.normalized_phone) || null,
+      normalizedPhone:
+        normalizedPhone(row.normalized_phone) ?? normalizedPhone(row.phone),
       phone: clean(row.phone) || null,
       position: Number(row.position ?? 0),
       unitId,
     };
+
+    if (activatedResidentIds.has(id)) {
+      activatedUnitIds.add(unitId);
+    }
 
     const current = residentsByUnit.get(unitId) ?? [];
     current.push(resident);
@@ -392,11 +509,26 @@ export async function getCommunityRegistrationDuplicateReviewData(
       return {
         id,
         label: clean(row.unit_label_snapshot),
+        lifecycle: lifecycleForUnit({
+          activated: activatedUnitIds.has(id),
+          label: clean(row.unit_label_snapshot),
+          patronatoConfirmedAt: clean(row.patronato_confirmed_at) || null,
+          reviewedAt: clean(row.reviewed_at) || null,
+          status: clean(row.status),
+          submittedAt:
+            latestSubmittedAtByUnit.get(id) ??
+            (clean(row.last_submitted_at) || null),
+        }),
+        patronatoConfirmedAt: clean(row.patronato_confirmed_at) || null,
         reference: clean(row.unit_reference_snapshot) || null,
         residents: (residentsByUnit.get(id) ?? []).sort(
           (left, right) => left.position - right.position,
         ),
+        reviewedAt: clean(row.reviewed_at) || null,
         status: clean(row.status),
+        submittedAt:
+          latestSubmittedAtByUnit.get(id) ??
+          (clean(row.last_submitted_at) || null),
       } satisfies RegistrationDuplicateUnit;
     })
     .filter((unit): unit is RegistrationDuplicateUnit => unit !== null)
@@ -441,5 +573,49 @@ export async function getCommunityRegistrationDuplicateReviewData(
     duplicateUnitIds,
     mergedUnitIds,
     units,
+  };
+}
+
+function lifecycleForUnit(input: {
+  activated: boolean;
+  label: string;
+  patronatoConfirmedAt: string | null;
+  reviewedAt: string | null;
+  status: string;
+  submittedAt: string | null;
+}): RegistrationDuplicateLifecycle {
+  const normalized = input.status.trim().toLowerCase();
+  const prepared =
+    input.activated || normalized === "processed" || normalized === "converted";
+  const confirmed = prepared || normalized === "confirmed" || Boolean(input.patronatoConfirmedAt);
+  const reviewed = confirmed || normalized === "reviewed" || Boolean(input.reviewedAt);
+  const submitted =
+    reviewed ||
+    ["submitted", "edit_enabled", "needs_correction"].includes(normalized) ||
+    Boolean(input.submittedAt);
+
+  const step = prepared ? 4 : confirmed ? 3 : reviewed ? 2 : submitted ? 1 : 0;
+  const label =
+    input.activated
+      ? "Activated"
+      : prepared
+      ? "Prepared for activation"
+      : confirmed
+        ? "Patronato confirmed"
+        : reviewed
+          ? "Reviewed"
+          : submitted
+            ? "Submitted"
+            : "Not submitted";
+  const blocksMerge = normalized !== "submitted";
+
+  return {
+    blocksMerge,
+    label,
+    reason: blocksMerge
+      ? `Merge is locked because ${input.label || "this unit"} has already reached ${label}.`
+      : null,
+    step,
+    totalSteps: 4,
   };
 }
