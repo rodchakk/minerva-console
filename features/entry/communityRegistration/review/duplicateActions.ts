@@ -74,6 +74,9 @@ function mapDuplicateError(error: { code?: string | null; message?: string | nul
   if (/ENTRY_CR_DUPLICATE_RESIDENT_UNRESOLVED/.test(message)) {
     return "Resolve every resident match before merging these units.";
   }
+  if (/ENTRY_CR_DUPLICATE_RESIDENT_FIELD_CONFLICT_UNRESOLVED/.test(message)) {
+    return "Choose which source email or phone should be kept before merging this resident.";
+  }
   if (/ENTRY_CR_DUPLICATE_RESIDENT_CONFLICT/.test(message)) {
     return "Resolve conflicting resident contact data before merging these units.";
   }
