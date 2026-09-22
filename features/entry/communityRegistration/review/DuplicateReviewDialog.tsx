@@ -457,6 +457,10 @@ export function DuplicateReviewDialog({
             effectiveCanonicalUnitId === candidate.unitAId ? left : right;
           const duplicateResident =
             effectiveCanonicalUnitId === candidate.unitAId ? right : left;
+          const sourceResult = resolvedResident(
+            canonicalResident,
+            duplicateResident,
+          );
           const result =
             decision === "merge"
               ? resolvedResident(
@@ -475,6 +479,7 @@ export function DuplicateReviewDialog({
             match,
             result,
             right,
+            sourceConflicts: sourceResult.conflicts,
           };
         })
         .filter((item): item is NonNullable<typeof item> => item !== null),
@@ -898,7 +903,7 @@ export function DuplicateReviewDialog({
                       ) : null}
 
                       {item.decision === "merge" &&
-                      item.result?.conflicts.length ? (
+                      item.sourceConflicts.length ? (
                         <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] p-3">
                           <div className="flex items-start gap-2">
                             <TriangleAlert
@@ -914,7 +919,7 @@ export function DuplicateReviewDialog({
                                 these two source registrations.
                               </p>
 
-                              {item.result.conflicts.includes("Email conflict") ? (
+                              {item.sourceConflicts.includes("Email conflict") ? (
                                 <fieldset className="mt-3">
                                   <legend className="text-xs font-semibold text-white">
                                     Email conflict
@@ -972,7 +977,7 @@ export function DuplicateReviewDialog({
                                 </fieldset>
                               ) : null}
 
-                              {item.result.conflicts.includes("Phone conflict") ? (
+                              {item.sourceConflicts.includes("Phone conflict") ? (
                                 <fieldset className="mt-3">
                                   <legend className="text-xs font-semibold text-white">
                                     Phone conflict
