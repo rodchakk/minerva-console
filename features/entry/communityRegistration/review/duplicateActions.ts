@@ -10,7 +10,7 @@ export type RegistrationDuplicateActionResult =
       success: true;
       data: {
         canonicalUnitId?: string;
-        kind: "dismissed" | "merged";
+        kind: "dismissed" | "merged" | "resolved_duplicate";
         message: string;
         mergedResidentCount?: number;
       };
@@ -53,8 +53,14 @@ function mapDuplicateError(error: { code?: string | null; message?: string | nul
   if (/ENTRY_CR_DUPLICATE_ALREADY_ACTIVATED/.test(message)) {
     return "These records already reached Activation Queue. Resolve the active identity before merging registration records.";
   }
+  if (/ENTRY_CR_DUPLICATE_MANUAL_IDENTITY_REVIEW_REQUIRED/.test(message)) {
+    return "Both registrations already have operational identity. This pair requires manual identity review.";
+  }
+  if (/ENTRY_CR_DUPLICATE_UNIQUE_DATA_REVIEW_REQUIRED/.test(message)) {
+    return "The duplicate contains unique information. Review and acknowledge it before archiving the registration.";
+  }
   if (/ENTRY_CR_DUPLICATE_INVALID_STATE/.test(message)) {
-    return "Both units must still be in Submitted status before they can be merged.";
+    return "The selected duplicate operation is not safe for the current registration lifecycle.";
   }
   if (/ENTRY_CR_DUPLICATE_DIFFERENT_CAMPAIGN|ENTRY_CR_DUPLICATE_INVALID_PAIR/.test(message)) {
     return "These units cannot be merged because they do not belong to the same active registration campaign.";
@@ -78,7 +84,7 @@ function mapDuplicateError(error: { code?: string | null; message?: string | nul
     return "Superadmin permission is required.";
   }
   if (/does not exist|PGRST205|42883/i.test(message)) {
-    return "Duplicate merge is not available in this environment until the reviewed database migration is deployed.";
+    return "Duplicate resolution is not available in this environment until the reviewed database migration is deployed.";
   }
 
   return "The duplicate action could not be completed. Refresh and try again.";
@@ -188,6 +194,65 @@ export async function mergeCommunityRegistrationDuplicateUnits(
       kind: "merged",
       mergedResidentCount: Number(result.merged_resident_count ?? 0),
       message: "The household records were merged into one canonical unit.",
+    },
+  };
+}
+
+
+export async function archiveCommunityRegistrationDuplicate(
+  _previousState: RegistrationDuplicateActionResult | null,
+  formData: FormData,
+): Promise<RegistrationDuplicateActionResult> {
+  const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+  if (previewResult) return previewResult;
+
+  const campaignId = formString(formData, "campaign_id");
+  const communityId = formString(formData, "community_id");
+  const canonicalUnitId = formString(formData, "canonical_unit_id");
+  const duplicateUnitId = formString(formData, "duplicate_unit_id");
+  const uniqueDataAcknowledged =
+    formString(formData, "unique_data_acknowledged") === "true";
+
+  if (
+    !campaignId ||
+    !communityId ||
+    !canonicalUnitId ||
+    !duplicateUnitId ||
+    canonicalUnitId === duplicateUnitId
+  ) {
+    return {
+      success: false,
+      error: "Choose two different units and select the advanced record to keep.",
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "resolve_community_registration_archived_duplicate_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_id: campaignId,
+      p_canonical_unit_id: canonicalUnitId,
+      p_duplicate_unit_id: duplicateUnitId,
+      p_unique_data_acknowledged: uniqueDataAcknowledged,
+    },
+  );
+
+  if (error) return { success: false, error: mapDuplicateError(error) };
+
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+
+  revalidateRegistration(communityId);
+  return {
+    success: true,
+    data: {
+      canonicalUnitId,
+      kind: "resolved_duplicate",
+      message:
+        "The lower-stage registration was archived as a resolved duplicate. The operational household was not changed.",
+      mergedResidentCount: Number(result.unique_data_count ?? 0),
     },
   };
 }
