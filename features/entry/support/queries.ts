@@ -4,6 +4,8 @@ import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createClient } from "@/lib/supabase/server";
 
 export type SupportStatus = "open" | "in_progress" | "resolved";
+export type SupportWorkflowState = SupportStatus | "waiting_user";
+export type SupportInboxFilter = SupportWorkflowState | "unread";
 
 export type EntrySupportTicket = {
   id: string;
@@ -16,10 +18,17 @@ export type EntrySupportTicket = {
   category: string;
   description: string;
   status: SupportStatus;
+  waitingOnUser: boolean;
+  workflowState: SupportWorkflowState;
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
   resolvedAt: string | null;
+  unreadCount: number;
+  lastUserActivityAt: string;
+  lastMessageAt: string;
+  lastMessageAuthorType: "user" | "staff";
+  lastReadAt: string | null;
 };
 
 export type EntrySupportRequester = {
@@ -49,6 +58,11 @@ function asString(value: unknown, fallback = "") {
   return typeof value === "string" ? value : fallback;
 }
 
+function asNumber(value: unknown, fallback = 0) {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function toTicket(value: unknown): EntrySupportTicket | null {
   const row = asRecord(value);
   const id = asString(row.id);
@@ -59,6 +73,10 @@ function toTicket(value: unknown): EntrySupportTicket | null {
   const rawStatus = asString(row.status);
   const status: SupportStatus =
     rawStatus === "in_progress" || rawStatus === "resolved" ? rawStatus : "open";
+  const waitingOnUser = status === "in_progress" && row.waiting_on_user === true;
+  const workflowState: SupportWorkflowState = waitingOnUser ? "waiting_user" : status;
+  const createdAt = asString(row.created_at);
+  const updatedAt = asString(row.updated_at);
 
   return {
     id,
@@ -71,10 +89,18 @@ function toTicket(value: unknown): EntrySupportTicket | null {
     category: asString(row.category, "Support"),
     description: asString(row.description),
     status,
+    waitingOnUser,
+    workflowState,
     metadata: asRecord(row.metadata),
-    createdAt: asString(row.created_at),
-    updatedAt: asString(row.updated_at),
+    createdAt,
+    updatedAt,
     resolvedAt: asString(row.resolved_at) || null,
+    unreadCount: Math.max(0, Math.trunc(asNumber(row.unread_count))),
+    lastUserActivityAt: asString(row.last_user_activity_at) || createdAt,
+    lastMessageAt: asString(row.last_message_at) || updatedAt || createdAt,
+    lastMessageAuthorType:
+      asString(row.last_message_author_type) === "staff" ? "staff" : "user",
+    lastReadAt: asString(row.last_read_at) || null,
   };
 }
 
@@ -102,11 +128,11 @@ function toRequester(value: unknown): EntrySupportRequester | null {
   };
 }
 
-export async function getEntrySupportTickets(status?: SupportStatus | null) {
+export async function getEntrySupportTickets(filter?: SupportInboxFilter | null) {
   await requireSuperadmin();
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("support_admin_list_tickets", {
-    p_status: status ?? null,
+  const { data, error } = await supabase.rpc("support_admin_list_tickets_v2", {
+    p_filter: filter ?? null,
   });
 
   if (error) {
@@ -133,7 +159,7 @@ export async function getEntrySupportTicket(ticketId: string) {
 
   const [{ data: ticketData, error: ticketError }, { data: messageData, error: messageError }] =
     await Promise.all([
-      supabase.rpc("support_admin_get_ticket", { p_ticket_id: ticketId }),
+      supabase.rpc("support_admin_get_ticket_v2", { p_ticket_id: ticketId }),
       supabase
         .from("support_ticket_messages")
         .select("id,author_id,author_type,body,created_at")
@@ -149,6 +175,7 @@ export async function getEntrySupportTicket(ticketId: string) {
     return {
       ticket: null,
       messages: [] as EntrySupportMessage[],
+      requester: null as EntrySupportRequester | null,
       loadError: "Ticket could not be loaded. Try again.",
     };
   }

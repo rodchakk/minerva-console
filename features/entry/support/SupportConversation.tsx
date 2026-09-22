@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Send } from "lucide-react";
 import { useFormStatus } from "react-dom";
-import { replyToEntrySupportTicket } from "@/features/entry/support/actions";
+import {
+  markEntrySupportTicketRead,
+  replyToEntrySupportTicket,
+} from "@/features/entry/support/actions";
 import { cn } from "@/lib/supabase/utils";
 
 type SupportConversationTicket = {
@@ -40,6 +43,28 @@ function formatDateTime(value: string) {
     month: "short",
     year: "numeric",
   }).format(date);
+}
+
+function latestUserActivity(
+  ticket: SupportConversationTicket,
+  messages: SupportConversationMessage[],
+) {
+  let latestAt = ticket.createdAt;
+  let latestTime = new Date(ticket.createdAt).getTime();
+
+  for (const message of messages) {
+    if (message.authorType !== "user") continue;
+
+    const messageTime = new Date(message.createdAt).getTime();
+    if (Number.isNaN(messageTime)) continue;
+
+    if (Number.isNaN(latestTime) || messageTime > latestTime) {
+      latestAt = message.createdAt;
+      latestTime = messageTime;
+    }
+  }
+
+  return latestAt;
 }
 
 function SendReplyButton() {
@@ -112,16 +137,35 @@ export function SupportConversation({
   const scrollRef = useRef<HTMLDivElement>(null);
   const nearBottomRef = useRef(true);
   const mountedRef = useRef(false);
+  const markedReadThroughRef = useRef<string | null>(null);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const latestMessageKey = useMemo(() => {
     const latest = messages[messages.length - 1];
     return latest ? `${latest.id}:${latest.createdAt}` : ticket.createdAt;
   }, [messages, ticket.createdAt]);
+  const latestUserActivityAt = useMemo(
+    () => latestUserActivity(ticket, messages),
+    [messages, ticket],
+  );
   const messageCount = messages.length + 1;
 
   const isNearBottom = useCallback((node: HTMLDivElement) => {
     return node.scrollHeight - node.scrollTop - node.clientHeight < 96;
   }, []);
+
+  const markLatestAsRead = useCallback(() => {
+    if (loadError || !latestUserActivityAt) return;
+    if (markedReadThroughRef.current === latestUserActivityAt) return;
+
+    const readThroughAt = latestUserActivityAt;
+    markedReadThroughRef.current = readThroughAt;
+
+    void markEntrySupportTicketRead(ticket.id, readThroughAt).then((result) => {
+      if (!result.ok && markedReadThroughRef.current === readThroughAt) {
+        markedReadThroughRef.current = null;
+      }
+    });
+  }, [latestUserActivityAt, loadError, ticket.id]);
 
   const scrollToLatest = useCallback((behavior: ScrollBehavior = "smooth") => {
     const node = scrollRef.current;
@@ -143,12 +187,14 @@ export function SupportConversation({
       mountedRef.current = true;
       node.scrollTop = node.scrollHeight;
       nearBottomRef.current = true;
+      markLatestAsRead();
       return;
     }
 
     const frame = window.requestAnimationFrame(() => {
       if (nearBottomRef.current) {
         scrollToLatest();
+        markLatestAsRead();
         return;
       }
 
@@ -156,7 +202,7 @@ export function SupportConversation({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [latestMessageKey, scrollToLatest]);
+  }, [latestMessageKey, markLatestAsRead, scrollToLatest]);
 
   return (
     <section className="flex h-[clamp(560px,72vh,720px)] flex-col overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
@@ -187,7 +233,10 @@ export function SupportConversation({
           onScroll={(event) => {
             const node = event.currentTarget;
             nearBottomRef.current = isNearBottom(node);
-            if (nearBottomRef.current) setHasNewMessages(false);
+            if (nearBottomRef.current) {
+              setHasNewMessages(false);
+              markLatestAsRead();
+            }
           }}
         >
           <div className="space-y-4 pb-3">
@@ -218,7 +267,10 @@ export function SupportConversation({
           <button
             type="button"
             className="absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 text-xs font-semibold text-slate-100 shadow-[0_10px_28px_rgba(0,0,0,0.4)] transition hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
-            onClick={() => scrollToLatest()}
+            onClick={() => {
+              scrollToLatest();
+              markLatestAsRead();
+            }}
           >
             New messages
             <ChevronDown className="h-3.5 w-3.5 stroke-[1.75]" />
