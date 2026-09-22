@@ -14,7 +14,10 @@ const ACTIVE_SUBMISSION_STATUSES = [
 type DuplicateResolutionRow = {
   canonical_unit_id?: string | null;
   duplicate_unit_id?: string | null;
+  metadata?: Record<string, unknown> | null;
   resolution_type?: string | null;
+  resolved_at?: string | null;
+  resolved_by?: string | null;
   unit_high_id?: string | null;
   unit_low_id?: string | null;
 };
@@ -40,12 +43,17 @@ export type RegistrationDuplicateLifecycle = {
 };
 
 export type RegistrationDuplicateUnit = {
+  canonicalUnitId: string | null;
   id: string;
   label: string;
   lifecycle: RegistrationDuplicateLifecycle;
   patronatoConfirmedAt: string | null;
   reference: string | null;
   residents: RegistrationDuplicateResident[];
+  resolutionMetadata: Record<string, unknown> | null;
+  resolutionType: "merged" | "resolved_duplicate" | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
   reviewedAt: string | null;
   status: string;
   submittedAt: string | null;
@@ -84,6 +92,7 @@ export type RegistrationDuplicateReviewData = {
   candidates: RegistrationDuplicateCandidate[];
   duplicateUnitIds: string[];
   mergedUnitIds: string[];
+  resolvedUnitIds: string[];
   units: RegistrationDuplicateUnit[];
 };
 
@@ -139,6 +148,51 @@ function isExpandedNameMatch(leftName: string, rightName: string) {
   return smaller.every((token) => larger.has(token));
 }
 
+function isOneEditApart(left: string, right: string) {
+  if (left === right) return false;
+  if (Math.abs(left.length - right.length) > 1) return false;
+
+  let leftIndex = 0;
+  let rightIndex = 0;
+  let edits = 0;
+
+  while (leftIndex < left.length && rightIndex < right.length) {
+    if (left[leftIndex] === right[rightIndex]) {
+      leftIndex += 1;
+      rightIndex += 1;
+      continue;
+    }
+
+    edits += 1;
+    if (edits > 1) return false;
+
+    if (left.length > right.length) leftIndex += 1;
+    else if (right.length > left.length) rightIndex += 1;
+    else {
+      leftIndex += 1;
+      rightIndex += 1;
+    }
+  }
+
+  if (leftIndex < left.length || rightIndex < right.length) edits += 1;
+  return edits === 1;
+}
+
+function isTinyNameVariant(leftName: string, rightName: string) {
+  const left = nameTokens(leftName);
+  const right = nameTokens(rightName);
+  if (left.length < 2 || left.length !== right.length) return false;
+
+  let tinyDifferences = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    if (left[index] === right[index]) continue;
+    if (!isOneEditApart(left[index], right[index])) return false;
+    tinyDifferences += 1;
+  }
+
+  return tinyDifferences === 1;
+}
+
 function residentMatchScore(
   left: RegistrationDuplicateResident,
   right: RegistrationDuplicateResident,
@@ -156,6 +210,10 @@ function residentMatchScore(
   const samePhone =
     Boolean(left.normalizedPhone) &&
     left.normalizedPhone === right.normalizedPhone;
+  const tinyNameVariant = isTinyNameVariant(
+    left.normalizedFullName,
+    right.normalizedFullName,
+  );
 
   if (sameName && (sameEmail || samePhone)) {
     return {
@@ -172,10 +230,12 @@ function residentMatchScore(
     };
   }
 
-  if (expandedName && sameEmail && samePhone) {
+  if ((expandedName || tinyNameVariant) && sameEmail && samePhone) {
     return {
       kind: "same_resident",
-      explanation: "Matched by compatible names with the same email and phone",
+      explanation: tinyNameVariant
+        ? "Matched by near-identical names with the same email and phone"
+        : "Matched by compatible names with the same email and phone",
       leftResidentId: left.id,
       rightResidentId: right.id,
       score: 9,
@@ -341,6 +401,7 @@ export async function getCommunityRegistrationDuplicateReviewData(
       candidates: [],
       duplicateUnitIds: [],
       mergedUnitIds: [],
+      resolvedUnitIds: [],
       units: [],
     };
   }
@@ -374,6 +435,7 @@ export async function getCommunityRegistrationDuplicateReviewData(
       candidates: [],
       duplicateUnitIds: [],
       mergedUnitIds: [],
+      resolvedUnitIds: [],
       units: [],
     };
   }
@@ -407,6 +469,7 @@ export async function getCommunityRegistrationDuplicateReviewData(
       candidates: [],
       duplicateUnitIds: [],
       mergedUnitIds: [],
+      resolvedUnitIds: [],
       units: [],
     };
   }
@@ -442,7 +505,7 @@ export async function getCommunityRegistrationDuplicateReviewData(
     const resolutionResponse = await supabase
       .from("community_registration_duplicate_resolutions")
       .select(
-        "unit_low_id,unit_high_id,resolution_type,canonical_unit_id,duplicate_unit_id",
+        "unit_low_id,unit_high_id,resolution_type,canonical_unit_id,duplicate_unit_id,metadata,resolved_by,resolved_at",
       )
       .eq("campaign_id", campaignId)
       .eq("community_id", communityId);
@@ -462,9 +525,29 @@ export async function getCommunityRegistrationDuplicateReviewData(
         .filter(Boolean),
     ),
   );
+  const resolvedUnitIds = Array.from(
+    new Set(
+      resolutions
+        .filter((row) => row.resolution_type === "resolved_duplicate")
+        .map((row) => clean(row.duplicate_unit_id))
+        .filter(Boolean),
+    ),
+  );
+  const resolutionByDuplicateUnitId = new Map(
+    resolutions
+      .filter((row) =>
+        ["merged", "resolved_duplicate"].includes(clean(row.resolution_type)),
+      )
+      .map((row) => [clean(row.duplicate_unit_id), row] as const)
+      .filter(([unitId]) => Boolean(unitId)),
+  );
   const hiddenPairs = new Set(
     resolutions
-      .filter((row) => ["merged", "dismissed"].includes(clean(row.resolution_type)))
+      .filter((row) =>
+        ["merged", "resolved_duplicate", "dismissed"].includes(
+          clean(row.resolution_type),
+        ),
+      )
       .map((row) => pairKey(clean(row.unit_low_id), clean(row.unit_high_id))),
   );
 
@@ -505,8 +588,16 @@ export async function getCommunityRegistrationDuplicateReviewData(
       const row = rawUnit as Record<string, unknown>;
       const id = clean(row.id);
       if (!id || mergedUnitIds.includes(id)) return null;
+      const resolution = resolutionByDuplicateUnitId.get(id);
+      const resolutionType =
+        resolution?.resolution_type === "resolved_duplicate"
+          ? "resolved_duplicate"
+          : resolution?.resolution_type === "merged"
+            ? "merged"
+            : null;
 
       return {
+        canonicalUnitId: clean(resolution?.canonical_unit_id) || null,
         id,
         label: clean(row.unit_label_snapshot),
         lifecycle: lifecycleForUnit({
@@ -524,6 +615,13 @@ export async function getCommunityRegistrationDuplicateReviewData(
         residents: (residentsByUnit.get(id) ?? []).sort(
           (left, right) => left.position - right.position,
         ),
+        resolutionMetadata:
+          resolution?.metadata && typeof resolution.metadata === "object"
+            ? resolution.metadata
+            : null,
+        resolutionType,
+        resolvedAt: clean(resolution?.resolved_at) || null,
+        resolvedBy: clean(resolution?.resolved_by) || null,
         reviewedAt: clean(row.reviewed_at) || null,
         status: clean(row.status),
         submittedAt:
@@ -535,8 +633,8 @@ export async function getCommunityRegistrationDuplicateReviewData(
     .filter(
       (unit) =>
         unit.status !== "unregistered" &&
-        unit.status !== "merged" &&
-        unit.residents.length > 0,
+        unit.residents.length > 0 &&
+        (unit.status !== "merged" || unit.resolutionType === "resolved_duplicate"),
     );
 
   const candidates: RegistrationDuplicateCandidate[] = [];
@@ -572,6 +670,7 @@ export async function getCommunityRegistrationDuplicateReviewData(
     candidates,
     duplicateUnitIds,
     mergedUnitIds,
+    resolvedUnitIds,
     units,
   };
 }
