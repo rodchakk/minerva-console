@@ -27,6 +27,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
 } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -54,6 +55,10 @@ import {
   getUnitMissingFields,
 } from "@/features/entry/communityRegistration/review/completeness";
 import { loadCommunityRegistrationConfirmationReport } from "@/features/entry/communityRegistration/review/reportActions";
+import {
+  markRegistrationUnitsReadyForPatronato,
+  prepareApprovedRegistrationUnitsForActivation,
+} from "@/features/entry/communityRegistration/review/bulkActions";
 import type {
   CommunityRegistrationQuickEditData,
   CommunityRegistrationQuickEditResident,
@@ -93,11 +98,11 @@ function statusLabel(status: string) {
     case "needs_correction":
       return "Needs correction";
     case "reviewed":
-      return "Reviewed";
+      return "Ready for Patronato";
     case "confirmed":
-      return "Patronato confirmed";
+      return "Patronato approved";
     case "processed":
-      return "Prepared for activation";
+      return "In Activation Queue";
     case "open":
       return "Campaign open";
     case "paused":
@@ -497,15 +502,15 @@ function HandoffProgress({
     },
     {
       done: Boolean(selectedUnit.reviewedAt),
-      label: "Reviewed",
+      label: "Ready for Patronato",
     },
     {
       done: Boolean(selectedUnit.patronatoConfirmedAt),
-      label: "Patronato confirmed",
+      label: "Patronato approved",
     },
     {
       done: normalized === "processed",
-      label: "Prepared for activation",
+      label: "In Activation Queue",
     },
   ];
 
@@ -626,6 +631,10 @@ export function ReviewWorkspace({
   const [selectionLoading, setSelectionLoading] = useState(false);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+  const [bulkFeedback, setBulkFeedback] = useState<
+    { tone: "error" | "success"; text: string } | null
+  >(null);
+  const [bulkPending, startBulkTransition] = useTransition();
   const [unitFilter, setUnitFilter] = useState<UnitFilter>("pending");
   const [unitSearch, setUnitSearch] = useState("");
   const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
@@ -736,6 +745,67 @@ export function ReviewWorkspace({
 
     return map;
   }, [duplicateData.candidates]);
+  const statusByUnitId = useMemo(
+    () =>
+      new Map(
+        activeUnits.map((unit) => [
+          unit.id,
+          unit.status.trim().toLowerCase(),
+        ]),
+      ),
+    [activeUnits],
+  );
+  const selectedReadyForPatronatoIds = selectedReportUnitIds.filter(
+    (unitId) =>
+      statusByUnitId.get(unitId) === "submitted" &&
+      !(duplicateCandidatesByUnit.get(unitId)?.length),
+  );
+  const selectedApprovedForActivationIds = selectedReportUnitIds.filter(
+    (unitId) => statusByUnitId.get(unitId) === "confirmed",
+  );
+
+  function runReadyForPatronatoBatch() {
+    if (selectedReadyForPatronatoIds.length === 0 || bulkPending) return;
+
+    setBulkFeedback(null);
+    startBulkTransition(async () => {
+      const result = await markRegistrationUnitsReadyForPatronato({
+        communityId,
+        unitIds: selectedReadyForPatronatoIds,
+      });
+
+      if (!result.success) {
+        setBulkFeedback({ tone: "error", text: result.error });
+        return;
+      }
+
+      setBulkFeedback({ tone: "success", text: result.message });
+      setSelectedReportUnitIds([]);
+      router.refresh();
+    });
+  }
+
+  function runActivationQueueBatch() {
+    if (selectedApprovedForActivationIds.length === 0 || bulkPending) return;
+
+    setBulkFeedback(null);
+    startBulkTransition(async () => {
+      const result = await prepareApprovedRegistrationUnitsForActivation({
+        communityId,
+        unitIds: selectedApprovedForActivationIds,
+      });
+
+      if (!result.success) {
+        setBulkFeedback({ tone: "error", text: result.error });
+        return;
+      }
+
+      setBulkFeedback({ tone: "success", text: result.message });
+      setSelectedReportUnitIds([]);
+      router.refresh();
+    });
+  }
+
   const selectedDuplicateCandidate =
     selectedUnitId
       ? duplicateCandidatesByUnit.get(selectedUnitId)?.[0] ?? null
@@ -1075,6 +1145,29 @@ export function ReviewWorkspace({
             >
               Clear
             </Button>
+            {selectedReadyForPatronatoIds.length > 0 ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={runReadyForPatronatoBatch}
+                disabled={bulkPending || Boolean(loadError)}
+              >
+                {bulkPending
+                  ? "Updating..."
+                  : `Ready for Patronato (${selectedReadyForPatronatoIds.length})`}
+              </Button>
+            ) : null}
+            {selectedApprovedForActivationIds.length > 0 ? (
+              <Button
+                type="button"
+                onClick={runActivationQueueBatch}
+                disabled={bulkPending || Boolean(loadError)}
+              >
+                {bulkPending
+                  ? "Moving..."
+                  : `Move to Activation Queue (${selectedApprovedForActivationIds.length})`}
+              </Button>
+            ) : null}
             <span className="mx-1 hidden h-7 w-px bg-[var(--border)] lg:block" aria-hidden />
             <Button
               type="button"
@@ -1098,6 +1191,26 @@ export function ReviewWorkspace({
             {reportError}
           </p>
         ) : null}
+        {bulkFeedback ? (
+          <p
+            className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
+              bulkFeedback.tone === "success"
+                ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-100"
+                : "border-rose-400/20 bg-rose-500/10 text-rose-100"
+            }`}
+          >
+            {bulkFeedback.text}
+          </p>
+        ) : null}
+        {selectedReportUnitIds.some(
+          (unitId) =>
+            statusByUnitId.get(unitId) === "submitted" &&
+            Boolean(duplicateCandidatesByUnit.get(unitId)?.length),
+        ) ? (
+          <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
+            Units with unresolved duplicate matches are excluded from Ready for Patronato.
+          </p>
+        ) : null}
       </section>
 
       <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-20rem),50rem)] xl:grid-cols-[minmax(460px,0.92fr)_minmax(0,1.08fr)]">
@@ -1107,7 +1220,7 @@ export function ReviewWorkspace({
               <div>
                 <h2 className="text-base font-semibold text-white">Units</h2>
                 <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Open a unit or select its checkbox for the report.
+                  Open a unit or use its checkbox for reports and bulk workflow actions.
                 </p>
               </div>
               <Badge tone="default">{summary.totalUnits}</Badge>
@@ -1714,7 +1827,9 @@ export function ReviewWorkspace({
                     onClick={() => setShowActivationHandoff(true)}
                     disabled={Boolean(loadError)}
                   >
-                      Confirm and prepare activation
+                      {selectedStatus === "confirmed"
+                        ? "Move to Activation Queue"
+                        : "Manual approval override"}
                   </Button>
                 ) : null}
 
