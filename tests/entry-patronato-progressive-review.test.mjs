@@ -62,8 +62,8 @@ test("Console can generate a secure Patronato link and batch hand off approved u
 
   assert.match(admin, /create_community_registration_patronato_access_v1/);
   assert.match(admin, /PATRONATO_LINK_DAYS = 30/);
-  assert.match(bulk, /mark_community_registration_unit_reviewed_v1/);
-  assert.match(bulk, /convert_community_registration_unit_to_activation_v1/);
+  assert.match(bulk, /mark_community_registration_units_reviewed_v2/);
+  assert.match(bulk, /convert_community_registration_units_to_activation_v2/);
   assert.doesNotMatch(
     bulk.match(
       /prepareApprovedRegistrationUnitsForActivation[\s\S]*$/,
@@ -100,4 +100,54 @@ test("Console makes Patronato approval explicit before Activation Queue handoff"
   assert.match(workspace, /Patronato approval is already recorded\./);
   assert.match(workspace, /Move to Activation Queue/);
   assert.match(workspace, /normalized === "confirmed"/);
+});
+
+
+test("duplicate candidates are fail-closed across single and bulk workflow actions", () => {
+  const workspace = read(
+    "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
+  );
+  const actions = read(
+    "features/entry/communityRegistration/review/actions.ts",
+  );
+  const bulk = read(
+    "features/entry/communityRegistration/review/bulkActions.ts",
+  );
+
+  assert.match(
+    workspace,
+    /Resolve duplicate before Patronato or Activation/,
+  );
+  assert.match(
+    workspace,
+    /canMarkReviewed && !selectedDuplicateCandidate/,
+  );
+  assert.match(
+    workspace,
+    /canConfirmAndPrepare && !selectedDuplicateCandidate/,
+  );
+  assert.match(
+    workspace,
+    /statusByUnitId\.get\(unitId\) === "confirmed"[\s\S]*duplicateCandidatesByUnit/,
+  );
+
+  assert.match(actions, /hasUnresolvedDuplicateCandidate/);
+  assert.match(
+    actions,
+    /Resolve the possible duplicate before sending this household to Patronato\./,
+  );
+  assert.match(
+    actions,
+    /Resolve the possible duplicate before approving or moving this household to Activation Queue\./,
+  );
+
+  assert.match(bulk, /findDuplicateBlockedUnitIds/);
+  assert.match(
+    bulk,
+    /Resolve possible duplicates before sending the selected households to Patronato\./,
+  );
+  assert.match(
+    bulk,
+    /Resolve possible duplicates before moving the selected households to Activation Queue\./,
+  );
 });
