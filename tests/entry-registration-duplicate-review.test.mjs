@@ -363,3 +363,46 @@ test("Resident Registration distinguishes contacted households from new follow-u
   assert.match(page, /getCommunityRegistrationLatestContactStatuses/);
   assert.match(page, /getCommunityRegistrationContactHistory/);
 });
+
+
+test("duplicate merge treats Honduras local and +504 phone formats as the same identity", () => {
+  const migration = read(
+    "supabase/migrations/20260923183500_fix_entry_duplicate_phone_normalization.sql",
+  );
+
+  assert.match(
+    migration,
+    /create or replace function public\._cr_duplicate_normalize_phone_v1/,
+  );
+  assert.match(
+    migration,
+    /when length\(digits\) = 11 and left\(digits, 3\) = '504'/,
+  );
+  assert.match(
+    migration,
+    /public\._cr_duplicate_normalize_phone_v1\(source\.phone\)[\s\S]*= public\._cr_duplicate_normalize_phone_v1\(v_resident\.phone\)/,
+  );
+  assert.match(
+    migration,
+    /v_same_phone := coalesce\([\s\S]*_cr_duplicate_normalize_phone_v1\(v_source_match\.phone\)[\s\S]*_cr_duplicate_normalize_phone_v1\(v_resident\.phone\)/,
+  );
+  assert.match(
+    migration,
+    /_cr_duplicate_normalize_phone_v1\(v_source_match\.phone\)[\s\S]*<> public\._cr_duplicate_normalize_phone_v1\(v_resident\.phone\)/,
+  );
+});
+
+test("duplicate merge no longer relies on stored phone formatting for resident matching", () => {
+  const migration = read(
+    "supabase/migrations/20260923183500_fix_entry_duplicate_phone_normalization.sql",
+  );
+
+  assert.doesNotMatch(
+    migration,
+    /source\.normalized_phone\s*=\s*v_resident\.normalized_phone/,
+  );
+  assert.doesNotMatch(
+    migration,
+    /v_source_match\.normalized_phone\s*=\s*v_resident\.normalized_phone/,
+  );
+});
