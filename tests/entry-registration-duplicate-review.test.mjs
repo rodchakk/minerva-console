@@ -479,3 +479,26 @@ test("duplicate merge no longer relies on stored phone formatting for resident m
     /v_source_match\.normalized_phone\s*=\s*v_resident\.normalized_phone/,
   );
 });
+
+
+test("combine household migration removes the legacy truncated resolution-type constraint", () => {
+  const migration = read(
+    "supabase/migrations/20260923203000_entry_registration_combine_household_resolution.sql",
+  );
+  const repair = read(
+    "supabase/migrations/20260923204000_fix_entry_combine_household_resolution_constraint.sql",
+  );
+
+  assert.match(
+    migration,
+    /drop constraint if exists community_registration_duplicate_resoluti_resolution_type_check/,
+  );
+  assert.match(
+    repair,
+    /drop constraint if exists community_registration_duplicate_resoluti_resolution_type_check/,
+  );
+  assert.match(
+    repair,
+    /'dismissed'[\s\S]*'merged'[\s\S]*'resolved_duplicate'[\s\S]*'combine_household'/,
+  );
+});
