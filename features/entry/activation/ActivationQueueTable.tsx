@@ -1077,14 +1077,14 @@ export function ActivationQueueTable({
           <div className="flex w-full max-w-2xl flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">
-                Resident access
+                ENTRY user creation
               </p>
-              <h3 className="mt-1 text-lg font-semibold text-white">
-                How should the selected resident{selectedCount !== 1 ? "s" : ""} get access?
+              <h3 className="mt-1 text-xl font-semibold text-white">
+                Create ENTRY user{selectedCount !== 1 ? "s" : ""}
               </h3>
               <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-                Choose the same onboarding path used everywhere in Minerva Console.
-                Nothing runs until you continue.
+                Choose how you want to create the selected resident{selectedCount !== 1 ? "s" : ""}.
+                This same standard is used across Minerva Console.
               </p>
             </div>
             <ResidentAccessModePicker
