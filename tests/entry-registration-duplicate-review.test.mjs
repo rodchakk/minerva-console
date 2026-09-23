@@ -46,7 +46,7 @@ test("resolved duplicate history stays distinct from a real merge", () => {
     "supabase/migrations/20260922023000_entry_registration_duplicate_resolution.sql",
   );
 
-  assert.match(source, /resolutionType: "merged" \| "resolved_duplicate" \| null/);
+  assert.match(source, /resolutionType: "combine_household" \| "merged" \| "resolved_duplicate" \| null/);
   assert.match(source, /resolvedUnitIds/);
   assert.match(workspace, /Resolved duplicate/);
   assert.match(workspace, /Related registrations/);
@@ -172,8 +172,81 @@ test("duplicate mutations remain behind Preview read-only boundary", () => {
 
   assert.match(source, /getEntryPreviewReadOnlyError/);
   assert.match(source, /merge_community_registration_units_v1/);
+  assert.match(source, /combine_community_registration_households_v1/);
   assert.match(source, /resolve_community_registration_archived_duplicate_v1/);
   assert.match(source, /resolve_community_registration_duplicate_v1/);
+});
+
+test("duplicate dialog defaults to merge and exposes combine household as explicit alternative", () => {
+  const source = read(
+    "features/entry/communityRegistration/review/DuplicateReviewDialog.tsx",
+  );
+
+  assert.match(source, /type ResolutionPath =[\s\S]*"merge_registration"[\s\S]*"combine_household"[\s\S]*"keep_separate"/);
+  assert.match(source, /useState<ResolutionPath>\("merge_registration"\)/);
+  assert.match(source, /Choose resolution path/);
+  assert.match(source, /Default path[\s\S]*Merge registration/);
+  assert.match(source, /Alternative[\s\S]*Combine household/);
+  assert.match(source, /badge="Default"/);
+  assert.match(source, /Use when the records are duplicates of the same household registration\./);
+  assert.match(source, /Use when both registrations belong to the same home/);
+  assert.match(source, /Use when these records should remain independent\./);
+});
+
+test("combine household preview preserves distinct residents and returns household to review", () => {
+  const source = read(
+    "features/entry/communityRegistration/review/DuplicateReviewDialog.tsx",
+  );
+
+  assert.match(source, /Same household resolution/i);
+  assert.match(source, /Combine both registrations into one household/);
+  assert.match(source, /Keep household record/);
+  assert.match(source, /Archived registration/);
+  assert.match(source, /Residents after combine/);
+  assert.match(source, /Status after combine[\s\S]*Needs review/);
+  assert.match(source, /Residents in combined household/);
+  assert.match(source, /No resident identities will be merged automatically/);
+  assert.match(source, /Combine household unavailable/);
+  assert.match(source, /Unavailable because this household has already reached Activation\./);
+});
+
+test("combine household action uses dedicated RPC and keep separate reuses dismissal", () => {
+  const source = read(
+    "features/entry/communityRegistration/review/DuplicateReviewDialog.tsx",
+  );
+  const actions = read(
+    "features/entry/communityRegistration/review/duplicateActions.ts",
+  );
+
+  assert.match(source, /combineCommunityRegistrationHouseholds/);
+  assert.match(source, /dismissCommunityRegistrationDuplicate/);
+  assert.match(source, /Combine household/);
+  assert.match(source, /Keep separate/);
+  assert.match(actions, /combine_community_registration_households_v1/);
+  assert.match(actions, /kind: "combine_household"/);
+});
+
+test("combine household RPC preserves residents, resets review, archives secondary, and audits metadata", () => {
+  const migration = read(
+    "supabase/migrations/20260923203000_entry_registration_combine_household_resolution.sql",
+  );
+
+  assert.match(migration, /create or replace function public\.combine_community_registration_households_v1/);
+  assert.match(migration, /resolution_type in \('merged', 'resolved_duplicate', 'combine_household'\)/);
+  assert.match(migration, /v_canonical\.status not in \('submitted', 'reviewed'\)/);
+  assert.match(migration, /v_duplicate\.status not in \('submitted', 'reviewed'\)/);
+  assert.match(migration, /ENTRY_CR_DUPLICATE_CANONICAL_REQUIRED/);
+  assert.match(migration, /from public\.resident_activation_queue/);
+  assert.match(migration, /status = 'superseded'/);
+  assert.match(migration, /status = 'invalidated'[\s\S]*Combined household registration/);
+  assert.match(migration, /set status = 'submitted'[\s\S]*reviewed_at = null[\s\S]*reviewed_by = null[\s\S]*patronato_confirmed_at = null/);
+  assert.match(migration, /set status = 'merged'/);
+  assert.match(migration, /'resolution_path', 'combine_household'/);
+  assert.match(migration, /'resulting_status', 'submitted'/);
+  assert.match(migration, /'status_label', 'Needs review'/);
+  assert.match(migration, /'residents_preserved'/);
+  assert.match(migration, /'residents_appended'/);
+  assert.match(migration, /ENTRY_CR_DUPLICATE_RESIDENT_LIMIT/);
 });
 
 

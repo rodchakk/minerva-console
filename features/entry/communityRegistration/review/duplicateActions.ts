@@ -10,7 +10,11 @@ export type RegistrationDuplicateActionResult =
       success: true;
       data: {
         canonicalUnitId?: string;
-        kind: "dismissed" | "merged" | "resolved_duplicate";
+        kind:
+          | "combine_household"
+          | "dismissed"
+          | "merged"
+          | "resolved_duplicate";
         message: string;
         mergedResidentCount?: number;
       };
@@ -61,6 +65,9 @@ function mapDuplicateError(error: { code?: string | null; message?: string | nul
   }
   if (/ENTRY_CR_DUPLICATE_INVALID_STATE/.test(message)) {
     return "The selected duplicate operation is not safe for the current registration lifecycle.";
+  }
+  if (/ENTRY_CR_DUPLICATE_CANONICAL_REQUIRED/.test(message)) {
+    return "Keep the higher-stage reviewed household record when combining these registrations.";
   }
   if (/ENTRY_CR_DUPLICATE_DIFFERENT_CAMPAIGN|ENTRY_CR_DUPLICATE_INVALID_PAIR/.test(message)) {
     return "These units cannot be merged because they do not belong to the same active registration campaign.";
@@ -197,6 +204,60 @@ export async function mergeCommunityRegistrationDuplicateUnits(
       kind: "merged",
       mergedResidentCount: Number(result.merged_resident_count ?? 0),
       message: "The household records were merged into one canonical unit.",
+    },
+  };
+}
+
+export async function combineCommunityRegistrationHouseholds(
+  _previousState: RegistrationDuplicateActionResult | null,
+  formData: FormData,
+): Promise<RegistrationDuplicateActionResult> {
+  const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+  if (previewResult) return previewResult;
+
+  const campaignId = formString(formData, "campaign_id");
+  const communityId = formString(formData, "community_id");
+  const canonicalUnitId = formString(formData, "canonical_unit_id");
+  const duplicateUnitId = formString(formData, "duplicate_unit_id");
+
+  if (
+    !campaignId ||
+    !communityId ||
+    !canonicalUnitId ||
+    !duplicateUnitId ||
+    canonicalUnitId === duplicateUnitId
+  ) {
+    return {
+      success: false,
+      error: "Choose two different units and select which household record should remain.",
+    };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "combine_community_registration_households_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_id: campaignId,
+      p_canonical_unit_id: canonicalUnitId,
+      p_duplicate_unit_id: duplicateUnitId,
+    },
+  );
+
+  if (error) return { success: false, error: mapDuplicateError(error) };
+
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+
+  revalidateRegistration(communityId);
+  return {
+    success: true,
+    data: {
+      canonicalUnitId,
+      kind: "combine_household",
+      mergedResidentCount: Number(result.combined_resident_count ?? 0),
+      message: "The registrations were combined into one household and returned to review.",
     },
   };
 }
