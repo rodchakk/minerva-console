@@ -69,7 +69,7 @@ async function resolvePreparedQueueId(input: {
     .eq("house_id", input.unitId)
     .eq("resident_name", input.fullName)
     .in("status", ["pending", "invited", "pin_generated", "failed"])
-    .order("updated_at", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(2);
 
   if (input.phone) {
