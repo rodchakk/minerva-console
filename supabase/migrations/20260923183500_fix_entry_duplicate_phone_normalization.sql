@@ -347,13 +347,15 @@ begin
          when source.normalized_full_name = v_resident.normalized_full_name
               and source.normalized_email is not null
               and source.normalized_email = v_resident.normalized_email
-              and source.normalized_phone is not null
-              and source.normalized_phone = v_resident.normalized_phone then 100
+              and public._cr_duplicate_normalize_phone_v1(source.phone) is not null
+              and public._cr_duplicate_normalize_phone_v1(source.phone)
+                  = public._cr_duplicate_normalize_phone_v1(v_resident.phone) then 100
          when source.normalized_full_name = v_resident.normalized_full_name then 90
          when source.normalized_email is not null
               and source.normalized_email = v_resident.normalized_email
-              and source.normalized_phone is not null
-              and source.normalized_phone = v_resident.normalized_phone then 80
+              and public._cr_duplicate_normalize_phone_v1(source.phone) is not null
+              and public._cr_duplicate_normalize_phone_v1(source.phone)
+                  = public._cr_duplicate_normalize_phone_v1(v_resident.phone) then 80
          else 60
        end desc,
        source.position,
