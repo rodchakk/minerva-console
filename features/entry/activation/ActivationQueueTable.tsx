@@ -18,6 +18,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type { ActivationQueueRow } from "@/features/entry/activation/actions";
 import { createActivatedUsers } from "@/features/entry/activation/createUserActions";
+import {
+  ResidentAccessModePicker,
+  type ResidentAccessMode,
+} from "@/features/entry/activation/ResidentAccessModePicker";
 import type {
   CreateActivatedUserItem,
   CreateActivatedUsersActionResult,
@@ -815,8 +819,8 @@ export function ActivationQueueTable({
     visibleRowIds.every((rowId) => selectedIds.includes(rowId));
   const selectedCount = selectedIds.length;
   const selectedRows = rows.filter((row) => selectedIds.includes(row.id));
-  const createUserTargetIds = selectedCount > 0 ? selectedIds : visibleRowIds;
-  const createUserTargetCount = createUserTargetIds.length;
+  const createUserTargetIds = selectedIds;
+  const createUserTargetCount = selectedCount;
   const activeRow =
     filteredRows.find((row) => row.id === activeRowId) ??
     rows.find((row) => row.id === activeRowId) ??
@@ -839,6 +843,7 @@ export function ActivationQueueTable({
     | "confirmingEmail"
     | "loadingEmail"
     | "emailResult"
+    | "choosingAccess"
     | "confirmingCreateUser"
     | "loadingCreateUser"
     | "createUserResult";
@@ -847,6 +852,7 @@ export function ActivationQueueTable({
   const [emailResult, setEmailResult] = useState<SendEmailInviteResult | null>(null);
   const [createUserResult, setCreateUserResult] =
     useState<CreateActivatedUsersActionResult | null>(null);
+  const [accessMode, setAccessMode] = useState<ResidentAccessMode>("email");
 
   function toggleAllVisibleRows() {
     setSelectedIds((current) => {
@@ -939,11 +945,34 @@ export function ActivationQueueTable({
   function runResidentCreateUser(rowId: string) {
     setSelectedIds([rowId]);
     setActiveRowId(rowId);
+    setAccessMode("email");
+    setPhase("choosingAccess");
+  }
+
+  function continueAccessChoice() {
+    if (accessMode === "email") {
+      setPhase("confirmingEmail");
+      return;
+    }
+
+    if (accessMode === "pin") {
+      setPhase("confirming");
+      return;
+    }
+
     setPhase("confirmingCreateUser");
   }
 
   const canGenerate = selectedCount > 0 && Boolean(communityId);
-  const canCreateUsers = createUserTargetCount > 0 && Boolean(communityId);
+  const canCreateUsers = selectedCount > 0 && Boolean(communityId);
+  const selectedEmailEligible =
+    selectedRows.length > 0 &&
+    selectedRows.every(
+      (row) => row.method === "email" && hasValue(row.email) && row.status !== "activated",
+    );
+  const selectedQuickCreateEligible =
+    selectedRows.length > 0 &&
+    selectedRows.every((row) => !["activated", "skipped"].includes(row.status));
 
   return (
     <>
@@ -1043,6 +1072,52 @@ export function ActivationQueueTable({
         <EmailResultModal result={emailResult} onClose={handleCloseEmailResult} />
       ) : null}
 
+      {phase === "choosingAccess" ? (
+        <Overlay>
+          <div className="flex w-full max-w-2xl flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">
+                ENTRY user creation
+              </p>
+              <h3 className="mt-1 text-xl font-semibold text-white">
+                Create ENTRY user{selectedCount !== 1 ? "s" : ""}
+              </h3>
+              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+                Choose how you want to create the selected resident{selectedCount !== 1 ? "s" : ""}.
+                This same standard is used across Minerva Console.
+              </p>
+            </div>
+            <ResidentAccessModePicker
+              value={accessMode}
+              onChange={setAccessMode}
+              disabled={{
+                email: selectedEmailEligible
+                  ? undefined
+                  : "Email invitation requires every selected resident to have an email-based queue record and not already be activated.",
+                quick: selectedQuickCreateEligible
+                  ? undefined
+                  : "Quick create is not available for already activated or skipped rows.",
+              }}
+            />
+            <div className="flex flex-wrap justify-end gap-3">
+              <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={continueAccessChoice}
+                disabled={
+                  (accessMode === "email" && !selectedEmailEligible) ||
+                  (accessMode === "quick" && !selectedQuickCreateEligible)
+                }
+              >
+                Continue
+              </Button>
+            </div>
+          </div>
+        </Overlay>
+      ) : null}
+
       {phase === "confirmingCreateUser" ? (
         <Overlay>
           <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
@@ -1061,11 +1136,6 @@ export function ActivationQueueTable({
               Use this when you need to finish activation from the console instead
               of waiting for the resident to complete it.
             </p>
-            {selectedCount === 0 ? (
-              <p className="text-sm leading-6 text-amber-200">
-                No rows are selected, so this will use all visible residents.
-              </p>
-            ) : null}
             <div className="flex flex-wrap justify-end gap-3">
               <Button type="button" variant="secondary" onClick={() => setPhase("idle")}>
                 Cancel
@@ -1128,7 +1198,10 @@ export function ActivationQueueTable({
               type="button"
               variant="secondary"
               disabled={!canCreateUsers || phase !== "idle"}
-              onClick={() => setPhase("confirmingCreateUser")}
+              onClick={() => {
+                setAccessMode("email");
+                setPhase("choosingAccess");
+              }}
               className="gap-2"
             >
               <UserPlus className="size-4" aria-hidden />

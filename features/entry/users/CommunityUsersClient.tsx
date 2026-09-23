@@ -25,6 +25,14 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
+  prepareConsoleResidentAccess,
+  type PrepareConsoleResidentAccessResult,
+} from "@/features/entry/activation/consoleResidentAccessActions";
+import {
+  ResidentAccessModePicker,
+  type ResidentAccessMode,
+} from "@/features/entry/activation/ResidentAccessModePicker";
+import {
   setCommunityUserActiveStatusAction,
   updateCommunityUserAction,
 } from "@/features/entry/users/actions";
@@ -63,6 +71,7 @@ type UserDraft = {
 };
 
 type CreateDraft = {
+  accessMode: ResidentAccessMode;
   email: string;
   fullName: string;
   houseId: string;
@@ -75,6 +84,7 @@ type CreateDraft = {
 const DEFAULT_VISIBLE_COUNT = 25;
 
 const EMPTY_CREATE_DRAFT: CreateDraft = {
+  accessMode: "email",
   email: "",
   fullName: "",
   houseId: "",
@@ -261,6 +271,7 @@ export function CommunityUsersClient({
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState<{ login: string; password: string } | null>(null);
+  const [preparedAccess, setPreparedAccess] = useState<PrepareConsoleResidentAccessResult | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedPassword, setCopiedPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -315,6 +326,7 @@ export function CommunityUsersClient({
     setShowPassword(false);
     setShowConfirmPassword(false);
     setCreatedCredentials(null);
+    setPreparedAccess(null);
     setCopied(false);
     setCopiedPassword(false);
     setError(null);
@@ -324,6 +336,7 @@ export function CommunityUsersClient({
     resetFeedback();
     setCreateDraft(EMPTY_CREATE_DRAFT);
     setCreatedCredentials(null);
+    setPreparedAccess(null);
     setShowCreatePassword(false);
     setCopiedPassword(false);
     setModal("create");
@@ -348,21 +361,31 @@ export function CommunityUsersClient({
 
   function submitCreate() {
     setError(null);
+    setMessage(null);
+    setPreparedAccess(null);
 
     if (!createDraft.fullName.trim()) {
       setError("Full name is required.");
       return;
     }
 
-    if (createDraft.password.trim().length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
-      setError(
-        `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
-      );
-      return;
-    }
+    const residentUsesActivationFlow =
+      createDraft.role === "RESIDENT" && createDraft.accessMode !== "quick";
 
     if ((createDraft.role === "RESIDENT" || createDraft.role === "ADMIN") && !createDraft.houseId) {
       setError("Select a unit for this user.");
+      return;
+    }
+
+    if (residentUsesActivationFlow && createDraft.accessMode === "email" && !createDraft.email.trim()) {
+      setError("Email is required for an email invitation.");
+      return;
+    }
+
+    if (!residentUsesActivationFlow && createDraft.password.trim().length < ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH) {
+      setError(
+        `Password must be at least ${ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH} characters.`,
+      );
       return;
     }
 
@@ -372,6 +395,33 @@ export function CommunityUsersClient({
     }
 
     startTransition(async () => {
+      if (residentUsesActivationFlow) {
+        const result = await prepareConsoleResidentAccess({
+          communityId: community.id,
+          unitId: createDraft.houseId,
+          fullName: createDraft.fullName,
+          email: createDraft.email,
+          phone: createDraft.phone,
+          mode: createDraft.accessMode === "email" ? "email" : "pin",
+        });
+
+        if (!result.success) {
+          setError(result.error ?? "Could not prepare this resident.");
+          return;
+        }
+
+        setPreparedAccess(result);
+        setMessage(
+          result.mode === "email"
+            ? result.emailSent
+              ? "Invitation sent successfully."
+              : "Resident prepared for activation."
+            : "Activation PIN generated.",
+        );
+        router.refresh();
+        return;
+      }
+
       const result = await createCommunityUserAction({
         communityId: community.id,
         email: createDraft.email,
@@ -510,6 +560,13 @@ export function CommunityUsersClient({
     await navigator.clipboard.writeText(
       `Login: ${createdCredentials.login}\nPassword: ${createdCredentials.password}`,
     );
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function copyPreparedPin() {
+    if (!preparedAccess?.pin) return;
+    await navigator.clipboard.writeText(preparedAccess.pin);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   }
@@ -764,10 +821,10 @@ export function CommunityUsersClient({
             <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">
-                  {modal === "create" ? "New community user" : "User management"}
+                  {modal === "create" ? "ENTRY user creation" : "User management"}
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-white">
-                  {modal === "create" ? "Create user" : selectedUser?.fullName}
+                  {modal === "create" ? "Create ENTRY user" : selectedUser?.fullName}
                 </h2>
                 {modal === "manage" && selectedUser ? (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -798,7 +855,48 @@ export function CommunityUsersClient({
             ) : null}
 
             {modal === "create" ? (
-              createdCredentials ? (
+              preparedAccess?.success ? (
+                <div className="mt-5 space-y-4">
+                  <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/8 p-4">
+                    <p className="text-sm font-semibold text-white">
+                      {preparedAccess.mode === "email"
+                        ? preparedAccess.emailSent
+                          ? "Invitation sent"
+                          : "Resident prepared"
+                        : "Activation PIN ready"}
+                    </p>
+                    <p className="mt-1 text-xs text-[var(--text-muted)]">
+                      {preparedAccess.residentName} · {preparedAccess.unitLabel}
+                    </p>
+                    {preparedAccess.mode === "email" ? (
+                      <div className="mt-3 rounded-md border border-white/8 bg-black/15 p-3">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Email</p>
+                        <p className="mt-1 text-sm font-semibold text-white">{preparedAccess.email}</p>
+                        <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                          This resident is now tracked in Activation Queue and completes the normal ENTRY activation flow.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="mt-3 rounded-md border border-violet-400/20 bg-black/15 p-3 text-center">
+                        <p className="text-[10px] uppercase tracking-[0.16em] text-[var(--text-muted)]">Activation PIN</p>
+                        <p className="mt-2 font-mono text-2xl font-bold tracking-[0.24em] text-violet-100">{preparedAccess.pin}</p>
+                        <Button variant="secondary" onClick={copyPreparedPin} className="mt-3">
+                          {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                          {copied ? "Copied" : "Copy PIN"}
+                        </Button>
+                      </div>
+                    )}
+                    {preparedAccess.warning ? (
+                      <div className="mt-3 rounded-md border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+                        {preparedAccess.warning}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={closeModal}>Done</Button>
+                  </div>
+                </div>
+              ) : createdCredentials ? (
                 <div className="mt-5 space-y-4">
                   <div className="rounded-lg border border-violet-400/20 bg-violet-500/8 p-4">
                     <p className="text-sm font-semibold text-white">Credentials</p>
@@ -847,6 +945,7 @@ export function CommunityUsersClient({
                           ...current,
                           email: nextRole === "GUARD" ? "" : current.email,
                           houseId: nextRole === "GUARD" ? "" : current.houseId,
+                          accessMode: nextRole === "RESIDENT" ? current.accessMode : "quick",
                           role: nextRole,
                           username: nextRole === "GUARD" ? current.username : "",
                         }));
@@ -858,6 +957,23 @@ export function CommunityUsersClient({
                       <option value="GUARD">Guard</option>
                     </select>
                   </label>
+                  <div className="sm:col-span-2">
+                    <FieldLabel>Creation method</FieldLabel>
+                    <ResidentAccessModePicker
+                      value={createDraft.role === "RESIDENT" ? createDraft.accessMode : "quick"}
+                      onChange={(accessMode) =>
+                        setCreateDraft((current) => ({ ...current, accessMode }))
+                      }
+                      disabled={
+                        createDraft.role === "RESIDENT"
+                          ? undefined
+                          : {
+                              email: "Email invitation is currently available for resident onboarding only.",
+                              pin: "Activation PIN is currently available for resident onboarding only.",
+                            }
+                      }
+                    />
+                  </div>
                   {createDraft.role === "GUARD" ? (
                     <label>
                       <FieldLabel>Username *</FieldLabel>
@@ -872,9 +988,13 @@ export function CommunityUsersClient({
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                       />
                     </label>
-                  ) : (
+                  ) : createDraft.role === "RESIDENT" && createDraft.accessMode === "pin" ? null : (
                     <label>
-                      <FieldLabel>Email (optional)</FieldLabel>
+                      <FieldLabel>
+                        {createDraft.role === "RESIDENT" && createDraft.accessMode === "email"
+                          ? "Email *"
+                          : "Email (optional)"}
+                      </FieldLabel>
                       <input
                         id="entry-community-user-contact-email"
                         name="entry_community_user_contact_email"
@@ -882,7 +1002,11 @@ export function CommunityUsersClient({
                         type="email"
                         value={createDraft.email}
                         onChange={(event) => setCreateDraft((current) => ({ ...current, email: event.target.value }))}
-                        placeholder="Leave blank for username login"
+                        placeholder={
+                          createDraft.role === "RESIDENT" && createDraft.accessMode === "email"
+                            ? "resident@example.com"
+                            : "Leave blank for username login"
+                        }
                         className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
                       />
                     </label>
@@ -916,6 +1040,7 @@ export function CommunityUsersClient({
                       </select>
                     </label>
                   ) : null}
+                  {createDraft.role !== "RESIDENT" || createDraft.accessMode === "quick" ? (
                   <label>
                     <FieldLabel>Temporary password *</FieldLabel>
                     <div className="flex overflow-hidden rounded-md border border-white/10 bg-[var(--surface-strong)] focus-within:border-violet-400/50">
@@ -961,9 +1086,18 @@ export function CommunityUsersClient({
                       </button>
                     </div>
                   </label>
+                  ) : null}
                   <div className="sm:col-span-2 flex justify-end gap-2 border-t border-white/8 pt-4">
                     <Button variant="secondary" onClick={closeModal} disabled={isPending}>Cancel</Button>
-                    <Button onClick={submitCreate} disabled={isPending}>{isPending ? "Creating..." : "Create user"}</Button>
+                    <Button onClick={submitCreate} disabled={isPending}>
+                      {isPending
+                        ? "Working..."
+                        : createDraft.role === "RESIDENT" && createDraft.accessMode === "email"
+                          ? "Send invitation"
+                          : createDraft.role === "RESIDENT" && createDraft.accessMode === "pin"
+                            ? "Generate PIN"
+                            : "Create active user"}
+                    </Button>
                   </div>
                 </div>
               )
