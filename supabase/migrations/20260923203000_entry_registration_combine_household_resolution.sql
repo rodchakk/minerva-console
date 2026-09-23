@@ -11,6 +11,13 @@ alter table public.community_registration_duplicate_resolutions
 alter table public.community_registration_duplicate_resolutions
   drop constraint if exists community_registration_duplicate_resolutions_resolution_type_check;
 
+-- The original schema migration used an auto-generated constraint name that
+-- PostgreSQL truncated differently from the explicit replacement name above.
+-- Drop that legacy name too so combine_household is not rejected by an older
+-- three-value CHECK constraint.
+alter table public.community_registration_duplicate_resolutions
+  drop constraint if exists community_registration_duplicate_resoluti_resolution_type_check;
+
 alter table public.community_registration_duplicate_resolutions
   add constraint community_registration_duplicate_resolutions_resolution_type_check
   check (resolution_type in (
