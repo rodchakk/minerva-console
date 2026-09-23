@@ -10,12 +10,15 @@ import {
   TriangleAlert,
   X,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { useActionState, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import {
   archiveCommunityRegistrationDuplicate,
+  combineCommunityRegistrationHouseholds,
+  dismissCommunityRegistrationDuplicate,
   mergeCommunityRegistrationDuplicateUnits,
   type RegistrationDuplicateActionResult,
 } from "@/features/entry/communityRegistration/review/duplicateActions";
@@ -28,6 +31,10 @@ import type {
 
 const initialState: RegistrationDuplicateActionResult | null = null;
 
+type ResolutionPath =
+  | "merge_registration"
+  | "combine_household"
+  | "keep_separate";
 type ResidentDecision = "merge" | "keep_separate";
 type FieldConflictChoice = "canonical" | "duplicate";
 type ResidentConflictChoices = {
@@ -208,6 +215,18 @@ function statusTone(status: string): "default" | "success" | "warning" | "info" 
   return "default";
 }
 
+function lifecycleRank(unit: RegistrationDuplicateUnit | null) {
+  const status = unit?.status.trim().toLowerCase();
+  if (status === "reviewed") return 2;
+  if (status === "submitted") return 1;
+  return 0;
+}
+
+function isPreOperationalCombineUnit(unit: RegistrationDuplicateUnit | null) {
+  const status = unit?.status.trim().toLowerCase();
+  return Boolean(unit && (status === "submitted" || status === "reviewed"));
+}
+
 function unitMatchForResident(
   candidate: RegistrationDuplicateCandidate,
   resident: RegistrationDuplicateResident,
@@ -215,6 +234,69 @@ function unitMatchForResident(
   return candidate.residentMatches.find(
     (match) =>
       match.leftResidentId === resident.id || match.rightResidentId === resident.id,
+  );
+}
+
+function ResolutionPathCard({
+  badge,
+  description,
+  disabled,
+  icon,
+  label,
+  name,
+  onSelect,
+  reason,
+  selected,
+}: {
+  badge?: string;
+  description: string;
+  disabled?: boolean;
+  icon: ReactNode;
+  label: string;
+  name: ResolutionPath;
+  onSelect: (path: ResolutionPath) => void;
+  reason?: string;
+  selected: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={() => onSelect(name)}
+      className={`min-h-36 rounded-xl border p-4 text-left transition ${
+        selected
+          ? "border-violet-400/60 bg-violet-500/[0.08] ring-1 ring-inset ring-violet-400/15"
+          : "border-[var(--border)] bg-[var(--surface-strong)] hover:border-white/20"
+      } ${disabled ? "cursor-not-allowed opacity-55" : ""}`}
+    >
+      <span className="flex items-start justify-between gap-3">
+        <span className="flex min-w-0 items-start gap-3">
+          <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-white/[0.06] text-slate-100 ring-1 ring-inset ring-white/10">
+            {icon}
+          </span>
+          <span className="min-w-0">
+            <span className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-semibold text-white">{label}</span>
+              {badge ? <Badge tone="info">{badge}</Badge> : null}
+            </span>
+            <span className="mt-2 block text-xs leading-5 text-[var(--text-muted)]">
+              {description}
+            </span>
+          </span>
+        </span>
+        <span
+          className={`mt-1 size-4 shrink-0 rounded-full border ${
+            selected ? "border-violet-300 bg-violet-400" : "border-white/30"
+          }`}
+          aria-hidden
+        />
+      </span>
+      {disabled && reason ? (
+        <span className="mt-3 block rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-3 py-2 text-xs leading-5 text-amber-50/75">
+          {reason}
+        </span>
+      ) : null}
+    </button>
   );
 }
 
@@ -360,6 +442,91 @@ function ResidentResultPreview({ result }: { result: ResolvedResident }) {
   );
 }
 
+function CombineHouseholdPreview({
+  archivedUnit,
+  keepUnit,
+  residents,
+}: {
+  archivedUnit: RegistrationDuplicateUnit;
+  keepUnit: RegistrationDuplicateUnit;
+  residents: RegistrationDuplicateResident[];
+}) {
+  return (
+    <section className="mt-5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
+        Same household resolution
+      </p>
+      <h4 className="mt-1 text-base font-semibold text-white">
+        Combine both registrations into one household
+      </h4>
+      <p className="mt-2 text-sm leading-6 text-slate-300">
+        The higher-stage registration will remain as the household record, all
+        unique residents will be preserved, and the combined household will return
+        to review so the full resident list can be validated together.
+      </p>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div>
+          <p className="text-[11px] text-[var(--text-muted)]">Keep household record</p>
+          <p className="mt-1 truncate text-sm font-semibold text-white">
+            {keepUnit.label}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] text-[var(--text-muted)]">Archived registration</p>
+          <p className="mt-1 truncate text-sm font-semibold text-white">
+            {archivedUnit.label}
+          </p>
+        </div>
+        <div>
+          <p className="text-[11px] text-[var(--text-muted)]">Residents after combine</p>
+          <p className="mt-1 text-sm font-semibold text-white">{residents.length}</p>
+        </div>
+        <div>
+          <p className="text-[11px] text-[var(--text-muted)]">Status after combine</p>
+          <p className="mt-1 text-sm font-semibold text-white">Needs review</p>
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg border border-white/[0.07] bg-black/10 px-3 py-3">
+        <p className="text-sm font-semibold text-white">
+          Residents in combined household
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          {residents.map((resident) => (
+            <div
+              key={resident.id}
+              className="rounded-lg border border-white/[0.07] bg-black/10 px-3 py-2.5"
+            >
+              <p className="truncate text-sm font-semibold text-white">
+                {resident.fullName}
+              </p>
+              <div className="mt-1 flex flex-col gap-1 text-[11px] text-[var(--text-muted)]">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <Mail className="size-3 shrink-0" aria-hidden />
+                  <span className="truncate">{resident.email ?? "Email missing"}</span>
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Phone className="size-3 shrink-0" aria-hidden />
+                  {resident.phone ?? "Phone missing"}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.06] px-3 py-3">
+        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
+        <p className="text-xs leading-5 text-emerald-100">
+          No resident identities will be merged automatically. Both residents will
+          remain separate inside one household.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export function DuplicateReviewDialog({
   campaignId,
   candidate,
@@ -388,6 +555,22 @@ export function DuplicateReviewDialog({
   const unitBOperational = isOperational(unitB);
   const unitASubmitted = unitA?.status.trim().toLowerCase() === "submitted";
   const unitBSubmitted = unitB?.status.trim().toLowerCase() === "submitted";
+  const unitAPreOperationalCombine = isPreOperationalCombineUnit(unitA);
+  const unitBPreOperationalCombine = isPreOperationalCombineUnit(unitB);
+  const unitALifecycleRank = lifecycleRank(unitA);
+  const unitBLifecycleRank = lifecycleRank(unitB);
+  const combineForcedCanonicalId =
+    unitALifecycleRank > unitBLifecycleRank
+      ? candidate.unitAId
+      : unitBLifecycleRank > unitALifecycleRank
+        ? candidate.unitBId
+        : null;
+  const combineUnavailableReason =
+    unitAOperational || unitBOperational
+      ? "Unavailable because this household has already reached Activation."
+      : !unitAPreOperationalCombine || !unitBPreOperationalCombine
+        ? "Unavailable because Combine household is limited to Submitted and Reviewed registrations."
+        : null;
   const resolveMode =
     Boolean(unitA && unitB) &&
     ((unitAOperational && unitBSubmitted && !unitBOperational) ||
@@ -411,8 +594,14 @@ export function DuplicateReviewDialog({
       ? selectedUnitId
       : candidate.unitAId);
 
+  const [resolutionPath, setResolutionPath] =
+    useState<ResolutionPath>("merge_registration");
   const [canonicalUnitId, setCanonicalUnitId] = useState(defaultCanonical);
-  const effectiveCanonicalUnitId = forcedCanonicalId ?? canonicalUnitId;
+  const effectiveForcedCanonicalId =
+    resolutionPath === "combine_household"
+      ? combineForcedCanonicalId
+      : forcedCanonicalId;
+  const effectiveCanonicalUnitId = effectiveForcedCanonicalId ?? canonicalUnitId;
   const [decisions, setDecisions] = useState<Record<string, ResidentDecision>>({});
   const [conflictChoices, setConflictChoices] = useState<
     Record<string, ResidentConflictChoices>
@@ -424,6 +613,14 @@ export function DuplicateReviewDialog({
   );
   const [archiveState, archiveAction, archivePending] = useActionState(
     archiveCommunityRegistrationDuplicate,
+    initialState,
+  );
+  const [combineState, combineAction, combinePending] = useActionState(
+    combineCommunityRegistrationHouseholds,
+    initialState,
+  );
+  const [dismissState, dismissAction, dismissPending] = useActionState(
+    dismissCommunityRegistrationDuplicate,
     initialState,
   );
 
@@ -641,13 +838,36 @@ export function DuplicateReviewDialog({
 
   const canMerge =
     safeMergeMode && unresolvedCount === 0 && conflictCount === 0;
+  const canCombine =
+    resolutionPath === "combine_household" &&
+    !combineUnavailableReason &&
+    Boolean(canonicalUnit) &&
+    Boolean(duplicateUnit);
   const canArchive =
     resolveMode &&
     Boolean(canonicalUnit) &&
     canonicalUnit?.id === forcedCanonicalId &&
     (!uniqueDataItems.length || uniqueDataAcknowledged);
-  const state = resolveMode ? archiveState : mergeState;
-  const pending = resolveMode ? archivePending : mergePending;
+  const state =
+    resolutionPath === "combine_household"
+      ? combineState
+      : resolutionPath === "keep_separate"
+        ? dismissState
+        : resolveMode
+          ? archiveState
+          : mergeState;
+  const pending =
+    resolutionPath === "combine_household"
+      ? combinePending
+      : resolutionPath === "keep_separate"
+        ? dismissPending
+        : resolveMode
+          ? archivePending
+          : mergePending;
+  const combineResidents = [
+    ...(canonicalUnit?.residents ?? []),
+    ...(duplicateUnit?.residents ?? []),
+  ];
 
   useEffect(() => {
     if (!state?.success) return;
@@ -666,7 +886,7 @@ export function DuplicateReviewDialog({
   if (!unitA || !unitB || !canonicalUnit || !duplicateUnit) return null;
 
   const chooseCanonical = (unitId: string) => {
-    if (forcedCanonicalId && unitId !== forcedCanonicalId) return;
+    if (effectiveForcedCanonicalId && unitId !== effectiveForcedCanonicalId) return;
     setCanonicalUnitId(unitId);
   };
 
@@ -689,9 +909,9 @@ export function DuplicateReviewDialog({
               </div>
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--text-muted)]">
-              Choose the registration that should survive. ENTRY will merge only
-              safe pre-activation records; advanced operational identities are
-              preserved and the lower-stage duplicate is archived instead.
+              ENTRY detected a possible duplicate. Merge registration remains
+              the default; Combine household is available when the records are the
+              same home with different residents.
             </p>
           </div>
           <button
@@ -716,22 +936,18 @@ export function DuplicateReviewDialog({
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Resolution path
+                Default path
               </p>
               <p className="mt-1 text-sm font-semibold text-white">
-                {manualIdentityReview
-                  ? "Manual identity review"
-                  : resolveMode
-                    ? "Archive duplicate"
-                    : "Merge registration"}
+                Merge registration
               </p>
             </div>
             <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3">
               <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                Resident matches
+                Alternative
               </p>
               <p className="mt-1 text-sm font-semibold text-white">
-                {candidate.residentMatches.filter((item) => item.kind === "same_resident").length}
+                Combine household
               </p>
             </div>
           </div>
@@ -751,10 +967,83 @@ export function DuplicateReviewDialog({
             />
           </div>
 
-          {resolveMode ? (
+          <section className="mt-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-white">
+                Choose resolution path
+              </p>
+              <p className="text-xs text-[var(--text-muted)]">
+                Accidental duplicate remains the default interpretation.
+              </p>
+            </div>
+            <div className="mt-3 grid gap-3 lg:grid-cols-3">
+              <ResolutionPathCard
+                badge="Default"
+                description="Use when the records are duplicates of the same household registration."
+                icon={<GitMerge className="size-4" aria-hidden />}
+                label="Merge registration"
+                name="merge_registration"
+                onSelect={setResolutionPath}
+                selected={resolutionPath === "merge_registration"}
+              />
+              <ResolutionPathCard
+                description="Use when both registrations belong to the same home, but the residents are different and should live under one household."
+                disabled={Boolean(combineUnavailableReason)}
+                icon={<Home className="size-4" aria-hidden />}
+                label="Combine household"
+                name="combine_household"
+                onSelect={setResolutionPath}
+                reason={combineUnavailableReason ?? undefined}
+                selected={resolutionPath === "combine_household"}
+              />
+              <ResolutionPathCard
+                description="Use when these records should remain independent."
+                icon={<CheckCircle2 className="size-4" aria-hidden />}
+                label="Keep separate"
+                name="keep_separate"
+                onSelect={setResolutionPath}
+                selected={resolutionPath === "keep_separate"}
+              />
+            </div>
+          </section>
+
+          {resolutionPath === "combine_household" ? (
+            combineUnavailableReason ? (
+              <div className="mt-5 flex items-start gap-3 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-4 py-4">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
+                <div>
+                  <p className="text-sm font-semibold text-amber-100">
+                    Combine household unavailable
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-amber-50/70">
+                    {combineUnavailableReason}
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <CombineHouseholdPreview
+                archivedUnit={duplicateUnit}
+                keepUnit={canonicalUnit}
+                residents={combineResidents}
+              />
+            )
+          ) : resolutionPath === "keep_separate" ? (
+            <section className="mt-5 rounded-xl border border-emerald-400/20 bg-emerald-500/[0.06] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                Keep separate
+              </p>
+              <h4 className="mt-1 text-base font-semibold text-white">
+                Leave both registrations independent
+              </h4>
+              <p className="mt-2 text-sm leading-6 text-emerald-50/75">
+                This reuses the existing not-duplicate resolution. No residents,
+                household records, or review states will be changed.
+              </p>
+            </section>
+          ) : resolveMode ? (
             <section className="mt-5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                Safe resolution
+                Archive duplicate
               </p>
               <h4 className="mt-1 text-base font-semibold text-white">
                 Keep {canonicalUnit.label}
@@ -1120,9 +1409,10 @@ export function DuplicateReviewDialog({
                   Manual identity review required
                 </p>
                 <p className="mt-1 text-xs leading-5 text-amber-50/70">
-                  Both registrations have advanced beyond a safe staging merge, or this
-                  lifecycle combination cannot be resolved automatically. ENTRY will not
-                  rewrite an operational identity.
+                  {manualIdentityReview
+                    ? "Both registrations have advanced beyond a safe staging merge."
+                    : "This lifecycle combination cannot be resolved automatically."}{" "}
+                  ENTRY will not rewrite an operational identity.
                 </p>
               </div>
             </div>
@@ -1149,7 +1439,62 @@ export function DuplicateReviewDialog({
           ) : null}
         </div>
 
-        {resolveMode ? (
+        {resolutionPath === "combine_household" ? (
+          <form
+            action={combineAction}
+            className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                Keep household record: {canonicalUnit.label}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {duplicateUnit.label} will be archived, and all residents will return
+                to review in one household.
+              </p>
+            </div>
+            <input type="hidden" name="campaign_id" value={campaignId} />
+            <input type="hidden" name="community_id" value={communityId} />
+            <input type="hidden" name="canonical_unit_id" value={canonicalUnit.id} />
+            <input type="hidden" name="duplicate_unit_id" value={duplicateUnit.id} />
+            <div className="flex shrink-0 gap-2">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" className="gap-2" disabled={!canCombine || pending}>
+                <Home className="size-4" aria-hidden />
+                {pending ? "Combining..." : "Combine household"}
+              </Button>
+            </div>
+          </form>
+        ) : resolutionPath === "keep_separate" ? (
+          <form
+            action={dismissAction}
+            className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                Keep these records separate
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                This pair will no longer block review as an unresolved duplicate.
+              </p>
+            </div>
+            <input type="hidden" name="campaign_id" value={campaignId} />
+            <input type="hidden" name="community_id" value={communityId} />
+            <input type="hidden" name="left_unit_id" value={candidate.unitAId} />
+            <input type="hidden" name="right_unit_id" value={candidate.unitBId} />
+            <div className="flex shrink-0 gap-2">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" className="gap-2" disabled={pending}>
+                <CheckCircle2 className="size-4" aria-hidden />
+                {pending ? "Saving..." : "Keep separate"}
+              </Button>
+            </div>
+          </form>
+        ) : resolveMode ? (
           <form
             action={archiveAction}
             className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
