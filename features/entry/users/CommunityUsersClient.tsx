@@ -821,10 +821,10 @@ export function CommunityUsersClient({
             <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-4">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">
-                  {modal === "create" ? "New community user" : "User management"}
+                  {modal === "create" ? "ENTRY user creation" : "User management"}
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-white">
-                  {modal === "create" ? "Create user" : selectedUser?.fullName}
+                  {modal === "create" ? "Create ENTRY user" : selectedUser?.fullName}
                 </h2>
                 {modal === "manage" && selectedUser ? (
                   <div className="mt-2 flex flex-wrap gap-2">
@@ -958,7 +958,7 @@ export function CommunityUsersClient({
                     </select>
                   </label>
                   <div className="sm:col-span-2">
-                    <FieldLabel>Access method</FieldLabel>
+                    <FieldLabel>Creation method</FieldLabel>
                     <ResidentAccessModePicker
                       value={createDraft.role === "RESIDENT" ? createDraft.accessMode : "quick"}
                       onChange={(accessMode) =>
