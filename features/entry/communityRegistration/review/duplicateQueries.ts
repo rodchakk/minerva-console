@@ -51,7 +51,7 @@ export type RegistrationDuplicateUnit = {
   reference: string | null;
   residents: RegistrationDuplicateResident[];
   resolutionMetadata: Record<string, unknown> | null;
-  resolutionType: "merged" | "resolved_duplicate" | null;
+  resolutionType: "combine_household" | "merged" | "resolved_duplicate" | null;
   resolvedAt: string | null;
   resolvedBy: string | null;
   reviewedAt: string | null;
@@ -528,7 +528,11 @@ export async function getCommunityRegistrationDuplicateReviewData(
   const resolvedUnitIds = Array.from(
     new Set(
       resolutions
-        .filter((row) => row.resolution_type === "resolved_duplicate")
+        .filter((row) =>
+          ["combine_household", "resolved_duplicate"].includes(
+            clean(row.resolution_type),
+          ),
+        )
         .map((row) => clean(row.duplicate_unit_id))
         .filter(Boolean),
     ),
@@ -541,10 +545,20 @@ export async function getCommunityRegistrationDuplicateReviewData(
       .map((row) => [clean(row.duplicate_unit_id), row] as const)
       .filter(([unitId]) => Boolean(unitId)),
   );
+  const resolutionByCombinedUnitId = new Map(
+    resolutions
+      .filter((row) =>
+        ["combine_household", "resolved_duplicate", "merged"].includes(
+          clean(row.resolution_type),
+        ),
+      )
+      .map((row) => [clean(row.duplicate_unit_id), row] as const)
+      .filter(([unitId]) => Boolean(unitId)),
+  );
   const hiddenPairs = new Set(
     resolutions
       .filter((row) =>
-        ["merged", "resolved_duplicate", "dismissed"].includes(
+        ["combine_household", "merged", "resolved_duplicate", "dismissed"].includes(
           clean(row.resolution_type),
         ),
       )
@@ -588,9 +602,12 @@ export async function getCommunityRegistrationDuplicateReviewData(
       const row = rawUnit as Record<string, unknown>;
       const id = clean(row.id);
       if (!id || mergedUnitIds.includes(id)) return null;
-      const resolution = resolutionByDuplicateUnitId.get(id);
+      const resolution =
+        resolutionByCombinedUnitId.get(id) ?? resolutionByDuplicateUnitId.get(id);
       const resolutionType =
-        resolution?.resolution_type === "resolved_duplicate"
+        resolution?.resolution_type === "combine_household"
+          ? "combine_household"
+          : resolution?.resolution_type === "resolved_duplicate"
           ? "resolved_duplicate"
           : resolution?.resolution_type === "merged"
             ? "merged"
@@ -634,7 +651,9 @@ export async function getCommunityRegistrationDuplicateReviewData(
       (unit) =>
         unit.status !== "unregistered" &&
         unit.residents.length > 0 &&
-        (unit.status !== "merged" || unit.resolutionType === "resolved_duplicate"),
+        (unit.status !== "merged" ||
+          unit.resolutionType === "combine_household" ||
+          unit.resolutionType === "resolved_duplicate"),
     );
 
   const candidates: RegistrationDuplicateCandidate[] = [];
