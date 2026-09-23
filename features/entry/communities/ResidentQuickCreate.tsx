@@ -228,10 +228,10 @@ export function ResidentQuickCreate({
                 </span>
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-200">
-                    Resident access
+                    ENTRY user creation
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-white">
-                    Add resident
+                    Create ENTRY user
                   </h2>
                 </div>
               </div>
@@ -328,8 +328,8 @@ export function ResidentQuickCreate({
             ) : (
               <div className="mt-5 grid gap-5">
                 <div>
-                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    How should this resident get access?
+                  <p className="mb-2 text-sm leading-6 text-[var(--text-muted)]">
+                    Choose how you want to create this resident.
                   </p>
                   <ResidentAccessModePicker value={accessMode} onChange={setMode} />
                 </div>
