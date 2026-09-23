@@ -402,7 +402,7 @@ export function CommunityUsersClient({
           fullName: createDraft.fullName,
           email: createDraft.email,
           phone: createDraft.phone,
-          mode: createDraft.accessMode,
+          mode: createDraft.accessMode === "email" ? "email" : "pin",
         });
 
         if (!result.success) {
