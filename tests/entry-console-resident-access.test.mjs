@@ -13,9 +13,10 @@ test("Console resident creation exposes one shared access-method vocabulary", ()
   const picker = read("features/entry/activation/ResidentAccessModePicker.tsx");
 
   assert.match(picker, /ResidentAccessMode = "email" \| "pin" \| "quick"/);
+  assert.match(picker, /Quick create active user/);
+  assert.match(picker, /Send activation invite/);
   assert.match(picker, /Email invitation/);
   assert.match(picker, /Activation PIN/);
-  assert.match(picker, /Quick create/);
   assert.match(picker, /Recommended/);
 });
 
