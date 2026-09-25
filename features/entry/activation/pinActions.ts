@@ -55,7 +55,7 @@ export async function generateActivationPins(input: {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.rpc(
-      "generate_resident_activation_pins_v1",
+      "generate_resident_activation_pins_locked_v1",
       {
         p_community_id: communityId,
         p_queue_ids: queueIds,

@@ -5,6 +5,7 @@ import {
   Clock3,
   KeyRound,
   Mail,
+  Pencil,
   Search,
   Send,
   TriangleAlert,
@@ -13,6 +14,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -33,6 +35,10 @@ import type {
 } from "@/features/entry/activation/pinActions";
 import { sendActivationEmails } from "@/features/entry/activation/emailActions";
 import type { SendEmailInviteResult } from "@/features/entry/activation/emailActions";
+import { updateActivationEmail } from "@/features/entry/activation/emailEditActions";
+import type { UpdateActivationEmailResult } from "@/features/entry/activation/emailEditActions";
+import { updateActivationPhone } from "@/features/entry/activation/phoneEditActions";
+import type { UpdateActivationPhoneResult } from "@/features/entry/activation/phoneEditActions";
 
 type ActivationQueueTableProps = {
   communityId: string;
@@ -171,6 +177,291 @@ function Overlay({ children }: { children: React.ReactNode }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
       {children}
     </div>
+  );
+}
+
+function EditActivationEmailModal({
+  communityId,
+  row,
+  onClose,
+}: {
+  communityId: string;
+  row: ActivationQueueRow;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [email, setEmail] = useState(row.email === "—" ? "" : row.email);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<UpdateActivationEmailResult | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!email.trim() || saving) {
+      return;
+    }
+
+    setSaving(true);
+    const actionResult = await updateActivationEmail({
+      communityId,
+      queueId: row.id,
+      email,
+    });
+    setResult(actionResult);
+    setSaving(false);
+
+    if (actionResult.success) {
+      router.refresh();
+    }
+  }
+
+  if (result?.success) {
+    return (
+      <Overlay>
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-emerald-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+              <CheckCircle2 className="size-5" aria-hidden />
+            </span>
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                {result.data.changed ? "Email updated" : "Email unchanged"}
+              </h3>
+              <p className="mt-1 break-all text-sm text-slate-200">
+                {result.data.email}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm leading-6 text-[var(--text-muted)]">
+            {result.data.changed
+              ? "Previous activation credentials were invalidated. This resident is back in Pending and is ready for a new invitation."
+              : "This is already the current activation email. No activation credentials or queue state were changed."}
+          </p>
+          <div className="flex justify-end">
+            <Button type="button" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay>
+      <form
+        onSubmit={handleSubmit}
+        className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-white">Change activation email</h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+            Correct the email used for this resident&apos;s pre-activation flow.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            Current email
+          </p>
+          <p className="mt-1 break-all text-sm text-slate-200">{row.email}</p>
+        </div>
+
+        <label className="space-y-2">
+          <span className="text-xs font-semibold text-slate-200">New email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              if (result && !result.success) {
+                setResult(null);
+              }
+            }}
+            autoComplete="off"
+            autoFocus
+            required
+            disabled={saving}
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/15 disabled:opacity-60"
+            placeholder="resident@example.com"
+          />
+        </label>
+
+        <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-3">
+          <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
+          <p className="text-xs leading-5 text-amber-100/80">
+            Changing this email invalidates any current activation PIN and resets
+            this resident to Pending. Send a new invitation afterward.
+          </p>
+        </div>
+
+        {result && !result.success ? (
+          <div className="rounded-xl border border-rose-400/20 bg-rose-500/[0.07] px-3 py-3 text-xs leading-5 text-rose-100">
+            {result.error}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving || !email.trim()}>
+            {saving ? "Updating..." : "Update email"}
+          </Button>
+        </div>
+      </form>
+    </Overlay>
+  );
+}
+
+function EditActivationPhoneModal({
+  communityId,
+  row,
+  onClose,
+}: {
+  communityId: string;
+  row: ActivationQueueRow;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [phone, setPhone] = useState(row.phone === "—" ? "" : row.phone);
+  const [saving, setSaving] = useState(false);
+  const [result, setResult] = useState<UpdateActivationPhoneResult | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!phone.trim() || saving) {
+      return;
+    }
+
+    setSaving(true);
+    const actionResult = await updateActivationPhone({
+      communityId,
+      queueId: row.id,
+      phone,
+    });
+    setResult(actionResult);
+    setSaving(false);
+
+    if (actionResult.success) {
+      router.refresh();
+    }
+  }
+
+  if (result?.success) {
+    return (
+      <Overlay>
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-emerald-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex items-start gap-3">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
+              <CheckCircle2 className="size-5" aria-hidden />
+            </span>
+            <div>
+              <h3 className="text-lg font-semibold text-white">
+                {result.data.changed ? "Phone updated" : "Phone unchanged"}
+              </h3>
+              <p className="mt-1 break-all text-sm text-slate-200">
+                {result.data.phone}
+              </p>
+            </div>
+          </div>
+          <p className="text-sm leading-6 text-[var(--text-muted)]">
+            {!result.data.changed
+              ? "This is already the current activation phone. No queue state was changed."
+              : result.data.activation_reset
+                ? "The previous phone activation credential was invalidated. This resident is back in Pending and needs a new PIN."
+                : "The phone number was updated without changing the resident's existing email activation state."}
+          </p>
+          <div className="flex justify-end">
+            <Button type="button" onClick={onClose}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </Overlay>
+    );
+  }
+
+  return (
+    <Overlay>
+      <form
+        onSubmit={handleSubmit}
+        className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+      >
+        <div>
+          <h3 className="text-lg font-semibold text-white">Change activation phone</h3>
+          <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+            Correct the phone number that will be stored for this resident.
+          </p>
+        </div>
+
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+            Current phone
+          </p>
+          <p className="mt-1 break-all text-sm text-slate-200">{row.phone}</p>
+        </div>
+
+        <label className="space-y-2">
+          <span className="text-xs font-semibold text-slate-200">New phone</span>
+          <input
+            type="tel"
+            value={phone}
+            onChange={(event) => {
+              setPhone(event.target.value);
+              if (result && !result.success) {
+                setResult(null);
+              }
+            }}
+            autoComplete="off"
+            autoFocus
+            required
+            disabled={saving}
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/15 disabled:opacity-60"
+            placeholder="+504 9999-9999"
+          />
+        </label>
+
+        <div
+          className={
+            row.method === "phone_pin"
+              ? "flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-3"
+              : "flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-3"
+          }
+        >
+          {row.method === "phone_pin" ? (
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
+          ) : null}
+          <p
+            className={
+              row.method === "phone_pin"
+                ? "text-xs leading-5 text-amber-100/80"
+                : "text-xs leading-5 text-[var(--text-muted)]"
+            }
+          >
+            {row.method === "phone_pin"
+              ? "This resident uses Phone PIN activation. Changing the number will invalidate the current PIN and return the resident to Pending."
+              : "Changing the phone preserves the current email or username activation. If this row is later configured for Phone PIN, the corrected number will be used."}
+          </p>
+        </div>
+
+        {result && !result.success ? (
+          <div className="rounded-xl border border-rose-400/20 bg-rose-500/[0.07] px-3 py-3 text-xs leading-5 text-rose-100">
+            {result.error}
+          </div>
+        ) : null}
+
+        <div className="flex flex-wrap justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={saving || !phone.trim()}>
+            {saving ? "Updating..." : "Update phone"}
+          </Button>
+        </div>
+      </form>
+    </Overlay>
   );
 }
 
@@ -775,6 +1066,8 @@ export function ActivationQueueTable({
   const [activeRowId, setActiveRowId] = useState<string | null>(rows[0]?.id ?? null);
   const [searchQuery, setSearchQuery] = useState("");
   const [queueView, setQueueView] = useState<QueueView>("all");
+  const [emailEditorRowId, setEmailEditorRowId] = useState<string | null>(null);
+  const [phoneEditorRowId, setPhoneEditorRowId] = useState<string | null>(null);
 
   const queueCounts = useMemo(
     () => ({
@@ -828,6 +1121,12 @@ export function ActivationQueueTable({
     rows[0] ??
     null;
   const activeRowBlockers = activeRow ? getQueueBlockers(activeRow) : [];
+  const emailEditorRow = emailEditorRowId
+    ? rows.find((row) => row.id === emailEditorRowId) ?? null
+    : null;
+  const phoneEditorRow = phoneEditorRowId
+    ? rows.find((row) => row.id === phoneEditorRowId) ?? null
+    : null;
   const allSelectedAreInvited =
     selectedRows.length > 0 &&
     selectedRows.every((row) => row.status === "invited");
@@ -976,6 +1275,22 @@ export function ActivationQueueTable({
 
   return (
     <>
+      {emailEditorRow ? (
+        <EditActivationEmailModal
+          communityId={communityId}
+          row={emailEditorRow}
+          onClose={() => setEmailEditorRowId(null)}
+        />
+      ) : null}
+
+      {phoneEditorRow ? (
+        <EditActivationPhoneModal
+          communityId={communityId}
+          row={phoneEditorRow}
+          onClose={() => setPhoneEditorRowId(null)}
+        />
+      ) : null}
+
       {phase === "confirming" ? (
         <Overlay>
           <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
@@ -1388,7 +1703,7 @@ export function ActivationQueueTable({
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]">
-              <table className="w-full min-w-[1020px] table-fixed border-collapse text-left text-xs">
+              <table className="w-full min-w-[1180px] table-fixed border-collapse text-left text-xs">
                 <thead className="sticky top-0 z-10 border-b border-white/[0.08] bg-[rgba(12,17,25,0.96)] text-[var(--text-muted)] backdrop-blur">
                   <tr>
                     <th className="w-11 px-3 py-2.5">
@@ -1400,7 +1715,8 @@ export function ActivationQueueTable({
                     <th className="w-[15%] px-3 py-2.5 font-semibold">Username</th>
                     <th className="w-[11%] px-3 py-2.5 font-semibold">Method</th>
                     <th className="w-[11%] px-3 py-2.5 font-semibold">Status</th>
-                    <th className="w-[16%] px-3 py-2.5 font-semibold">Created</th>
+                    <th className="w-[15%] px-3 py-2.5 font-semibold">Last activation</th>
+                    <th className="w-[15%] px-3 py-2.5 font-semibold">Created</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.07] text-slate-200">
@@ -1456,6 +1772,14 @@ export function ActivationQueueTable({
                         <td className="px-3 py-2.5 align-top">
                           <Badge tone={getStatusTone(row.status)}>{getStatusLabel(row.status)}</Badge>
                         </td>
+                        <td className="whitespace-nowrap px-3 py-2.5 align-top">
+                          <span className="block text-slate-200">{row.lastActivationAt}</span>
+                          {row.lastActivationChannel !== "—" ? (
+                            <span className="mt-1 block text-[10px] text-[var(--text-muted)]">
+                              {row.lastActivationChannel}
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2.5 align-top text-[var(--text-muted)]">
                           {row.createdAt}
                         </td>
@@ -1465,7 +1789,7 @@ export function ActivationQueueTable({
 
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-16 text-center text-sm text-[var(--text-muted)]">
+                      <td colSpan={9} className="px-6 py-16 text-center text-sm text-[var(--text-muted)]">
                         No residents match this queue view.
                       </td>
                     </tr>
@@ -1569,11 +1893,43 @@ export function ActivationQueueTable({
                       </div>
                       <div className="flex items-start justify-between gap-3">
                         <dt className="text-[var(--text-muted)]">Phone</dt>
-                        <dd className="text-right text-slate-200">{activeRow.phone}</dd>
+                        <dd className="max-w-[70%] text-right text-slate-200">
+                          <span className="block break-all">{activeRow.phone}</span>
+                          {!["activated", "skipped"].includes(activeRow.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => setPhoneEditorRowId(activeRow.id)}
+                              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-300 transition hover:text-violet-200"
+                            >
+                              <Pencil className="size-3" aria-hidden />
+                              Edit phone
+                            </button>
+                          ) : null}
+                        </dd>
                       </div>
                       <div className="flex items-start justify-between gap-3">
                         <dt className="text-[var(--text-muted)]">Email</dt>
-                        <dd className="max-w-[65%] break-all text-right text-slate-200">{activeRow.email}</dd>
+                        <dd className="max-w-[70%] text-right text-slate-200">
+                          <span className="block break-all">{activeRow.email}</span>
+                          {!["activated", "skipped"].includes(activeRow.status) ? (
+                            <button
+                              type="button"
+                              onClick={() => setEmailEditorRowId(activeRow.id)}
+                              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-300 transition hover:text-violet-200"
+                            >
+                              <Pencil className="size-3" aria-hidden />
+                              Edit email
+                            </button>
+                          ) : null}
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Last email sent</dt>
+                        <dd className="text-right text-slate-200">{activeRow.inviteSentAt}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Last PIN generated</dt>
+                        <dd className="text-right text-slate-200">{activeRow.lastPinGeneratedAt}</dd>
                       </div>
                       <div className="flex items-start justify-between gap-3">
                         <dt className="text-[var(--text-muted)]">Created</dt>
