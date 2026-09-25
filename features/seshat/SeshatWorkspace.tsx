@@ -18,6 +18,10 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/supabase/utils";
 import {
+  expectedAutomaticInvoiceCount,
+  type ClientServiceBillingCurrency,
+} from "./billingPreview";
+import {
   generateInvoice,
   getDueClientServiceOccurrences,
   getPaymentProofSignedUrl,
@@ -194,6 +198,8 @@ function Field({
   type = "text",
   required,
   as = "input",
+  min,
+  step,
 }: {
   label: string;
   name: string;
@@ -201,6 +207,8 @@ function Field({
   type?: string;
   required?: boolean;
   as?: "input" | "textarea";
+  min?: number | string;
+  step?: number | string;
 }) {
   return (
     <label className="block space-y-1.5 text-sm">
@@ -219,6 +227,8 @@ function Field({
           type={type}
           defaultValue={defaultValue ?? ""}
           required={required}
+          min={min}
+          step={step}
           className="w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-white outline-none focus:border-violet-300/60"
         />
       )}
@@ -251,7 +261,7 @@ function SelectField({
   );
 }
 
-function Alert({ message, tone = "danger" }: { message: string | null; tone?: "danger" | "success" }) {
+function Alert({ message, tone = "danger" }: { message: string | null; tone?: "danger" | "success" | "warning" }) {
   if (!message) return null;
   return (
     <div
@@ -259,7 +269,9 @@ function Alert({ message, tone = "danger" }: { message: string | null; tone?: "d
         "rounded-md border px-3 py-2 text-sm",
         tone === "success"
           ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-          : "border-rose-400/25 bg-rose-400/10 text-rose-100",
+          : tone === "warning"
+            ? "border-amber-400/25 bg-amber-400/10 text-amber-100"
+            : "border-rose-400/25 bg-rose-400/10 text-rose-100",
       )}
     >
       {message}
@@ -340,6 +352,7 @@ export function SeshatWorkspace() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [clientServices, setClientServices] = useState<ClientService[]>([]);
@@ -352,6 +365,7 @@ export function SeshatWorkspace() {
   const [clientProfit, setClientProfit] = useState<ClientOperationalProfitSummary | null>(null);
   const [dueItems, setDueItems] = useState<DueClientServiceOccurrence[]>([]);
   const [billingResult, setBillingResult] = useState<AutomaticBillingRunResult | null>(null);
+  const [billingCurrencies, setBillingCurrencies] = useState<ClientServiceBillingCurrency[]>([]);
   const [invoiceFilter, setInvoiceFilter] = useState<InvoiceStatus | "all">("all");
 
   const currentClient = clients.find((client) => client.id === id) ?? null;
@@ -372,6 +386,7 @@ export function SeshatWorkspace() {
         categoriesRes,
         profileRes,
         monthlyRes,
+        billingCurrenciesRes,
       ] = await Promise.all([
         supabase.from("clients").select("*").order("name", { ascending: true }),
         supabase.from("services").select("*").order("name", { ascending: true }),
@@ -380,9 +395,10 @@ export function SeshatWorkspace() {
         supabase.from("expense_categories").select("*").order("name", { ascending: true }),
         supabase.from("business_profiles").select("*").maybeSingle(),
         supabase.from("monthly_profit_summary").select("*").order("month", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("client_services").select("id, agreed_currency"),
       ]);
 
-      for (const result of [clientsRes, servicesRes, invoicesRes, expensesRes, categoriesRes, profileRes, monthlyRes]) {
+      for (const result of [clientsRes, servicesRes, invoicesRes, expensesRes, categoriesRes, profileRes, monthlyRes, billingCurrenciesRes]) {
         if (result.error) throw result.error;
       }
 
@@ -393,6 +409,7 @@ export function SeshatWorkspace() {
       setCategories((categoriesRes.data as ExpenseCategory[]) ?? []);
       setProfile((profileRes.data as BusinessProfile | null) ?? null);
       setMonthlySummary((monthlyRes.data as MonthlyProfitSummary | null) ?? null);
+      setBillingCurrencies((billingCurrenciesRes.data as ClientServiceBillingCurrency[]) ?? []);
 
       if (view === "billing" || view === "overview") {
         setDueItems(await getDueClientServiceOccurrences());
@@ -675,10 +692,14 @@ export function SeshatWorkspace() {
   async function submitPayment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!invoice) return;
-    const form = new FormData(event.currentTarget);
+    const paymentForm = event.currentTarget;
+    const form = new FormData(paymentForm);
     setError(null);
+    setNotice(null);
+    setWarning(null);
+    let result: Awaited<ReturnType<typeof recordPayment>>;
     try {
-      const result = await recordPayment({
+      result = await recordPayment({
         invoice_id: invoice.id,
         amount: numberFrom(form.get("amount")),
         payment_date: clean(form.get("payment_date")),
@@ -686,8 +707,14 @@ export function SeshatWorkspace() {
         reference: clean(form.get("reference")),
         notes: clean(form.get("notes")),
       });
-      const proof = form.get("proof");
-      if (proof instanceof File && proof.size > 0) {
+    } catch (paymentError) {
+      setError(seshatErrorMessage(paymentError, "Could not record payment."));
+      return;
+    }
+
+    const proof = form.get("proof");
+    if (proof instanceof File && proof.size > 0) {
+      try {
         const ext = proof.name.split(".").pop()?.toLowerCase() || "bin";
         const path = `${session?.user.id}/${invoice.id}/${result.payment_id}/proof-${Date.now()}.${ext}`;
         const { error: uploadError } = await getSeshatSupabase()
@@ -700,14 +727,15 @@ export function SeshatWorkspace() {
           .update({ proof_path: path })
           .eq("id", result.payment_id);
         if (updateProofError) throw updateProofError;
+      } catch {
+        setWarning("The payment was recorded, but proof attachment failed. You can retry proof attachment later.");
       }
-      setNotice("Payment recorded.");
-      await load();
-      await loadDetail();
-      (event.currentTarget as HTMLFormElement).reset();
-    } catch (paymentError) {
-      setError(seshatErrorMessage(paymentError, "Could not record payment."));
     }
+
+    setNotice("Payment recorded.");
+    paymentForm.reset();
+    await load();
+    await loadDetail();
   }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
@@ -787,6 +815,7 @@ export function SeshatWorkspace() {
 
       <Alert message={error} />
       <Alert message={notice} tone="success" />
+      <Alert message={warning} tone="warning" />
       {loading ? <p className="text-sm text-[var(--text-muted)]">Loading...</p> : null}
 
       {view === "overview" ? (
@@ -838,6 +867,8 @@ export function SeshatWorkspace() {
       {view === "billing" ? (
         <Billing
           dueItems={dueItems}
+          billingCurrencies={billingCurrencies}
+          defaultCurrency={profile?.default_currency}
           result={billingResult}
           onPreview={async (asOfDate) => setDueItems(await getDueClientServiceOccurrences(asOfDate))}
           onRun={async (asOfDate) => {
@@ -1041,8 +1072,8 @@ function ClientServiceForm({
         {services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
       </SelectField>
       <Field label="Name" name="name" defaultValue={clientService?.name} required />
-      <Field label="Price" name="price" type="number" defaultValue={clientService?.price ?? 0} />
-      <Field label="Quantity" name="quantity" type="number" defaultValue={clientService?.quantity ?? 1} />
+      <Field label="Price" name="price" type="number" min={0} step="0.01" defaultValue={clientService?.price ?? 0} />
+      <Field label="Quantity" name="quantity" type="number" min="0.01" step="0.01" defaultValue={clientService?.quantity ?? 1} />
       <SelectField label="Frequency" name="frequency" defaultValue={clientService?.frequency ?? "monthly"}>
         {serviceFrequencies.map((frequency) => <option key={frequency} value={frequency}>{frequency}</option>)}
       </SelectField>
@@ -1083,8 +1114,8 @@ function ServiceForm({ service, onSubmit }: { service?: Service; onSubmit: (even
       <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
         <Field label="Name" name="name" defaultValue={service?.name} required />
         <Field label="Category" name="category" defaultValue={service?.category} />
-        <Field label="Default price" name="default_price" type="number" defaultValue={service?.default_price ?? 0} />
-        <Field label="Default quantity" name="default_quantity" type="number" defaultValue={service?.default_quantity ?? 1} />
+        <Field label="Default price" name="default_price" type="number" min={0} step="0.01" defaultValue={service?.default_price ?? 0} />
+        <Field label="Default quantity" name="default_quantity" type="number" min="0.01" step="0.01" defaultValue={service?.default_quantity ?? 1} />
         <div className="md:col-span-2"><Field label="Description" name="description" as="textarea" defaultValue={service?.description} /></div>
         <label className="flex items-center gap-2 text-sm text-slate-200"><input name="is_active" type="checkbox" defaultChecked={service?.is_active ?? true} /> Active</label>
         <div className="md:col-span-2"><Button className="gap-2"><Save className="h-4 w-4" /> Save Service</Button></div>
@@ -1135,7 +1166,7 @@ function ExpenseForm({
       <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
         <Field label="Name" name="name" defaultValue={expense?.name} required />
         <Field label="Vendor" name="vendor" defaultValue={expense?.vendor} />
-        <Field label="Amount" name="amount" type="number" defaultValue={expense?.amount ?? 0} />
+        <Field label="Amount" name="amount" type="number" min={0} step="0.01" defaultValue={expense?.amount ?? 0} />
         <Field label="Currency" name="currency" defaultValue={expense?.currency ?? "USD"} />
         <SelectField label="Frequency" name="frequency" defaultValue={expense?.frequency ?? "monthly"}>
           {expenseFrequencies.map((frequency) => <option key={frequency} value={frequency}>{frequency}</option>)}
@@ -1430,7 +1461,7 @@ function InvoiceDetail({
         </div>
         {(invoice.status === "sent" || invoice.status === "overdue") && balance > 0 ? (
           <form onSubmit={onPayment} className="mt-5 grid gap-3 border-t border-white/[0.10] pt-4 md:grid-cols-3">
-            <Field label="Amount" name="amount" type="number" defaultValue={balance} required />
+            <Field label="Amount" name="amount" type="number" min="0.01" step="0.01" defaultValue={balance} required />
             <Field label="Payment date" name="payment_date" type="date" defaultValue={today()} required />
             <SelectField label="Method" name="payment_method" defaultValue="bank_transfer">
               <option value="bank_transfer">Bank transfer</option>
@@ -1455,17 +1486,29 @@ function InvoiceDetail({
 
 function Billing({
   dueItems,
+  billingCurrencies,
+  defaultCurrency,
   result,
   onPreview,
   onRun,
 }: {
   dueItems: DueClientServiceOccurrence[];
+  billingCurrencies: ClientServiceBillingCurrency[];
+  defaultCurrency: string | null | undefined;
   result: AutomaticBillingRunResult | null;
   onPreview: (asOfDate: string) => void;
   onRun: (asOfDate: string) => void;
 }) {
   const [asOfDate, setAsOfDate] = useState(today());
   const total = dueItems.reduce((sum, item) => sum + item.amount, 0);
+  const currenciesByClientService = new Map(
+    billingCurrencies.map((item) => [item.id, item.agreed_currency]),
+  );
+  const expectedInvoiceCount = expectedAutomaticInvoiceCount(
+    dueItems,
+    currenciesByClientService,
+    defaultCurrency,
+  );
   return (
     <Card>
       <h2 className="mb-4 text-xl font-semibold text-white">Automatic Billing</h2>
@@ -1482,7 +1525,7 @@ function Billing({
       ) : null}
       <div className="my-4 grid gap-3 md:grid-cols-3">
         <Metric label="Due service items" value={String(dueItems.length)} />
-        <Metric label="Expected invoice count" value={String(new Set(dueItems.map((item) => item.client_id)).size)} />
+        <Metric label="Expected invoice count" value={String(expectedInvoiceCount)} />
         <Metric label="Expected total" value={money(total)} />
       </div>
       <Table
@@ -1509,7 +1552,7 @@ function Settings({ profile, onSubmit }: { profile: BusinessProfile | null; onSu
         <Field label="Website" name="website" defaultValue={profile?.website} />
         <Field label="Default currency" name="default_currency" defaultValue={profile?.default_currency ?? "USD"} />
         <Field label="Invoice prefix" name="invoice_prefix" defaultValue={profile?.invoice_prefix ?? "INV"} />
-        <Field label="Default payment terms days" name="default_payment_terms_days" type="number" defaultValue={profile?.default_payment_terms_days ?? 15} />
+        <Field label="Default payment terms days" name="default_payment_terms_days" type="number" min={0} step={1} defaultValue={profile?.default_payment_terms_days ?? 15} />
         <Field label="Invoice accent color" name="invoice_accent_color" defaultValue={profile?.invoice_accent_color} />
         <div className="md:col-span-2"><Field label="Invoice footer" name="invoice_footer" as="textarea" defaultValue={profile?.invoice_footer} /></div>
         <div className="md:col-span-2"><Button className="gap-2"><Save className="h-4 w-4" /> Save Settings</Button></div>
