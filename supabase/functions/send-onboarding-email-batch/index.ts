@@ -296,7 +296,10 @@ async function processMessage(
       })
       .eq("id", msg.id);
 
-    // Promote the queue row to 'invited' (unless already activated).
+    // Promote only the exact queue identity/PIN state that this worker sent.
+    // A concurrent admin email correction resets the queue to pending and
+    // expires the old PIN; this guard prevents the worker from overwriting that
+    // correction back to "invited" after provider delivery completes.
     await supabase
       .from("resident_activation_queue")
       .update({
@@ -305,7 +308,8 @@ async function processMessage(
         updated_at: nowIso,
       })
       .eq("id", msg.activation_queue_id)
-      .neq("status", "activated");
+      .eq("email", msg.recipient_email)
+      .eq("status", "pin_generated");
 
     return { ok: true };
   } catch (err) {
