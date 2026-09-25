@@ -123,3 +123,35 @@ test("queue review acknowledgement is compact and operational", () => {
   assert.match(source, /pending activation/);
   assert.doesNotMatch(source, /rounded-\[26px\]/);
 });
+
+
+test("Activation Queue exposes safe pre-activation email correction", () => {
+  const table = read("features/entry/activation/ActivationQueueTable.tsx");
+  const action = read("features/entry/activation/emailEditActions.ts");
+  const migration = read(
+    "supabase/migrations/20260925021500_update_resident_activation_email_v1.sql",
+  );
+
+  assert.match(table, /Change activation email/);
+  assert.match(table, /Edit email/);
+  assert.match(table, /updateActivationEmail/);
+  assert.match(action, /update_resident_activation_email_v1/);
+  assert.match(migration, /status = 'expired'/);
+  assert.match(migration, /status = 'pending'/);
+  assert.match(migration, /campaign_send_in_progress/);
+  assert.match(migration, /email_already_reserved/);
+});
+
+test("Console PIN generation serializes with activation email edits", () => {
+  const source = read("features/entry/activation/pinActions.ts");
+  const migration = read(
+    "supabase/migrations/20260925021500_update_resident_activation_email_v1.sql",
+  );
+
+  assert.match(source, /generate_resident_activation_pins_locked_v1/);
+  assert.match(migration, /generate_resident_activation_pins_locked_v1/);
+  assert.match(
+    migration,
+    /resident_activation_pins[\s\S]*for update[\s\S]*resident_activation_queue[\s\S]*for update/,
+  );
+});
