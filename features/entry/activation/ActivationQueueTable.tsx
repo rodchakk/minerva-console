@@ -423,20 +423,28 @@ function EditActivationPhoneModal({
           />
         </label>
 
-        {row.method === "phone_pin" ? (
-          <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-3">
+        <div
+          className={
+            row.method === "phone_pin"
+              ? "flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-500/[0.07] px-3 py-3"
+              : "flex items-start gap-2 rounded-xl border border-white/10 bg-white/[0.025] px-3 py-3"
+          }
+        >
+          {row.method === "phone_pin" ? (
             <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
-            <p className="text-xs leading-5 text-amber-100/80">
-              This resident uses Phone PIN activation. Changing the number will
-              invalidate the current PIN and return the resident to Pending.
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-xl border border-white/10 bg-white/[0.025] px-3 py-3 text-xs leading-5 text-[var(--text-muted)]">
-            This resident uses {getMethodLabel(row.method)} activation. Changing
-            the phone will not invalidate an email activation already sent.
-          </div>
-        )}
+          ) : null}
+          <p
+            className={
+              row.method === "phone_pin"
+                ? "text-xs leading-5 text-amber-100/80"
+                : "text-xs leading-5 text-[var(--text-muted)]"
+            }
+          >
+            {row.method === "phone_pin"
+              ? "This resident uses Phone PIN activation. Changing the number will invalidate the current PIN and return the resident to Pending."
+              : "Changing the phone preserves the current email or username activation. If this row is later configured for Phone PIN, the corrected number will be used."}
+          </p>
+        </div>
 
         {result && !result.success ? (
           <div className="rounded-xl border border-rose-400/20 bg-rose-500/[0.07] px-3 py-3 text-xs leading-5 text-rose-100">
