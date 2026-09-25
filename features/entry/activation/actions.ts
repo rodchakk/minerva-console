@@ -43,7 +43,11 @@ export type ActivationQueueRow = {
   createdAt: string;
   email: string;
   id: string;
+  inviteSentAt: string;
+  lastActivationAt: string;
+  lastActivationChannel: string;
   lastError: string;
+  lastPinGeneratedAt: string;
   method: string;
   ownerReference: string;
   phone: string;
@@ -187,6 +191,36 @@ function formatCreatedAt(value: string) {
   }).format(date);
 }
 
+function formatOptionalDateTime(value: string) {
+  return value ? formatCreatedAt(value) : "Never";
+}
+
+function getLatestActivationActivity(inviteSentAt: string, lastPinGeneratedAt: string) {
+  const candidates = [
+    { channel: "Email", raw: inviteSentAt },
+    { channel: "PIN", raw: lastPinGeneratedAt },
+  ]
+    .filter((candidate) => candidate.raw)
+    .map((candidate) => ({
+      ...candidate,
+      timestamp: new Date(candidate.raw).getTime(),
+    }))
+    .filter((candidate) => !Number.isNaN(candidate.timestamp))
+    .sort((a, b) => b.timestamp - a.timestamp);
+
+  const latest = candidates[0];
+
+  return latest
+    ? {
+        at: formatCreatedAt(latest.raw),
+        channel: latest.channel,
+      }
+    : {
+        at: "Never",
+        channel: "—",
+      };
+}
+
 function normalizeMethod(value: string) {
   const normalized = value.trim().toLowerCase();
 
@@ -277,6 +311,12 @@ function mapActivationQueueRow(item: unknown): ActivationQueueRow {
   const suggestedUsername =
     coerceString(record.suggested_username) ||
     coerceString(record.username_suggestion);
+  const inviteSentAt = coerceString(record.invite_sent_at);
+  const lastPinGeneratedAt = coerceString(record.last_pin_generated_at);
+  const lastActivation = getLatestActivationActivity(
+    inviteSentAt,
+    lastPinGeneratedAt,
+  );
 
   return {
     createdAt: formatCreatedAt(createdAt),
@@ -285,7 +325,11 @@ function mapActivationQueueRow(item: unknown): ActivationQueueRow {
       coerceString(record.queue_id) ||
       coerceString(record.id) ||
       crypto.randomUUID(),
+    inviteSentAt: formatOptionalDateTime(inviteSentAt),
+    lastActivationAt: lastActivation.at,
+    lastActivationChannel: lastActivation.channel,
     lastError: coerceString(record.last_error, "—"),
+    lastPinGeneratedAt: formatOptionalDateTime(lastPinGeneratedAt),
     method: normalizeMethod(
       coerceString(record.activation_method) || coerceString(record.method),
     ),
@@ -361,7 +405,7 @@ export async function getActivationQueuePageData(input: {
   const supabase = await createClient();
   const [{ data: queueData, error: queueError }, { data: progressData }] =
     await Promise.all([
-      supabase.rpc("list_resident_activation_queue_v1", {
+      supabase.rpc("list_resident_activation_queue_v2", {
         p_community_id: communityId,
         p_status: status,
       }),
