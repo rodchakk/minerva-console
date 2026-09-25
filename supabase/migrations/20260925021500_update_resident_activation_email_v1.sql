@@ -34,6 +34,16 @@ begin
     return jsonb_build_object('success', false, 'error', 'invalid_email');
   end if;
 
+  -- Match the activation flow lock order: pending PIN first, then queue row.
+  -- This prevents a resident activation racing an admin email correction from
+  -- taking the same locks in reverse order.
+  perform 1
+    from public.resident_activation_pins
+   where queue_id = p_queue_id
+     and status = 'pending'
+   order by id
+   for update;
+
   select *
     into v_queue
     from public.resident_activation_queue
@@ -89,8 +99,7 @@ begin
    where q.id <> p_queue_id
      and lower(btrim(q.email)) = v_new_email
      and q.status in ('pending', 'invited', 'pin_generated', 'activated', 'failed')
-   limit 1
-   for update;
+   limit 1;
 
   if found then
     return jsonb_build_object(
@@ -128,29 +137,6 @@ begin
 
   v_previous_status := v_queue.status;
 
-  -- A PIN sent to the previous address must never remain usable after identity
-  -- correction. Historical rows remain for audit, but become expired.
-  update public.resident_activation_pins
-     set status = 'expired',
-         expires_at = least(expires_at, now())
-   where queue_id = p_queue_id
-     and status = 'pending';
-
-  get diagnostics v_pins_invalidated = row_count;
-
-  -- Defensive compatibility with the older activation-code path, if this queue
-  -- row still references one.
-  if v_queue.activation_code_id is not null then
-    update public.account_activation_codes
-       set status = 'expired',
-           expires_at = least(expires_at, now()),
-           visible_code = null
-     where id = v_queue.activation_code_id
-       and status = 'pending';
-
-    get diagnostics v_legacy_codes_invalidated = row_count;
-  end if;
-
   begin
     update public.resident_activation_queue
        set email = v_new_email,
@@ -177,6 +163,29 @@ begin
 
       raise;
   end;
+
+  -- Only after the queue identity update succeeds do we invalidate credentials.
+  -- Expected conflict returns above therefore have no side effects.
+  update public.resident_activation_pins
+     set status = 'expired',
+         expires_at = least(expires_at, now())
+   where queue_id = p_queue_id
+     and status = 'pending';
+
+  get diagnostics v_pins_invalidated = row_count;
+
+  -- Defensive compatibility with the older activation-code path, if this queue
+  -- row still references one.
+  if v_queue.activation_code_id is not null then
+    update public.account_activation_codes
+       set status = 'expired',
+           expires_at = least(expires_at, now()),
+           visible_code = null
+     where id = v_queue.activation_code_id
+       and status = 'pending';
+
+    get diagnostics v_legacy_codes_invalidated = row_count;
+  end if;
 
   -- Campaign messages snapshot the destination email. Only unsent rows are
   -- rewritten; sent/failed rows remain immutable history.
