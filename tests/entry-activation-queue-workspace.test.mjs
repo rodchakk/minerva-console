@@ -189,3 +189,24 @@ test("Activation Queue shows last email and PIN timing separately", () => {
   assert.match(actions, /list_resident_activation_queue_v2/);
   assert.match(migration, /max\(p\.created_at\) as last_pin_generated_at/);
 });
+
+
+test("activation phone/timestamp migration contains one complete definition of each RPC", () => {
+  const migration = read(
+    "supabase/migrations/20260925043000_activation_queue_phone_and_delivery_timestamps.sql",
+  );
+
+  assert.equal(
+    (migration.match(/create or replace function public\.update_resident_activation_phone_v1/g) ?? []).length,
+    1,
+  );
+  assert.equal(
+    (migration.match(/create or replace function public\.list_resident_activation_queue_v2/g) ?? []).length,
+    1,
+  );
+  assert.equal((migration.match(/\$function\$;/g) ?? []).length, 2);
+  assert.match(
+    migration,
+    /v_new_method := v_queue\.activation_method;[\s\S]*v_requires_reset := v_new_method = 'phone_pin';/,
+  );
+});
