@@ -197,7 +197,7 @@ export async function sendActivationEmails(input: {
 
   const items = pinResult.data.items;
   const emailResults: NonNullable<SendEmailInviteResult["data"]>["items"] = [];
-  const successfullyInvitedIds: string[] = [];
+  const successfullyInvited: Array<{ queueId: string; email: string }> = [];
 
   let sent_count = 0;
   let failed_count = 0;
@@ -264,7 +264,7 @@ export async function sendActivationEmails(input: {
       });
 
       sent_count++;
-      successfullyInvitedIds.push(item.queue_id);
+      successfullyInvited.push({ queueId: item.queue_id, email: item.email });
       emailResults.push({
         queue_id: item.queue_id,
         email: item.email,
@@ -287,31 +287,43 @@ export async function sendActivationEmails(input: {
     }
   }
 
-  // 3. Update status in database for those who successfully received an email
-  if (successfullyInvitedIds.length > 0) {
+  // 3. Persist delivery metadata only while the queue still represents the
+  // exact email + freshly generated PIN state that was sent. This compare-and-
+  // set guard prevents a concurrent admin email correction from being
+  // overwritten back to "invited" after the old address receives a stale PIN.
+  if (successfullyInvited.length > 0) {
     try {
       const inviteSentAt = new Date().toISOString();
-      // Resends move invite_sent_at to the latest successful accepted delivery.
-      const { error: queueUpdateError } = await supabase
-        .from("resident_activation_queue")
-        .update({
-          invite_sent_at: inviteSentAt,
-          status: "invited",
-          updated_at: inviteSentAt,
-        })
-        .in("id", successfullyInvitedIds);
 
-      if (queueUpdateError) {
-        metadataPersisted = false;
-        metadataWarning =
-          "Email accepted by Resend, but ENTRY could not persist invite metadata. Review the Activation Queue before resending.";
-        console.error(
-          "Failed to persist resident_activation_queue invite metadata after accepted activation email delivery",
-          {
-            attemptedQueueCount: successfullyInvitedIds.length,
-            error: getSafeQueueUpdateErrorLog(queueUpdateError),
-          },
-        );
+      for (const delivered of successfullyInvited) {
+        const { data: updatedRows, error: queueUpdateError } = await supabase
+          .from("resident_activation_queue")
+          .update({
+            invite_sent_at: inviteSentAt,
+            status: "invited",
+            updated_at: inviteSentAt,
+          })
+          .eq("id", delivered.queueId)
+          .eq("community_id", communityId)
+          .eq("email", delivered.email)
+          .eq("status", "pin_generated")
+          .select("id");
+
+        if (queueUpdateError || !updatedRows?.length) {
+          metadataPersisted = false;
+          metadataWarning =
+            "Email accepted by Resend, but the activation record changed before invite metadata could be saved. Review the Activation Queue before resending.";
+
+          console.error(
+            "Failed guarded resident_activation_queue invite metadata persistence after accepted activation email delivery",
+            {
+              queueId: delivered.queueId,
+              error: queueUpdateError
+                ? getSafeQueueUpdateErrorLog(queueUpdateError)
+                : { message: "Queue row changed before guarded invite metadata update." },
+            },
+          );
+        }
       }
 
       revalidatePath("/products/entry/activation");
@@ -322,7 +334,7 @@ export async function sendActivationEmails(input: {
       console.error(
         "Failed to persist resident_activation_queue invite metadata after accepted activation email delivery",
         {
-          attemptedQueueCount: successfullyInvitedIds.length,
+          attemptedQueueCount: successfullyInvited.length,
           error: getSafeQueueUpdateErrorLog(dbErr),
         },
       );
