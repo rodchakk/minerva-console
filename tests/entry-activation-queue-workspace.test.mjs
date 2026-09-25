@@ -155,3 +155,37 @@ test("Console PIN generation serializes with activation email edits", () => {
     /resident_activation_pins[\s\S]*for update[\s\S]*resident_activation_queue[\s\S]*for update/,
   );
 });
+
+
+test("Activation Queue supports safe pre-activation phone correction", () => {
+  const table = read("features/entry/activation/ActivationQueueTable.tsx");
+  const action = read("features/entry/activation/phoneEditActions.ts");
+  const migration = read(
+    "supabase/migrations/20260925043000_activation_queue_phone_and_delivery_timestamps.sql",
+  );
+
+  assert.match(table, /Change activation phone/);
+  assert.match(table, /Edit phone/);
+  assert.match(table, /updateActivationPhone/);
+  assert.match(action, /update_resident_activation_phone_v1/);
+  assert.match(migration, /activation_reset/);
+  assert.match(migration, /phone_send_in_progress/);
+  assert.match(migration, /status = 'expired'/);
+});
+
+test("Activation Queue shows last email and PIN timing separately", () => {
+  const table = read("features/entry/activation/ActivationQueueTable.tsx");
+  const actions = read("features/entry/activation/actions.ts");
+  const migration = read(
+    "supabase/migrations/20260925043000_activation_queue_phone_and_delivery_timestamps.sql",
+  );
+
+  assert.match(table, /Last activation/);
+  assert.match(table, /Last email sent/);
+  assert.match(table, /Last PIN generated/);
+  assert.match(actions, /lastActivationAt/);
+  assert.match(actions, /invite_sent_at/);
+  assert.match(actions, /last_pin_generated_at/);
+  assert.match(actions, /list_resident_activation_queue_v2/);
+  assert.match(migration, /max\(p\.created_at\) as last_pin_generated_at/);
+});
