@@ -403,7 +403,7 @@ export async function getActivationQueuePageData(input: {
   }
 
   const supabase = await createClient();
-  const [{ data: queueData, error: queueError }, { data: progressData }] =
+  const [{ data: queueV2Data, error: queueV2Error }, { data: progressData }] =
     await Promise.all([
       supabase.rpc("list_resident_activation_queue_v2", {
         p_community_id: communityId,
@@ -413,6 +413,25 @@ export async function getActivationQueuePageData(input: {
         p_community_id: communityId,
       }),
     ]);
+
+  let queueData = queueV2Data;
+  let queueError = queueV2Error;
+
+  // Preview deployments can be built before the accompanying migration is
+  // applied. Keep the queue usable there; v1 still includes invite_sent_at,
+  // while the new PIN timestamp simply renders as "Never" until v2 exists.
+  if (
+    queueV2Error &&
+    (queueV2Error.code === "PGRST202" ||
+      queueV2Error.message?.includes("list_resident_activation_queue_v2"))
+  ) {
+    const fallback = await supabase.rpc("list_resident_activation_queue_v1", {
+      p_community_id: communityId,
+      p_status: status,
+    });
+    queueData = fallback.data;
+    queueError = fallback.error;
+  }
 
   const rows =
     queueError || !Array.isArray(queueData)
