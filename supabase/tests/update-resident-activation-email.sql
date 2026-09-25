@@ -58,14 +58,31 @@ begin
     (c, h, '10', 'Reserved Email Resident', 'reserved-edit@example.com', 'email', 'pending')
   returning id into other_q;
 
+  update public.resident_activation_queue
+     set status = 'pin_generated'
+   where id = q;
+
+  insert into public.resident_activation_pins
+    (queue_id, community_id, pin_hash, visible_code, status, expires_at)
+  values
+    (q, c, 'conflict-test-hash', '654321', 'pending', now() + interval '7 days');
+
   result := public.update_resident_activation_email_v1(
     c, q, 'reserved-edit@example.com'
   );
   assert result->>'error' = 'email_already_reserved', 'queue reservation protected';
   assert exists (
     select 1 from public.resident_activation_queue
-     where id = q and email = 'new-edit@example.com'
-  ), 'conflict does not mutate queue';
+     where id = q
+       and email = 'new-edit@example.com'
+       and status = 'pin_generated'
+  ), 'conflict does not mutate queue state';
+  assert exists (
+    select 1 from public.resident_activation_pins
+     where queue_id = q
+       and status = 'pending'
+       and visible_code = '654321'
+  ), 'conflict does not invalidate a valid PIN';
 
   insert into auth.users(email) values ('registered-edit@example.com');
   result := public.update_resident_activation_email_v1(
