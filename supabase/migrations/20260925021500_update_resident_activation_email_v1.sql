@@ -232,6 +232,63 @@ begin
 end;
 $function$;
 
+-- Console PIN generation must serialize with email correction. The existing
+-- generator is kept as the canonical implementation; this wrapper only acquires
+-- locks in the same order used by activation completion and the email editor.
+create or replace function public.generate_resident_activation_pins_locked_v1(
+  p_community_id uuid,
+  p_queue_ids uuid[]
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public', 'extensions'
+as $function$
+begin
+  if not public.is_superadmin() then
+    raise exception 'superadmin_required' using errcode = '42501';
+  end if;
+
+  if p_queue_ids is null or cardinality(p_queue_ids) = 0 then
+    return jsonb_build_object(
+      'generated_count', 0,
+      'skipped_count', 0,
+      'failed_count', 0,
+      'items', '[]'::jsonb
+    );
+  end if;
+
+  -- Complete activation locks PIN -> queue. Keep the same order here, and lock
+  -- IDs deterministically for batch requests to avoid cross-batch deadlocks.
+  perform 1
+    from public.resident_activation_pins
+   where queue_id = any(p_queue_ids)
+     and status = 'pending'
+   order by queue_id, id
+   for update;
+
+  perform 1
+    from public.resident_activation_queue
+   where id = any(p_queue_ids)
+   order by id
+   for update;
+
+  return public.generate_resident_activation_pins_v1(
+    p_community_id,
+    p_queue_ids
+  );
+end;
+$function$;
+
+comment on function public.generate_resident_activation_pins_locked_v1(uuid, uuid[]) is
+  'Console-safe wrapper around generate_resident_activation_pins_v1. Serializes '
+  'pending PIN and queue-row locks so PIN generation cannot read a stale email '
+  'while a superadmin corrects the activation identity.';
+
+revoke all on function public.generate_resident_activation_pins_locked_v1(uuid, uuid[]) from public;
+revoke all on function public.generate_resident_activation_pins_locked_v1(uuid, uuid[]) from anon;
+grant execute on function public.generate_resident_activation_pins_locked_v1(uuid, uuid[]) to authenticated;
+
 comment on function public.update_resident_activation_email_v1(uuid, uuid, text) is
   'Superadmin-only pre-activation email correction. Rejects activated/skipped rows, '
   'reserves normalized email globally, invalidates pending activation credentials, '
@@ -241,4 +298,3 @@ comment on function public.update_resident_activation_email_v1(uuid, uuid, text)
 revoke all on function public.update_resident_activation_email_v1(uuid, uuid, text) from public;
 revoke all on function public.update_resident_activation_email_v1(uuid, uuid, text) from anon;
 grant execute on function public.update_resident_activation_email_v1(uuid, uuid, text) to authenticated;
-grant execute on function public.update_resident_activation_email_v1(uuid, uuid, text) to service_role;
