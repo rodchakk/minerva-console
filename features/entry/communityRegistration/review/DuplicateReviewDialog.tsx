@@ -1136,7 +1136,7 @@ export function DuplicateReviewDialog({
                 </div>
               ) : null}
 
-              {uniqueDataItems.length > 0 ? (
+              {uniqueDataItems.length > 0 && protectedUniqueResidents.length === 0 ? (
                 <div className="mt-4 rounded-lg border border-amber-400/25 bg-amber-500/[0.07] p-3">
                   <div className="flex items-start gap-2">
                     <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
