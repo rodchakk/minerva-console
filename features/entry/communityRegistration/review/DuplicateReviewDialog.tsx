@@ -1170,7 +1170,9 @@ export function DuplicateReviewDialog({
                 <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.06] px-3 py-3">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
                   <p className="text-xs leading-5 text-emerald-100">
-                    No unique registration information was detected on the lower-stage duplicate.
+                    {protectedUniqueResidents.length > 0
+                      ? "No additional household information was found in the duplicate. The selected residents above are the only information that will be added to the canonical household."
+                      : "No unique registration information was detected on the lower-stage duplicate."}
                   </p>
                 </div>
               )}
