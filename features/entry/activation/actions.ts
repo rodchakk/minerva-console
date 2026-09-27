@@ -39,14 +39,26 @@ export type ActivationQueueImportResult = {
   submitted: number;
 };
 
+export type ActivationFollowUpStatus =
+  | "completed"
+  | "needs_follow_up"
+  | "not_invited"
+  | "recent"
+  | "waiting";
+
 export type ActivationQueueRow = {
   createdAt: string;
+  daysSinceLastInvitation: number | null;
   email: string;
+  firstInvitationSentAt: string;
+  followUpStatus: ActivationFollowUpStatus;
   id: string;
+  invitationAttemptCount: number;
   inviteSentAt: string;
   lastActivationAt: string;
   lastActivationChannel: string;
   lastError: string;
+  lastInvitationSentAt: string;
   lastPinGeneratedAt: string;
   method: string;
   ownerReference: string;
@@ -221,6 +233,31 @@ function getLatestActivationActivity(inviteSentAt: string, lastPinGeneratedAt: s
       };
 }
 
+function deriveFollowUpStatus(
+  status: string,
+  lastInvitationSentAt: string,
+): ActivationFollowUpStatus {
+  if (["activated", "skipped"].includes(status)) {
+    return "completed";
+  }
+
+  if (!lastInvitationSentAt) {
+    return "not_invited";
+  }
+
+  const timestamp = new Date(lastInvitationSentAt).getTime();
+
+  if (Number.isNaN(timestamp)) {
+    return "not_invited";
+  }
+
+  const ageDays = Math.max(0, (Date.now() - timestamp) / 86_400_000);
+
+  if (ageDays <= 3) return "recent";
+  if (ageDays <= 7) return "waiting";
+  return "needs_follow_up";
+}
+
 function normalizeMethod(value: string) {
   const normalized = value.trim().toLowerCase();
 
@@ -312,7 +349,45 @@ function mapActivationQueueRow(item: unknown): ActivationQueueRow {
     coerceString(record.suggested_username) ||
     coerceString(record.username_suggestion);
   const inviteSentAt = coerceString(record.invite_sent_at);
+  const firstInvitationSentAt =
+    coerceString(record.first_invitation_sent_at) || inviteSentAt;
+  const lastInvitationSentAt =
+    coerceString(record.last_invitation_sent_at) || inviteSentAt;
   const lastPinGeneratedAt = coerceString(record.last_pin_generated_at);
+  const normalizedStatus = normalizeStatus(coerceString(record.status, "pending"));
+  const derivedFollowUpStatus = deriveFollowUpStatus(
+    normalizedStatus,
+    lastInvitationSentAt,
+  );
+  const serverFollowUpStatus = coerceString(record.follow_up_status) as ActivationFollowUpStatus;
+  const followUpStatus = [
+    "completed",
+    "needs_follow_up",
+    "not_invited",
+    "recent",
+    "waiting",
+  ].includes(serverFollowUpStatus)
+    ? serverFollowUpStatus
+    : derivedFollowUpStatus;
+  const serverDays = record.days_since_last_invitation;
+  const parsedServerDays =
+    serverDays === null || serverDays === undefined || serverDays === ""
+      ? null
+      : Number(serverDays);
+  const daysSinceLastInvitation =
+    parsedServerDays !== null && Number.isFinite(parsedServerDays)
+      ? Math.max(0, Math.floor(parsedServerDays))
+      : lastInvitationSentAt
+        ? Math.max(
+            0,
+            Math.floor(
+              (Date.now() - new Date(lastInvitationSentAt).getTime()) / 86_400_000,
+            ),
+          )
+        : null;
+  const invitationAttemptCount =
+    coerceNumber(record.invitation_attempt_count) ||
+    (lastInvitationSentAt ? 1 : 0);
   const lastActivation = getLatestActivationActivity(
     inviteSentAt,
     lastPinGeneratedAt,
@@ -320,15 +395,20 @@ function mapActivationQueueRow(item: unknown): ActivationQueueRow {
 
   return {
     createdAt: formatCreatedAt(createdAt),
+    daysSinceLastInvitation,
     email: coerceString(record.email, "—"),
+    firstInvitationSentAt: formatOptionalDateTime(firstInvitationSentAt),
+    followUpStatus,
     id:
       coerceString(record.queue_id) ||
       coerceString(record.id) ||
       crypto.randomUUID(),
+    invitationAttemptCount,
     inviteSentAt: formatOptionalDateTime(inviteSentAt),
     lastActivationAt: lastActivation.at,
     lastActivationChannel: lastActivation.channel,
     lastError: coerceString(record.last_error, "—"),
+    lastInvitationSentAt: formatOptionalDateTime(lastInvitationSentAt),
     lastPinGeneratedAt: formatOptionalDateTime(lastPinGeneratedAt),
     method: normalizeMethod(
       coerceString(record.activation_method) || coerceString(record.method),
@@ -339,7 +419,7 @@ function mapActivationQueueRow(item: unknown): ActivationQueueRow {
       coerceString(record.resident_name) ||
       coerceString(record.full_name) ||
       "Unnamed resident",
-    status: normalizeStatus(coerceString(record.status, "pending")),
+    status: normalizedStatus,
     suggestedUsername: suggestedUsername || "Not generated",
     unit:
       coerceString(record.unit_label) ||
@@ -403,9 +483,9 @@ export async function getActivationQueuePageData(input: {
   }
 
   const supabase = await createClient();
-  const [{ data: queueV2Data, error: queueV2Error }, { data: progressData }] =
+  const [{ data: queueV3Data, error: queueV3Error }, { data: progressData }] =
     await Promise.all([
-      supabase.rpc("list_resident_activation_queue_v2", {
+      supabase.rpc("list_resident_activation_queue_v3", {
         p_community_id: communityId,
         p_status: status,
       }),
@@ -414,23 +494,36 @@ export async function getActivationQueuePageData(input: {
       }),
     ]);
 
-  let queueData = queueV2Data;
-  let queueError = queueV2Error;
+  let queueData = queueV3Data;
+  let queueError = queueV3Error;
 
   // Preview deployments can be built before the accompanying migration is
-  // applied. Keep the queue usable there; v1 still includes invite_sent_at,
-  // while the new PIN timestamp simply renders as "Never" until v2 exists.
+  // applied. Fall back through the previous read models while keeping the UI
+  // usable; follow-up values are derived from invite_sent_at when v3 is absent.
   if (
-    queueV2Error &&
-    (queueV2Error.code === "PGRST202" ||
-      queueV2Error.message?.includes("list_resident_activation_queue_v2"))
+    queueV3Error &&
+    (queueV3Error.code === "PGRST202" ||
+      queueV3Error.message?.includes("list_resident_activation_queue_v3"))
   ) {
-    const fallback = await supabase.rpc("list_resident_activation_queue_v1", {
+    const v2Fallback = await supabase.rpc("list_resident_activation_queue_v2", {
       p_community_id: communityId,
       p_status: status,
     });
-    queueData = fallback.data;
-    queueError = fallback.error;
+    queueData = v2Fallback.data;
+    queueError = v2Fallback.error;
+
+    if (
+      v2Fallback.error &&
+      (v2Fallback.error.code === "PGRST202" ||
+        v2Fallback.error.message?.includes("list_resident_activation_queue_v2"))
+    ) {
+      const v1Fallback = await supabase.rpc("list_resident_activation_queue_v1", {
+        p_community_id: communityId,
+        p_status: status,
+      });
+      queueData = v1Fallback.data;
+      queueError = v1Fallback.error;
+    }
   }
 
   const rows =

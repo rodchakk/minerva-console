@@ -18,7 +18,10 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import type { ActivationQueueRow } from "@/features/entry/activation/actions";
+import type {
+  ActivationFollowUpStatus,
+  ActivationQueueRow,
+} from "@/features/entry/activation/actions";
 import { createActivatedUsers } from "@/features/entry/activation/createUserActions";
 import {
   ResidentAccessModePicker,
@@ -955,6 +958,55 @@ function getQueueViewLabel(view: QueueView) {
   }
 }
 
+type FollowUpView =
+  | "all"
+  | "needs_follow_up"
+  | "not_invited"
+  | "recent"
+  | "waiting";
+
+function matchesFollowUpView(row: ActivationQueueRow, view: FollowUpView) {
+  if (view === "all") return true;
+  return row.followUpStatus === view;
+}
+
+function getFollowUpLabel(status: ActivationFollowUpStatus) {
+  switch (status) {
+    case "needs_follow_up":
+      return "Needs follow-up";
+    case "not_invited":
+      return "Not invited";
+    case "recent":
+      return "Recent";
+    case "waiting":
+      return "Waiting";
+    default:
+      return "Completed";
+  }
+}
+
+function getFollowUpTone(
+  status: ActivationFollowUpStatus,
+): "danger" | "default" | "info" | "success" | "warning" {
+  switch (status) {
+    case "needs_follow_up":
+      return "danger";
+    case "waiting":
+      return "warning";
+    case "recent":
+      return "info";
+    case "completed":
+      return "success";
+    default:
+      return "default";
+  }
+}
+
+function getFollowUpFilterLabel(view: FollowUpView) {
+  if (view === "all") return "All";
+  return getFollowUpLabel(view);
+}
+
 function getActivationStage(row: ActivationQueueRow) {
   const status = row.status;
   return [
@@ -1066,6 +1118,11 @@ export function ActivationQueueTable({
   const [activeRowId, setActiveRowId] = useState<string | null>(rows[0]?.id ?? null);
   const [searchQuery, setSearchQuery] = useState("");
   const [queueView, setQueueView] = useState<QueueView>("all");
+  const [followUpView, setFollowUpView] = useState<FollowUpView>(
+    rows.some((row) => row.followUpStatus === "needs_follow_up")
+      ? "needs_follow_up"
+      : "all",
+  );
   const [emailEditorRowId, setEmailEditorRowId] = useState<string | null>(null);
   const [phoneEditorRowId, setPhoneEditorRowId] = useState<string | null>(null);
 
@@ -1086,11 +1143,47 @@ export function ActivationQueueTable({
     [rows],
   );
 
+  const followUpCounts = useMemo(
+    () => ({
+      all: rows.filter((row) =>
+        ["pending", "pin_generated", "invited"].includes(row.status),
+      ).length,
+      needs_follow_up: rows.filter(
+        (row) => row.followUpStatus === "needs_follow_up",
+      ).length,
+      not_invited: rows.filter((row) => row.followUpStatus === "not_invited").length,
+      recent: rows.filter((row) => row.followUpStatus === "recent").length,
+      waiting: rows.filter((row) => row.followUpStatus === "waiting").length,
+      fourteen_plus: rows.filter(
+        (row) =>
+          row.followUpStatus === "needs_follow_up" &&
+          (row.daysSinceLastInvitation ?? 0) >= 14,
+      ).length,
+      high_attempts: rows.filter(
+        (row) =>
+          !["activated", "skipped"].includes(row.status) &&
+          row.invitationAttemptCount >= 5,
+      ).length,
+    }),
+    [rows],
+  );
+
+  const followUpFilterOrder = useMemo<FollowUpView[]>(
+    () =>
+      followUpCounts.needs_follow_up > 0
+        ? ["all", "needs_follow_up", "not_invited", "recent", "waiting"]
+        : ["all", "not_invited", "recent", "waiting", "needs_follow_up"],
+    [followUpCounts.needs_follow_up],
+  );
+
   const filteredRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
 
     return rows.filter((row) => {
       const matchesView = matchesQueueView(row, queueView);
+      const followUpApplies = !["activated", "errors"].includes(queueView);
+      const matchesFollowUp =
+        !followUpApplies || matchesFollowUpView(row, followUpView);
       const matchesQuery =
         !normalizedQuery ||
         row.unit.toLowerCase().includes(normalizedQuery) ||
@@ -1099,9 +1192,9 @@ export function ActivationQueueTable({
         row.phone.toLowerCase().includes(normalizedQuery) ||
         row.suggestedUsername.toLowerCase().includes(normalizedQuery);
 
-      return matchesView && matchesQuery;
+      return matchesView && matchesFollowUp && matchesQuery;
     });
-  }, [queueView, rows, searchQuery]);
+  }, [followUpView, queueView, rows, searchQuery]);
 
   const visibleRowIds = useMemo(
     () => filteredRows.map((row) => row.id),
@@ -1636,17 +1729,40 @@ export function ActivationQueueTable({
             </span>
           </button>
 
-          <div className="flex items-center gap-3 rounded-xl border border-sky-400/15 bg-sky-500/[0.045] px-4 py-3">
+          <button
+            type="button"
+            onClick={() =>
+              setFollowUpView(
+                followUpCounts.needs_follow_up > 0 ? "needs_follow_up" : "all",
+              )
+            }
+            className="flex items-center gap-3 rounded-xl border border-sky-400/15 bg-sky-500/[0.045] px-4 py-3 text-left"
+          >
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sky-500/10 text-sky-300">
-              <KeyRound className="size-4" aria-hidden />
+              <Clock3 className="size-4" aria-hidden />
             </span>
             <div>
-              <p className="text-sm font-semibold text-white">Activation tip</p>
+              <p className="text-sm font-semibold text-white">Follow-up snapshot</p>
               <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
-                Select multiple residents to generate PINs or send invites in one controlled batch.
+                {queueCounts.ready} pending · {followUpCounts.not_invited} not invited ·{" "}
+                {followUpCounts.recent} recent · {followUpCounts.waiting} waiting ·{" "}
+                {followUpCounts.needs_follow_up} need follow-up
               </p>
+              {followUpCounts.fourteen_plus > 0 || followUpCounts.high_attempts > 0 ? (
+                <p className="mt-1 text-[10px] font-medium text-amber-200/80">
+                  {followUpCounts.fourteen_plus > 0
+                    ? `${followUpCounts.fourteen_plus} at 14+ days`
+                    : ""}
+                  {followUpCounts.fourteen_plus > 0 && followUpCounts.high_attempts > 0
+                    ? " · "
+                    : ""}
+                  {followUpCounts.high_attempts > 0
+                    ? `${followUpCounts.high_attempts} with 5+ invitations`
+                    : ""}
+                </p>
+              ) : null}
             </div>
-          </div>
+          </button>
         </div>
 
         <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-24rem),52rem)] xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -1684,6 +1800,30 @@ export function ActivationQueueTable({
                 </label>
               </div>
 
+              <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Activation follow-up filters">
+                <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+                  Follow-up
+                </span>
+                {followUpFilterOrder.map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => setFollowUpView(view)}
+                    aria-pressed={followUpView === view}
+                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
+                      followUpView === view
+                        ? view === "needs_follow_up"
+                          ? "border-rose-400/35 bg-rose-500/10 text-rose-100"
+                          : "border-sky-400/35 bg-sky-500/10 text-sky-100"
+                        : "border-[var(--border)] text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-white"
+                    }`}
+                  >
+                    {getFollowUpFilterLabel(view)}{" "}
+                    <span className="ml-1 opacity-70">{followUpCounts[view]}</span>
+                  </button>
+                ))}
+              </div>
+
               <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
                 <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-200">
                   <input
@@ -1703,7 +1843,7 @@ export function ActivationQueueTable({
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]">
-              <table className="w-full min-w-[1180px] table-fixed border-collapse text-left text-xs">
+              <table className="w-full min-w-[1320px] table-fixed border-collapse text-left text-xs">
                 <thead className="sticky top-0 z-10 border-b border-white/[0.08] bg-[rgba(12,17,25,0.96)] text-[var(--text-muted)] backdrop-blur">
                   <tr>
                     <th className="w-11 px-3 py-2.5">
@@ -1714,7 +1854,8 @@ export function ActivationQueueTable({
                     <th className="w-[21%] px-3 py-2.5 font-semibold">Contact</th>
                     <th className="w-[15%] px-3 py-2.5 font-semibold">Username</th>
                     <th className="w-[11%] px-3 py-2.5 font-semibold">Method</th>
-                    <th className="w-[11%] px-3 py-2.5 font-semibold">Status</th>
+                    <th className="w-[10%] px-3 py-2.5 font-semibold">Status</th>
+                    <th className="w-[13%] px-3 py-2.5 font-semibold">Follow-up</th>
                     <th className="w-[15%] px-3 py-2.5 font-semibold">Last activation</th>
                     <th className="w-[15%] px-3 py-2.5 font-semibold">Created</th>
                   </tr>
@@ -1772,6 +1913,22 @@ export function ActivationQueueTable({
                         <td className="px-3 py-2.5 align-top">
                           <Badge tone={getStatusTone(row.status)}>{getStatusLabel(row.status)}</Badge>
                         </td>
+                        <td className="px-3 py-2.5 align-top">
+                          <Badge tone={getFollowUpTone(row.followUpStatus)}>
+                            {getFollowUpLabel(row.followUpStatus)}
+                          </Badge>
+                          {row.followUpStatus !== "completed" ? (
+                            <span className="mt-1 block text-[10px] text-[var(--text-muted)]">
+                              {row.invitationAttemptCount} invitation{row.invitationAttemptCount === 1 ? "" : "s"}
+                            </span>
+                          ) : null}
+                          {row.followUpStatus === "needs_follow_up" &&
+                          (row.daysSinceLastInvitation ?? 0) >= 14 ? (
+                            <span className="mt-1 block text-[10px] font-semibold text-rose-200">
+                              14+ days
+                            </span>
+                          ) : null}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2.5 align-top">
                           <span className="block text-slate-200">{row.lastActivationAt}</span>
                           {row.lastActivationChannel !== "—" ? (
@@ -1789,7 +1946,7 @@ export function ActivationQueueTable({
 
                   {filteredRows.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-6 py-16 text-center text-sm text-[var(--text-muted)]">
+                      <td colSpan={10} className="px-6 py-16 text-center text-sm text-[var(--text-muted)]">
                         No residents match this queue view.
                       </td>
                     </tr>
@@ -1924,8 +2081,24 @@ export function ActivationQueueTable({
                         </dd>
                       </div>
                       <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Last email sent</dt>
-                        <dd className="text-right text-slate-200">{activeRow.inviteSentAt}</dd>
+                        <dt className="text-[var(--text-muted)]">Follow-up</dt>
+                        <dd className="text-right">
+                          <Badge tone={getFollowUpTone(activeRow.followUpStatus)}>
+                            {getFollowUpLabel(activeRow.followUpStatus)}
+                          </Badge>
+                        </dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">First invitation sent</dt>
+                        <dd className="text-right text-slate-200">{activeRow.firstInvitationSentAt}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Last invitation sent</dt>
+                        <dd className="text-right text-slate-200">{activeRow.lastInvitationSentAt}</dd>
+                      </div>
+                      <div className="flex items-start justify-between gap-3">
+                        <dt className="text-[var(--text-muted)]">Invitation attempts</dt>
+                        <dd className="text-right text-slate-200">{activeRow.invitationAttemptCount}</dd>
                       </div>
                       <div className="flex items-start justify-between gap-3">
                         <dt className="text-[var(--text-muted)]">Last PIN generated</dt>
@@ -1937,6 +2110,18 @@ export function ActivationQueueTable({
                       </div>
                     </dl>
                   </div>
+
+                  {activeRow.followUpStatus === "needs_follow_up" ||
+                  activeRow.invitationAttemptCount >= 5 ? (
+                    <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] p-3.5">
+                      <p className="text-xs font-semibold text-amber-100">Follow-up guidance</p>
+                      <p className="mt-1 text-[11px] leading-5 text-amber-100/75">
+                        {activeRow.invitationAttemptCount >= 5
+                          ? "Several invitations have already been sent. Confirm the email or contact the resident by WhatsApp before sending another reminder."
+                          : `The last invitation was sent ${activeRow.daysSinceLastInvitation ?? 8} days ago. This resident is ready for a follow-up.`}
+                      </p>
+                    </div>
+                  ) : null}
 
                   <div className="mt-4">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
