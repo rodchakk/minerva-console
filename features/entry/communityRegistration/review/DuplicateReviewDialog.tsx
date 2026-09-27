@@ -20,6 +20,7 @@ import {
   combineCommunityRegistrationHouseholds,
   dismissCommunityRegistrationDuplicate,
   mergeCommunityRegistrationDuplicateUnits,
+  protectedMergeCommunityRegistrationDuplicate,
   type RegistrationDuplicateActionResult,
 } from "@/features/entry/communityRegistration/review/duplicateActions";
 import type {
@@ -607,12 +608,17 @@ export function DuplicateReviewDialog({
     Record<string, ResidentConflictChoices>
   >({});
   const [uniqueDataAcknowledged, setUniqueDataAcknowledged] = useState(false);
+  const [protectedSelectedResidentIds, setProtectedSelectedResidentIds] = useState<string[]>([]);
   const [mergeState, mergeAction, mergePending] = useActionState(
     mergeCommunityRegistrationDuplicateUnits,
     initialState,
   );
   const [archiveState, archiveAction, archivePending] = useActionState(
     archiveCommunityRegistrationDuplicate,
+    initialState,
+  );
+  const [protectedMergeState, protectedMergeAction, protectedMergePending] = useActionState(
+    protectedMergeCommunityRegistrationDuplicate,
     initialState,
   );
   const [combineState, combineAction, combinePending] = useActionState(
@@ -782,6 +788,29 @@ export function DuplicateReviewDialog({
         : unitA
       : null;
 
+  const protectedUniqueResidents = (() => {
+    if (!resolveMode || !canonicalUnit || !duplicateUnit) {
+      return [] as RegistrationDuplicateResident[];
+    }
+    const canonicalIds = new Set(canonicalUnit.residents.map((resident) => resident.id));
+    return duplicateUnit.residents.filter((resident) => {
+      const match = candidate.residentMatches.find(
+        (item) =>
+          item.leftResidentId === resident.id || item.rightResidentId === resident.id,
+      );
+      if (!match) return true;
+      const otherId =
+        match.leftResidentId === resident.id ? match.rightResidentId : match.leftResidentId;
+      return !canonicalIds.has(otherId);
+    });
+  })();
+
+  const protectedSelectedSet = new Set(protectedSelectedResidentIds);
+  const canProtectedMerge =
+    resolveMode &&
+    protectedUniqueResidents.length > 0 &&
+    protectedSelectedResidentIds.length > 0;
+
   const uniqueDataItems = (() => {
     if (!resolveMode || !canonicalUnit || !duplicateUnit) return [] as string[];
     const items: string[] = [];
@@ -853,17 +882,21 @@ export function DuplicateReviewDialog({
       ? combineState
       : resolutionPath === "keep_separate"
         ? dismissState
-        : resolveMode
-          ? archiveState
-          : mergeState;
+        : resolveMode && protectedUniqueResidents.length > 0
+          ? protectedMergeState
+          : resolveMode
+            ? archiveState
+            : mergeState;
   const pending =
     resolutionPath === "combine_household"
       ? combinePending
       : resolutionPath === "keep_separate"
         ? dismissPending
-        : resolveMode
-          ? archivePending
-          : mergePending;
+        : resolveMode && protectedUniqueResidents.length > 0
+          ? protectedMergePending
+          : resolveMode
+            ? archivePending
+            : mergePending;
   const combineResidents = [
     ...(canonicalUnit?.residents ?? []),
     ...(duplicateUnit?.residents ?? []),
@@ -1043,19 +1076,67 @@ export function DuplicateReviewDialog({
           ) : resolveMode ? (
             <section className="mt-5 rounded-xl border border-cyan-400/20 bg-cyan-500/[0.06] p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200">
-                Archive duplicate
+                {protectedUniqueResidents.length > 0 ? "Protected operational merge" : "Archive duplicate"}
               </p>
               <h4 className="mt-1 text-base font-semibold text-white">
-                Keep {canonicalUnit.label}
+                {canonicalUnit.label} remains the canonical household
               </h4>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                {duplicateUnit.label} will be archived as a resolved duplicate.
-                The {canonicalUnit.lifecycle.label.toLowerCase()} household, its
-                Activation Queue state, users, house identity, PINs and access
-                identity will not be changed.
+                This household has already reached Activation, so ENTRY will protect
+                its existing users, PINs, Activation Queue rows, house identity and
+                access history. Only explicitly selected new residents can be added.
               </p>
 
-              {uniqueDataItems.length > 0 ? (
+              {protectedUniqueResidents.length > 0 ? (
+                <div className="mt-4 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.06] p-3">
+                  <p className="text-sm font-semibold text-emerald-100">
+                    Residents found only in {duplicateUnit.label}
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-emerald-50/70">
+                    Select the residents that really belong to {canonicalUnit.label}.
+                    They will enter Activation Queue as new pending residents.
+                  </p>
+                  <div className="mt-3 space-y-2">
+                    {protectedUniqueResidents.map((resident) => (
+                      <label
+                        key={resident.id}
+                        className="flex cursor-pointer items-start gap-3 rounded-lg border border-white/[0.08] bg-black/10 px-3 py-3"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={protectedSelectedSet.has(resident.id)}
+                          onChange={(event) =>
+                            setProtectedSelectedResidentIds((current) =>
+                              event.target.checked
+                                ? Array.from(new Set([...current, resident.id]))
+                                : current.filter((id) => id !== resident.id),
+                            )
+                          }
+                          className="mt-0.5 size-4 accent-violet-500"
+                        />
+                        <span className="min-w-0">
+                          <span className="block text-sm font-semibold text-white">
+                            {resident.fullName}
+                          </span>
+                          <span className="mt-1 block text-xs text-[var(--text-muted)]">
+                            {resident.email ?? "Email missing"} · {resident.phone ?? "Phone missing"}
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex items-start gap-2 rounded-lg border border-cyan-400/15 bg-cyan-500/[0.05] px-3 py-2.5">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-cyan-200" aria-hidden />
+                    <p className="text-xs leading-5 text-cyan-50/80">
+                      Existing operational residents are not recreated or modified.
+                      If a selected resident already has operational identity or conflicting
+                      activation data, the server will stop the entire operation for manual review.
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+
+              {uniqueDataItems.length > 0 && protectedUniqueResidents.length === 0 ? (
                 <div className="mt-4 rounded-lg border border-amber-400/25 bg-amber-500/[0.07] p-3">
                   <div className="flex items-start gap-2">
                     <TriangleAlert className="mt-0.5 size-4 shrink-0 text-amber-300" aria-hidden />
@@ -1089,7 +1170,9 @@ export function DuplicateReviewDialog({
                 <div className="mt-4 flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.06] px-3 py-3">
                   <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
                   <p className="text-xs leading-5 text-emerald-100">
-                    No unique registration information was detected on the lower-stage duplicate.
+                    {protectedUniqueResidents.length > 0
+                      ? "No additional household information was found in the duplicate. The selected residents above are the only information that will be added to the canonical household."
+                      : "No unique registration information was detected on the lower-stage duplicate."}
                   </p>
                 </div>
               )}
@@ -1491,6 +1574,37 @@ export function DuplicateReviewDialog({
               <Button type="submit" className="gap-2" disabled={pending}>
                 <CheckCircle2 className="size-4" aria-hidden />
                 {pending ? "Saving..." : "Keep separate"}
+              </Button>
+            </div>
+          </form>
+        ) : resolveMode && protectedUniqueResidents.length > 0 ? (
+          <form
+            action={protectedMergeAction}
+            className="flex shrink-0 flex-col gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+          >
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-white">
+                Protected merge into {canonicalUnit.label}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                {protectedSelectedResidentIds.length} new resident
+                {protectedSelectedResidentIds.length === 1 ? "" : "s"} selected. Existing operational identity stays untouched.
+              </p>
+            </div>
+            <input type="hidden" name="campaign_id" value={campaignId} />
+            <input type="hidden" name="community_id" value={communityId} />
+            <input type="hidden" name="canonical_unit_id" value={canonicalUnit.id} />
+            <input type="hidden" name="duplicate_unit_id" value={duplicateUnit.id} />
+            {protectedSelectedResidentIds.map((residentId) => (
+              <input key={residentId} type="hidden" name="selected_resident_id" value={residentId} />
+            ))}
+            <div className="flex shrink-0 gap-2">
+              <Button type="button" variant="secondary" onClick={onClose} disabled={pending}>
+                Cancel
+              </Button>
+              <Button type="submit" className="gap-2" disabled={!canProtectedMerge || pending}>
+                <GitMerge className="size-4" aria-hidden />
+                {pending ? "Adding residents..." : `Merge into ${canonicalUnit.label}`}
               </Button>
             </div>
           </form>

@@ -11,6 +11,7 @@ export type RegistrationDuplicateActionResult =
       data: {
         canonicalUnitId?: string;
         kind:
+          | "protected_merge"
           | "combine_household"
           | "dismissed"
           | "merged"
@@ -56,6 +57,12 @@ function mapDuplicateError(error: { code?: string | null; message?: string | nul
 
   if (/ENTRY_CR_DUPLICATE_ALREADY_ACTIVATED/.test(message)) {
     return "These records already reached Activation Queue. Resolve the active identity before merging registration records.";
+  }
+  if (/ENTRY_CR_DUPLICATE_PROTECTED_RESIDENT_CONFLICT/.test(message)) {
+    return "One of the selected residents already has operational identity or conflicting activation data. Review that resident manually before adding them.";
+  }
+  if (/ENTRY_CR_DUPLICATE_PROTECTED_SELECTION_REQUIRED/.test(message)) {
+    return "Select at least one unique resident to add to the operational household.";
   }
   if (/ENTRY_CR_DUPLICATE_MANUAL_IDENTITY_REVIEW_REQUIRED/.test(message)) {
     return "Both registrations already have operational identity. This pair requires manual identity review.";
@@ -317,6 +324,68 @@ export async function archiveCommunityRegistrationDuplicate(
       message:
         "The lower-stage registration was archived as a resolved duplicate. The operational household was not changed.",
       mergedResidentCount: Number(result.unique_data_count ?? 0),
+    },
+  };
+}
+
+
+export async function protectedMergeCommunityRegistrationDuplicate(
+  _previousState: RegistrationDuplicateActionResult | null,
+  formData: FormData,
+): Promise<RegistrationDuplicateActionResult> {
+  const auth = await requireSuperadmin();
+  const previewResult = previewReadOnlyResult();
+  if (previewResult) return previewResult;
+
+  const campaignId = formString(formData, "campaign_id");
+  const communityId = formString(formData, "community_id");
+  const canonicalUnitId = formString(formData, "canonical_unit_id");
+  const duplicateUnitId = formString(formData, "duplicate_unit_id");
+  const selectedResidentIds = formData
+    .getAll("selected_resident_id")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+
+  if (
+    !campaignId ||
+    !communityId ||
+    !canonicalUnitId ||
+    !duplicateUnitId ||
+    canonicalUnitId === duplicateUnitId
+  ) {
+    return { success: false, error: "Protected merge information is incomplete." };
+  }
+
+  if (selectedResidentIds.length < 1) {
+    return { success: false, error: "Select at least one unique resident to add." };
+  }
+
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.rpc(
+    "protected_merge_community_registration_duplicate_v1",
+    {
+      p_actor_user_id: auth.user.id,
+      p_campaign_id: campaignId,
+      p_canonical_unit_id: canonicalUnitId,
+      p_duplicate_unit_id: duplicateUnitId,
+      p_selected_resident_ids: selectedResidentIds,
+    },
+  );
+
+  if (error) return { success: false, error: mapDuplicateError(error) };
+
+  const result =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
+
+  revalidateRegistration(communityId);
+  return {
+    success: true,
+    data: {
+      canonicalUnitId,
+      kind: "protected_merge",
+      mergedResidentCount: Number(result.added_resident_count ?? 0),
+      message:
+        "Unique residents were added to the protected operational household and the duplicate registration was archived.",
     },
   };
 }
