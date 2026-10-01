@@ -92,6 +92,7 @@ const DIAGNOSTIC_REQUIRED_SECTIONS = [
   "suspected_areas",
   "observability",
   "current_observability",
+  "provider_health",
   "recent_events",
   "privacy",
 ] as const;
