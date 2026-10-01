@@ -6,11 +6,12 @@ import {
   getEntryDiagnosticSnapshots,
   getEntryObservability,
 } from "@/features/entry/observability/queries";
+import { getEntryProviderHealth } from "@/features/entry/observability/providerHealth";
 
 export const dynamic = "force-dynamic";
 
 export default async function FieldEntryHealthPage() {
-  const [observability, snapshots] = await Promise.all([
+  const [observability, snapshots, providerHealth] = await Promise.all([
     getEntryObservability({ range: "24h" }).catch(() => ({
       error: "ENTRY health could not be loaded.",
       state: "unavailable" as const,
@@ -19,6 +20,7 @@ export default async function FieldEntryHealthPage() {
       error: "Diagnostic snapshots could not be loaded.",
       state: "unavailable" as const,
     })),
+    getEntryProviderHealth().catch(() => null),
   ]);
 
   if (observability.state !== "ready") {
@@ -26,6 +28,7 @@ export default async function FieldEntryHealthPage() {
       <FieldEntryHealthWorkspace
         data={null}
         error={observability.error}
+        providerHealth={providerHealth}
       />
     );
   }
@@ -69,5 +72,11 @@ export default async function FieldEntryHealthPage() {
     status: currentStatus,
   } satisfies FieldEntryHealthView;
 
-  return <FieldEntryHealthWorkspace data={data} error={null} />;
+  return (
+    <FieldEntryHealthWorkspace
+      data={data}
+      error={null}
+      providerHealth={providerHealth}
+    />
+  );
 }
