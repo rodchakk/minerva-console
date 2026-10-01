@@ -87,6 +87,10 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
     ? asArray(currentObservability.critical_flows).map(asRecord)
     : asArray(observability.critical_flows).map(asRecord);
   const queueHealth = asRecord(bundle.queue_health);
+  const providerHealth = asRecord(bundle.provider_health);
+  const primaryProvider = asRecord(providerHealth.primary);
+  const continuityProvider = asRecord(providerHealth.continuity);
+  const providerAttribution = asRecord(providerHealth.attribution);
 
   const currentStatus = String(triage.system_status || "unknown").toUpperCase();
   const windowStatus = String(triage.window_status || triage.system_status || "unknown").toUpperCase();
@@ -101,6 +105,20 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
   if (windowStatus !== currentStatus) {
     lines.push(
       `Selected-window health: ${windowStatus} (historical activity in this window; not necessarily current)`,
+    );
+  }
+
+  if (Object.keys(providerHealth).length > 0) {
+    lines.push(
+      "",
+      "Infrastructure providers:",
+      `- Primary: ${String(primaryProvider.provider || "Supabase")} · ${String(
+        primaryProvider.state || "unknown",
+      ).toUpperCase()} · ${String(primaryProvider.latency_ms ?? "n/a")} ms`,
+      `- Continuity: ${String(continuityProvider.provider || "Cloudflare")} · ${String(
+        continuityProvider.state || "unknown",
+      ).toUpperCase()}`,
+      `- Attribution: ${String(providerAttribution.title || "Unavailable")}`,
     );
   }
 
