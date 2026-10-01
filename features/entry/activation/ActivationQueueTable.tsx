@@ -1178,6 +1178,7 @@ export function ActivationQueueTable({
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
+    const normalizedDigits = searchQuery.replace(/\D+/g, "");
 
     return rows.filter((row) => {
       const matchesView = matchesQueueView(row, queueView);
@@ -1190,6 +1191,7 @@ export function ActivationQueueTable({
         row.resident.toLowerCase().includes(normalizedQuery) ||
         row.email.toLowerCase().includes(normalizedQuery) ||
         row.phone.toLowerCase().includes(normalizedQuery) ||
+        (normalizedDigits.length > 0 && row.phone.replace(/\D+/g, "").includes(normalizedDigits)) ||
         row.suggestedUsername.toLowerCase().includes(normalizedQuery);
 
       return matchesView && matchesFollowUp && matchesQuery;
@@ -1794,7 +1796,7 @@ export function ActivationQueueTable({
                   <input
                     value={searchQuery}
                     onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search resident, unit or contact..."
+                    placeholder="Search name, unit, email, phone or username..."
                     className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
                   />
                 </label>
