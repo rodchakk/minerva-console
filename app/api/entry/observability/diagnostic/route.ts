@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthContext } from "@/features/auth/requireSuperadmin";
 import { createClient } from "@/lib/supabase/server";
+import { getEntryProviderHealth } from "@/features/entry/observability/providerHealth";
 
 export const dynamic = "force-dynamic";
 
@@ -127,6 +128,64 @@ export async function POST(request: NextRequest) {
     }
   } catch {
     // Diagnostic export must remain available even when enrichment is absent.
+  }
+
+  // Provider attribution is intentionally generated outside the observability
+  // RPC so a diagnostic can distinguish ENTRY failures from upstream
+  // infrastructure health. No credentials or provider URLs are included.
+  try {
+    const providerHealth = await getEntryProviderHealth();
+
+    if (
+      responseData &&
+      typeof responseData === "object" &&
+      !Array.isArray(responseData)
+    ) {
+      const envelope = responseData as Record<string, unknown>;
+      const bundle =
+        envelope.bundle &&
+        typeof envelope.bundle === "object" &&
+        !Array.isArray(envelope.bundle)
+          ? (envelope.bundle as Record<string, unknown>)
+          : null;
+
+      if (bundle) {
+        responseData = {
+          ...envelope,
+          bundle: {
+            ...bundle,
+            provider_health: {
+              attribution: {
+                explanation: providerHealth.attribution.explanation,
+                kind: providerHealth.attribution.kind,
+                title: providerHealth.attribution.title,
+              },
+              checked_at: providerHealth.checkedAt,
+              continuity: {
+                configured: providerHealth.continuity.configured,
+                http_status: providerHealth.continuity.httpStatus,
+                latency_ms: providerHealth.continuity.latencyMs,
+                provider: providerHealth.continuity.provider,
+                reconciliation_enabled:
+                  providerHealth.continuity.reconciliationEnabled,
+                state: providerHealth.continuity.state,
+                writes_enabled: providerHealth.continuity.writesEnabled,
+              },
+              primary: {
+                endpoint: providerHealth.primary.endpoint,
+                failure_kind: providerHealth.primary.failureKind,
+                http_status: providerHealth.primary.httpStatus,
+                latency_ms: providerHealth.primary.latencyMs,
+                provider: providerHealth.primary.provider,
+                state: providerHealth.primary.state,
+              },
+            },
+          },
+        };
+      }
+    }
+  } catch {
+    // The core diagnostic remains useful if an independent probe cannot run.
   }
 
   return NextResponse.json(responseData, {
