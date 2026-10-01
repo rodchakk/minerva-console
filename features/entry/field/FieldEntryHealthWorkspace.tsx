@@ -32,6 +32,32 @@ type FieldHealthIncident = {
   severity: "INFO" | "WARNING" | "ERROR" | "CRITICAL";
 };
 
+export type FieldProviderHealthView = {
+  checkedAt: string;
+  primary: {
+    provider: "Supabase";
+    state: "healthy" | "degraded" | "down" | "unknown";
+    latencyMs: number | null;
+    httpStatus: number | null;
+    endpoint: "auth_health";
+    failureKind: "http_5xx" | "timeout" | "network" | "http_4xx" | null;
+  };
+  continuity: {
+    provider: "Cloudflare";
+    state: "ready" | "standby" | "down" | "not_configured" | "unknown";
+    latencyMs: number | null;
+    httpStatus: number | null;
+    configured: boolean;
+    writesEnabled: boolean | null;
+    reconciliationEnabled: boolean | null;
+  };
+  attribution: {
+    kind: "primary_provider" | "continuity_provider" | "none" | "unknown";
+    title: string;
+    explanation: string;
+  };
+};
+
 export type FieldEntryHealthView = {
   flows: FieldHealthFlow[];
   generatedAt: string;
@@ -276,12 +302,75 @@ function FlowStatus({ status }: { status: FieldHealthStatus }) {
   );
 }
 
+function providerStateView(
+  state:
+    | FieldProviderHealthView["primary"]["state"]
+    | FieldProviderHealthView["continuity"]["state"],
+) {
+  if (state === "healthy" || state === "ready") {
+    return {
+      dot: "bg-emerald-300",
+      label: state === "ready" ? "READY" : "HEALTHY",
+      text: "text-emerald-200",
+    };
+  }
+
+  if (state === "degraded" || state === "standby") {
+    return {
+      dot: state === "standby" ? "bg-sky-300" : "bg-amber-300",
+      label: state === "standby" ? "STANDBY" : "DEGRADED",
+      text: state === "standby" ? "text-sky-200" : "text-amber-200",
+    };
+  }
+
+  if (state === "down") {
+    return {
+      dot: "bg-rose-400",
+      label: "DOWN",
+      text: "text-rose-200",
+    };
+  }
+
+  if (state === "not_configured") {
+    return {
+      dot: "bg-slate-500",
+      label: "NOT CONFIGURED",
+      text: "text-slate-400",
+    };
+  }
+
+  return {
+    dot: "bg-slate-500",
+    label: "UNKNOWN",
+    text: "text-slate-400",
+  };
+}
+
+function ProviderState({
+  state,
+}: {
+  state:
+    | FieldProviderHealthView["primary"]["state"]
+    | FieldProviderHealthView["continuity"]["state"];
+}) {
+  const view = providerStateView(state);
+
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs font-bold ${view.text}`}>
+      <span className={`h-2 w-2 rounded-full ${view.dot}`} />
+      {view.label}
+    </span>
+  );
+}
+
 export function FieldEntryHealthWorkspace({
   data,
   error,
+  providerHealth,
 }: {
   data: FieldEntryHealthView | null;
   error: string | null;
+  providerHealth: FieldProviderHealthView | null;
 }) {
   const router = useRouter();
   const [refreshPending, startRefresh] = useTransition();
@@ -289,7 +378,13 @@ export function FieldEntryHealthWorkspace({
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
   const [copyError, setCopyError] = useState<string | null>(null);
 
-  const status = data?.status ?? "unknown";
+  const status =
+    data?.status ??
+    (providerHealth?.primary.state === "down"
+      ? "down"
+      : providerHealth?.primary.state === "degraded"
+        ? "degraded"
+        : "unknown");
   const config = statusConfig[status];
 
   const affectedFlows = useMemo(
@@ -406,6 +501,109 @@ export function FieldEntryHealthWorkspace({
             Production
           </span>
         </div>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-[var(--console-border)] bg-[var(--console-surface)]">
+        <div className="border-b border-[var(--console-border)] px-4 py-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--console-text)]">
+                Infrastructure providers
+              </h2>
+              <p className="mt-0.5 text-xs text-[var(--console-text-muted)]">
+                Independent probes — does not rely on ENTRY operational RPCs
+              </p>
+            </div>
+            {providerHealth ? (
+              <span className="text-xs text-[var(--console-text-muted)]">
+                Checked {formatRelative(providerHealth.checkedAt)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+
+        {providerHealth ? (
+          <>
+            <div className="grid gap-px bg-[var(--console-border)] sm:grid-cols-2">
+              <div className="bg-[var(--console-surface)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+                      Primary
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-[var(--console-text)]">
+                      {providerHealth.primary.provider}
+                    </p>
+                  </div>
+                  <ProviderState state={providerHealth.primary.state} />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-[var(--console-text-muted)]">
+                  Auth health probe · {formatLatency(providerHealth.primary.latencyMs)}
+                  {providerHealth.primary.httpStatus !== null
+                    ? ` · HTTP ${providerHealth.primary.httpStatus}`
+                    : ""}
+                </p>
+                {providerHealth.primary.failureKind ? (
+                  <p className="mt-1 font-mono text-[11px] text-amber-200/80">
+                    {providerHealth.primary.failureKind}
+                  </p>
+                ) : null}
+              </div>
+
+              <div className="bg-[var(--console-surface)] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+                      Continuity
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-[var(--console-text)]">
+                      {providerHealth.continuity.provider}
+                    </p>
+                  </div>
+                  <ProviderState state={providerHealth.continuity.state} />
+                </div>
+                <p className="mt-3 text-xs leading-5 text-[var(--console-text-muted)]">
+                  {providerHealth.continuity.configured
+                    ? `Health probe · ${formatLatency(providerHealth.continuity.latencyMs)}`
+                    : "Independent fallback is not configured in this environment yet."}
+                </p>
+                {providerHealth.continuity.configured ? (
+                  <p className="mt-1 text-[11px] text-[var(--console-text-muted)]">
+                    Writes{" "}
+                    {providerHealth.continuity.writesEnabled === true
+                      ? "enabled"
+                      : "disabled"}{" "}
+                    · reconciliation{" "}
+                    {providerHealth.continuity.reconciliationEnabled === true
+                      ? "enabled"
+                      : "disabled"}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+
+            <div
+              className={`border-t px-4 py-3 ${
+                providerHealth.attribution.kind === "primary_provider"
+                  ? "border-rose-400/20 bg-rose-500/[0.06]"
+                  : providerHealth.attribution.kind === "continuity_provider"
+                    ? "border-amber-400/20 bg-amber-500/[0.06]"
+                    : "border-[var(--console-border)] bg-white/[0.018]"
+              }`}
+            >
+              <p className="text-sm font-semibold text-[var(--console-text)]">
+                {providerHealth.attribution.title}
+              </p>
+              <p className="mt-1 text-xs leading-5 text-[var(--console-text-muted)]">
+                {providerHealth.attribution.explanation}
+              </p>
+            </div>
+          </>
+        ) : (
+          <div className="px-4 py-5 text-sm text-[var(--console-text-muted)]">
+            Independent provider probes are temporarily unavailable.
+          </div>
+        )}
       </section>
 
       {error ? (
