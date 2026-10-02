@@ -70,8 +70,7 @@ begin
     timeout_milliseconds => 9000
   );
 end;
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION public.trigger_entry_mobile_push_receipt_worker()
  RETURNS bigint
@@ -106,8 +105,7 @@ begin
 
   return v_request_id;
 end;
-$function$
-
+$function$;
 
 CREATE OR REPLACE FUNCTION public.process_plate_ocr_queue()
  RETURNS jsonb
@@ -191,8 +189,7 @@ begin
 
   return jsonb_build_object('dispatched',v_dispatched,'dispatch_failed',v_failed_dispatch,'status','ok');
 end;
-$function$
-
+$function$;
 
 create or replace function public.run_entry_background_job_v1(
   p_job_name text
