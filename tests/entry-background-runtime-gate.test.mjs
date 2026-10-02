@@ -54,3 +54,11 @@ test("database-side fan-out is bounded before downstream workers run", () => {
   assert.match(sql, /timeout_milliseconds => 9000/);
   assert.match(sql, /timeout_milliseconds := 15000/);
 });
+
+
+test("generated function definitions are terminated as SQL statements", () => {
+  assert.doesNotMatch(sql, /\$function\$\s+(?=create or replace function)/i);
+  assert.match(sql, /\$function\$;\s*CREATE OR REPLACE FUNCTION public\.trigger_entry_mobile_push_receipt_worker/i);
+  assert.match(sql, /\$function\$;\s*CREATE OR REPLACE FUNCTION public\.process_plate_ocr_queue/i);
+  assert.match(sql, /\$function\$;\s*create or replace function public\.run_entry_background_job_v1/i);
+});
