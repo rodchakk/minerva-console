@@ -1,0 +1,19 @@
+name: Generate Supabase migration name
+
+on:
+  push:
+    branches:
+      - chore/generate-entry-idempotency-migration
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Generate migration with Supabase CLI
+        run: |
+          npx --yes supabase@latest migration new entry_manual_checkin_idempotency
+          echo "GENERATED_MIGRATION=$(find supabase/migrations -maxdepth 1 -type f -name '*_entry_manual_checkin_idempotency.sql' -printf '%f\n' | sort | tail -1)"
