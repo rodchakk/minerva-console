@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 const RETRY_DELAY_MS = 15_000;
 
@@ -20,11 +20,8 @@ function getSafeNextPath() {
 }
 
 export default function TemporarilyUnavailablePage() {
-  const [nextPath, setNextPath] = useState("/");
-
   useEffect(() => {
     const safeNextPath = getSafeNextPath();
-    setNextPath(safeNextPath);
 
     const retryTimer = window.setTimeout(() => {
       window.location.replace(safeNextPath);
@@ -52,7 +49,7 @@ export default function TemporarilyUnavailablePage() {
 
         <button
           type="button"
-          onClick={() => window.location.replace(nextPath)}
+          onClick={() => window.location.replace(getSafeNextPath())}
           className="mt-8 w-full rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-600 active:scale-[0.99]"
         >
           Try again now
