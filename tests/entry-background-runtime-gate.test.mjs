@@ -45,3 +45,12 @@ test("runtime gate is not executable by browser roles", () => {
   assert.match(sql, /revoke all on function public\.run_entry_background_job_v1\(text\) from authenticated/);
   assert.match(sql, /grant execute on function public\.run_entry_background_job_v1\(text\) to service_role/);
 });
+
+
+test("database-side fan-out is bounded before downstream workers run", () => {
+  assert.match(sql, /jsonb_build_object\('limit',5\)/);
+  assert.match(sql, /jsonb_build_object\('limit',50\)/);
+  assert.match(sql, /limit 3\s+for update of q skip locked/i);
+  assert.match(sql, /timeout_milliseconds => 9000/);
+  assert.match(sql, /timeout_milliseconds := 15000/);
+});
