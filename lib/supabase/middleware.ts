@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isVerifiedInvalidSession } from "@/features/auth/authErrorClassification";
 import { getSupabaseEnv } from "@/lib/supabase/utils";
 
 function copyCookies(source: NextResponse, target: NextResponse) {
@@ -23,6 +24,58 @@ function protectMachineAuthenticatedResponse(response: NextResponse) {
   response.headers.set("Referrer-Policy", "no-referrer");
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
+}
+
+function redirectWithSessionCookies(
+  response: NextResponse,
+  redirectUrl: URL,
+) {
+  return copyCookies(response, NextResponse.redirect(redirectUrl));
+}
+
+function redirectToTemporaryUnavailable(
+  request: NextRequest,
+  response: NextResponse,
+) {
+  const redirectUrl = request.nextUrl.clone();
+  redirectUrl.pathname = "/temporarily-unavailable";
+  redirectUrl.search = "";
+  redirectUrl.searchParams.set(
+    "next",
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  );
+  return redirectWithSessionCookies(response, redirectUrl);
+}
+
+function redirectToLoginAndClearBrokenSession(
+  request: NextRequest,
+  response: NextResponse,
+) {
+  const redirectUrl = request.nextUrl.clone();
+  redirectUrl.pathname = "/login";
+  redirectUrl.search = "";
+  redirectUrl.searchParams.set(
+    "next",
+    `${request.nextUrl.pathname}${request.nextUrl.search}`,
+  );
+
+  const redirect = redirectWithSessionCookies(response, redirectUrl);
+  const cookieNames = new Set([
+    ...request.cookies.getAll().map((cookie) => cookie.name),
+    ...response.cookies.getAll().map((cookie) => cookie.name),
+  ]);
+
+  for (const name of cookieNames) {
+    if (name.startsWith("sb-") && name.includes("-auth-token")) {
+      redirect.cookies.set(name, "", {
+        expires: new Date(0),
+        maxAge: 0,
+        path: "/",
+      });
+    }
+  }
+
+  return redirect;
 }
 
 export async function updateSession(request: NextRequest) {
@@ -79,22 +132,46 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   const isPublicRoute =
     pathname === "/login" ||
     pathname === "/unauthorized" ||
+    pathname === "/temporarily-unavailable" ||
     pathname === "/activate" ||
     pathname.startsWith("/activate/") ||
     pathname === "/reset-password";
 
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError) {
+    if (pathname === "/temporarily-unavailable") {
+      return response;
+    }
+
+    if (isVerifiedInvalidSession(authError)) {
+      if (isPublicRoute) {
+        return response;
+      }
+
+      return redirectToLoginAndClearBrokenSession(request, response);
+    }
+
+    // A transport/5xx/rate-limit/unknown Auth failure is not proof that the
+    // session is invalid. Keep Supabase cookies and route to a recoverable state.
+    return redirectToTemporaryUnavailable(request, response);
+  }
+
   if (!user && !isPublicRoute) {
     const redirectUrl = request.nextUrl.clone();
     redirectUrl.pathname = "/login";
-    redirectUrl.searchParams.set("next", pathname);
-    return copyCookies(response, NextResponse.redirect(redirectUrl));
+    redirectUrl.search = "";
+    redirectUrl.searchParams.set(
+      "next",
+      `${request.nextUrl.pathname}${request.nextUrl.search}`,
+    );
+    return redirectWithSessionCookies(response, redirectUrl);
   }
 
   // Note: /login handles authenticated users via getAuthContext() in page.tsx
