@@ -15,5 +15,5 @@ jobs:
           node-version: 20
       - name: Generate migration with Supabase CLI
         run: |
-          npx --yes supabase@latest migration new entry_manual_checkin_idempotency
-          echo "GENERATED_MIGRATION=$(find supabase/migrations -maxdepth 1 -type f -name '*_entry_manual_checkin_idempotency.sql' -printf '%f\n' | sort | tail -1)"
+          npx --yes supabase@latest migration new entry_background_runtime_gate
+          echo "GENERATED_MIGRATION=$(find supabase/migrations -maxdepth 1 -type f -name '*_entry_background_runtime_gate.sql' -printf '%f\n' | sort | tail -1)"
