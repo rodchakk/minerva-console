@@ -48,6 +48,26 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+  entry-background-worker-safety-tests:
+    name: ENTRY background worker safety regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run background worker safety regressions
+        run: node --test tests/entry-background-worker-safety.test.mjs
+
+
   entry-activation-queue-tests:
     name: ENTRY Activation Queue regressions
     runs-on: ubuntu-latest
