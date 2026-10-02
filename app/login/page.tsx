@@ -28,8 +28,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     redirect("/unauthorized");
   }
 
-  if (context.status === "authorization_error") {
-    redirect("/unauthorized?reason=authorization_error");
+  if (
+    context.status === "temporarily_unavailable" ||
+    context.status === "authorization_error"
+  ) {
+    const recoveryDestination = requestedDestination ?? "/";
+    redirect(
+      `/temporarily-unavailable?next=${encodeURIComponent(recoveryDestination)}`,
+    );
   }
 
   return (
