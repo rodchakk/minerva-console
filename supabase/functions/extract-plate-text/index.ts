@@ -24,6 +24,7 @@ const OCR_BUCKET = "entry-photos";
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_ENDPOINT =
   `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
+const GEMINI_REQUEST_TIMEOUT_MS = 12_000;
 
 // Google AI standard paid-list pricing reviewed 2026-09-07.
 // This is an estimate for operational attribution, not an invoice reconciliation.
@@ -356,6 +357,7 @@ Deno.serve(async (req: Request) => {
         }],
         generationConfig: { temperature: 0, maxOutputTokens: 200 },
       }),
+      signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     });
   } catch {
     const durationMs = Date.now() - providerStartedAt;
