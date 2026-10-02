@@ -1,73 +1,90 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   ArrowRight,
   ArrowUpRight,
+  CheckCircle2,
+  ClipboardList,
   Clock3,
   Compass,
-  MessageSquare,
+  LifeBuoy,
   Plus,
   Send,
   UserRoundCheck,
   Users,
-  UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import { listCommunitiesWithProgress } from "@/features/entry/communities/queries";
+import {
+  communityNeedsSetupAttention,
+  getCommunityProgressValue,
+  isCommunityFullyActive,
+  isCommunityPendingSetup,
+} from "@/features/entry/communities/lifecycle";
+import {
+  listCommunitiesWithProgress,
+  type CommunityWithProgressItem,
+} from "@/features/entry/communities/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 import { OperationalActivityFeed } from "@/features/entry/operations/OperationalActivityFeed";
+import { getEntryOperationalActivity } from "@/features/entry/operations/queries";
 import {
-  getEntryOperationalActivity,
-  getEntryPublishedMessagesLast24Hours,
-} from "@/features/entry/operations/queries";
-import {
-  listOutriderSessions,
-  type OutriderListItem,
-} from "@/features/entry/outrider/queries";
+  getEntryObservability,
+  type EntryObservabilityIncident,
+} from "@/features/entry/observability/queries";
+import { getEntrySupportTickets } from "@/features/entry/support/queries";
 import { cn } from "@/lib/supabase/utils";
+
+type OperationalPriorityItem = {
+  actionLabel: string;
+  href: string;
+  id: string;
+  impact: string;
+  status: string;
+  title: string;
+  tone: "amber" | "rose" | "violet" | "sky";
+  type: string;
+  urgency: number;
+};
 
 function getProgressWidth(completed: number, total: number) {
   if (total <= 0) return "0%";
   return `${Math.min(100, Math.round((completed / total) * 100))}%`;
 }
 
-function getProgressValue(completed: number, total: number) {
-  if (total <= 0) return 0;
-  return Math.min(100, Math.round((completed / total) * 100));
-}
-
 function getCommunityHref(communityId: string) {
   return `/products/entry/communities/${communityId}`;
 }
 
-function getStatusLabel(onboardingStatus: string, isActive: boolean) {
-  if (onboardingStatus === "complete_active" && isActive) return "Active";
-  if (onboardingStatus === "complete_active") return "Complete";
-  if (onboardingStatus.includes("progress")) return "In progress";
-  if (onboardingStatus.includes("pending")) return "Pending";
-  return isActive ? "Active" : "Inactive";
+function getActivationQueueHref(communityId: string) {
+  return `/products/entry/activation?community_id=${encodeURIComponent(communityId)}`;
 }
 
-function getStatusClass(onboardingStatus: string, isActive: boolean) {
-  if (onboardingStatus === "complete_active" && isActive) {
-    return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
-  }
-  if (onboardingStatus.includes("progress")) {
-    return "border-violet-400/20 bg-violet-500/[0.08] text-violet-200";
-  }
-  if (onboardingStatus.includes("pending")) {
-    return "border-amber-400/20 bg-amber-500/[0.08] text-amber-200";
-  }
-  if (isActive) {
-    return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
-  }
-  return "border-white/10 bg-white/[0.04] text-slate-200";
+function formatCount(value: number, singular: string, plural = `${singular}s`) {
+  return `${value} ${value === 1 ? singular : plural}`;
 }
 
-function statusCount(
-  sessions: OutriderListItem[],
-  status: OutriderListItem["status"],
-) {
-  return sessions.filter((session) => session.status === status).length;
+function getInitials(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  return (
+    parts
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("") || "EN"
+  );
+}
+
+function severityRank(severity: EntryObservabilityIncident["severity"]) {
+  switch (severity) {
+    case "CRITICAL":
+      return 4;
+    case "ERROR":
+      return 3;
+    case "WARNING":
+      return 2;
+    case "INFO":
+    default:
+      return 1;
+  }
 }
 
 const quickActions = [
@@ -84,6 +101,13 @@ const quickActions = [
     note: "Open the community intake workspace",
     icon: Compass,
     tone: "border-violet-400/15 bg-violet-500/[0.10] text-violet-200",
+  },
+  {
+    label: "Review tickets",
+    href: "/products/entry/tickets",
+    note: "Open resident support follow-up",
+    icon: LifeBuoy,
+    tone: "border-sky-400/15 bg-sky-500/[0.10] text-sky-200",
   },
   {
     label: "Review users",
@@ -219,80 +243,160 @@ function SectionHeading({
   );
 }
 
-export default async function DashboardPage() {
-  const [
-    communities,
-    operationalActivity,
-    messagesLast24Hours,
-    outriderSessions,
-  ] = await Promise.all([
-    listCommunitiesWithProgress(),
-    getEntryOperationalActivity(15),
-    getEntryPublishedMessagesLast24Hours(),
-    listOutriderSessions(),
-  ]);
+function getToneClass(tone: OperationalPriorityItem["tone"]) {
+  switch (tone) {
+    case "rose":
+      return "border-rose-400/20 bg-rose-500/[0.08] text-rose-200";
+    case "sky":
+      return "border-sky-400/20 bg-sky-500/[0.08] text-sky-200";
+    case "violet":
+      return "border-violet-400/20 bg-violet-500/[0.08] text-violet-200";
+    case "amber":
+    default:
+      return "border-amber-400/20 bg-amber-500/[0.08] text-amber-200";
+  }
+}
 
-  const activeCommunities = communities.filter((community) => community.isActive);
-  const pendingSetup = communities.filter(
-    (community) => community.onboardingStatus !== "complete_active",
-  );
+function buildSetupPriority(community: CommunityWithProgressItem) {
+  const needsAttention = communityNeedsSetupAttention(community);
+
+  return {
+    actionLabel: needsAttention ? "Review setup" : "Continue setup",
+    href: getCommunityHref(community.id),
+    id: `setup-${community.id}`,
+    impact:
+      community.activationPendingCount > 0
+        ? formatCount(
+            community.activationPendingCount,
+            "pending activation",
+            "pending activations",
+          )
+        : getOnboardingNextStepLabel(community.nextStepKey),
+    status: `${community.completedTasks}/${community.totalTasks} complete`,
+    title: community.name,
+    tone: needsAttention ? "amber" : "violet",
+    type: "Onboarding",
+    urgency:
+      (needsAttention ? 90 : 70) + Math.min(community.activationPendingCount, 10),
+  } satisfies OperationalPriorityItem;
+}
+
+function buildActivationPriority(community: CommunityWithProgressItem) {
+  return {
+    actionLabel: "Open queue",
+    href: getActivationQueueHref(community.id),
+    id: `activation-${community.id}`,
+    impact: "Activation queue requires review",
+    status: formatCount(community.activationPendingCount, "resident", "residents"),
+    title: community.name,
+    tone: "amber",
+    type: "Residents",
+    urgency: 82 + Math.min(community.activationPendingCount, 10),
+  } satisfies OperationalPriorityItem;
+}
+
+export default async function DashboardPage() {
+  const [communities, operationalActivity, supportTickets, observability] =
+    await Promise.all([
+      listCommunitiesWithProgress(),
+      getEntryOperationalActivity(15),
+      getEntrySupportTickets(null),
+      getEntryObservability({ range: "24h" }),
+    ]);
+
+  const pendingSetupCommunities = communities.filter(isCommunityPendingSetup);
   const residentsInActivationQueue = communities.reduce(
     (sum, community) => sum + community.activationPendingCount,
     0,
   );
-  const inactiveCommunities = communities.filter((community) => !community.isActive);
-  const prioritizedCommunities = [...pendingSetup]
-    .sort((a, b) => {
-      if (a.activationPendingCount !== b.activationPendingCount) {
-        return b.activationPendingCount - a.activationPendingCount;
-      }
-      return a.name.localeCompare(b.name);
-    })
-    .slice(0, 5);
+  const openTickets = supportTickets.loadError
+    ? null
+    : supportTickets.tickets.filter((ticket) => ticket.status !== "resolved");
+  const incidents =
+    observability.state === "ready"
+      ? [...observability.data.incidents].sort(
+          (a, b) =>
+            severityRank(b.severity) - severityRank(a.severity) ||
+            b.occurrenceCount - a.occurrenceCount,
+        )
+      : null;
 
-  const setupOverview = [
+  const activationPriorities = communities
+    .filter(
+      (community) =>
+        isCommunityFullyActive(community) && community.activationPendingCount > 0,
+    )
+    .map(buildActivationPriority);
+
+  const ticketPriority =
+    openTickets && openTickets.length > 0
+      ? [
+          {
+            actionLabel: "Review tickets",
+            href: "/products/entry/tickets",
+            id: "support-tickets",
+            impact: formatCount(
+              openTickets.filter((ticket) => ticket.status === "in_progress").length,
+              "ticket in progress",
+              "tickets in progress",
+            ),
+            status: formatCount(openTickets.length, "open ticket"),
+            title: "Support tickets",
+            tone: "sky" as const,
+            type: "Tickets",
+            urgency: 78 + Math.min(openTickets.length, 10),
+          },
+        ]
+      : [];
+
+  const incidentPriorities =
+    incidents?.slice(0, 2).map((incident, index) => ({
+      actionLabel: "Review incident",
+      href: "/products/entry/observability",
+      id: `incident-${incident.fingerprint}-${index}`,
+      impact: incident.explanation,
+      status: `${incident.severity} · ${formatCount(
+        incident.occurrenceCount,
+        "occurrence",
+      )}`,
+      title:
+        incident.communities.length === 1
+          ? incident.communities[0]?.communityName || "ENTRY observability"
+          : "ENTRY observability",
+      tone:
+        incident.severity === "CRITICAL" || incident.severity === "ERROR"
+          ? ("rose" as const)
+          : ("amber" as const),
+      type: "Alerts / incidents",
+      urgency: 85 + severityRank(incident.severity),
+    })) ?? [];
+
+  const allPriorityItems = [
+    ...pendingSetupCommunities.map(buildSetupPriority),
+    ...activationPriorities,
+    ...ticketPriority,
+    ...incidentPriorities,
+  ].sort((a, b) => b.urgency - a.urgency || a.title.localeCompare(b.title));
+  const priorityItems = allPriorityItems.slice(0, 8);
+
+  const summaryRows = [
     {
-      label: "Ready for review",
-      value: statusCount(outriderSessions, "ready_for_review"),
-      color: "#8b5cf6",
+      label: "Communities awaiting setup completion",
+      value: pendingSetupCommunities.length,
     },
     {
-      label: "In progress",
-      value: statusCount(outriderSessions, "in_progress"),
-      color: "#22d3ee",
+      label: "Residents waiting in activation queue",
+      value: residentsInActivationQueue,
     },
     {
-      label: "Needs information",
-      value: statusCount(outriderSessions, "needs_information"),
-      color: "#f59e0b",
+      label: "Open support tickets",
+      value: openTickets ? openTickets.length : "Unavailable",
     },
     {
-      label: "Not started",
-      value: statusCount(outriderSessions, "not_started"),
-      color: "#64748b",
-    },
-    {
-      label: "Approved",
-      value: statusCount(outriderSessions, "approved"),
-      color: "#34d399",
+      label: "Current alerts / incidents",
+      value: incidents ? incidents.length : "Unavailable",
     },
   ];
-  const totalOutriderSessions = setupOverview.reduce(
-    (sum, item) => sum + item.value,
-    0,
-  );
-  let cursor = 0;
-  const gradientStops = totalOutriderSessions
-    ? setupOverview
-        .filter((item) => item.value > 0)
-        .map((item) => {
-          const start = (cursor / totalOutriderSessions) * 100;
-          cursor += item.value;
-          const end = (cursor / totalOutriderSessions) * 100;
-          return `${item.color} ${start}% ${end}%`;
-        })
-        .join(", ")
-    : "rgba(255,255,255,0.08) 0% 100%";
 
   return (
     <div className="space-y-5">
@@ -303,8 +407,8 @@ export default async function DashboardPage() {
               ENTRY Operations
             </h1>
             <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
-              Onboard communities, monitor setup, and keep operational work moving
-              from one workspace.
+              Action-focused workspace for issues, onboarding tasks, activations,
+              and operational follow-up.
             </p>
           </div>
 
@@ -323,41 +427,37 @@ export default async function DashboardPage() {
 
       <section className="grid overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] md:grid-cols-2 xl:grid-cols-4">
         <MetricItem
-          icon={UsersRound}
-          label="Active communities"
-          value={activeCommunities.length}
-          note="Communities currently active"
-          dotClassName="bg-emerald-400"
+          icon={ClipboardList}
+          label="Needs attention"
+          value={allPriorityItems.length}
+          note="Actionable operational items"
+          dotClassName={
+            allPriorityItems.length > 0 ? "bg-amber-400" : "bg-emerald-400"
+          }
           className="border-b border-[var(--console-border)] md:border-r xl:border-b-0"
         />
         <MetricItem
-          icon={Clock3}
-          label="Pending setup"
-          value={pendingSetup.length}
-          note="Communities not yet complete"
-          dotClassName="bg-violet-400"
+          icon={UserRoundCheck}
+          label="Pending activations"
+          value={residentsInActivationQueue}
+          note="Residents waiting in queue"
+          dotClassName="bg-amber-400"
           className="border-b border-[var(--console-border)] xl:border-r xl:border-b-0"
         />
         <MetricItem
-          icon={UserRoundCheck}
-          label="Residents in activation queue"
-          value={residentsInActivationQueue}
-          note="Pending activation rows"
-          dotClassName="bg-slate-400"
+          icon={LifeBuoy}
+          label="Open tickets"
+          value={openTickets ? openTickets.length : "-"}
+          note={openTickets ? "Unresolved support tickets" : "Ticket count unavailable"}
+          dotClassName={openTickets ? "bg-sky-400" : "bg-amber-400"}
           className="border-b border-[var(--console-border)] md:border-r md:border-b-0 xl:border-r"
         />
         <MetricItem
-          icon={MessageSquare}
-          label="Messages (24h)"
-          value={messagesLast24Hours ?? "—"}
-          note={
-            messagesLast24Hours === null
-              ? "Message count unavailable"
-              : "Published community updates"
-          }
-          dotClassName={
-            messagesLast24Hours === null ? "bg-amber-400" : "bg-violet-400"
-          }
+          icon={AlertTriangle}
+          label="Alerts / incidents"
+          value={incidents ? incidents.length : "-"}
+          note={incidents ? "Current observability items" : "Incident count unavailable"}
+          dotClassName={incidents && incidents.length > 0 ? "bg-rose-400" : "bg-emerald-400"}
         />
       </section>
 
@@ -365,136 +465,85 @@ export default async function DashboardPage() {
         <div className="min-w-0">
           <ConsolePanel className="h-full overflow-hidden">
             <SectionHeading
-              title="Setup priorities across ENTRY"
-              description="Incomplete communities sorted by onboarding urgency and activation load."
+              title="Operational priorities"
+              description="Items that need your attention, sorted by urgency and impact."
               action={
                 <ActionLink href="/products/entry/communities">
-                  View all communities
+                  View communities
                   <ArrowUpRight className="h-4 w-4 stroke-[1.75]" />
                 </ActionLink>
               }
             />
 
-            {prioritizedCommunities.length > 0 ? (
+            {priorityItems.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full text-left text-sm">
                   <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
                     <tr>
-                      <th className="px-5 py-3 font-medium">Community</th>
-                      <th className="px-4 py-3 font-medium">City</th>
+                      <th className="px-5 py-3 font-medium">Item</th>
+                      <th className="px-4 py-3 font-medium">Type</th>
                       <th className="px-4 py-3 font-medium">Status</th>
-                      <th className="px-4 py-3 font-medium">Onboarding</th>
-                      <th className="px-4 py-3 font-medium">Units</th>
-                      <th className="px-4 py-3 font-medium leading-4">
-                        <span className="block">Pending</span>
-                        <span className="block">activations</span>
-                      </th>
+                      <th className="px-4 py-3 font-medium">Impact</th>
                       <th className="px-5 py-3 text-right font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {prioritizedCommunities.map((community) => {
-                      const isComplete =
-                        community.onboardingStatus === "complete_active";
-                      const progressValue = getProgressValue(
-                        community.completedTasks,
-                        community.totalTasks,
-                      );
-
-                      return (
-                        <tr
-                          key={community.id}
-                          className="border-b border-[var(--console-border)] transition-colors hover:bg-white/[0.025] last:border-b-0"
-                        >
-                          <td className="px-5 py-4 align-top">
-                            <div className="flex items-start gap-3">
-                              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--console-border-strong)] bg-white/[0.025] text-xs font-semibold text-slate-200">
-                                {community.name
-                                  .split(" ")
-                                  .map((part) => part[0] ?? "")
-                                  .join("")
-                                  .slice(0, 2)
-                                  .toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="font-medium text-white">
-                                  {community.name}
-                                </p>
-                                <p className="mt-1 text-xs text-[var(--console-text-muted)]">
-                                  {getOnboardingNextStepLabel(community.nextStepKey)}
-                                </p>
-                              </div>
+                    {priorityItems.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-b border-[var(--console-border)] transition-colors hover:bg-white/[0.025] last:border-b-0"
+                      >
+                        <td className="px-5 py-4 align-top">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--console-border-strong)] bg-white/[0.025] text-xs font-semibold text-slate-200">
+                              {getInitials(item.title)}
                             </div>
-                          </td>
-                          <td className="px-4 py-4 align-top text-slate-300">
-                            {community.city}
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <span
-                              className={`inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium ${getStatusClass(
-                                community.onboardingStatus,
-                                community.isActive,
-                              )}`}
-                            >
-                              {getStatusLabel(
-                                community.onboardingStatus,
-                                community.isActive,
-                              )}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 align-top">
-                            <div className="min-w-[190px]">
-                              <div className="flex items-center justify-between gap-3 text-xs text-[var(--console-text-muted)]">
-                                <span>
-                                  {community.completedTasks}/{community.totalTasks} complete
-                                </span>
-                                <span>{progressValue}%</span>
-                              </div>
-                              <div className="mt-2 h-1 rounded-full bg-white/[0.08]">
-                                <div
-                                  className="h-1 rounded-full bg-[var(--console-accent)]"
-                                  style={{
-                                    width: getProgressWidth(
-                                      community.completedTasks,
-                                      community.totalTasks,
-                                    ),
-                                  }}
-                                />
-                              </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-white">{item.title}</p>
+                              <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                                Requires operational follow-up
+                              </p>
                             </div>
-                          </td>
-                          <td className="px-4 py-4 align-top text-slate-300">
-                            {community.totalUnits}
-                          </td>
-                          <td className="px-4 py-4 align-top text-slate-300">
-                            {community.activationPendingCount}
-                          </td>
-                          <td className="px-5 py-4 align-top text-right">
-                            <Link
-                              href={getCommunityHref(community.id)}
-                              className={cn(
-                                "inline-flex h-8 items-center justify-center rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
-                                isComplete
-                                  ? "border border-[var(--console-border)] bg-white/[0.025] text-slate-100 hover:bg-white/[0.05]"
-                                  : "border border-transparent bg-[var(--console-accent-subtle)] text-violet-100 hover:bg-violet-500/20",
-                              )}
-                            >
-                              {isComplete ? "Open" : "Continue setup"}
-                            </Link>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 align-top">
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium",
+                              getToneClass(item.tone),
+                            )}
+                          >
+                            {item.type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 align-top text-slate-300">
+                          {item.status}
+                        </td>
+                        <td className="max-w-[320px] px-4 py-4 align-top text-[var(--console-text-muted)]">
+                          <span className="line-clamp-2">{item.impact}</span>
+                        </td>
+                        <td className="px-5 py-4 align-top text-right">
+                          <Link
+                            href={item.href}
+                            className="inline-flex h-8 items-center justify-center rounded-md border border-transparent bg-[var(--console-accent-subtle)] px-3 text-xs font-semibold text-violet-100 transition-colors hover:bg-violet-500/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+                          >
+                            {item.actionLabel}
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <div className="px-5 py-10 text-center">
-                <h3 className="text-lg font-semibold text-white">
-                  No setup work pending
+              <div className="px-5 py-12 text-center">
+                <CheckCircle2 className="mx-auto h-8 w-8 text-emerald-300" />
+                <h3 className="mt-3 text-lg font-semibold text-white">
+                  Nothing needs attention
                 </h3>
                 <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
-                  New or incomplete communities will appear here when setup work is needed.
+                  ENTRY is operating normally. New setup tasks, activations,
+                  tickets, or incidents will appear here when they need follow-up.
                 </p>
               </div>
             )}
@@ -540,59 +589,58 @@ export default async function DashboardPage() {
           <ConsolePanel className="overflow-hidden">
             <div className="border-b border-[var(--console-border)] px-5 py-4">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
-                Setup Overview
+                Operational Summary
               </p>
             </div>
             <div className="p-4">
-              <div className="flex items-center gap-4">
-                <div
-                  className="relative h-24 w-24 shrink-0 rounded-full"
-                  style={{ background: `conic-gradient(${gradientStops})` }}
-                >
-                  <div className="absolute inset-[11px] flex items-center justify-center rounded-full bg-[var(--console-surface)]">
-                    <div className="text-center">
-                      <p className="text-xl font-semibold text-white">
-                        {totalOutriderSessions}
-                      </p>
-                      <p className="text-[9px] uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
-                        Outriders
-                      </p>
-                    </div>
+              <div className="space-y-3">
+                {summaryRows.map((row) => (
+                  <div
+                    key={row.label}
+                    className="flex items-start justify-between gap-4 rounded-md border border-[var(--console-border)] bg-white/[0.018] px-3 py-2.5"
+                  >
+                    <span className="text-xs leading-5 text-[var(--console-text-muted)]">
+                      {row.label}
+                    </span>
+                    <span className="shrink-0 text-sm font-semibold text-white">
+                      {row.value}
+                    </span>
                   </div>
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  {setupOverview.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between gap-3 text-xs"
-                    >
-                      <span className="flex min-w-0 items-center gap-2 text-[var(--console-text-muted)]">
-                        <span
-                          className="h-2 w-2 shrink-0 rounded-full"
-                          style={{ backgroundColor: item.color }}
-                        />
-                        <span className="truncate">{item.label}</span>
-                      </span>
-                      <span className="font-semibold text-white">{item.value}</span>
-                    </div>
-                  ))}
-                </div>
+                ))}
               </div>
 
-              <div className="mt-4 border-t border-[var(--console-border)] pt-3">
-                <div className="flex items-center justify-between text-xs text-[var(--console-text-muted)]">
-                  <span>Communities needing setup</span>
-                  <span className="font-semibold text-white">
-                    {pendingSetup.length}
-                  </span>
+              {pendingSetupCommunities.length > 0 ? (
+                <div className="mt-4 border-t border-[var(--console-border)] pt-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+                    Setup progress
+                  </p>
+                  <div className="mt-3 space-y-3">
+                    {pendingSetupCommunities.slice(0, 3).map((community) => {
+                      const progressValue = getCommunityProgressValue(community);
+
+                      return (
+                        <div key={community.id}>
+                          <div className="flex items-center justify-between gap-3 text-xs text-[var(--console-text-muted)]">
+                            <span className="truncate">{community.name}</span>
+                            <span className="shrink-0">{progressValue}%</span>
+                          </div>
+                          <div className="mt-2 h-1 rounded-full bg-white/[0.08]">
+                            <div
+                              className="h-1 rounded-full bg-[var(--console-accent)]"
+                              style={{
+                                width: getProgressWidth(
+                                  community.completedTasks,
+                                  community.totalTasks,
+                                ),
+                              }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-[var(--console-text-muted)]">
-                  <span>Inactive communities</span>
-                  <span className="font-semibold text-white">
-                    {inactiveCommunities.length}
-                  </span>
-                </div>
-              </div>
+              ) : null}
             </div>
           </ConsolePanel>
         </div>
