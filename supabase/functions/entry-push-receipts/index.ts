@@ -3,6 +3,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const EXPO_RECEIPTS_URL = "https://exp.host/--/api/v2/push/getReceipts";
+const EXPO_RECEIPTS_TIMEOUT_MS = 8_000;
+const MAX_RECEIPTS_PER_RUN = 50;
+const RECEIPT_CHUNK_SIZE = 50;
 
 type ReceiptRow = {
   id: string;
@@ -74,10 +77,10 @@ Deno.serve(async (req: Request) => {
   });
 
   const body = await req.json().catch(() => ({}));
-  const requested = Number(body?.limit ?? 300);
+  const requested = Number(body?.limit ?? MAX_RECEIPTS_PER_RUN);
   const limit = Number.isFinite(requested)
-    ? Math.max(1, Math.min(Math.trunc(requested), 300))
-    : 300;
+    ? Math.max(1, Math.min(Math.trunc(requested), MAX_RECEIPTS_PER_RUN))
+    : MAX_RECEIPTS_PER_RUN;
 
   const cutoff = new Date(Date.now() - 30_000).toISOString();
   const { data, error } = await client
@@ -101,8 +104,8 @@ Deno.serve(async (req: Request) => {
   let failed = 0;
   let pending = 0;
 
-  for (let offset = 0; offset < rows.length; offset += 300) {
-    const chunk = rows.slice(offset, offset + 300);
+  for (let offset = 0; offset < rows.length; offset += RECEIPT_CHUNK_SIZE) {
+    const chunk = rows.slice(offset, offset + RECEIPT_CHUNK_SIZE);
     const ids = chunk.map((row) => row.ticket_id);
 
     let providerData: Record<string, unknown> = {};
@@ -111,6 +114,7 @@ Deno.serve(async (req: Request) => {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ ids }),
+        signal: AbortSignal.timeout(EXPO_RECEIPTS_TIMEOUT_MS),
       });
       if (!response.ok) {
         pending += chunk.length;
