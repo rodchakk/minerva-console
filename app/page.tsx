@@ -12,8 +12,11 @@ export default async function HomePage() {
     redirect(context.role === "owner" ? "/dashboard" : "/workspace");
   }
 
-  if (context.status === "authorization_error") {
-    redirect("/unauthorized?reason=authorization_error");
+  if (
+    context.status === "temporarily_unavailable" ||
+    context.status === "authorization_error"
+  ) {
+    redirect("/temporarily-unavailable");
   }
 
   redirect("/unauthorized");
