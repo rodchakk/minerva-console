@@ -1,10 +1,12 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { isVerifiedInvalidSession } from "@/features/auth/authErrorClassification";
 import { createClient } from "@/lib/supabase/server";
 
 export type AuthContextStatus =
   | "unauthenticated"
+  | "temporarily_unavailable"
   | "authorized"
   | "forbidden"
   | "authorization_error";
@@ -19,6 +21,11 @@ export type AuthContext =
       status: "unauthenticated";
       isSuperadmin: false;
       user: null;
+    }
+  | {
+      status: "temporarily_unavailable";
+      isSuperadmin: false;
+      user: AuthUser | null;
     }
   | {
       status: "authorized";
@@ -40,7 +47,24 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
   const supabase = await createClient();
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
+
+  if (authError) {
+    if (isVerifiedInvalidSession(authError)) {
+      return {
+        status: "unauthenticated",
+        user: null,
+        isSuperadmin: false,
+      };
+    }
+
+    return {
+      status: "temporarily_unavailable",
+      user: null,
+      isSuperadmin: false,
+    };
+  }
 
   if (!user) {
     return {
@@ -58,7 +82,7 @@ export const getAuthContext = cache(async (): Promise<AuthContext> => {
       code: error.code,
     });
     return {
-      status: "authorization_error",
+      status: "temporarily_unavailable",
       user: {
         email: user.email ?? null,
         id: user.id,
@@ -94,8 +118,11 @@ export async function requireSuperadmin() {
     redirect("/login");
   }
 
-  if (context.status === "authorization_error") {
-    redirect("/unauthorized?reason=authorization_error");
+  if (
+    context.status === "temporarily_unavailable" ||
+    context.status === "authorization_error"
+  ) {
+    redirect("/temporarily-unavailable");
   }
 
   if (context.status === "forbidden" || !context.isSuperadmin) {
