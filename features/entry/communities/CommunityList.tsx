@@ -6,6 +6,12 @@ import { useRef, useState, useTransition } from "react";
 import { MapPin, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
+import {
+  getCommunityLifecycleLabel,
+  getCommunityLifecycleState,
+  getCommunityProgressValue,
+  getCommunitySetupLabel,
+} from "@/features/entry/communities/lifecycle";
 import { setCommunityActiveStatusAction } from "@/features/entry/communities/statusActions";
 import type { CommunityListItem } from "@/features/entry/communities/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
@@ -21,21 +27,9 @@ type PendingCommunityAction = {
 };
 
 function getSetupState(community: CommunityListItem) {
-  if (!community.isActive && community.onboardingStatus === "complete_active") {
-    return {
-      label: "Needs review",
-      tone: "warning" as const,
-      progressTone: "bg-amber-400",
-    };
-  }
+  const lifecycleState = getCommunityLifecycleState(community);
 
-  if (
-    community.totalUnits <= 0 ||
-    community.nextStepKey === "units" ||
-    (community.onboardingStatus !== "complete_active" &&
-      community.totalMembers <= 0 &&
-      community.activationPendingCount <= 0)
-  ) {
+  if (lifecycleState === "needs_attention") {
     return {
       label: "Needs attention",
       tone: "warning" as const,
@@ -52,7 +46,7 @@ function getSetupState(community: CommunityListItem) {
   }
 
   return {
-    label: "Pending setup",
+    label: getCommunitySetupLabel(community),
     tone: "warning" as const,
     progressTone: "bg-[var(--console-accent)]",
   };
@@ -64,14 +58,6 @@ function getProgressWidth(completed: number, total: number) {
   }
 
   return `${Math.min(100, Math.round((completed / total) * 100))}%`;
-}
-
-function getProgressValue(completed: number, total: number) {
-  if (total <= 0) {
-    return 0;
-  }
-
-  return Math.min(100, Math.round((completed / total) * 100));
 }
 
 function getInitials(name: string) {
@@ -123,6 +109,18 @@ function getCta(community: CommunityListItem) {
 function getSetupChipClass(tone: ReturnType<typeof getSetupState>["tone"]) {
   if (tone === "success") {
     return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
+  }
+
+  return "border-amber-400/20 bg-amber-500/[0.08] text-amber-200";
+}
+
+function getLifecycleChipClass(state: ReturnType<typeof getCommunityLifecycleState>) {
+  if (state === "fully_active") {
+    return "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200";
+  }
+
+  if (state === "inactive") {
+    return "border-white/10 bg-white/[0.04] text-slate-200";
   }
 
   return "border-amber-400/20 bg-amber-500/[0.08] text-amber-200";
@@ -306,10 +304,8 @@ export function CommunityList({ communities }: CommunityListProps) {
               {communities.map((community) => {
                 const cta = getCta(community);
                 const setupState = getSetupState(community);
-                const progressValue = getProgressValue(
-                  community.completedTasks,
-                  community.totalTasks,
-                );
+                const lifecycleState = getCommunityLifecycleState(community);
+                const progressValue = getCommunityProgressValue(community);
                 const enabledFeatures = [
                   community.allowFrequentAccess ? "Frequent access" : null,
                   community.allowReservations ? "Reservations" : null,
@@ -346,13 +342,9 @@ export function CommunityList({ communities }: CommunityListProps) {
                               {community.name}
                             </h3>
                             <StatusChip
-                              className={
-                                community.isActive
-                                  ? "border-emerald-400/20 bg-emerald-500/[0.08] text-emerald-200"
-                                  : "border-white/10 bg-white/[0.04] text-slate-200"
-                              }
+                              className={getLifecycleChipClass(lifecycleState)}
                             >
-                              {community.isActive ? "Active" : "Inactive"}
+                              {getCommunityLifecycleLabel(lifecycleState)}
                             </StatusChip>
                             <StatusChip className={getSetupChipClass(setupState.tone)}>
                               {setupState.label}

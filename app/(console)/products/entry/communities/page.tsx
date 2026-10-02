@@ -9,6 +9,11 @@ import {
 } from "lucide-react";
 import { CommunityList } from "@/features/entry/communities/CommunityList";
 import {
+  communityNeedsSetupAttention,
+  isCommunityFullyActive,
+  isCommunityPendingSetup,
+} from "@/features/entry/communities/lifecycle";
+import {
   listCommunitiesWithProgress,
   type CommunityWithProgressItem,
 } from "@/features/entry/communities/queries";
@@ -25,42 +30,22 @@ function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
 }
 
-function needsAttention(community: CommunityWithProgressItem) {
-  return (
-    community.totalUnits <= 0 ||
-    community.nextStepKey === "units" ||
-    (community.onboardingStatus !== "complete_active" &&
-      community.totalMembers <= 0 &&
-      community.activationPendingCount <= 0)
-  );
-}
-
 function filterCommunities(
   communities: CommunityWithProgressItem[],
   filter: CommunityFilter,
 ) {
   switch (filter) {
     case "pending_setup":
-      return communities.filter(
-        (community) =>
-          community.isActive &&
-          community.onboardingStatus !== "complete_active" &&
-          !needsAttention(community),
-      );
+      return communities.filter(isCommunityPendingSetup);
     case "all":
       return communities;
     case "inactive":
       return communities.filter((community) => !community.isActive);
     case "needs_attention":
-      return communities.filter(
-        (community) => community.isActive && needsAttention(community),
-      );
+      return communities.filter(communityNeedsSetupAttention);
     case "active":
     default:
-      return communities.filter(
-        (community) =>
-          community.isActive && community.onboardingStatus === "complete_active",
-      );
+      return communities.filter(isCommunityFullyActive);
   }
 }
 
@@ -68,15 +53,15 @@ function getEmptyStateCopy(filter: CommunityFilter) {
   switch (filter) {
     case "pending_setup":
       return {
-        title: "No active communities pending setup",
+        title: "No communities pending setup",
         description:
-          "All active communities are either complete or currently outside the pending setup stage.",
+          "All enabled communities have completed the required setup lifecycle.",
       };
     case "active":
       return {
-        title: "No active communities found",
+        title: "No fully active communities found",
         description:
-          "There are no fully active communities in this view right now.",
+          "There are no communities that are both enabled and setup-complete in this view right now.",
       };
     case "inactive":
       return {
@@ -88,7 +73,7 @@ function getEmptyStateCopy(filter: CommunityFilter) {
       return {
         title: "No active communities need attention",
         description:
-          "No active communities are currently missing core setup requirements.",
+          "No enabled communities are currently missing core setup requirements.",
       };
     default:
       return {
@@ -107,8 +92,8 @@ const summaryCards = [
     dotClassName: "bg-violet-400",
   },
   {
-    label: "Active communities",
-    hint: "Shown by default",
+    label: "Fully active",
+    hint: "Setup complete",
     icon: CheckCircle2,
     dotClassName: "bg-emerald-400",
   },
@@ -225,29 +210,31 @@ export default async function CommunitiesPage(
   const searchParams = await props.searchParams;
   const rawFilter = getSingleParam(searchParams.filter);
   const currentFilter: CommunityFilter =
+    rawFilter === "active" ||
     rawFilter === "pending_setup" ||
     rawFilter === "all" ||
     rawFilter === "inactive" ||
     rawFilter === "needs_attention"
       ? rawFilter
-      : "active";
+      : "all";
 
   const filteredCommunities = filterCommunities(communities, currentFilter);
   const totalCount = communities.length;
-  const activeCount = communities.filter(
-    (community) =>
-      community.isActive && community.onboardingStatus === "complete_active",
-  ).length;
-  const pendingCount = communities.filter(
-    (community) =>
-      community.isActive &&
-      community.onboardingStatus !== "complete_active" &&
-      !needsAttention(community),
-  ).length;
+  const activeCount = communities.filter(isCommunityFullyActive).length;
+  const pendingCount = communities.filter(isCommunityPendingSetup).length;
   const inactiveCount = communities.filter((community) => !community.isActive).length;
 
   const filters: Array<{ label: string; value: CommunityFilter; href: string }> = [
-    { label: "Active", value: "active", href: "/products/entry/communities" },
+    {
+      label: "All communities",
+      value: "all",
+      href: "/products/entry/communities",
+    },
+    {
+      label: "Active",
+      value: "active",
+      href: "/products/entry/communities?filter=active",
+    },
     {
       label: "Pending setup",
       value: "pending_setup",
@@ -263,11 +250,6 @@ export default async function CommunitiesPage(
       value: "inactive",
       href: "/products/entry/communities?filter=inactive",
     },
-    {
-      label: "All communities",
-      value: "all",
-      href: "/products/entry/communities?filter=all",
-    },
   ];
 
   const emptyState = getEmptyStateCopy(currentFilter);
@@ -282,11 +264,10 @@ export default async function CommunitiesPage(
               ENTRY DIRECTORY
             </p>
             <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white lg:text-[2.05rem]">
-              ENTRY communities
+              ENTRY Communities
             </h1>
             <p className="mt-2 text-sm leading-6 text-[var(--console-text-muted)]">
-              Directory and onboarding workspace for active ENTRY communities.
-              Archived communities remain available through the inactive filter.
+              Directory and lifecycle management for all ENTRY communities.
             </p>
           </div>
 
