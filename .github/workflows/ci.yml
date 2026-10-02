@@ -48,6 +48,26 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+  auth-outage-recovery-tests:
+    name: Auth outage recovery regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run auth outage recovery regressions
+        run: node --test tests/auth-outage-recovery.test.mjs
+
+
   entry-activation-queue-tests:
     name: ENTRY Activation Queue regressions
     runs-on: ubuntu-latest
