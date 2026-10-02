@@ -80,8 +80,32 @@ begin
       using errcode = '22023';
   end if;
 
-  -- Serialize one logical manual-entry operation. The mobile app keeps the
-  -- same client_reference while retrying a single evidence flow.
+  if not exists (
+    select 1
+    from public.communities c
+    where c.id = p_community_id
+      and c.is_active = true
+  ) then
+    raise exception 'Community is inactive or unavailable'
+      using errcode = '42501';
+  end if;
+
+  if not exists (
+    select 1
+    from public.community_members cm
+    where cm.user_id = v_user_id
+      and cm.community_id = p_community_id
+      and cm.is_active = true
+      and cm.role in ('GUARD', 'ADMIN')
+  ) then
+    raise exception 'Not authorized to register manual entries in this community'
+      using errcode = '42501';
+  end if;
+
+  -- Serialize one logical manual-entry operation only after current
+  -- authentication, community status, and guard membership are verified.
+  -- A replay never grants access; it only returns the result of an operation
+  -- that already committed for the same guard and payload.
   if v_client_reference is not null then
     perform pg_advisory_xact_lock(
       hashtextextended(
@@ -153,28 +177,6 @@ begin
         'metadata', v_existing_manual_entry.metadata
       );
     end if;
-  end if;
-
-  if not exists (
-    select 1
-    from public.communities c
-    where c.id = p_community_id
-      and c.is_active = true
-  ) then
-    raise exception 'Community is inactive or unavailable'
-      using errcode = '42501';
-  end if;
-
-  if not exists (
-    select 1
-    from public.community_members cm
-    where cm.user_id = v_user_id
-      and cm.community_id = p_community_id
-      and cm.is_active = true
-      and cm.role in ('GUARD', 'ADMIN')
-  ) then
-    raise exception 'Not authorized to register manual entries in this community'
-      using errcode = '42501';
   end if;
 
   if p_destination_id is not null then
