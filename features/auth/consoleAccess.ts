@@ -1,6 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
+import { isVerifiedInvalidSession } from "@/features/auth/authErrorClassification";
 import { createClient } from "@/lib/supabase/server";
 
 export const CONSOLE_ROLES = ["owner", "builder", "viewer"] as const;
@@ -21,6 +22,12 @@ export type ConsoleAccessContext =
       role: null;
       source: null;
       user: null;
+    }
+  | {
+      status: "temporarily_unavailable";
+      role: null;
+      source: null;
+      user: ConsoleAccessUser | null;
     }
   | {
       status: "authorized";
@@ -79,7 +86,26 @@ export const getConsoleAccessContext = cache(
     const supabase = await createClient();
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser();
+
+    if (authError) {
+      if (isVerifiedInvalidSession(authError)) {
+        return {
+          status: "unauthenticated",
+          role: null,
+          source: null,
+          user: null,
+        };
+      }
+
+      return {
+        status: "temporarily_unavailable",
+        role: null,
+        source: null,
+        user: null,
+      };
+    }
 
     if (!user) {
       return {
@@ -103,7 +129,7 @@ export const getConsoleAccessContext = cache(
         code: error.code,
       });
       return {
-        status: "authorization_error",
+        status: "temporarily_unavailable",
         role: null,
         source: null,
         user: userContext,
@@ -155,6 +181,10 @@ export const getConsoleAccessContext = cache(
   },
 );
 
+function redirectToTemporaryUnavailable() {
+  redirect("/temporarily-unavailable");
+}
+
 export async function requireConsoleMember() {
   const context = await getConsoleAccessContext();
 
@@ -162,8 +192,11 @@ export async function requireConsoleMember() {
     redirect("/login");
   }
 
-  if (context.status === "authorization_error") {
-    redirect("/unauthorized?reason=authorization_error");
+  if (
+    context.status === "temporarily_unavailable" ||
+    context.status === "authorization_error"
+  ) {
+    redirectToTemporaryUnavailable();
   }
 
   if (context.status !== "authorized") {
@@ -185,8 +218,11 @@ export async function requireConsoleOwner() {
     redirect("/login");
   }
 
-  if (context.status === "authorization_error") {
-    redirect("/unauthorized?reason=authorization_error");
+  if (
+    context.status === "temporarily_unavailable" ||
+    context.status === "authorization_error"
+  ) {
+    redirectToTemporaryUnavailable();
   }
 
   if (context.status !== "authorized" || context.role !== "owner") {
