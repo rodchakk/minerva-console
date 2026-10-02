@@ -57,7 +57,7 @@ test("ENTRY operations remain available inside the ENTRY product module", () => 
   assert.doesNotMatch(entryPage, /redirect\("\/dashboard"\)/);
 });
 
-test("product registry represents current, future, and locked module states", () => {
+test("product registry represents current, Seshat preview, and locked module states", () => {
   const registry = read("features/control-center/productRegistry.ts");
   const productsPage = read("app/(console)/products/page.tsx");
   const sidebar = read("components/layout/AppSidebar.tsx");
@@ -67,7 +67,9 @@ test("product registry represents current, future, and locked module states", ()
   assert.match(registry, /href: "\/products\/entry"/);
   assert.match(registry, /id: "seshat"/);
   assert.match(registry, /status: "development"/);
-  assert.match(registry, /availability: "coming_later"/);
+  assert.match(registry, /href: "\/seshat"/);
+  assert.match(registry, /availability: "available"/);
+  assert.match(registry, /Dedicated Seshat auth/);
   assert.match(registry, /restrictedProductStateExample/);
   assert.match(registry, /status: "locked"/);
   assert.match(registry, /availability: "restricted"/);
@@ -155,17 +157,19 @@ test("ENTRY sidebar active state selects only the most specific section", () => 
   assert.equal(isItemActive("/products/entry/communities/abc", communitiesHref), true);
 });
 
-test("Seshat, Logs, and Reminders routes are honest Minerva placeholders", () => {
+test("Seshat is a native workspace while Logs and Reminders remain honest placeholders", () => {
   const seshatPage = read("app/(console)/seshat/page.tsx");
+  const seshatWorkspace = read("features/seshat/SeshatWorkspace.tsx");
   const logsPage = read("app/(console)/logs/page.tsx");
   const remindersPage = read("app/(console)/reminders/page.tsx");
   const topbar = read("components/layout/Topbar.tsx");
 
-  assert.match(seshatPage, /Seshat/);
-  assert.match(seshatPage, /Coming soon/);
-  assert.match(seshatPage, /finance workspace inside Minerva Console/);
-  assert.match(seshatPage, /Cost tracking/);
-  assert.doesNotMatch(seshatPage, /createClient|insert\(|upsert\(|cron|scheduleAction/i);
+  assert.match(seshatPage, /SeshatWorkspace/);
+  assert.match(seshatWorkspace, /Connect Seshat/);
+  assert.match(seshatWorkspace, /generateInvoice/);
+  assert.match(seshatWorkspace, /recordPayment/);
+  assert.match(seshatWorkspace, /runAutomaticBilling/);
+  assert.doesNotMatch(seshatWorkspace, /scheduleAction/i);
   assert.match(logsPage, /Logs/);
   assert.match(logsPage, /Operational logs and system history will live here/);
   assert.match(logsPage, /No logs available yet/);

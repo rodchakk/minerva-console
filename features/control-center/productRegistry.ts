@@ -69,29 +69,29 @@ export const productModules: ProductModule[] = [
     statusLabel: "Operational",
   },
   {
-    availability: "coming_later",
+    availability: "available",
     connection: {
-      adminUrl: null,
+      adminUrl: "/seshat",
       overviewEndpoint: null,
     },
     connectionMode: "native_module",
     description:
-      "Future native Minerva module. Reserved in Console without a fake product surface.",
+      "Native finance workspace connected to the existing Seshat Supabase backend for invoices, clients, services, expenses, payments and billing.",
     environment: "development",
-    href: null,
+    href: "/seshat",
     icon: CircleGauge,
     id: "seshat",
     kind: "native",
     metrics: [
       { label: "Module", value: "Native" },
-      { label: "Route", value: "Reserved" },
-      { label: "Connection", value: "Not active" },
+      { label: "Route", value: "/seshat" },
+      { label: "Connection", value: "Dedicated Seshat auth" },
     ],
     name: "Seshat",
     owner: "Minerva Technologies",
     slug: "seshat",
     status: "development",
-    statusLabel: "In development",
+    statusLabel: "Preview ready",
   },
 ];
 
