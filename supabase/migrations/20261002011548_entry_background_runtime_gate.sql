@@ -36,6 +36,164 @@ values (
 )
 on conflict (control_key) do nothing;
 
+-- Bound database-side dispatch before the runtime gate can ever permit work.
+-- These limits are intentionally duplicated in the Edge Functions so an older
+-- worker deployment cannot turn one cron tick into an unbounded recovery burst.
+
+CREATE OR REPLACE FUNCTION public.trigger_community_message_push_worker()
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_secret text;
+begin
+  select ds.decrypted_secret into v_secret
+  from vault.decrypted_secrets ds
+  where ds.name='entry_community_message_worker_secret'
+  order by ds.created_at desc
+  limit 1;
+
+  if nullif(v_secret,'') is null then
+    raise exception 'ENTRY community message worker credential is not configured'
+      using errcode='55000';
+  end if;
+
+  perform net.http_post(
+    url => 'https://ytzvislhvrcdtkbtpbmu.supabase.co/functions/v1/smart-service',
+    headers => jsonb_build_object(
+      'Content-Type','application/json',
+      'Authorization','Bearer ' || v_secret
+    ),
+    body => jsonb_build_object('limit',5),
+    timeout_milliseconds => 9000
+  );
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.trigger_entry_mobile_push_receipt_worker()
+ RETURNS bigint
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_secret text;
+  v_request_id bigint;
+begin
+  select ds.decrypted_secret into v_secret
+  from vault.decrypted_secrets ds
+  where ds.name='entry_community_message_worker_secret'
+  order by ds.created_at desc
+  limit 1;
+
+  if nullif(v_secret,'') is null then
+    raise exception 'ENTRY mobile push receipt worker credential is not configured'
+      using errcode='55000';
+  end if;
+
+  select net.http_post(
+    url => 'https://ytzvislhvrcdtkbtpbmu.supabase.co/functions/v1/entry-push-receipts',
+    headers => jsonb_build_object(
+      'Content-Type','application/json',
+      'Authorization','Bearer ' || v_secret
+    ),
+    body => jsonb_build_object('limit',50),
+    timeout_milliseconds => 9000
+  ) into v_request_id;
+
+  return v_request_id;
+end;
+$function$
+
+
+CREATE OR REPLACE FUNCTION public.process_plate_ocr_queue()
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public', 'pg_temp'
+AS $function$
+declare
+  v_item record;
+  v_service_role_key text;
+  v_dispatched integer := 0;
+  v_failed_dispatch integer := 0;
+begin
+  select ds.decrypted_secret
+  into v_service_role_key
+  from vault.decrypted_secrets ds
+  where ds.name = 'SUPABASE_SERVICE_ROLE_KEY'
+  limit 1;
+
+  if nullif(v_service_role_key, '') is null then
+    return jsonb_build_object('dispatched',0,'dispatch_failed',0,'status','internal_auth_unavailable');
+  end if;
+
+  update public.plate_ocr_queue q
+  set status='DONE', completed_at=coalesce(q.completed_at, now()), last_error=null
+  from public.entry_logs el
+  where el.id=q.entry_log_id
+    and el.vehicle_plate_text is not null
+    and q.status in ('PENDING','PROCESSING');
+
+  for v_item in
+    select q.id, q.entry_log_id, q.image_path, q.attempts, q.max_attempts
+    from public.plate_ocr_queue q
+    join public.entry_logs el on el.id = q.entry_log_id
+    where q.status='PENDING'
+      and q.scheduled_at <= now()
+      and q.attempts < q.max_attempts
+      and el.vehicle_plate_text is null
+    order by q.created_at
+    limit 3
+    for update of q skip locked
+  loop
+    begin
+      update public.plate_ocr_queue
+      set status='PROCESSING', attempts=attempts+1, last_error=null
+      where id=v_item.id;
+
+      perform net.http_post(
+        url := 'https://ytzvislhvrcdtkbtpbmu.supabase.co/functions/v1/extract-plate-text',
+        headers := jsonb_build_object(
+          'Content-Type','application/json',
+          'Authorization','Bearer ' || v_service_role_key,
+          'apikey',v_service_role_key
+        ),
+        body := jsonb_build_object(
+          'image_path',v_item.image_path,
+          'bucket','entry-photos',
+          'entry_log_id',v_item.entry_log_id::text
+        ),
+        timeout_milliseconds := 15000
+      );
+
+      update public.plate_ocr_queue
+      set status='PENDING', scheduled_at=now()+interval '2 minutes'
+      where id=v_item.id and status='PROCESSING';
+
+      v_dispatched := v_dispatched + 1;
+    exception when others then
+      update public.plate_ocr_queue
+      set status=case when attempts>=max_attempts then 'FAILED' else 'PENDING' end,
+          scheduled_at=case when attempts>=max_attempts then scheduled_at else now()+interval '2 minutes' end,
+          last_error='OCR_DISPATCH_FAILED'
+      where id=v_item.id;
+      v_failed_dispatch := v_failed_dispatch + 1;
+    end;
+  end loop;
+
+  update public.plate_ocr_queue
+  set status='FAILED', last_error=coalesce(last_error,'OCR_MAX_ATTEMPTS_REACHED')
+  where status='PENDING' and attempts>=max_attempts;
+
+  return jsonb_build_object('dispatched',v_dispatched,'dispatch_failed',v_failed_dispatch,'status','ok');
+end;
+$function$
+
+
 create or replace function public.run_entry_background_job_v1(
   p_job_name text
 )
