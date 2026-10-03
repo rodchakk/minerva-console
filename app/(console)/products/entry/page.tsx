@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Rubik } from "next/font/google";
 import {
   AlertTriangle,
   ClipboardList,
@@ -31,6 +32,11 @@ import {
 import { getEntrySupportTickets } from "@/features/entry/support/queries";
 import { cn } from "@/lib/supabase/utils";
 
+const rubik = Rubik({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 function getCommunityHref(communityId: string) {
   return "/products/entry/communities/" + communityId;
 }
@@ -57,20 +63,6 @@ function severityRank(severity: EntryObservabilityIncident["severity"]) {
     case "INFO":
     default:
       return 1;
-  }
-}
-
-function getStatusNote(type: string) {
-  switch (type) {
-    case "Alerts / incidents":
-      return "Needs review";
-    case "Residents":
-      return "Requires review";
-    case "Tickets":
-      return "Support follow-up";
-    case "Onboarding":
-    default:
-      return "Operational follow-up";
   }
 }
 
@@ -413,7 +405,7 @@ export default async function DashboardPage() {
     .map(({ urgency: _urgency, ...item }) => item);
 
   return (
-    <div className="space-y-4 text-[#E7E5EA]">
+    <div className={cn(rubik.className, "relative -mx-4 -my-4 min-h-[calc(100vh-4rem)] space-y-4 bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7")}>
       <section className="flex flex-col gap-5 pt-1 xl:flex-row xl:items-end xl:justify-between">
         <div className="min-w-0 max-w-3xl">
           <h1 className="text-3xl font-semibold tracking-[-0.03em] text-white lg:text-[2.05rem]">
