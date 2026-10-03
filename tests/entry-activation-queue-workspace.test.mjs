@@ -196,3 +196,14 @@ test("Activation Queue shows invitation history, follow-up age and PIN timing se
   assert.match(actions, /list_resident_activation_queue_v3/);
   assert.match(migration, /max\(p\.created_at\) as last_pin_generated_at/);
 });
+
+
+test("Activation Queue does not treat digits inside an email as a phone query", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(source, /const isPhoneLikeQuery = /^[+\\d\\s().-]+$//);
+  assert.match(
+    source,
+    /const normalizedDigits = isPhoneLikeQuery[sS]*searchQuery.replace(/\\D+/g, "")[sS]*: "";/,
+  );
+});
