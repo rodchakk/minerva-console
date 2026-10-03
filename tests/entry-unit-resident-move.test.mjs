@@ -49,17 +49,24 @@ test("resident unit move RPC preserves identity and primary-resident consistency
   assert.doesNotMatch(migration, /delete from auth/i);
 });
 
-test("ENTRY Operations preserves activation and onboarding context while exposing Outrider only as a quick action", () => {
+test("ENTRY Operations preserves activation and onboarding context in the table-first workspace", () => {
   const dashboard = read("app/(console)/products/entry/page.tsx");
+  const workspace = read(
+    "features/entry/operations/OperationalPrioritiesWorkspace.tsx",
+  );
 
-  assert.match(dashboard, /label="Residents in activation queue"/);
-  assert.match(dashboard, /Open Activation Queue/);
-  assert.match(dashboard, /Open Outrider/);
-  assert.match(dashboard, /Setup priorities across ENTRY/);
-  assert.match(dashboard, />Onboarding</);
-  assert.match(dashboard, /Pending[\s\S]*activations/);
+  assert.match(dashboard, /label="Pending activations"/);
   assert.match(dashboard, /residentsInActivationQueue/);
-  assert.doesNotMatch(dashboard, /label="Outrider"/);
-  assert.doesNotMatch(dashboard, />Outrider<\/th>/);
-  assert.doesNotMatch(dashboard, /Recent Outrider activity/i);
+  assert.match(dashboard, /buildActivationPriority/);
+  assert.match(dashboard, /buildSetupPriority/);
+  assert.match(dashboard, /type: "Onboarding"/);
+  assert.match(dashboard, /type: "Residents"/);
+  assert.match(workspace, /Operational priorities/);
+  assert.match(workspace, /Search items/);
+  assert.match(workspace, /Filter priorities/);
+  assert.match(workspace, /Current state/);
+  assert.match(workspace, /Operational actions/);
+  assert.doesNotMatch(dashboard, /Open Outrider/);
+  assert.doesNotMatch(dashboard, /Quick Actions/);
+  assert.doesNotMatch(dashboard, /Operational Summary/);
 });
