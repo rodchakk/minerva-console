@@ -1194,7 +1194,13 @@ export function ActivationQueueTable({
         (normalizedDigits.length > 0 && row.phone.replace(/\D+/g, "").includes(normalizedDigits)) ||
         row.suggestedUsername.toLowerCase().includes(normalizedQuery);
 
-      return matchesView && matchesFollowUp && matchesQuery;
+      // A search is a global lookup across the loaded activation queue. The status
+      // and follow-up tabs are browsing filters and must not hide a matching person.
+      if (normalizedQuery) {
+        return matchesQuery;
+      }
+
+      return matchesView && matchesFollowUp;
     });
   }, [followUpView, queueView, rows, searchQuery]);
 
