@@ -1178,7 +1178,10 @@ export function ActivationQueueTable({
 
   const filteredRows = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLowerCase();
-    const normalizedDigits = searchQuery.replace(/\D+/g, "");
+    const isPhoneLikeQuery = /^[+\d\s().-]+$/.test(searchQuery.trim());
+    const normalizedDigits = isPhoneLikeQuery
+      ? searchQuery.replace(/\D+/g, "")
+      : "";
 
     return rows.filter((row) => {
       const matchesView = matchesQueueView(row, queueView);
