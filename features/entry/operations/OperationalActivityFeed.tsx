@@ -9,6 +9,7 @@ import type {
 
 type OperationalActivityFeedProps = {
   initialResult: EntryOperationalActivityResult;
+  limit?: number;
 };
 
 const REFRESH_INTERVAL_MS = 30_000;
@@ -22,7 +23,7 @@ function getEventTextStyle(activity: EntryOperationalActivityItem) {
     return "font-medium text-amber-300";
   }
 
-  return "font-medium text-slate-200";
+  return "font-medium text-white";
 }
 
 function formatRelativeTime(value: string) {
@@ -61,6 +62,7 @@ function formatRelativeTime(value: string) {
 
 export function OperationalActivityFeed({
   initialResult,
+  limit = 8,
 }: OperationalActivityFeedProps) {
   const [result, setResult] = useState(initialResult);
   const [refreshing, setRefreshing] = useState(false);
@@ -76,7 +78,7 @@ export function OperationalActivityFeed({
       setRefreshing(true);
 
       try {
-        const response = await fetch("/api/entry/operational-activity?limit=15", {
+        const response = await fetch("/api/entry/operational-activity?limit=" + limit, {
           cache: "no-store",
           credentials: "same-origin",
         });
@@ -116,11 +118,11 @@ export function OperationalActivityFeed({
       window.clearInterval(timer);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, []);
+  }, [limit]);
 
   return (
     <div>
-      <div className="flex items-center justify-end gap-2 border-b border-[var(--console-border)] px-5 py-2 text-xs text-[var(--console-text-muted)]">
+      <div className="flex items-center justify-end gap-2 border-b border-[#141119] px-5 py-2 text-xs text-[#8F879D]">
         {result.state === "unavailable" ? (
           <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
         ) : null}
@@ -128,9 +130,9 @@ export function OperationalActivityFeed({
       </div>
 
       <div className="overflow-x-auto">
-        <div className="max-h-[340px] overflow-y-auto">
+        <div>
           <table className="min-w-[880px] w-full text-left text-xs">
-            <thead className="sticky top-0 z-10 border-b border-[var(--console-border)] bg-[var(--console-surface-raised)] text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <thead className="border-b border-[#141119] bg-[#1F1B26] text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8F879D]">
               <tr>
                 <th className="px-5 py-3 font-medium">Time</th>
                 <th className="px-4 py-3 font-medium">Community</th>
@@ -139,12 +141,12 @@ export function OperationalActivityFeed({
                 <th className="px-5 py-3 font-medium">Actor</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--console-border)]">
+            <tbody className="divide-y divide-[#141119]">
               {result.state === "unavailable" ? (
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center">
                     <p className="font-medium text-white">Activity temporarily unavailable</p>
-                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                    <p className="mt-1 text-xs text-[#8F879D]">
                       Operational data could not be loaded safely. The feed will retry automatically.
                     </p>
                   </td>
@@ -153,18 +155,18 @@ export function OperationalActivityFeed({
                 <tr>
                   <td colSpan={5} className="px-5 py-8 text-center">
                     <p className="font-medium text-white">No operational activity yet</p>
-                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                    <p className="mt-1 text-xs text-[#8F879D]">
                       Important ENTRY actions will appear here as they happen.
                     </p>
                   </td>
                 </tr>
               ) : (
-                result.items.map((activity) => (
+                result.items.slice(0, limit).map((activity) => (
                   <tr
                     key={activity.eventId}
-                    className="transition-colors hover:bg-white/[0.02]"
+                    className="transition-colors hover:bg-white/[0.018]"
                   >
-                    <td className="whitespace-nowrap px-5 py-3 align-top text-[var(--console-text-muted)]">
+                    <td className="whitespace-nowrap px-5 py-3 align-top text-[#8F879D]">
                       <time
                         dateTime={activity.occurredAt}
                         title={new Date(activity.occurredAt).toISOString()}
@@ -177,12 +179,12 @@ export function OperationalActivityFeed({
                       {activity.communityId ? (
                         <Link
                           href={`/products/entry/communities/${activity.communityId}`}
-                          className="font-medium text-slate-200 transition-colors hover:text-white"
+                          className="font-medium text-white transition-colors hover:text-white"
                         >
                           {activity.communityName}
                         </Link>
                       ) : (
-                        <span className="font-medium text-slate-300">{activity.communityName}</span>
+                        <span className="font-medium text-[#D3CEDA]">{activity.communityName}</span>
                       )}
                     </td>
                     <td className="px-4 py-3 align-top">
@@ -190,10 +192,10 @@ export function OperationalActivityFeed({
                         {activity.eventLabel}
                       </span>
                     </td>
-                    <td className="max-w-[520px] px-4 py-3 align-top text-slate-300">
+                    <td className="max-w-[520px] px-4 py-3 align-top text-[#C7C1CF]">
                       {activity.detail}
                     </td>
-                    <td className="whitespace-nowrap px-5 py-3 align-top font-medium text-slate-200">
+                    <td className="whitespace-nowrap px-5 py-3 align-top font-medium text-white">
                       {activity.actor}
                     </td>
                   </tr>
