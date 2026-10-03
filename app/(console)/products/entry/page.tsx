@@ -400,9 +400,7 @@ export default async function DashboardPage() {
     ...incidentPriorities,
   ].sort((a, b) => b.urgency - a.urgency || a.title.localeCompare(b.title));
 
-  const priorityItems: OperationsPriorityItem[] = allPriorityItems
-    .slice(0, 8)
-    .map(({ urgency: _urgency, ...item }) => item);
+  const priorityItems: OperationsPriorityItem[] = allPriorityItems.slice(0, 8);
 
   return (
     <div className={cn(rubik.className, "relative -mx-4 -my-4 min-h-[calc(100vh-4rem)] space-y-4 bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7")}>
