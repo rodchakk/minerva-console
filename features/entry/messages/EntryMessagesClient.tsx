@@ -135,7 +135,7 @@ function CommunityChecklistRow({
         type="checkbox"
         checked={checked}
         onChange={onToggle}
-        className="h-4 w-4 rounded border-[var(--console-border-strong)] bg-transparent text-[var(--console-accent)] focus:ring-0 focus:ring-offset-0"
+        className="h-4 w-4 rounded border-[#4B4454] bg-transparent text-[#7553FF] focus:ring-0 focus:ring-offset-0"
       />
     </label>
   );
@@ -345,9 +345,9 @@ export function EntryMessagesClient({
                       type="button"
                       onClick={() => setMode(option.value)}
                       className={cn(
-                        "inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
+                        "inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#7553FF]",
                         isActive
-                          ? "bg-[var(--console-accent-subtle)] text-violet-100 ring-1 ring-inset ring-[var(--console-accent-border)]"
+                          ? "bg-[rgba(117,83,255,0.10)] text-[#D8D1FF] ring-1 ring-inset ring-[rgba(117,83,255,0.28)]"
                           : "text-[#A9A3B2] hover:bg-white/[0.035] hover:text-slate-100",
                       )}
                     >
@@ -434,7 +434,7 @@ export function EntryMessagesClient({
                   ))}
 
                   {filteredActiveCommunities.length === 0 ? (
-                    <div className="rounded-md border border-dashed border-[var(--console-border-strong)] p-4 text-center text-xs text-[#A9A3B2]">
+                    <div className="rounded-md border border-dashed border-[#4B4454] p-4 text-center text-xs text-[#A9A3B2]">
                       No active communities match this search.
                     </div>
                   ) : null}
