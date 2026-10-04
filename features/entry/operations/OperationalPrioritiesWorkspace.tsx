@@ -178,10 +178,12 @@ export function OperationalPrioritiesWorkspace({
     <section
       className={cn(
         "grid items-start gap-3",
-        activeItem ? "xl:grid-cols-[minmax(0,1fr)_370px]" : "grid-cols-1",
+        activeItem
+          ? "xl:h-[560px] xl:grid-cols-[minmax(0,1fr)_370px]"
+          : "grid-cols-1",
       )}
     >
-      <div className="relative min-w-0 overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
+      <div className="relative min-w-0 overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] xl:flex xl:h-full xl:flex-col">
         <div className="flex flex-col gap-4 border-b border-[#141119] px-5 py-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h2 className="text-lg font-semibold tracking-[-0.02em] text-white">
@@ -284,7 +286,7 @@ export function OperationalPrioritiesWorkspace({
         </div>
 
         {visibleItems.length > 0 ? (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto xl:flex-1 xl:overflow-auto">
             <table className="min-w-[920px] w-full table-fixed text-left">
               <colgroup>
                 <col className="w-[28%]" />
@@ -370,7 +372,10 @@ export function OperationalPrioritiesWorkspace({
                       </td>
                       <td className="px-5 py-4 align-top">
                         <div className="flex items-center justify-end gap-2">
-                          <DimensionalLink href={item.href}>
+                          <DimensionalLink
+                            href={item.href}
+                            className="w-[118px] shrink-0"
+                          >
                             {item.actionLabel}
                           </DimensionalLink>
                           <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
@@ -393,7 +398,7 @@ export function OperationalPrioritiesWorkspace({
       </div>
 
       {activeItem ? (
-        <aside className="overflow-hidden rounded-[10px] border border-[#141119] bg-[#26222F] shadow-[0_18px_40px_rgba(0,0,0,0.22)]">
+        <aside className="flex overflow-hidden rounded-[10px] border border-[#141119] bg-[#26222F] shadow-[0_18px_40px_rgba(0,0,0,0.22)] xl:h-full xl:min-h-0 xl:flex-col">
           <div className="border-b border-[#141119] px-4 py-4">
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 items-start gap-3">
@@ -480,7 +485,7 @@ export function OperationalPrioritiesWorkspace({
             ) : null}
           </div>
 
-          <div className="p-4">
+          <div className="p-4 xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
             <div
               className={cn(
                 "rounded-lg border p-3.5",
@@ -507,8 +512,12 @@ export function OperationalPrioritiesWorkspace({
                 </div>
               ))}
             </div>
+          </div>
 
-            <p className="mb-2 mt-4 text-xs font-semibold text-white">Operational actions</p>
+          <div className="shrink-0 border-t border-[#141119] bg-[#26222F] p-4">
+            <p className="mb-2 text-xs font-semibold text-white">
+              Operational actions
+            </p>
             <div className="grid gap-2">
               {activeItem.secondaryAction ? (
                 <DimensionalLink
