@@ -24,6 +24,17 @@ export function isVerifiedInvalidSession(error: unknown) {
     return true;
   }
 
+  // Supabase's SSR client reports a completely missing browser session as
+  // AuthSessionMissingError (commonly without a 401 status/code). That is a
+  // normal signed-out state, especially on a fresh Vercel preview hostname,
+  // and must go to /login rather than the transient-outage screen.
+  if (
+    message.includes("auth session missing") ||
+    message.includes("session missing")
+  ) {
+    return true;
+  }
+
   if (authError.status !== 401) {
     return false;
   }
