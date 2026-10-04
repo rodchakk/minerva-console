@@ -68,12 +68,12 @@ function getSecondaryIdentity(email: string, username: string) {
 
 function buttonClass(variant: "primary" | "secondary" | "ghost" | "danger") {
   return cn(
-    "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-60",
+    "relative isolate inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[7px] px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-60",
     variant === "primary"
-      ? "border border-transparent bg-[var(--console-accent-subtle)] text-violet-100 hover:bg-violet-500/20"
+      ? "border border-[#120539] bg-[#7553FF] text-white shadow-[0_2px_0_#120539]"
       : "",
     variant === "secondary"
-      ? "border border-[var(--console-border)] bg-white/[0.025] text-slate-100 hover:bg-white/[0.05]"
+      ? "border border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] hover:bg-[#342F3D]"
       : "",
     variant === "ghost"
       ? "border border-transparent bg-transparent text-[var(--console-text-muted)] hover:bg-white/[0.04] hover:text-white"
@@ -478,7 +478,7 @@ function UserAvatar({ name }: { name: string }) {
       .join("") || "U";
 
   return (
-    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-accent-subtle)] text-xs font-semibold text-violet-100">
+    <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-full border border-[rgba(117,83,255,0.28)] bg-[rgba(117,83,255,0.08)] text-xs font-semibold text-[#E3DEFF]">
       {initials}
     </span>
   );
@@ -509,7 +509,7 @@ export function UserSearch() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-3">
+      <section className="relative rounded-[10px] border border-[#141119] bg-[#24202B] px-4 py-3 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
         <form action={formAction}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <label className="relative min-w-0 flex-1">
@@ -519,7 +519,7 @@ export function UserSearch() {
                 name="query"
                 type="text"
                 defaultValue={state.query}
-                className="h-9 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] pl-9 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
+                className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-10 pr-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none transition placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
                 placeholder="Search by name, email, or username"
               />
             </label>
@@ -532,10 +532,10 @@ export function UserSearch() {
       </section>
 
       {hasResults ? (
-        <section className="overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
+        <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
           <div className="min-h-[220px] overflow-x-auto">
             <div className="min-w-[760px]">
-              <div className="grid grid-cols-[minmax(340px,1.4fr)_minmax(260px,1fr)_100px] items-center gap-4 border-b border-[var(--console-border)] bg-white/[0.015] px-5 py-3">
+              <div className="grid grid-cols-[minmax(340px,1.4fr)_minmax(260px,1fr)_100px] items-center gap-4 border-b border-[#141119] bg-[#1F1B26] px-5 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
                   User
                 </p>
@@ -547,7 +547,7 @@ export function UserSearch() {
                 </p>
               </div>
 
-              <div className="divide-y divide-[var(--console-border)]">
+              <div className="divide-y divide-[#141119]">
                 {results.map((user) => {
                   const primaryIdentity = getPrimaryIdentity(
                     user.email,
@@ -597,7 +597,7 @@ export function UserSearch() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 divide-x divide-[var(--console-border)]">
+                      <div className="grid grid-cols-2 divide-x divide-[#141119]">
                         <div className="min-w-0 pr-3">
                           <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
                             <Building2 className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
@@ -636,7 +636,7 @@ export function UserSearch() {
       ) : null}
 
       {!hasResults && hasQuery ? (
-        <section className="rounded-lg border border-dashed border-[var(--console-border-strong)] bg-[var(--console-surface)] px-6 py-10 text-center">
+        <section className="relative rounded-[10px] border border-dashed border-[#141119] bg-[#24202B] px-6 py-10 text-center before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
           <p className="text-sm text-[var(--console-text-muted)]">
             No users matched <span className="font-semibold">{state.query}</span>.
           </p>
