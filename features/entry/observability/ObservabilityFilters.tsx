@@ -47,13 +47,13 @@ export function ObservabilityFilters({
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <label className="relative block">
         <span className="sr-only">Community</span>
-        <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--console-text-soft)]" />
+        <Building2 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8F879D]" />
         <select
           value={communityId ?? ""}
           onChange={(event) =>
             updateFilter({ communityId: event.target.value || null })
           }
-          className="h-10 min-w-[210px] rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] pl-9 pr-9 text-sm font-medium text-slate-100 outline-none transition-colors hover:border-white/20 focus:border-[var(--console-accent-border)] focus:ring-2 focus:ring-[var(--console-accent)]/20"
+          className="h-10 min-w-[210px] rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-9 text-sm font-medium text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none hover:border-white/15 focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
         >
           <option value="">All communities</option>
           {communities.map((community) => (
@@ -66,7 +66,7 @@ export function ObservabilityFilters({
 
       <label className="relative block">
         <span className="sr-only">Time range</span>
-        <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--console-text-soft)]" />
+        <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8F879D]" />
         <select
           value={range}
           onChange={(event) =>
@@ -74,7 +74,7 @@ export function ObservabilityFilters({
               range: event.target.value as EntryObservabilityTimeRange,
             })
           }
-          className="h-10 min-w-[160px] rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] pl-9 pr-9 text-sm font-medium text-slate-100 outline-none transition-colors hover:border-white/20 focus:border-[var(--console-accent-border)] focus:ring-2 focus:ring-[var(--console-accent)]/20"
+          className="h-10 min-w-[160px] rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-9 text-sm font-medium text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none hover:border-white/15 focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
         >
           <option value="24h">Last 24 hours</option>
           <option value="7d">Last 7 days</option>
