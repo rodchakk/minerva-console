@@ -254,7 +254,7 @@ export function AppSidebar({ email, isOpen, onClose }: AppSidebarProps) {
       ) : null}
       <aside
         className={cn(
-          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-white/[0.14] bg-[#20242b] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.04),18px_0_46px_rgba(0,0,0,0.18)] transition-transform lg:translate-x-0",
+          "fixed bottom-0 left-0 top-[61px] z-40 flex w-64 flex-col border-r border-[#141119] bg-[#24202B] px-3.5 py-3.5 text-[var(--console-text)] shadow-[inset_-1px_0_0_rgba(255,255,255,0.03),18px_0_46px_rgba(0,0,0,0.18)] transition-transform lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
