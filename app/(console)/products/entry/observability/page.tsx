@@ -370,7 +370,7 @@ function Incidents({ incidents }: { incidents: EntryObservabilityIncident[] }) {
         action={
           <Link
             href="/logs"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3 text-sm font-semibold text-slate-100 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+            className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-sm font-semibold text-white shadow-[0_2px_0_#141119] transition-colors hover:bg-[#342F3D]"
           >
             Open logs
             <ArrowRight className="h-4 w-4 stroke-[1.75]" />
@@ -628,7 +628,7 @@ function AuditActivity({ data }: { data: EntryObservabilityData }) {
         action={
           <Link
             href="/products/entry"
-            className="inline-flex h-9 items-center gap-2 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3 text-sm font-semibold text-slate-100 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+            className="inline-flex h-9 items-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-sm font-semibold text-white shadow-[0_2px_0_#141119] transition-colors hover:bg-[#342F3D]"
           >
             Operations
             <ArrowRight className="h-4 w-4 stroke-[1.75]" />
