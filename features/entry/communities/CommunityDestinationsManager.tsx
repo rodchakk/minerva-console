@@ -404,7 +404,7 @@ function DestinationRow({
         !destination.isActive && "bg-white/[0.015]",
       )}
     >
-      <div className="min-w-0">
+      <div className={cn(isEditing ? "col-span-4 min-w-0" : "contents")}>
         {isEditing ? (
           <RenameDestinationForm
             communityId={communityId}
