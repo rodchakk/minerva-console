@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Rubik } from "next/font/google";
 import {
   Activity,
   AlertTriangle,
@@ -29,6 +30,11 @@ import {
   type EntryObservabilityStatus,
 } from "@/features/entry/observability/queries";
 import { cn } from "@/lib/supabase/utils";
+
+const rubik = Rubik({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
 
 export const dynamic = "force-dynamic";
 
@@ -155,7 +161,7 @@ function SummaryCard({
   value: React.ReactNode;
 }) {
   return (
-    <article className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-4 shadow-[0_18px_42px_rgba(0,0,0,0.18)]">
+    <article className="relative rounded-[10px] border border-[#141119] bg-[#24202B] p-4 before:absolute before:left-0 before:top-0 before:h-px before:w-12 before:bg-[#7553FF]">
       <div className="flex items-start gap-3">
         <span
           className={cn(
@@ -166,13 +172,13 @@ function SummaryCard({
           <Icon className="h-5 w-5 stroke-[1.75]" />
         </span>
         <div className="min-w-0">
-          <p className="text-xs font-medium text-[var(--console-text-muted)]">
+          <p className="text-xs font-medium text-[#A9A3B2]">
             {label}
           </p>
           <div className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-white">
             {value}
           </div>
-          <p className="mt-2 text-xs leading-5 text-[var(--console-text-muted)]">
+          <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
             {note}
           </p>
         </div>
@@ -191,7 +197,7 @@ function Panel({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]",
+        "relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]",
         className,
       )}
     >
@@ -212,14 +218,14 @@ function PanelHeader({
   title: string;
 }) {
   return (
-    <div className="flex flex-col gap-3 border-b border-[var(--console-border)] px-5 py-4 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-3 border-b border-[#141119] px-5 py-4 md:flex-row md:items-center md:justify-between">
       <div className="flex min-w-0 items-start gap-3">
-        <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-violet-400/20 bg-violet-500/[0.10] text-violet-200">
+        <span className="grid size-9 shrink-0 place-items-center rounded-full border border-white/[0.14] bg-white/[0.02] text-[#D8D3E7]">
           <Icon className="h-4.5 w-4.5 stroke-[1.75]" />
         </span>
         <div className="min-w-0">
           <h2 className="text-base font-semibold text-white">{title}</h2>
-          <p className="mt-1 text-sm leading-5 text-[var(--console-text-muted)]">
+          <p className="mt-1 text-sm leading-5 text-[#A9A3B2]">
             {description}
           </p>
         </div>
@@ -239,7 +245,7 @@ function EmptyPanelState({
   return (
     <div className="px-5 py-10 text-center">
       <p className="font-medium text-white">{title}</p>
-      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[var(--console-text-muted)]">
+      <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#A9A3B2]">
         {description}
       </p>
     </div>
@@ -250,7 +256,7 @@ function Sparkline({ values }: { values: number[] }) {
   const safeValues = values.filter((value) => Number.isFinite(value));
   if (safeValues.length < 2 || Math.max(...safeValues) <= 0) {
     return (
-      <div className="flex h-24 items-center justify-center border-t border-[var(--console-border)] text-xs text-[var(--console-text-muted)]">
+      <div className="flex h-24 items-center justify-center border-t border-[#141119] text-xs text-[#A9A3B2]">
         No trend data
       </div>
     );
@@ -272,7 +278,7 @@ function Sparkline({ values }: { values: number[] }) {
       role="img"
       aria-label="Usage trend"
       viewBox={`0 0 ${width} ${height}`}
-      className="h-24 w-full border-t border-[var(--console-border)] p-3"
+      className="h-24 w-full border-t border-[#141119] p-3"
       preserveAspectRatio="none"
     >
       <polyline
@@ -304,7 +310,7 @@ function CriticalFlows({
       />
       <div className="overflow-x-auto">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+          <thead className="border-b border-[#141119] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[#A9A3B2]">
             <tr>
               <th className="px-5 py-3 font-medium">Flow</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -313,7 +319,7 @@ function CriticalFlows({
               <th className="px-5 py-3 font-medium">P95 latency</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[var(--console-border)]">
+          <tbody className="divide-y divide-[#141119]">
             {flows.map((flow) => (
               <tr key={flow.key} className="transition-colors hover:bg-white/[0.02]">
                 <td className="px-5 py-3 font-medium text-slate-100">
@@ -342,7 +348,7 @@ function CriticalFlows({
                 <td className="px-4 py-3 text-slate-300">
                   {formatRelative(flow.lastSuccessAt)}
                 </td>
-                <td className="px-4 py-3 text-[var(--console-text-muted)]">
+                <td className="px-4 py-3 text-[#A9A3B2]">
                   {formatNumber(flow.successCount)} ok / {formatNumber(flow.failureCount)} failed
                 </td>
                 <td className="px-5 py-3 text-slate-300">
@@ -380,7 +386,7 @@ function Incidents({ incidents }: { incidents: EntryObservabilityIncident[] }) {
           title="No grouped incidents"
         />
       ) : (
-        <div className="divide-y divide-[var(--console-border)]">
+        <div className="divide-y divide-[#141119]">
           {incidents.map((incident) => (
             <article key={incident.fingerprint} className="px-5 py-4">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -402,7 +408,7 @@ function Incidents({ incidents }: { incidents: EntryObservabilityIncident[] }) {
                     {formatNumber(incident.occurrenceCount)} occurrences ·{" "}
                     {formatNumber(incident.affectedCommunityCount)} communities affected
                   </p>
-                  <p className="mt-2 max-w-2xl text-sm leading-5 text-[var(--console-text-muted)]">
+                  <p className="mt-2 max-w-2xl text-sm leading-5 text-[#A9A3B2]">
                     {incident.explanation}
                   </p>
                   {incident.communities.length > 0 ? (
@@ -418,7 +424,7 @@ function Incidents({ incidents }: { incidents: EntryObservabilityIncident[] }) {
                     </div>
                   ) : null}
                 </div>
-                <div className="shrink-0 text-left text-xs leading-5 text-[var(--console-text-muted)] md:text-right">
+                <div className="shrink-0 text-left text-xs leading-5 text-[#A9A3B2] md:text-right">
                   <p>First seen {formatRelative(incident.firstSeenAt)}</p>
                   <p>Last seen {formatRelative(incident.lastSeenAt)}</p>
                 </div>
@@ -442,28 +448,28 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
         title="Usage and cost"
       />
       <div className="grid gap-0 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.35fr)]">
-        <div className="border-b border-[var(--console-border)] p-5 lg:border-b-0 lg:border-r">
+        <div className="border-b border-[#141119] p-5 lg:border-b-0 lg:border-r">
           <dl className="space-y-3 text-sm">
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-[var(--console-text-muted)]">Usage records</dt>
+              <dt className="text-[#A9A3B2]">Usage records</dt>
               <dd className="font-semibold text-white">
                 {formatNumber(usage.summary.recordCount)}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-[var(--console-text-muted)]">Input tokens</dt>
+              <dt className="text-[#A9A3B2]">Input tokens</dt>
               <dd className="font-semibold text-white">
                 {formatNumber(usage.summary.inputTokens)}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-[var(--console-text-muted)]">Output tokens</dt>
+              <dt className="text-[#A9A3B2]">Output tokens</dt>
               <dd className="font-semibold text-white">
                 {formatNumber(usage.summary.outputTokens)}
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-[var(--console-text-muted)]">Images</dt>
+              <dt className="text-[#A9A3B2]">Images</dt>
               <dd className="font-semibold text-white">
                 {usage.summary.recordCount > 0
                   ? formatNumber(usage.summary.imageCount)
@@ -471,7 +477,7 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
               </dd>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <dt className="text-[var(--console-text-muted)]">Estimated cost</dt>
+              <dt className="text-[#A9A3B2]">Estimated cost</dt>
               <dd className="font-semibold text-white">
                 {formatCost(
                   usage.summary.estimatedCost,
@@ -490,8 +496,8 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
         </div>
 
         <div className="grid min-w-0 gap-0 xl:grid-cols-2">
-          <div className="border-b border-[var(--console-border)] xl:border-b-0 xl:border-r">
-            <div className="border-b border-[var(--console-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+          <div className="border-b border-[#141119] xl:border-b-0 xl:border-r">
+            <div className="border-b border-[#141119] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
               Providers
             </div>
             {usage.byProvider.length === 0 ? (
@@ -500,7 +506,7 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
                 title="No provider usage"
               />
             ) : (
-              <div className="divide-y divide-[var(--console-border)]">
+              <div className="divide-y divide-[#141119]">
                 {usage.byProvider.slice(0, 6).map((item) => (
                   <div
                     key={`${item.provider}-${item.operation}-${item.serviceModel}`}
@@ -510,11 +516,11 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
                       <p className="min-w-0 truncate font-medium text-white">
                         {item.provider}
                       </p>
-                      <span className="text-xs text-[var(--console-text-muted)]">
+                      <span className="text-xs text-[#A9A3B2]">
                         {formatNumber(item.recordCount)} calls
                       </span>
                     </div>
-                    <p className="mt-1 truncate text-xs text-[var(--console-text-muted)]">
+                    <p className="mt-1 truncate text-xs text-[#A9A3B2]">
                       {sentenceLabel(item.operation)} · {item.serviceModel}
                     </p>
                   </div>
@@ -524,7 +530,7 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
           </div>
 
           <div>
-            <div className="border-b border-[var(--console-border)] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <div className="border-b border-[#141119] px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
               Communities
             </div>
             {usage.byCommunity.length === 0 ? (
@@ -533,7 +539,7 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
                 title="No community usage"
               />
             ) : (
-              <div className="divide-y divide-[var(--console-border)]">
+              <div className="divide-y divide-[#141119]">
                 {usage.byCommunity.slice(0, 6).map((item) => (
                   <div
                     key={item.communityId ?? "global"}
@@ -543,11 +549,11 @@ function UsageAndCost({ data }: { data: EntryObservabilityData }) {
                       <p className="min-w-0 truncate font-medium text-white">
                         {item.communityName}
                       </p>
-                      <span className="text-xs text-[var(--console-text-muted)]">
+                      <span className="text-xs text-[#A9A3B2]">
                         {formatNumber(item.recordCount)} records
                       </span>
                     </div>
-                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+                    <p className="mt-1 text-xs text-[#A9A3B2]">
                       Cost {formatCost(item.estimatedCost, item.recordCount > 0)}
                     </p>
                   </div>
@@ -572,39 +578,39 @@ function OcrQueue({ queue }: { queue: EntryObservabilityOcrQueue }) {
         title="OCR queue"
       />
       <div className="grid gap-0 md:grid-cols-4">
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs font-medium text-[var(--console-text-muted)]">Open work</p>
+        <div className="border-b border-[#141119] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs font-medium text-[#A9A3B2]">Open work</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatNumber(queue.pendingCount + queue.processingCount)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+          <p className="mt-1 text-xs text-[#A9A3B2]">
             {formatNumber(queue.pendingCount)} pending / {formatNumber(queue.processingCount)} processing
           </p>
         </div>
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs font-medium text-[var(--console-text-muted)]">Failures</p>
+        <div className="border-b border-[#141119] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs font-medium text-[#A9A3B2]">Failures</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatNumber(queue.failedCount)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+          <p className="mt-1 text-xs text-[#A9A3B2]">
             {formatNumber(queue.exhaustedCount)} exhausted attempts
           </p>
         </div>
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs font-medium text-[var(--console-text-muted)]">Completed</p>
+        <div className="border-b border-[#141119] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs font-medium text-[#A9A3B2]">Completed</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatNumber(queue.completedCount)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+          <p className="mt-1 text-xs text-[#A9A3B2]">
             Last completion {formatRelative(queue.lastCompletedAt)}
           </p>
         </div>
         <div className="px-5 py-4">
-          <p className="text-xs font-medium text-[var(--console-text-muted)]">Provider usage</p>
+          <p className="text-xs font-medium text-[#A9A3B2]">Provider usage</p>
           <p className="mt-2 text-base font-semibold text-white">
             {queue.providerInstrumented ? "Instrumented" : "Not instrumented"}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+          <p className="mt-1 text-xs text-[#A9A3B2]">
             {hasOpenWork
               ? `Oldest open ${formatRelative(queue.oldestOpenScheduledAt)}`
               : `${formatNumber(queue.totalJobs)} queue jobs observed`}
@@ -640,7 +646,7 @@ function AuditActivity({ data }: { data: EntryObservabilityData }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <thead className="border-b border-[#141119] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[#A9A3B2]">
               <tr>
                 <th className="px-5 py-3 font-medium">Event</th>
                 <th className="px-4 py-3 font-medium">Actor</th>
@@ -649,7 +655,7 @@ function AuditActivity({ data }: { data: EntryObservabilityData }) {
                 <th className="px-5 py-3 font-medium">Time</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--console-border)]">
+            <tbody className="divide-y divide-[#141119]">
               {data.auditActivity.map((item) => (
                 <tr key={`${item.source}-${item.eventId}`} className="hover:bg-white/[0.02]">
                   <td className="px-5 py-3 font-medium text-white">
@@ -657,10 +663,10 @@ function AuditActivity({ data }: { data: EntryObservabilityData }) {
                   </td>
                   <td className="px-4 py-3 text-slate-300">{item.actor}</td>
                   <td className="px-4 py-3 text-slate-300">{item.communityName}</td>
-                  <td className="px-4 py-3 text-[var(--console-text-muted)]">
+                  <td className="px-4 py-3 text-[#A9A3B2]">
                     {sentenceLabel(item.source)}
                   </td>
-                  <td className="px-5 py-3 text-[var(--console-text-muted)]">
+                  <td className="px-5 py-3 text-[#A9A3B2]">
                     <time dateTime={item.occurredAt} title={formatDateTime(item.occurredAt)}>
                       {formatRelative(item.occurredAt)}
                     </time>
@@ -687,35 +693,35 @@ function PerformancePanel({ data }: { data: EntryObservabilityData }) {
         title="Performance"
       />
       <div className="grid gap-0 md:grid-cols-4">
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs text-[var(--console-text-muted)]">Measured events</p>
+        <div className="border-b border-[#141119] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[#A9A3B2]">Measured events</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatNumber(performance.summary.eventCount)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+          <p className="mt-1 text-xs text-[#A9A3B2]">
             {formatNumber(performance.summary.failedCount)} failed measurements
           </p>
         </div>
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs text-[var(--console-text-muted)]">P50</p>
+        <div className="border-b border-[#141119] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[#A9A3B2]">P50</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatLatency(performance.summary.p50Ms)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">Typical measured latency</p>
+          <p className="mt-1 text-xs text-[#A9A3B2]">Typical measured latency</p>
         </div>
-        <div className="border-b border-[var(--console-border)] px-5 py-4 md:border-b-0 md:border-r">
-          <p className="text-xs text-[var(--console-text-muted)]">P95</p>
+        <div className="border-b border-[#141119] px-5 py-4 md:border-b-0 md:border-r">
+          <p className="text-xs text-[#A9A3B2]">P95</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatLatency(performance.summary.p95Ms)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">Slow-user experience</p>
+          <p className="mt-1 text-xs text-[#A9A3B2]">Slow-user experience</p>
         </div>
         <div className="px-5 py-4">
-          <p className="text-xs text-[var(--console-text-muted)]">P99</p>
+          <p className="text-xs text-[#A9A3B2]">P99</p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {formatLatency(performance.summary.p99Ms)}
           </p>
-          <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+          <p className="mt-1 text-xs text-[#A9A3B2]">
             Last sample {formatRelative(performance.summary.lastSeenAt)}
           </p>
         </div>
@@ -726,9 +732,9 @@ function PerformancePanel({ data }: { data: EntryObservabilityData }) {
           description="Web and mobile measurements will appear here as instrumented clients report real user timings."
         />
       ) : (
-        <div className="overflow-x-auto border-t border-[var(--console-border)]">
+        <div className="overflow-x-auto border-t border-[#141119]">
           <table className="w-full min-w-[760px] text-left text-sm">
-            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <thead className="border-b border-[#141119] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[#A9A3B2]">
               <tr>
                 <th className="px-5 py-3 font-medium">Metric</th>
                 <th className="px-4 py-3 font-medium">Surface</th>
@@ -739,7 +745,7 @@ function PerformancePanel({ data }: { data: EntryObservabilityData }) {
                 <th className="px-5 py-3 font-medium">Last seen</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--console-border)]">
+            <tbody className="divide-y divide-[#141119]">
               {performance.metrics.slice(0, 16).map((metric) => (
                 <tr
                   key={`${metric.surface}-${metric.metric}-${metric.unit}-${metric.appVersion ?? "current"}`}
@@ -751,7 +757,7 @@ function PerformancePanel({ data }: { data: EntryObservabilityData }) {
                   <td className="px-4 py-3 text-slate-300">{formatMetricValue(metric.p95, metric.unit)}</td>
                   <td className="px-4 py-3 text-slate-300">{formatMetricValue(metric.p99, metric.unit)}</td>
                   <td className="px-4 py-3 text-slate-300">{formatNumber(metric.eventCount)}</td>
-                  <td className="px-5 py-3 text-[var(--console-text-muted)]">{formatRelative(metric.lastSeenAt)}</td>
+                  <td className="px-5 py-3 text-[#A9A3B2]">{formatRelative(metric.lastSeenAt)}</td>
                 </tr>
               ))}
             </tbody>
@@ -807,21 +813,21 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
         title="Operational infrastructure"
       />
 
-      <div className="grid gap-0 border-b border-[var(--console-border)] sm:grid-cols-2 xl:grid-cols-4">
-        <div className="border-b border-[var(--console-border)] px-4 py-3.5 sm:border-r xl:border-b-0">
-          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+      <div className="grid gap-0 border-b border-[#141119] sm:grid-cols-2 xl:grid-cols-4">
+        <div className="border-b border-[#141119] px-4 py-3.5 sm:border-r xl:border-b-0">
+          <p className="text-[11px] font-medium text-[#A9A3B2]">
             DB connections
           </p>
           <p className="mt-1.5 text-xl font-semibold text-white">
             {formatNumber(infrastructure.database.connections)}
           </p>
-          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
+          <p className="mt-1 text-[11px] leading-4 text-[#A9A3B2]">
             {infrastructure.database.deadlocks} deadlocks · {infrastructure.database.conflicts} conflicts
           </p>
         </div>
 
-        <div className="border-b border-[var(--console-border)] px-4 py-3.5 xl:border-b-0 xl:border-r">
-          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+        <div className="border-b border-[#141119] px-4 py-3.5 xl:border-b-0 xl:border-r">
+          <p className="text-[11px] font-medium text-[#A9A3B2]">
             DB cache hit
           </p>
           <p className="mt-1.5 text-xl font-semibold text-white">
@@ -829,40 +835,40 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
               ? "No data"
               : `${infrastructure.database.cacheHitPercent.toFixed(1)}%`}
           </p>
-          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
+          <p className="mt-1 text-[11px] leading-4 text-[#A9A3B2]">
             PostgreSQL shared-buffer cache
           </p>
         </div>
 
-        <div className="border-b border-[var(--console-border)] px-4 py-3.5 sm:border-r sm:border-b-0">
-          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+        <div className="border-b border-[#141119] px-4 py-3.5 sm:border-r sm:border-b-0">
+          <p className="text-[11px] font-medium text-[#A9A3B2]">
             Mobile push delivery
           </p>
           <p className="mt-1.5 text-xl font-semibold text-white">
             {formatPercent(push.deliveryRate)}
           </p>
-          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
+          <p className="mt-1 text-[11px] leading-4 text-[#A9A3B2]">
             {formatNumber(push.deliveredCount)} delivered / {formatNumber(push.failedCount)} failed
           </p>
         </div>
 
         <div className="px-4 py-3.5">
-          <p className="text-[11px] font-medium text-[var(--console-text-muted)]">
+          <p className="text-[11px] font-medium text-[#A9A3B2]">
             Receipt pending
           </p>
           <p className="mt-1.5 text-xl font-semibold text-white">
             {formatNumber(push.acceptedCount)}
           </p>
-          <p className="mt-1 text-[11px] leading-4 text-[var(--console-text-muted)]">
+          <p className="mt-1 text-[11px] leading-4 text-[#A9A3B2]">
             Last delivery {formatRelative(push.lastDeliveredAt)}
           </p>
         </div>
       </div>
 
       <div className="grid xl:h-[clamp(22rem,42dvh,34rem)] xl:grid-cols-2">
-        <section className="flex min-h-0 flex-col border-b border-[var(--console-border)] xl:border-b-0 xl:border-r">
-          <div className="flex shrink-0 items-center justify-between border-b border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+        <section className="flex min-h-0 flex-col border-b border-[#141119] xl:border-b-0 xl:border-r">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#141119] bg-[#24202B] px-4 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
               Workers
             </p>
             <span className="rounded-md border border-white/8 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold text-slate-300">
@@ -870,9 +876,9 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
             </span>
           </div>
 
-          <div className="min-h-0 flex-1 divide-y divide-[var(--console-border)] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] xl:max-h-none max-h-[28rem]">
+          <div className="min-h-0 flex-1 divide-y divide-[#141119] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] xl:max-h-none max-h-[28rem]">
             {infrastructure.workers.length === 0 ? (
-              <div className="grid min-h-36 place-items-center px-5 text-center text-sm text-[var(--console-text-muted)]">
+              <div className="grid min-h-36 place-items-center px-5 text-center text-sm text-[#A9A3B2]">
                 No worker telemetry recorded.
               </div>
             ) : (
@@ -885,7 +891,7 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
                     <p className="truncate text-sm font-medium text-white" title={sentenceLabel(worker.name)}>
                       {sentenceLabel(worker.name)}
                     </p>
-                    <p className="mt-0.5 truncate font-mono text-[10px] text-[var(--console-text-muted)]" title={worker.schedule}>
+                    <p className="mt-0.5 truncate font-mono text-[10px] text-[#A9A3B2]" title={worker.schedule}>
                       {worker.schedule}
                     </p>
                   </div>
@@ -899,7 +905,7 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
                     >
                       {sentenceLabel(worker.status)}
                     </span>
-                    <p className="mt-1 text-[10px] text-[var(--console-text-muted)]">
+                    <p className="mt-1 text-[10px] text-[#A9A3B2]">
                       {formatRelative(worker.lastFinishedAt ?? worker.lastStartedAt)}
                     </p>
                   </div>
@@ -910,8 +916,8 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
         </section>
 
         <section className="flex min-h-0 flex-col">
-          <div className="flex shrink-0 items-center justify-between border-b border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-2.5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+          <div className="flex shrink-0 items-center justify-between border-b border-[#141119] bg-[#24202B] px-4 py-2.5">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
               Queues
             </p>
             <span className="rounded-md border border-white/8 bg-white/[0.03] px-2 py-0.5 text-[10px] font-semibold text-slate-300">
@@ -919,9 +925,9 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
             </span>
           </div>
 
-          <div className="min-h-0 flex-1 divide-y divide-[var(--console-border)] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] xl:max-h-none max-h-[28rem]">
+          <div className="min-h-0 flex-1 divide-y divide-[#141119] overflow-y-auto overscroll-contain [scrollbar-gutter:stable] xl:max-h-none max-h-[28rem]">
             {infrastructure.queues.length === 0 ? (
-              <div className="grid min-h-36 place-items-center px-5 text-center text-sm text-[var(--console-text-muted)]">
+              <div className="grid min-h-36 place-items-center px-5 text-center text-sm text-[#A9A3B2]">
                 No queue telemetry recorded.
               </div>
             ) : (
@@ -935,7 +941,7 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
                       <p className="truncate text-sm font-medium text-white" title={queue.name}>
                         {queue.name}
                       </p>
-                      <p className="mt-0.5 truncate text-[10px] text-[var(--console-text-muted)]">
+                      <p className="mt-0.5 truncate text-[10px] text-[#A9A3B2]">
                         {sentenceLabel(queue.capability)}
                       </p>
                     </div>
@@ -950,7 +956,7 @@ function InfrastructurePanel({ data }: { data: EntryObservabilityData }) {
                     </span>
                   </div>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[var(--console-text-muted)]">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-[#A9A3B2]">
                     <span className={queue.failedCount > 0 ? "font-semibold text-rose-200" : ""}>
                       {formatNumber(queue.failedCount)} system failed
                     </span>
@@ -984,7 +990,7 @@ function ReadinessPanel({ data }: { data: EntryObservabilityData }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <thead className="border-b border-[#141119] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[#A9A3B2]">
               <tr>
                 <th className="px-5 py-3 font-medium">Community</th>
                 <th className="px-4 py-3 font-medium">Residents</th>
@@ -997,7 +1003,7 @@ function ReadinessPanel({ data }: { data: EntryObservabilityData }) {
                 <th className="px-5 py-3 font-medium">Messages</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--console-border)]">
+            <tbody className="divide-y divide-[#141119]">
               {data.readiness.communities.map((community) => (
                 <tr key={community.communityId} className="hover:bg-white/[0.02]">
                   <td className="px-5 py-3 font-medium text-white">{community.communityName}</td>
@@ -1039,7 +1045,7 @@ function IncidentHistoryPanel({ data }: { data: EntryObservabilityData }) {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
-            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <thead className="border-b border-[#141119] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[#A9A3B2]">
               <tr>
                 <th className="px-5 py-3 font-medium">Incident</th>
                 <th className="px-4 py-3 font-medium">Capability</th>
@@ -1050,17 +1056,17 @@ function IncidentHistoryPanel({ data }: { data: EntryObservabilityData }) {
                 <th className="px-5 py-3 font-medium">Last / resolved</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--console-border)]">
+            <tbody className="divide-y divide-[#141119]">
               {data.incidentHistory.slice(0, 30).map((incident) => (
                 <tr key={incident.id} className="hover:bg-white/[0.02]">
                   <td className="px-5 py-3">
                     <p className="font-medium text-white">{sentenceLabel(incident.eventType)}</p>
-                    <p className="mt-1 text-xs text-[var(--console-text-muted)]">{incident.errorCode ?? incident.fingerprint}</p>
+                    <p className="mt-1 text-xs text-[#A9A3B2]">{incident.errorCode ?? incident.fingerprint}</p>
                   </td>
                   <td className="px-4 py-3 text-slate-300">{sentenceLabel(incident.capability)}</td>
                   <td className="px-4 py-3 text-slate-300">{incident.communityName ?? "ENTRY system"}</td>
                   <td className="px-4 py-3">
-                    <span className={cn("rounded-full border px-2 py-1 text-[11px] font-semibold", severityClass[incident.severity] ?? severityClass.INFO)}>
+                    <span className={cn("rounded-[4px] border px-2 py-1 text-[11px] font-semibold", severityClass[incident.severity] ?? severityClass.INFO)}>
                       {incident.severity}
                     </span>
                   </td>
@@ -1070,8 +1076,8 @@ function IncidentHistoryPanel({ data }: { data: EntryObservabilityData }) {
                   )}>
                     {incident.status === "open" ? "Open" : "Resolved"}
                   </td>
-                  <td className="px-4 py-3 text-[var(--console-text-muted)]">{formatDateTime(incident.firstSeenAt)}</td>
-                  <td className="px-5 py-3 text-[var(--console-text-muted)]">
+                  <td className="px-4 py-3 text-[#A9A3B2]">{formatDateTime(incident.firstSeenAt)}</td>
+                  <td className="px-5 py-3 text-[#A9A3B2]">
                     {incident.resolvedAt ? `Resolved ${formatRelative(incident.resolvedAt)}` : formatRelative(incident.lastSeenAt)}
                   </td>
                 </tr>
@@ -1105,7 +1111,7 @@ function DiagnosticSnapshotsPanel({
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="border-b border-[var(--console-border)] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+            <thead className="border-b border-[#141119] bg-white/[0.015] text-[11px] uppercase tracking-[0.16em] text-[#A9A3B2]">
               <tr>
                 <th className="px-5 py-3 font-medium">Reference</th>
                 <th className="px-4 py-3 font-medium">Trigger</th>
@@ -1116,7 +1122,7 @@ function DiagnosticSnapshotsPanel({
                 <th className="px-5 py-3 font-medium">Bundle</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--console-border)]">
+            <tbody className="divide-y divide-[#141119]">
               {snapshots.map((snapshot) => (
                 <tr key={snapshot.id} className="hover:bg-white/[0.02]">
                   <td className="px-5 py-3">
@@ -1124,7 +1130,7 @@ function DiagnosticSnapshotsPanel({
                       {snapshot.diagnosticRef}
                     </p>
                     {snapshot.notes ? (
-                      <p className="mt-1 max-w-sm truncate text-xs text-[var(--console-text-muted)]">
+                      <p className="mt-1 max-w-sm truncate text-xs text-[#A9A3B2]">
                         {snapshot.notes}
                       </p>
                     ) : null}
@@ -1150,13 +1156,13 @@ function DiagnosticSnapshotsPanel({
                         {statusCopy[snapshot.systemStatus].label}
                       </span>
                     ) : (
-                      <span className="text-[var(--console-text-muted)]">Not recorded</span>
+                      <span className="text-[#A9A3B2]">Not recorded</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-[var(--console-text-muted)]">
+                  <td className="px-4 py-3 text-[#A9A3B2]">
                     {formatRelative(snapshot.createdAt)}
                   </td>
-                  <td className="px-4 py-3 text-[var(--console-text-muted)]">
+                  <td className="px-4 py-3 text-[#A9A3B2]">
                     {formatDateTime(snapshot.startsAt)} → {formatDateTime(snapshot.endsAt)}
                   </td>
                   <td className="px-5 py-3">
@@ -1319,7 +1325,7 @@ export default async function EntryObservabilityPage(props: {
       : null;
 
   return (
-    <div className="space-y-5">
+    <div className={cn(rubik.className, "relative -mx-4 -my-4 min-h-[calc(100vh-4rem)] space-y-4 bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7")}>
       <PageHeader
         title="ENTRY observability"
         description="Operational health, incidents, usage, and cost visibility for ENTRY."
@@ -1350,13 +1356,13 @@ export default async function EntryObservabilityPage(props: {
               <h2 className="mt-4 text-xl font-semibold text-white">
                 Could not load the ENTRY read model
               </h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--console-text-muted)]">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#A9A3B2]">
                 {result.error}
               </p>
             </div>
             <Link
               href="/products/entry/observability"
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3.5 text-sm font-semibold text-slate-100 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
+              className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3.5 text-sm font-semibold text-white shadow-[0_2px_0_#141119]"
             >
               <RefreshCw className="h-4 w-4 stroke-[1.75]" />
               Retry
