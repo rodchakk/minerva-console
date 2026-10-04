@@ -179,7 +179,7 @@ export function OperationalPrioritiesWorkspace({
       className={cn(
         "grid items-start gap-3",
         activeItem
-          ? "xl:h-[560px] xl:grid-cols-[minmax(0,1fr)_370px]"
+          ? "xl:h-[680px] xl:grid-cols-[minmax(0,1fr)_430px]"
           : "grid-cols-1",
       )}
     >
