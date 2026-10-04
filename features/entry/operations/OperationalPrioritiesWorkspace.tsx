@@ -289,11 +289,11 @@ export function OperationalPrioritiesWorkspace({
           <div className="overflow-x-auto xl:flex-1 xl:overflow-auto">
             <table className="min-w-[920px] w-full table-fixed text-left">
               <colgroup>
-                <col className="w-[28%]" />
-                <col className="w-[15%]" />
-                <col className="w-[17%]" />
-                <col className="w-[25%]" />
-                <col className="w-[15%]" />
+                <col className="w-[30%]" />
+                <col className="w-[16%]" />
+                <col className="w-[18%]" />
+                <col className="w-[32%]" />
+                <col className="w-[4%]" />
               </colgroup>
               <thead>
                 <tr className="bg-[#1F1B26] text-[10px] uppercase tracking-[0.14em] text-[#8F879D]">
@@ -301,7 +301,10 @@ export function OperationalPrioritiesWorkspace({
                   <th className="border-b border-[#141119] px-4 py-3 font-medium">Category</th>
                   <th className="border-b border-[#141119] px-4 py-3 font-medium">Status</th>
                   <th className="border-b border-[#141119] px-4 py-3 font-medium">Impact</th>
-                  <th className="border-b border-[#141119] px-5 py-3 text-right font-medium">Action</th>
+                  <th
+                    className="border-b border-[#141119] px-4 py-3 font-medium"
+                    aria-label="Open details"
+                  />
                 </tr>
               </thead>
               <tbody>
@@ -370,16 +373,14 @@ export function OperationalPrioritiesWorkspace({
                       <td className="px-4 py-4 align-top text-sm leading-5 text-[#A9A3B2]">
                         <span className="line-clamp-2">{item.impact}</span>
                       </td>
-                      <td className="px-5 py-4 align-top">
-                        <div className="flex items-center justify-end gap-2">
-                          <DimensionalLink
-                            href={item.href}
-                            className="w-[118px] shrink-0"
-                          >
-                            {item.actionLabel}
-                          </DimensionalLink>
-                          <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
-                        </div>
+                      <td className="px-4 py-4 align-middle text-right">
+                        <ChevronRight
+                          className={cn(
+                            "ml-auto size-4 transition-colors",
+                            selected ? "text-[#D8D1FF]" : "text-[#8F879D]",
+                          )}
+                          aria-hidden
+                        />
                       </td>
                     </tr>
                   );
