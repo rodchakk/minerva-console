@@ -317,7 +317,7 @@ export function DiagnosticBundleControl({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-10 items-center gap-2 rounded-lg border border-violet-400/25 bg-violet-500/[0.10] px-3.5 text-sm font-semibold text-violet-100 transition-colors hover:border-violet-300/40 hover:bg-violet-500/[0.16]"
+        className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-3.5 text-sm font-semibold text-white shadow-[0_2px_0_#120539] outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
       >
         <Stethoscope className="h-4 w-4" />
         Generate diagnostic
@@ -325,7 +325,7 @@ export function DiagnosticBundleControl({
 
       {open ? (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-white/12 bg-[#111315] shadow-2xl">
+          <div className="max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[10px] border border-[#141119] bg-[#24202B] shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
             <div className="flex items-start justify-between gap-4 border-b border-white/10 px-5 py-4">
               <div>
                 <h2 className="text-lg font-semibold text-white">ENTRY diagnostic bundle</h2>
@@ -361,7 +361,7 @@ export function DiagnosticBundleControl({
                   <select
                     value={preset}
                     onChange={(event) => setPreset(event.target.value as Preset)}
-                    className="mt-2 h-10 w-full rounded-lg border border-white/10 bg-[#17191c] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                    className="mt-2 h-10 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm text-white outline-none focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
                   >
                     <option value="15m">Last 15 minutes</option>
                     <option value="1h">Last hour</option>
@@ -384,7 +384,7 @@ export function DiagnosticBundleControl({
                       type="datetime-local"
                       value={customStart}
                       onChange={(event) => setCustomStart(event.target.value)}
-                      className="mt-2 h-10 w-full rounded-lg border border-white/10 bg-[#17191c] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                      className="mt-2 h-10 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm text-white outline-none focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
                     />
                   </label>
                   <label>
@@ -395,7 +395,7 @@ export function DiagnosticBundleControl({
                       type="datetime-local"
                       value={customEnd}
                       onChange={(event) => setCustomEnd(event.target.value)}
-                      className="mt-2 h-10 w-full rounded-lg border border-white/10 bg-[#17191c] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                      className="mt-2 h-10 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm text-white outline-none focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
                     />
                   </label>
                 </div>
@@ -410,7 +410,7 @@ export function DiagnosticBundleControl({
                   onChange={(event) => setNotes(event.target.value.slice(0, 1000))}
                   placeholder="Example: Guard reported QR failures around 7:40 PM."
                   rows={2}
-                  className="mt-2 w-full resize-none rounded-lg border border-white/10 bg-[#17191c] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 focus:border-violet-400/50"
+                  className="mt-2 w-full resize-none rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 py-2 text-sm text-white outline-none placeholder:text-slate-600 focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
                 />
               </label>
 
@@ -425,7 +425,7 @@ export function DiagnosticBundleControl({
                   type="button"
                   disabled={loading}
                   onClick={() => void generate(false)}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-violet-500 px-4 text-sm font-semibold text-white hover:bg-violet-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="inline-flex h-10 items-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#120539] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileJson className="h-4 w-4" />}
                   {loading ? "Generating…" : "Generate bundle"}
