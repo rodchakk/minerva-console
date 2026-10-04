@@ -68,15 +68,15 @@ function getSecondaryIdentity(email: string, username: string) {
 
 function buttonClass(variant: "primary" | "secondary" | "ghost" | "danger") {
   return cn(
-    "inline-flex h-8 items-center justify-center whitespace-nowrap rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-60",
+    "relative isolate inline-flex h-9 items-center justify-center whitespace-nowrap rounded-[7px] px-3.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-60",
     variant === "primary"
-      ? "border border-transparent bg-[var(--console-accent-subtle)] text-violet-100 hover:bg-violet-500/20"
+      ? "border border-[#120539] bg-[#7553FF] text-white shadow-[0_2px_0_#120539]"
       : "",
     variant === "secondary"
-      ? "border border-[var(--console-border)] bg-white/[0.025] text-slate-100 hover:bg-white/[0.05]"
+      ? "border border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] hover:bg-[#342F3D]"
       : "",
     variant === "ghost"
-      ? "border border-transparent bg-transparent text-[var(--console-text-muted)] hover:bg-white/[0.04] hover:text-white"
+      ? "border border-transparent bg-transparent text-[#A9A3B2] hover:bg-white/[0.04] hover:text-white"
       : "",
     variant === "danger"
       ? "border border-rose-400/20 bg-rose-500/10 text-rose-200 hover:bg-rose-500/15"
@@ -165,7 +165,7 @@ function PasswordResetSubmitButton({
       disabled={disabled || pending}
       className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
     >
-      <KeyRound className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
+      <KeyRound className="h-4 w-4 shrink-0 stroke-[1.75] text-[#A9A3B2]" />
       <span>{pending ? pendingLabel : idleLabel}</span>
     </button>
   );
@@ -206,7 +206,7 @@ function PasswordResetControl({ user }: { user: UserSearchItem }) {
             className="flex w-full cursor-not-allowed items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-400 opacity-60"
             title="PIN reset not available for this role"
           >
-            <KeyRound className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
+            <KeyRound className="h-4 w-4 shrink-0 stroke-[1.75] text-[#A9A3B2]" />
             <span>Reset password</span>
           </button>
         )}
@@ -320,7 +320,7 @@ function UserActionsMenu({
           aria-expanded={isOpen}
           aria-haspopup="menu"
           aria-label={`Actions for ${user.fullName}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] bg-white/[0.025] text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#141119] bg-white/[0.025] text-slate-300 transition-colors hover:border-white/20 hover:bg-white/[0.05] hover:text-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#7553FF]"
           onClick={() => setIsOpen((prev) => !prev)}
         >
           <Ellipsis className="h-4 w-4 stroke-[1.75]" />
@@ -339,7 +339,7 @@ function UserActionsMenu({
               className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none"
               onClick={() => setIsOpen(false)}
             >
-              <ExternalLink className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
+              <ExternalLink className="h-4 w-4 shrink-0 stroke-[1.75] text-[#A9A3B2]" />
               <span>Open community</span>
             </Link>
           ) : null}
@@ -351,20 +351,20 @@ function UserActionsMenu({
               className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-xs font-semibold text-slate-200 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:bg-white/[0.06] focus-visible:text-white focus-visible:outline-none"
               onClick={() => setIsOpen(false)}
             >
-              <Users className="h-4 w-4 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
+              <Users className="h-4 w-4 shrink-0 stroke-[1.75] text-[#A9A3B2]" />
               <span>Manage in community</span>
             </Link>
           ) : null}
 
           {user.communityId ? (
-            <div className="my-1 border-t border-[var(--console-border)]" />
+            <div className="my-1 border-t border-[#141119]" />
           ) : null}
 
           <PasswordResetControl user={user} />
 
           {user.communityId ? (
             <>
-              <div className="my-1 border-t border-[var(--console-border)]" />
+              <div className="my-1 border-t border-[#141119]" />
               <button
                 type="button"
                 role="menuitem"
@@ -396,7 +396,7 @@ function UserActionsMenu({
             className="absolute inset-0"
             onClick={closeStatusModal}
           />
-          <section className="relative z-10 w-full max-w-lg rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
+          <section className="relative z-10 w-full max-w-lg rounded-[10px] border border-[#141119] bg-[#24202B] p-5 shadow-[0_30px_90px_rgba(0,0,0,0.55)]">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
@@ -411,7 +411,7 @@ function UserActionsMenu({
               <button
                 type="button"
                 aria-label="Close"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--console-border)] text-[var(--console-text-muted)] hover:text-white"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[#141119] text-[#A9A3B2] hover:text-white"
                 onClick={closeStatusModal}
                 disabled={isStatusPending}
               >
@@ -438,7 +438,7 @@ function UserActionsMenu({
               </p>
             ) : null}
 
-            <div className="mt-5 flex justify-end gap-2 border-t border-[var(--console-border)] pt-4">
+            <div className="mt-5 flex justify-end gap-2 border-t border-[#141119] pt-4">
               <button
                 type="button"
                 className={buttonClass("secondary")}
@@ -478,7 +478,7 @@ function UserAvatar({ name }: { name: string }) {
       .join("") || "U";
 
   return (
-    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--console-border-strong)] bg-[var(--console-accent-subtle)] text-xs font-semibold text-violet-100">
+    <span className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-full border border-[rgba(117,83,255,0.28)] bg-[rgba(117,83,255,0.08)] text-xs font-semibold text-[#E3DEFF]">
       {initials}
     </span>
   );
@@ -509,17 +509,17 @@ export function UserSearch() {
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-3">
+      <section className="relative rounded-[10px] border border-[#141119] bg-[#24202B] px-4 py-3 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
         <form action={formAction}>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <label className="relative min-w-0 flex-1">
               <span className="sr-only">Search by name, email, or username</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[1.75] text-[var(--console-text-soft)]" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 stroke-[1.75] text-[#8F879D]" />
               <input
                 name="query"
                 type="text"
                 defaultValue={state.query}
-                className="h-9 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] pl-9 pr-3 text-sm text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
+                className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-10 pr-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none transition placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
                 placeholder="Search by name, email, or username"
               />
             </label>
@@ -532,22 +532,22 @@ export function UserSearch() {
       </section>
 
       {hasResults ? (
-        <section className="overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
+        <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
           <div className="min-h-[220px] overflow-x-auto">
             <div className="min-w-[760px]">
-              <div className="grid grid-cols-[minmax(340px,1.4fr)_minmax(260px,1fr)_100px] items-center gap-4 border-b border-[var(--console-border)] bg-white/[0.015] px-5 py-3">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <div className="grid grid-cols-[minmax(340px,1.4fr)_minmax(260px,1fr)_100px] items-center gap-4 border-b border-[#141119] bg-[#1F1B26] px-5 py-3">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                   User
                 </p>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                   Context
                 </p>
-                <p className="text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+                <p className="text-right text-[11px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                   Actions
                 </p>
               </div>
 
-              <div className="divide-y divide-[var(--console-border)]">
+              <div className="divide-y divide-[#141119]">
                 {results.map((user) => {
                   const primaryIdentity = getPrimaryIdentity(
                     user.email,
@@ -589,7 +589,7 @@ export function UserSearch() {
                               <span className="truncate">{primaryIdentity}</span>
                             </p>
                             {secondaryIdentity ? (
-                              <p className="mt-0.5 truncate text-xs text-[var(--console-text-muted)]">
+                              <p className="mt-0.5 truncate text-xs text-[#A9A3B2]">
                                 {secondaryIdentity}
                               </p>
                             ) : null}
@@ -597,9 +597,9 @@ export function UserSearch() {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 divide-x divide-[var(--console-border)]">
+                      <div className="grid grid-cols-2 divide-x divide-[#141119]">
                         <div className="min-w-0 pr-3">
-                          <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+                          <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                             <Building2 className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                             Community
                           </p>
@@ -607,13 +607,13 @@ export function UserSearch() {
                             {user.communityName}
                           </p>
                           {user.communityCity ? (
-                            <p className="mt-0.5 truncate text-xs text-[var(--console-text-muted)]">
+                            <p className="mt-0.5 truncate text-xs text-[#A9A3B2]">
                               {user.communityCity}
                             </p>
                           ) : null}
                         </div>
                         <div className="min-w-0 pl-3">
-                          <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+                          <p className="flex items-center gap-1.5 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                             <Home className="h-3.5 w-3.5 shrink-0 stroke-[1.75]" />
                             Unit
                           </p>
@@ -636,8 +636,8 @@ export function UserSearch() {
       ) : null}
 
       {!hasResults && hasQuery ? (
-        <section className="rounded-lg border border-dashed border-[var(--console-border-strong)] bg-[var(--console-surface)] px-6 py-10 text-center">
-          <p className="text-sm text-[var(--console-text-muted)]">
+        <section className="relative rounded-[10px] border border-dashed border-[#141119] bg-[#24202B] px-6 py-10 text-center before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
+          <p className="text-sm text-[#A9A3B2]">
             No users matched <span className="font-semibold">{state.query}</span>.
           </p>
         </section>

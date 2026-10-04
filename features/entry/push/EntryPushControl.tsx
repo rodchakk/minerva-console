@@ -244,7 +244,7 @@ export function EntryPushControl({ surface }: EntryPushControlProps) {
         className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 text-xs font-bold transition disabled:cursor-wait disabled:opacity-60 ${
           field
             ? "border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] text-[var(--console-text)] hover:bg-[var(--console-surface-hover)]"
-            : "border-violet-400/25 bg-violet-500/10 text-violet-100 hover:bg-violet-500/15"
+            : "border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] hover:bg-[#342F3D]"
         }`}
       >
         <Icon aria-hidden="true" className={`h-4 w-4 ${busy ? "animate-spin" : ""}`} />
