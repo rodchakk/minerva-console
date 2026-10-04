@@ -19,6 +19,8 @@ test("Console middleware preserves sessions on transient Auth failures", () => {
   assert.match(middleware, /pathname === "\/temporarily-unavailable"/);
   assert.match(middleware, /copyCookies\(response, NextResponse\.redirect/);
   assert.match(classifier, /refresh_token_not_found/);
+  assert.match(classifier, /auth session missing/);
+  assert.match(classifier, /session missing/);
   assert.match(classifier, /authError\.status !== 401/);
   assert.doesNotMatch(
     middleware,
@@ -52,4 +54,14 @@ test("temporary-unavailable page retries without asking the user to sign out", (
   assert.match(page, /Try again now/);
   assert.match(page, /candidate\.startsWith\("\/\/"\)/);
   assert.doesNotMatch(page, /signOutAction|Sign out/);
+});
+
+
+test("missing Supabase browser session is treated as signed out, not provider outage", () => {
+  const classifier = read("features/auth/authErrorClassification.ts");
+
+  assert.match(
+    classifier,
+    /message\.includes\("auth session missing"\)[\s\S]*return true/,
+  );
 });
