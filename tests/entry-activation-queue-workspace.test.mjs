@@ -201,7 +201,7 @@ test("Activation Queue shows invitation history, follow-up age and PIN timing se
 test("Activation Queue does not treat digits inside an email as a phone query", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
 
-  assert.match(source, /const isPhoneLikeQuery = /^[+\\d\\s().-]+$//);
+  assert.match(source, /const isPhoneLikeQuery = \/\\^\\[\\+\\\\d\\\\s\\(\\)\\.\\-\\]\\+\\$\\/\\.test\\(searchQuery\\.trim\\(\\)\\);/);
   assert.match(
     source,
     /const normalizedDigits = isPhoneLikeQuery[sS]*searchQuery.replace(/\\D+/g, "")[sS]*: "";/,
