@@ -5,7 +5,7 @@ import { test } from "node:test";
 
 const root = process.cwd();
 const sql = readFileSync(join(root, "supabase/migrations/20261002011548_entry_background_runtime_gate.sql"), "utf8");
-const recoverySql = readFileSync(join(root, "supabase/migrations/20261007184000_entry_background_recovery_stage.sql"), "utf8");
+const recoverySql = readFileSync(join(root, "supabase/migrations/20261007185013_entry_background_recovery_stage.sql"), "utf8");
 
 test("background runtime gate defaults to severe load shedding", () => {
   assert.match(sql, /mode in \('NORMAL', 'DEGRADED', 'SEVERE'\)/);
