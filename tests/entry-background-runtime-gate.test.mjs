@@ -6,6 +6,7 @@ import { test } from "node:test";
 const root = process.cwd();
 const sql = readFileSync(join(root, "supabase/migrations/20261002011548_entry_background_runtime_gate.sql"), "utf8");
 const recoverySql = readFileSync(join(root, "supabase/migrations/20261007185013_entry_background_recovery_stage.sql"), "utf8");
+const scheduleSql = readFileSync(join(root, "supabase/migrations/20261007185142_entry_background_recovery_schedule_stagger.sql"), "utf8");
 
 test("background runtime gate defaults to severe load shedding", () => {
   assert.match(sql, /mode in \('NORMAL', 'DEGRADED', 'SEVERE'\)/);
@@ -94,4 +95,12 @@ test("recovery migration preserves service-only execution", () => {
   assert.match(recoverySql, /revoke all on function public\.run_entry_background_job_v1\(text\) from anon/);
   assert.match(recoverySql, /revoke all on function public\.run_entry_background_job_v1\(text\) from authenticated/);
   assert.match(recoverySql, /grant execute on function public\.run_entry_background_job_v1\(text\) to service_role/);
+});
+
+test("database-only recovery jobs keep cadence but start on separate minute offsets", () => {
+  assert.match(scheduleSql, /entry-observability-incident-reconcile'[\s\S]*?schedule := '2-59\/5 \* \* \* \*'/);
+  assert.match(scheduleSql, /community-message-push-stale-sweeper'[\s\S]*?schedule := '3-59\/5 \* \* \* \*'/);
+  assert.match(scheduleSql, /cleanup-edge-rate-limits'[\s\S]*?schedule := '4-59\/15 \* \* \* \*'/);
+  assert.match(scheduleSql, /expire-stale-records'[\s\S]*?schedule := '1-59\/5 \* \* \* \*'/);
+  assert.doesNotMatch(scheduleSql, /active\s*:=/);
 });
