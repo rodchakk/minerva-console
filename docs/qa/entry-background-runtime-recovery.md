@@ -9,11 +9,12 @@ turns all background load back on.
 
 - **SEVERE** — no incident-relevant high-frequency background job is allowed to run.
 - **DEGRADED** — only the bounded community mobile-push worker and mobile receipt worker may run.
+- **RECOVERY** — keeps those two workers available and additionally permits database-only maintenance: observability reconciliation, stale push sweeping, edge rate-limit cleanup, and stale-record expiration. OCR and web-push fan-out remain blocked.
 - **NORMAL** — the runtime gate permits all configured jobs.
 
-The migration initializes the control row in **SEVERE** and rewrites the eight
-targeted cron commands through the runtime gate while preserving
-`active=false`.
+Every allowed job also takes a transaction-scoped advisory lock. If the previous
+invocation is still running, the next cron tick exits successfully with
+`reason=overlap_guard` instead of stacking another copy of the same workload.
 
 ## Staged recovery order
 
@@ -24,11 +25,14 @@ targeted cron commands through the runtime gate while preserving
 5. Enable **community-message-push-worker** alone and observe Auth/REST errors,
    database latency, cron startup failures, queue age, and pg_net backlog.
 6. Enable **entry-mobile-push-receipts** only after the first worker remains stable.
-7. Move to **NORMAL** only with observed headroom.
-8. Re-enable OCR, web push, stale sweeper, cleanup, observability reconciliation,
-   and expiration **one at a time**, observing after every change.
-9. If Auth/REST 5xx, cron startup timeouts, or connection pressure returns, set
-   runtime mode back to **SEVERE** before investigating. Do not mass-toggle jobs.
+7. After a longer stable window, move to **RECOVERY**, not **NORMAL**.
+8. Re-enable database-only jobs in this order: **entry-observability-incident-reconcile**,
+   **community-message-push-stale-sweeper**, **cleanup-edge-rate-limits**, then
+   **expire-stale-records**. Keep OCR and web push disabled while this stage is observed.
+9. Move to **NORMAL** only with observed headroom, then restore
+   **entry-web-push-dispatch** and **entry-plate-ocr-queue** one at a time.
+10. If Auth/REST 5xx, cron startup timeouts, or connection pressure returns, set
+    runtime mode back to **SEVERE** before investigating. Do not mass-toggle jobs.
 
 ## Rollback principle
 
