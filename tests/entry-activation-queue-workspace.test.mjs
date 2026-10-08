@@ -15,7 +15,10 @@ test("Activation Queue page loads the full community queue for client-side opera
   assert.match(page, /getActivationQueuePageData\(\{[\s\S]*communityId: selectedCommunityId,[\s\S]*\}\)/);
   assert.doesNotMatch(page, /status: selectedStatus/);
   assert.doesNotMatch(page, /Setup overview/);
-  assert.match(page, /max-w-\[2200px\]/);
+  assert.match(page, /-mx-4 -my-4/);
+  assert.match(page, /lg:-mx-6 lg:-my-5/);
+  assert.match(page, /bg-\[#2E2936\]/);
+  assert.doesNotMatch(page, /max-w-\[2200px\]/);
 });
 
 test("Activation Queue exposes operational queue buckets and stage filters", () => {
