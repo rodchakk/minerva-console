@@ -220,7 +220,7 @@ export async function searchUsersAction(
 
   if (!query) {
     return {
-      message: "Enter a name or email to search users.",
+      message: "Enter a name, email, username, phone, unit, or community to search users.",
       query,
       results: [],
     };
