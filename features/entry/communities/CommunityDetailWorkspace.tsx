@@ -243,7 +243,7 @@ export function CommunityDetailWorkspace({
 
             <OperationRow
               icon={Users}
-              title="Residents & units"
+              title="Community Directory"
               description="Manage households, primary residents, ownership, and unit-level access."
               stat={unitCount + " units · " + memberCount + " residents"}
               statNote="Physical directory and household context"
