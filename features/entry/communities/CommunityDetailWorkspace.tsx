@@ -53,24 +53,46 @@ function WorkspaceButton({
   onClick?: () => void;
   primary?: boolean;
 }) {
-  const className = cn(
-    "inline-flex h-9 items-center justify-center gap-2 rounded-[7px] border px-3 text-xs font-semibold outline-none transition focus-visible:ring-2 focus-visible:ring-[#7553FF]",
-    primary
-      ? "border-[#120539] bg-[#7553FF] text-white shadow-[0_2px_0_#120539]"
-      : "border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] hover:bg-[#342F3D]",
+  const className =
+    "relative isolate inline-flex h-9 w-[156px] items-center justify-center rounded-[7px] border-0 bg-transparent px-3 text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#2E2936]";
+
+  const content = (
+    <>
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-0 -z-20 rounded-[7px]",
+          primary
+            ? "bg-[#120539] shadow-[0_2px_0_#120539]"
+            : "bg-[#141119] shadow-[0_2px_0_#141119]",
+        )}
+      />
+      <span
+        aria-hidden
+        className={cn(
+          "absolute inset-0 -z-10 -translate-y-0.5 rounded-[7px] border transition-colors",
+          primary
+            ? "border-[#120539] bg-[#7553FF] hover:bg-[#8062FF]"
+            : "border-[#141119] bg-[#2E2936] hover:bg-[#342F3D]",
+        )}
+      />
+      <span className="relative -translate-y-0.5 inline-flex items-center justify-center gap-2">
+        {children}
+      </span>
+    </>
   );
 
   if (href) {
     return (
       <Link href={href} className={className}>
-        {children}
+        {content}
       </Link>
     );
   }
 
   return (
     <button type="button" onClick={onClick} className={className}>
-      {children}
+      {content}
     </button>
   );
 }
@@ -252,7 +274,6 @@ export function CommunityDetailWorkspace({
               action={
                 <WorkspaceButton
                   href={"/products/entry/activation?community_id=" + communityId}
-                  primary={pendingActivationCount > 0}
                 >
                   Open queue
                   <ChevronRight className="size-3.5" aria-hidden />
@@ -274,7 +295,6 @@ export function CommunityDetailWorkspace({
               action={
                 <WorkspaceButton
                   onClick={() => setModal("registration")}
-                  primary={registrationSubmittedUnits > 0}
                 >
                   Manage registration
                 </WorkspaceButton>
