@@ -168,6 +168,8 @@ export function CommunityDirectoryWorkspace({
   const [filterOpen, setFilterOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [desktopWorkspaceHeight, setDesktopWorkspaceHeight] = useState<number | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
 
@@ -207,6 +209,24 @@ export function CommunityDirectoryWorkspace({
   }));
 
   useEffect(() => {
+    function updateWorkspaceHeight() {
+      if (window.innerWidth < 1024) {
+        setDesktopWorkspaceHeight(null);
+        return;
+      }
+
+      const top = pageRef.current?.getBoundingClientRect().top ?? 0;
+      setDesktopWorkspaceHeight(
+        Math.max(520, Math.floor(window.innerHeight - top - 16)),
+      );
+    }
+
+    updateWorkspaceHeight();
+    window.addEventListener("resize", updateWorkspaceHeight);
+    return () => window.removeEventListener("resize", updateWorkspaceHeight);
+  }, []);
+
+  useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
       if (filterOpen) {
@@ -244,8 +264,16 @@ export function CommunityDirectoryWorkspace({
   }
 
   return (
-    <div className="-mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-4 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7">
-      <div className="flex min-h-[calc(100vh-6.5rem)] flex-col gap-3">
+    <div
+      ref={pageRef}
+      style={
+        desktopWorkspaceHeight
+          ? { height: `${desktopWorkspaceHeight}px` }
+          : undefined
+      }
+      className="-mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-4 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:min-h-0 lg:overflow-hidden lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7"
+    >
+      <div className="flex min-h-[calc(100vh-6.5rem)] flex-col gap-3 lg:h-full lg:min-h-0">
         <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
@@ -348,7 +376,7 @@ export function CommunityDirectoryWorkspace({
           />
         </section>
 
-        <section className="relative flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]">
+        <section className="relative flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:min-h-0">
           <div className="grid gap-3 border-b border-[#141119] px-4 py-3 lg:grid-cols-[auto_minmax(300px,1fr)_auto] lg:items-center">
             <div className="min-w-[210px]">
               <h2 className="text-base font-semibold text-white">Units & households</h2>
@@ -451,7 +479,7 @@ export function CommunityDirectoryWorkspace({
               </div>
             </div>
           ) : (
-            <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]">
+            <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable] [touch-action:pan-y]">
               <table className="w-full min-w-[1120px] table-fixed border-collapse text-left text-xs">
                 <colgroup>
                   <col className="w-[18%]" />
