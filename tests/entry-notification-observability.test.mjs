@@ -426,8 +426,9 @@ test("overview and drill-down UI preserve filters and avoid fake healthy empty s
   assert.match(page, /\/products\/entry\/observability\/notifications/);
   assert.match(page, /flow\.key === "communications"/);
   assert.match(notificationsPage, /ENTRY observability \/ Communications/);
-  assert.match(notificationsPage, /Back to observability/);
+  assert.doesNotMatch(notificationsPage, /Back to observability/);
   assert.match(notificationsPage, /basePath="\/products\/entry\/observability\/notifications"/);
+  assert.match(observabilityNav, /Communications/);
   assert.match(drilldown, /No events stays Unknown/);
   assert.match(drilldown, /This remains Unknown, not Healthy/);
   assert.match(drilldown, /Event detail/);
