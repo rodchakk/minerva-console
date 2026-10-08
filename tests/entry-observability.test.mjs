@@ -56,7 +56,6 @@ const performancePage = read("app/(console)/products/entry/observability/perform
 const diagnosticsPage = read("app/(console)/products/entry/observability/diagnostics/page.tsx");
 const notificationsPage = read("app/(console)/products/entry/observability/notifications/page.tsx");
 const observabilityLayout = read("app/(console)/products/entry/observability/layout.tsx");
-const observabilityNav = read("features/entry/observability/ObservabilityWorkspaceNav.tsx");
 const loading = read("app/(console)/products/entry/observability/loading.tsx");
 const filters = read("features/entry/observability/ObservabilityFilters.tsx");
 const queries = read("features/entry/observability/queries.ts");
@@ -687,10 +686,9 @@ test("diagnostic API is superadmin-gated and bounds troubleshooting windows", ()
   assert.match(diagnosticApi, /Cache-Control/);
 });
 
-test("observability workspace routes, filters, loading state, and sidebar entry are wired", () => {
-  assert.match(sidebar, /Observability/);
-  assert.match(sidebar, /\/products\/entry\/observability/);
-  assert.match(observabilityLayout, /ObservabilityWorkspaceNav/);
+test("monitors workspace routes, filters, loading state, and primary sidebar nesting are wired", () => {
+  assert.match(sidebar, /label: "Monitors"/);
+  assert.match(sidebar, /icon: Monitor/);
   for (const route of [
     "/products/entry/observability",
     "/products/entry/observability/notifications",
@@ -698,12 +696,14 @@ test("observability workspace routes, filters, loading state, and sidebar entry 
     "/products/entry/observability/performance",
     "/products/entry/observability/diagnostics",
   ]) {
-    assert.match(observabilityNav, new RegExp(route.replaceAll("/", "\\/")));
+    assert.match(sidebar, new RegExp(route.replaceAll("/", "\\/")));
   }
-  assert.match(observabilityNav, /useSearchParams/);
-  assert.match(observabilityNav, /community/);
-  assert.match(observabilityNav, /range/);
-  assert.match(page, /ENTRY observability/);
+  for (const label of ["Overview", "Communications", "Background", "Performance", "Diagnostics"]) {
+    assert.match(sidebar, new RegExp(`label: "${label}"`));
+  }
+  assert.doesNotMatch(observabilityLayout, /grid-cols|ObservabilityWorkspaceNav/);
+  assert.match(observabilityLayout, /<main className="min-w-0">/);
+  assert.match(page, /ENTRY monitors/);
   assert.match(page, /ObservabilityFilters/);
   assert.match(notificationsPage, /basePath="\/products\/entry\/observability\/notifications"/);
   assert.match(backgroundPage, /basePath="\/products\/entry\/observability\/background"/);
