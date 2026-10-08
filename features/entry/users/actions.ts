@@ -58,6 +58,13 @@ export type SetCommunityUserUnitResult = {
   success: boolean;
 };
 
+export type UpdateGlobalUserIdentityInput = {
+  communityId: string;
+  fullName: string;
+  phone: string;
+  userId: string;
+};
+
 export type UserSearchState = {
   message?: string;
   query?: string;
@@ -344,6 +351,93 @@ export async function searchUsersAction(
     query,
     results,
   };
+}
+
+export async function updateGlobalUserIdentityAction(
+  input: UpdateGlobalUserIdentityInput,
+): Promise<CommunityUserActionResult> {
+  const actor = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  const fullName = input.fullName.trim();
+  const phone = input.phone.trim();
+
+  if (!communityId || !userId || !fullName) {
+    return {
+      error: "Community, user, and full name are required.",
+      success: false,
+    };
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: profile, error: profileError } = await adminSupabase
+    .from("profiles")
+    .select("user_id,house_id")
+    .eq("community_id", communityId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (profileError) {
+    return { error: profileError.message, success: false };
+  }
+
+  if (!profile) {
+    return { error: "User not found in this community.", success: false };
+  }
+
+  const { error: updateError } = await adminSupabase
+    .from("profiles")
+    .update({
+      full_name: fullName,
+      phone: phone || null,
+    })
+    .eq("community_id", communityId)
+    .eq("user_id", userId);
+
+  if (updateError) {
+    return { error: updateError.message, success: false };
+  }
+
+  const details = {
+    full_name: fullName,
+    phone: phone || null,
+    target_user_id: userId,
+  };
+
+  await Promise.allSettled([
+    adminSupabase.from("system_event_log").insert({
+      actor_id: actor.user.id,
+      community_id: communityId,
+      details,
+      entity_id: userId,
+      entity_type: "user",
+      event_type: "COMMUNITY_USER_IDENTITY_UPDATED",
+      message: "Community user identity updated by superadmin",
+      module: "superadmin",
+      severity: "INFO",
+      source: "minerva_console",
+      user_id: userId,
+    }),
+    adminSupabase.from("superadmin_audit_log").insert({
+      action: "community_user.identity_update",
+      actor_user_id: actor.user.id,
+      metadata: details,
+      target_id: userId,
+      target_type: "user",
+    }),
+  ]);
+
+  revalidateCommunityUserPaths(
+    communityId,
+    coerceString(profile.house_id) || undefined,
+  );
+  return { success: true };
 }
 
 export async function getGlobalUserManagementContextAction(
