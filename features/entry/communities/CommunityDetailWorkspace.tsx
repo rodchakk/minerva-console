@@ -28,6 +28,9 @@ type CommunityDetailWorkspaceProps = {
   facilityControl: ReactNode;
   facilitiesLabel: string;
   memberCount: number;
+  nextActionDescription: string;
+  nextActionHref: string;
+  nextActionLabel: string;
   pendingActivationCount: number;
   registrationManager: ReactNode;
   registrationStatus: string;
@@ -158,6 +161,9 @@ export function CommunityDetailWorkspace({
   facilityControl,
   facilitiesLabel,
   memberCount,
+  nextActionDescription,
+  nextActionHref,
+  nextActionLabel,
   pendingActivationCount,
   registrationManager,
   registrationStatus,
@@ -272,6 +278,23 @@ export function CommunityDetailWorkspace({
           </section>
 
           <aside className="grid gap-3">
+            <section className="rounded-[10px] border border-[#141119] bg-[#24202B] p-4">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">
+                Next action
+              </p>
+              <div className="mt-3 rounded-lg border border-[rgba(117,83,255,0.22)] bg-[rgba(117,83,255,0.06)] p-3.5">
+                <p className="text-sm font-semibold text-white">{nextActionLabel}</p>
+                <p className="mt-2 text-[11px] leading-5 text-[#A9A3B2]">
+                  {nextActionDescription}
+                </p>
+                <div className="mt-3">
+                  <WorkspaceButton href={nextActionHref} primary>
+                    {nextActionLabel}
+                  </WorkspaceButton>
+                </div>
+              </div>
+            </section>
+
             <section className="rounded-[10px] border border-[#141119] bg-[#24202B] p-4">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">
                 Operational snapshot
