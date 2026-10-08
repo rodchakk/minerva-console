@@ -53,7 +53,13 @@ import type {
   CommunityUsersPageCommunity,
 } from "@/features/entry/users/queries";
 
-type RoleFilter = "all" | "ADMIN" | "RESIDENT" | "GUARD" | "UNASSIGNED";
+type RoleFilter =
+  | "all"
+  | "OPERATOR"
+  | "ADMIN"
+  | "RESIDENT"
+  | "GUARD"
+  | "UNASSIGNED";
 type StatusFilter = "all" | "active" | "inactive";
 type ModalState = "create" | "manage" | null;
 type ManageMode = "view" | "edit" | "password" | "status";
@@ -279,7 +285,16 @@ export function CommunityUsersClient({
       (user.isActive ? "active enabled" : "inactive disabled blocked").includes(normalizedQuery);
 
     if (!matchesQuery) return false;
-    if (roleFilter !== "all" && user.role !== roleFilter) return false;
+    if (
+      roleFilter !== "all" &&
+      !(
+        roleFilter === "OPERATOR" &&
+        (user.role === "ADMIN" || user.role === "GUARD")
+      ) &&
+      user.role !== roleFilter
+    ) {
+      return false;
+    }
     if (statusFilter === "active" && !user.isActive) return false;
     if (statusFilter === "inactive" && user.isActive) return false;
     return true;
@@ -687,9 +702,9 @@ export function CommunityUsersClient({
               label="Operators"
               value={privilegedCount}
               hint={adminCount + " admins · " + guardCount + " guards"}
-              active={roleFilter === "ADMIN" || roleFilter === "GUARD"}
+              active={roleFilter === "OPERATOR"}
               onClick={() => {
-                setRoleFilter("ADMIN");
+                setRoleFilter("OPERATOR");
                 setStatusFilter("all");
                 setVisibleCount(DEFAULT_VISIBLE_COUNT);
               }}
@@ -767,6 +782,7 @@ export function CommunityUsersClient({
                       {([
                         ["all", "All roles", users.length],
                         ["RESIDENT", "Residents", residentCount],
+                        ["OPERATOR", "Operators", privilegedCount],
                         ["ADMIN", "Admins", adminCount],
                         ["GUARD", "Guards", guardCount],
                         ["UNASSIGNED", "Unassigned", users.filter((user) => user.role === "UNASSIGNED").length],
