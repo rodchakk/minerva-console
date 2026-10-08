@@ -56,7 +56,7 @@ function getActivityTone(actionType: string) {
     return "border-violet-300/25 bg-violet-400/12 text-violet-100";
   }
 
-  return "border-white/10 bg-white/7 text-[var(--text-muted)]";
+  return "border-[#141119] bg-white/7 text-[var(--text-muted)]";
 }
 
 function getActivityGroup(actionType: string): ActivityFilter {
@@ -171,7 +171,7 @@ export function CommunityAdminActivityDrawer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-sm font-semibold text-violet-200 transition hover:text-white"
+        className="inline-flex h-9 min-w-[150px] items-center justify-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] transition hover:bg-[#342F3D]"
       >
         {triggerLabel} →
       </button>
@@ -185,10 +185,10 @@ export function CommunityAdminActivityDrawer({
             onClick={() => setOpen(false)}
           />
 
-          <aside className="absolute right-0 top-0 flex h-full w-full max-w-4xl flex-col border-l border-white/10 bg-[rgba(7,11,22,0.98)] shadow-[-28px_0_80px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-            <div className="flex items-start justify-between gap-4 border-b border-white/10 px-6 py-5">
+          <aside className="absolute right-0 top-0 flex h-full w-full max-w-4xl flex-col border-l border-[#141119] bg-[#26222F] shadow-[-28px_0_80px_rgba(0,0,0,0.42)]">
+            <div className="flex items-start justify-between gap-4 border-b border-[#141119] px-6 py-5">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#BEB4FF]">
                   Entry operations
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-white">
@@ -201,7 +201,7 @@ export function CommunityAdminActivityDrawer({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="grid h-10 w-10 place-items-center rounded-2xl border border-white/10 bg-white/5 text-xl text-[var(--text-muted)] transition hover:border-violet-300/40 hover:text-white"
+                className="grid h-10 w-10 place-items-center rounded-lg border border-[#141119] bg-white/5 text-xl text-[var(--text-muted)] transition hover:border-violet-300/40 hover:text-white"
                 aria-label="Close admin activity log"
               >
                 ×
@@ -217,7 +217,7 @@ export function CommunityAdminActivityDrawer({
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                   placeholder="Search activity, actor, or action type..."
-                  className="h-12 w-full rounded-2xl border border-white/10 bg-[var(--surface-strong)] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50"
+                  className="h-12 w-full rounded-lg border border-[#141119] bg-[var(--surface-strong)] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
                 />
               </label>
 
@@ -227,10 +227,10 @@ export function CommunityAdminActivityDrawer({
                     key={item.value}
                     type="button"
                     onClick={() => setFilter(item.value)}
-                    className={`rounded-2xl border px-4 py-2 text-sm font-semibold transition ${
+                    className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
                       filter === item.value
                         ? "border-violet-300/50 bg-[var(--primary)] text-white shadow-[0_14px_32px_rgba(112,104,255,0.28)]"
-                        : "border-white/10 bg-white/5 text-[var(--text-muted)] hover:border-violet-300/40 hover:text-white"
+                        : "border-[#141119] bg-white/5 text-[var(--text-muted)] hover:border-violet-300/40 hover:text-white"
                     }`}
                   >
                     {item.label}
@@ -238,7 +238,7 @@ export function CommunityAdminActivityDrawer({
                 ))}
               </div>
 
-              <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[28px] border border-white/10 bg-[var(--surface)]">
+              <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[10px] border border-[#141119] bg-[var(--surface)]">
                 <div className="grid grid-cols-[minmax(180px,1fr)_140px_180px_120px] border-b border-white/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                   <span>Activity</span>
                   <span>Actor</span>
@@ -267,14 +267,14 @@ export function CommunityAdminActivityDrawer({
                           key={activity.id}
                           type="button"
                           onClick={() => setSelectedId(activity.id)}
-                          className={`grid w-full grid-cols-[minmax(180px,1fr)_140px_180px_120px] items-center rounded-2xl border px-3 py-3 text-left text-sm transition ${
+                          className={`grid w-full grid-cols-[minmax(180px,1fr)_140px_180px_120px] items-center rounded-lg border px-3 py-3 text-left text-sm transition ${
                             selected
                               ? "border-violet-300/50 bg-violet-400/12 shadow-[0_12px_34px_rgba(112,104,255,0.16)]"
-                              : "border-transparent hover:border-white/10 hover:bg-white/5"
+                              : "border-transparent hover:border-[#141119] hover:bg-white/5"
                           }`}
                         >
                           <span className="flex min-w-0 items-center gap-3">
-                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/5 text-xs text-violet-100">
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-xl border border-[#141119] bg-white/5 text-xs text-violet-100">
                               {getActivityIcon(activity.actionType)}
                             </span>
                             <span className="truncate font-semibold text-white">
@@ -298,16 +298,16 @@ export function CommunityAdminActivityDrawer({
               </div>
             </div>
 
-            <div className="border-t border-white/10 bg-[rgba(9,12,24,0.84)] px-6 py-5">
+            <div className="border-t border-[#141119] bg-[rgba(9,12,24,0.84)] px-6 py-5">
               {selectedActivity ? (
-                <div className="rounded-[28px] border border-white/10 bg-[var(--surface)] p-5">
+                <div className="rounded-[10px] border border-[#141119] bg-[var(--surface)] p-5">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="grid h-16 w-16 place-items-center rounded-2xl bg-[var(--primary)] text-2xl text-white">
+                      <div className="grid h-16 w-16 place-items-center rounded-lg bg-[var(--primary)] text-2xl text-white">
                         {getActivityIcon(selectedActivity.actionType)}
                       </div>
                       <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-violet-200">
+                        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#BEB4FF]">
                           Selected activity
                         </p>
                         <div className="mt-1 flex flex-wrap items-center gap-2">
@@ -329,7 +329,7 @@ export function CommunityAdminActivityDrawer({
                     ].map(([label, value]) => (
                       <div
                         key={label}
-                        className="rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-4 py-3"
+                        className="rounded-lg border border-white/8 bg-[var(--surface-strong)] px-4 py-3"
                       >
                         <p className="text-xs text-[var(--text-muted)]">{label}</p>
                         <p className="mt-2 text-sm font-semibold text-white">{value}</p>
@@ -337,7 +337,7 @@ export function CommunityAdminActivityDrawer({
                     ))}
                   </div>
 
-                  <div className="mt-4 rounded-2xl border border-white/8 bg-white/5 p-4">
+                  <div className="mt-4 rounded-lg border border-white/8 bg-white/5 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
                       Operational context
                     </p>
@@ -365,7 +365,7 @@ export function CommunityAdminActivityDrawer({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-[22px] border border-dashed border-white/10 bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
+                <div className="rounded-[22px] border border-dashed border-[#141119] bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
                   Select an activity to see details here.
                 </div>
               )}
