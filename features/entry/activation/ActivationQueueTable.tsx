@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type {
@@ -1186,6 +1186,19 @@ export function ActivationQueueTable({
   );
   const [emailEditorRowId, setEmailEditorRowId] = useState<string | null>(null);
   const [phoneEditorRowId, setPhoneEditorRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [filterOpen]);
 
   const queueCounts = useMemo(
     () => ({
