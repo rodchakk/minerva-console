@@ -98,3 +98,12 @@ test("Community Directory keeps chrome fixed and scrolls only table data on desk
   assert.match(source, /overflow-auto overscroll-contain/);
   assert.match(source, /\[touch-action:pan-y\]/);
 });
+
+
+test("Units route layout does not render duplicate management chrome", () => {
+  const source = read("app/(console)/products/entry/communities/[communityId]/units/layout.tsx");
+
+  assert.doesNotMatch(source, /UnitBulkDeleteManager/);
+  assert.doesNotMatch(source, /createClient/);
+  assert.match(source, /return children/);
+});
