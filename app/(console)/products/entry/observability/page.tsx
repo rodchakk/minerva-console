@@ -1283,10 +1283,7 @@ export default async function EntryObservabilityPage(props: {
   const communityId = Array.isArray(searchParams.community)
     ? searchParams.community[0]
     : searchParams.community;
-  const result = await getEntryObservability({
-    communityId: communityId ?? null,
-    range,
-  });
+  const result = await getEntryObservability({ communityId: communityId ?? null, model: "overview", range });
 
   const communities = result.state === "ready" ? result.data.communities : [];
   const selectedCommunity =
