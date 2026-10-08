@@ -1425,6 +1425,39 @@ export function ReviewWorkspace({
     }
   }, [duplicateDismissState, router]);
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      if (filterOpen) {
+        setFilterOpen(false);
+        return;
+      }
+
+      if (selectedUnitId) {
+        router.replace(
+          `/products/entry/communities/${communityId}/registration`,
+          { scroll: false },
+        );
+      }
+    }
+
+    function onPointerDown(event: MouseEvent) {
+      if (!filterOpen) return;
+      const target = event.target as Node;
+      if (!filterRef.current?.contains(target)) {
+        setFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  }, [communityId, filterOpen, router, selectedUnitId]);
+
   async function openReport(unitIds: string[], mode: "single" | "selection") {
     if (unitIds.length === 0) return;
 
