@@ -602,232 +602,351 @@ export function CommunityUsersClient({
 
   return (
     <>
-      <div className="space-y-5">
-        <section className="flex flex-col gap-5 pt-5 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
-                MINERVA CONSOLE / ENTRY
+      <div className="-mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 2xl:-mx-7 2xl:px-7">
+        <div className="space-y-3">
+          <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
+                MINERVA CONSOLE · ENTRY
               </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Users & Access</h1>
-              <p className="mt-1 text-sm font-semibold text-violet-100">{community.name}</p>
-              <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-                Manage user accounts, login identities, roles, unit assignment, and access status for this community.
+              <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
+                Users & Access
+              </h1>
+              <p className="mt-2 text-sm font-semibold text-white">{community.name}</p>
+              <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[#A9A3B2]">
+                Manage login identities, roles, unit assignment, credentials, and account access for this community.
               </p>
             </div>
-          </div>
 
-          <div className="flex flex-wrap gap-2">
-            <Link href={`/products/entry/communities/${community.id}`}>
-              <Button variant="secondary">
-                <Building2 className="mr-2 h-4 w-4" aria-hidden />
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href={`/products/entry/communities/${community.id}`}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#141119] outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
+              >
+                <Building2 className="size-4" aria-hidden />
                 Back to community
+              </Link>
+              <Button onClick={openCreate}>
+                <Plus className="mr-2 h-4 w-4" aria-hidden />
+                Create user
               </Button>
-            </Link>
-            <Button onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" aria-hidden />
-              Create user
-            </Button>
-          </div>
-        </section>
+            </div>
+          </header>
 
-        {loadError ? (
-          <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
-            Community users are temporarily unavailable. Please refresh and try again.
-          </div>
-        ) : null}
+          {loadError ? (
+            <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+              Community users are temporarily unavailable. Please refresh and try again.
+            </div>
+          ) : null}
 
-        {message && !modal ? (
-          <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-100">
-            {message}
-          </div>
-        ) : null}
+          {message && !modal ? (
+            <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-100">
+              {message}
+            </div>
+          ) : null}
 
-        <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <MetricCard icon={<UsersRound className="h-5 w-5" />} label="Total accounts" value={users.length} hint="Linked to community" />
-          <MetricCard icon={<UserCheck className="h-5 w-5" />} label="Active" value={activeCount} hint="Currently enabled" tone="green" />
-          <MetricCard icon={<UserX className="h-5 w-5" />} label="Inactive" value={inactiveCount} hint="Blocked from access" tone="orange" />
-          <MetricCard icon={<Home className="h-5 w-5" />} label="Residents" value={residentCount} hint="Resident accounts" tone="blue" />
-          <MetricCard icon={<ShieldCheck className="h-5 w-5" />} label="Admins" value={adminCount} hint="Community admins" tone="amber" />
-          <MetricCard icon={<Shield className="h-5 w-5" />} label="Guards" value={guardCount} hint="Guard operators" tone="cyan" />
-        </section>
+          <section className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] md:grid-cols-2 xl:grid-cols-4">
+            <MetricCard
+              icon={<UsersRound className="size-4" />}
+              label="Accounts"
+              value={users.length}
+              hint="All accounts linked to this community"
+              active={roleFilter === "all" && statusFilter === "all"}
+              onClick={() => {
+                setRoleFilter("all");
+                setStatusFilter("all");
+                setVisibleCount(DEFAULT_VISIBLE_COUNT);
+              }}
+            />
+            <MetricCard
+              icon={<UserCheck className="size-4" />}
+              label="Active access"
+              value={activeCount}
+              hint={inactiveCount + " inactive accounts"}
+              active={statusFilter === "active" && roleFilter === "all"}
+              onClick={() => {
+                setRoleFilter("all");
+                setStatusFilter("active");
+                setVisibleCount(DEFAULT_VISIBLE_COUNT);
+              }}
+            />
+            <MetricCard
+              icon={<Home className="size-4" />}
+              label="Residents"
+              value={residentCount}
+              hint="Resident account identities"
+              active={roleFilter === "RESIDENT"}
+              onClick={() => {
+                setRoleFilter("RESIDENT");
+                setStatusFilter("all");
+                setVisibleCount(DEFAULT_VISIBLE_COUNT);
+              }}
+            />
+            <MetricCard
+              icon={<ShieldCheck className="size-4" />}
+              label="Operators"
+              value={privilegedCount}
+              hint={adminCount + " admins · " + guardCount + " guards"}
+              active={roleFilter === "ADMIN" || roleFilter === "GUARD"}
+              onClick={() => {
+                setRoleFilter("ADMIN");
+                setStatusFilter("all");
+                setVisibleCount(DEFAULT_VISIBLE_COUNT);
+              }}
+            />
+          </section>
 
-        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_14px_36px_rgba(2,6,23,0.18)]">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
-            <label className="min-w-0 flex-1">
-              <FieldLabel>Search users</FieldLabel>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
+          <section className="relative flex min-h-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] xl:h-[clamp(36rem,calc(100dvh-18rem),58rem)]">
+            <div className="grid gap-3 border-b border-[#141119] px-4 py-3 lg:grid-cols-[auto_minmax(340px,1fr)_auto] lg:items-center">
+              <div className="min-w-[220px]">
+                <h2 className="text-base font-semibold text-white">Accounts</h2>
+                <p className="mt-1 text-[10px] text-[#A9A3B2]">
+                  {filteredUsers.length} matching · {users.length} total
+                </p>
+              </div>
+
+              <label className="relative block w-full max-w-[720px]">
+                <span className="sr-only">Search users and access</span>
+                <Search
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8F879D]"
+                  aria-hidden
+                />
                 <input
                   value={query}
                   onChange={(event) => {
                     setQuery(event.target.value);
                     setVisibleCount(DEFAULT_VISIBLE_COUNT);
                   }}
-                  placeholder="Search name, email, username, phone, or unit..."
-                  className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] pl-10 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/50"
+                  placeholder="Search name, email, username, phone, unit, role or status..."
+                  className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
                 />
+              </label>
+
+              <div ref={filterRef} className="relative justify-self-end">
+                <button
+                  type="button"
+                  onClick={() => setFilterOpen((value) => !value)}
+                  aria-expanded={filterOpen}
+                  className="inline-flex h-9 min-w-[104px] items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119]"
+                >
+                  <Filter className="size-3.5" aria-hidden />
+                  Filters
+                  {activeFilterCount > 0 ? (
+                    <span className="grid size-4 place-items-center rounded-[4px] bg-[#7553FF] text-[9px] text-white">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
+                </button>
+
+                {filterOpen ? (
+                  <div className="absolute right-0 top-11 z-40 w-[320px] overflow-hidden rounded-lg border border-[#141119] bg-[#24202B] shadow-[0_18px_45px_rgba(0,0,0,0.42)]">
+                    <div className="flex items-center justify-between border-b border-[#141119] px-3.5 py-3">
+                      <div>
+                        <p className="text-xs font-semibold text-white">Filter accounts</p>
+                        <p className="mt-0.5 text-[10px] text-[#8F879D]">
+                          Narrow by role and access status.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRoleFilter("all");
+                          setStatusFilter("all");
+                          setVisibleCount(DEFAULT_VISIBLE_COUNT);
+                        }}
+                        className="text-[10px] font-semibold text-[#BEB4FF] hover:text-white"
+                      >
+                        Clear
+                      </button>
+                    </div>
+
+                    <div className="p-2.5">
+                      <p className="px-2 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                        Role
+                      </p>
+                      {([
+                        ["all", "All roles", users.length],
+                        ["RESIDENT", "Residents", residentCount],
+                        ["ADMIN", "Admins", adminCount],
+                        ["GUARD", "Guards", guardCount],
+                        ["UNASSIGNED", "Unassigned", users.filter((user) => user.role === "UNASSIGNED").length],
+                      ] as const).map(([value, label, count]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => {
+                            setRoleFilter(value);
+                            setVisibleCount(DEFAULT_VISIBLE_COUNT);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs ${
+                            roleFilter === value
+                              ? "bg-[rgba(117,83,255,0.08)] text-white"
+                              : "text-[#D3CEDA] hover:bg-white/[0.03] hover:text-white"
+                          }`}
+                        >
+                          <span>{label}</span>
+                          <span className="text-[10px] text-[#8F879D]">{count}</span>
+                        </button>
+                      ))}
+
+                      <div className="my-2 border-t border-white/[0.07]" />
+                      <p className="px-2 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                        Access status
+                      </p>
+                      {([
+                        ["all", "Any status", users.length],
+                        ["active", "Active", activeCount],
+                        ["inactive", "Inactive", inactiveCount],
+                      ] as const).map(([value, label, count]) => (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => {
+                            setStatusFilter(value);
+                            setVisibleCount(DEFAULT_VISIBLE_COUNT);
+                          }}
+                          className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs ${
+                            statusFilter === value
+                              ? "bg-[rgba(117,83,255,0.08)] text-white"
+                              : "text-[#D3CEDA] hover:bg-white/[0.03] hover:text-white"
+                          }`}
+                        >
+                          <span>{label}</span>
+                          <span className="text-[10px] text-[#8F879D]">{count}</span>
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        onClick={() => setFilterOpen(false)}
+                        className="mt-2 h-8 w-full rounded-md border border-[#141119] bg-[#2E2936] text-xs font-semibold text-white"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </div>
-            </label>
+            </div>
 
-            <div>
-              <FieldLabel>Role</FieldLabel>
-              <div className="flex flex-wrap gap-1.5">
-                {(["all", "ADMIN", "RESIDENT", "GUARD", "UNASSIGNED"] as const).map((value) => (
-                  <FilterButton
-                    key={value}
-                    active={roleFilter === value}
-                    onClick={() => {
-                      setRoleFilter(value);
-                      setVisibleCount(DEFAULT_VISIBLE_COUNT);
-                    }}
-                  >
-                    {value === "all" ? "All" : getRoleLabel(value)}
-                  </FilterButton>
-                ))}
+            {loadError ? (
+              <div className="grid min-h-56 flex-1 place-items-center px-6 text-center text-sm text-[#A9A3B2]">
+                User list unavailable.
               </div>
-            </div>
-
-            <div>
-              <FieldLabel>Status</FieldLabel>
-              <div className="flex gap-1.5">
-                {(["all", "active", "inactive"] as const).map((value) => (
-                  <FilterButton
-                    key={value}
-                    active={statusFilter === value}
-                    onClick={() => {
-                      setStatusFilter(value);
-                      setVisibleCount(DEFAULT_VISIBLE_COUNT);
-                    }}
-                  >
-                    {value === "all" ? "All" : value.charAt(0).toUpperCase() + value.slice(1)}
-                  </FilterButton>
-                ))}
+            ) : filteredUsers.length === 0 ? (
+              <div className="grid min-h-56 flex-1 place-items-center px-6 text-center">
+                <div>
+                  <UsersRound className="mx-auto size-8 text-[#8F879D]" aria-hidden />
+                  <p className="mt-3 text-sm font-semibold text-white">No accounts match this view</p>
+                  <p className="mt-1 text-xs text-[#A9A3B2]">
+                    Clear the search or filters to show community accounts again.
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] shadow-[0_14px_36px_rgba(2,6,23,0.18)]">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/8 px-4 py-3">
-            <div>
-              <p className="text-sm font-semibold text-white">
-                {filteredUsers.length} user{filteredUsers.length === 1 ? "" : "s"}
-              </p>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {hasFilters || filteredUsers.length <= DEFAULT_VISIBLE_COUNT
-                  ? "Filtered within this community"
-                  : `Showing ${visibleUsers.length} of ${filteredUsers.length}`}
-              </p>
-            </div>
-          </div>
-
-          {loadError ? (
-            <div className="px-5 py-14 text-center text-sm text-[var(--text-muted)]">User list unavailable.</div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="px-5 py-14 text-center">
-              <UsersRound className="mx-auto h-8 w-8 text-[var(--text-muted)]" aria-hidden />
-              <p className="mt-3 font-semibold text-white">No users match these filters.</p>
-              <p className="mt-1 text-sm text-[var(--text-muted)]">Try a different search, role, or status.</p>
-            </div>
-          ) : (
-            <>
-              <div className="hidden lg:block">
-                <div className="grid grid-cols-[minmax(210px,1.3fr)_minmax(185px,1fr)_125px_minmax(110px,0.7fr)_125px_100px_100px] gap-3 border-b border-white/8 bg-white/[0.018] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                  <span>Name</span>
-                  <span>Access identity</span>
-                  <span>Role</span>
-                  <span>Unit</span>
-                  <span>Phone</span>
-                  <span>Status</span>
-                  <span className="text-right">Actions</span>
+            ) : (
+              <>
+                <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable] [touch-action:pan-y]">
+                  <table className="w-full min-w-[1180px] table-fixed border-collapse text-left text-xs">
+                    <colgroup>
+                      <col className="w-[24%]" />
+                      <col className="w-[22%]" />
+                      <col className="w-[13%]" />
+                      <col className="w-[17%]" />
+                      <col className="w-[14%]" />
+                      <col className="w-[9%]" />
+                      <col className="w-9" />
+                    </colgroup>
+                    <thead className="sticky top-0 z-10 border-b border-[#141119] bg-[#1F1B26] text-[#8F879D]">
+                      <tr className="text-[10px] uppercase tracking-[0.13em]">
+                        <th className="px-4 py-2.5 font-semibold">User</th>
+                        <th className="px-4 py-2.5 font-semibold">Access identity</th>
+                        <th className="px-4 py-2.5 font-semibold">Role</th>
+                        <th className="px-4 py-2.5 font-semibold">Unit</th>
+                        <th className="px-4 py-2.5 font-semibold">Phone</th>
+                        <th className="px-4 py-2.5 font-semibold">Status</th>
+                        <th className="px-2 py-2.5"><span className="sr-only">Open details</span></th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#141119] text-[#D6D0DC]">
+                      {visibleUsers.map((user) => {
+                        const selected = selectedUserId === user.userId && modal === "manage";
+                        return (
+                          <tr
+                            key={user.userId}
+                            tabIndex={0}
+                            onClick={() => openManage(user)}
+                            onKeyDown={(event) => {
+                              if (event.key !== "Enter" && event.key !== " ") return;
+                              event.preventDefault();
+                              openManage(user);
+                            }}
+                            className={`cursor-pointer outline-none transition hover:bg-white/[0.018] ${
+                              selected
+                                ? "bg-[rgba(117,83,255,0.075)] shadow-[inset_2px_0_0_#7553FF]"
+                                : ""
+                            }`}
+                          >
+                            <td className="px-4 py-2.5 align-top">
+                              <div className="flex min-w-0 items-center gap-3">
+                                <div className="grid size-8 shrink-0 place-items-center rounded-[6px] border border-[rgba(117,83,255,0.20)] bg-[rgba(117,83,255,0.07)] text-[10px] font-semibold text-[#D8D1FF]">
+                                  {getUserInitials(user)}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold text-white" title={user.fullName}>
+                                    {user.fullName}
+                                  </p>
+                                  <p className="mt-1 truncate text-[10px] text-[#8F879D]">
+                                    {!isSyntheticEmail(user.email) ? user.email : getIdentityType(user)}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-2.5 align-top">
+                              <p className="truncate font-semibold text-white" title={getIdentityLabel(user)}>
+                                {getIdentityLabel(user)}
+                              </p>
+                              <p className="mt-1 text-[10px] text-[#8F879D]">{getIdentityType(user)}</p>
+                            </td>
+                            <td className="px-4 py-2.5 align-top"><RoleBadge role={user.role} /></td>
+                            <td className="px-4 py-2.5 align-top">
+                              <p className="truncate text-[#D3CEDA]" title={user.houseLabel}>{user.houseLabel}</p>
+                            </td>
+                            <td className="px-4 py-2.5 align-top text-[#D3CEDA]">
+                              {user.phone || "Not provided"}
+                            </td>
+                            <td className="px-4 py-2.5 align-top"><StatusBadge isActive={user.isActive} /></td>
+                            <td className="px-2 py-2.5 align-middle text-right">
+                              <ChevronRight className={`ml-auto size-4 ${selected ? "text-[#D8D1FF]" : "text-[#8F879D]"}`} aria-hidden />
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
 
-                <div className="divide-y divide-white/[0.06]">
-                  {visibleUsers.map((user) => (
-                    <div
-                      key={user.userId}
-                      className="grid grid-cols-[minmax(210px,1.3fr)_minmax(185px,1fr)_125px_minmax(110px,0.7fr)_125px_100px_100px] items-center gap-3 px-4 py-3 transition hover:bg-white/[0.025]"
+                <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#141119] bg-[#1F1B26] px-4 py-2 text-[10px] text-[#8F879D]">
+                  <span>
+                    Showing {visibleUsers.length} of {filteredUsers.length} matching account{filteredUsers.length === 1 ? "" : "s"}
+                  </span>
+                  {!hasFilters && visibleUsers.length < filteredUsers.length ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVisibleCount((current) =>
+                          Math.min(current + DEFAULT_VISIBLE_COUNT, filteredUsers.length),
+                        )
+                      }
+                      className="font-semibold text-[#BEB4FF] hover:text-white"
                     >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-violet-400/15 bg-violet-500/10 text-xs font-semibold text-violet-100">
-                          {getUserInitials(user)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">{user.fullName}</p>
-                          <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-                            {!isSyntheticEmail(user.email) ? user.email : getIdentityType(user)}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          {user.username ? (
-                            <UserRound className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                          ) : (
-                            <Mail className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-                          )}
-                          <p className="truncate text-sm font-semibold text-slate-100">{getIdentityLabel(user)}</p>
-                        </div>
-                        <p className="ml-6 mt-0.5 text-xs text-[var(--text-muted)]">{getIdentityType(user)}</p>
-                      </div>
-
-                      <div><RoleBadge role={user.role} /></div>
-                      <div className="truncate text-sm text-[var(--text-soft)]">{user.houseLabel}</div>
-                      <div className="truncate text-sm text-[var(--text-soft)]">{user.phone || "Not provided"}</div>
-                      <div><StatusBadge isActive={user.isActive} /></div>
-                      <div className="text-right">
-                        <Button variant="secondary" onClick={() => openManage(user)}>
-                          Manage
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                      Show more
+                    </button>
+                  ) : null}
                 </div>
-              </div>
-
-              <div className="space-y-2 p-3 lg:hidden">
-                {visibleUsers.map((user) => (
-                  <article key={user.userId} className="rounded-lg border border-white/8 bg-white/[0.025] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-violet-400/15 bg-violet-500/10 text-xs font-semibold text-violet-100">
-                          {getUserInitials(user)}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold text-white">{user.fullName}</p>
-                          <p className="mt-1 truncate text-sm text-[var(--text-muted)]">{getIdentityLabel(user)}</p>
-                        </div>
-                      </div>
-                      <StatusBadge isActive={user.isActive} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <RoleBadge role={user.role} />
-                      <span className="rounded-md border border-white/8 bg-white/[0.035] px-2 py-1 text-xs text-[var(--text-muted)]">
-                        {user.houseLabel}
-                      </span>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Button variant="secondary" onClick={() => openManage(user)}>Manage</Button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-
-              {!hasFilters && visibleUsers.length < filteredUsers.length ? (
-                <div className="border-t border-white/8 px-4 py-3">
-                  <Button
-                    variant="secondary"
-                    onClick={() => setVisibleCount((current) => Math.min(current + DEFAULT_VISIBLE_COUNT, filteredUsers.length))}
-                  >
-                    Show more
-                  </Button>
-                </div>
-              ) : null}
-            </>
-          )}
-        </section>
+              </>
+            )}
+          </section>
+        </div>
       </div>
 
       {modal ? (
