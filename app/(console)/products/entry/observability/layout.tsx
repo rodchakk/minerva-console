@@ -1,5 +1,3 @@
-import { ObservabilityWorkspaceNav } from "@/features/entry/observability/ObservabilityWorkspaceNav";
-
 export default function EntryObservabilityLayout({
   children,
 }: {
@@ -7,10 +5,7 @@ export default function EntryObservabilityLayout({
 }) {
   return (
     <div className="-mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7">
-      <div className="grid min-w-0 gap-4 lg:grid-cols-[12.5rem_minmax(0,1fr)]">
-        <ObservabilityWorkspaceNav />
-        <main className="min-w-0">{children}</main>
-      </div>
+      <main className="min-w-0">{children}</main>
     </div>
   );
 }
