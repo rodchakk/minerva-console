@@ -1096,6 +1096,17 @@ function CommunityDrawer({
                 Manage resident, admin, and guard accounts, including roles,
                 login identities, account status, and unit assignment.
               </p>
+              {community.activationPendingCount > 0 ? (
+                <div className="mt-3">
+                  <DimensionalLink
+                    href={getActivationQueueHref(community.id)}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Open activation queue
+                  </DimensionalLink>
+                </div>
+              ) : null}
             </div>
           </section>
         ) : null}
@@ -1135,17 +1146,11 @@ function CommunityDrawer({
               Open community
             </DimensionalLink>
             <DimensionalLink
-              href={
-                community.activationPendingCount > 0
-                  ? getActivationQueueHref(community.id)
-                  : getUsersHref(community.id)
-              }
+              href={getUsersHref(community.id)}
               variant="secondary"
               className="w-full"
             >
-              {community.activationPendingCount > 0
-                ? "Activation queue"
-                : "Manage users"}
+              Manage users
             </DimensionalLink>
           </div>
         </div>
