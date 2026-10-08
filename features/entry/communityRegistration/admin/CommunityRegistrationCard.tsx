@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useState, useTransition } from "react";
-import { Check } from "lucide-react";
+import { useActionState, useRef, useState, useTransition } from "react";
+import { Check, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
   cancelCommunityRegistrationCampaign,
   launchCommunityRegistrationCampaign,
@@ -37,6 +38,12 @@ type CommunityRegistrationCardProps = {
 const initialState: LaunchCommunityRegistrationCampaignResult | null = null;
 const initialReplaceState: ReplaceCommunityRegistrationLinkResult | null = null;
 const initialCancelState: CancelCommunityRegistrationCampaignResult | null = null;
+
+const registrationPrimaryActionClass =
+  "inline-flex h-9 min-w-[152px] items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] outline-none transition hover:bg-[#8062FF] focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45";
+
+const registrationSecondaryActionClass =
+  "inline-flex h-9 min-w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] outline-none transition hover:bg-[#342F3D] focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45";
 
 function statusLabel(status: string) {
   const normalized = status.trim().toLowerCase();
@@ -90,8 +97,8 @@ function RegistrationProgressSummary({
 }) {
   if (!progress.hasKnownTotal) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-        <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+      <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] px-4 py-3">
+        <p className="text-[10px] uppercase tracking-[0.18em] text-[#A9A3B2]">
           Residents received
         </p>
         <p className="mt-2 text-2xl font-semibold text-white">
@@ -105,14 +112,14 @@ function RegistrationProgressSummary({
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-      <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+    <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] px-4 py-3">
+      <p className="text-[10px] uppercase tracking-[0.18em] text-[#A9A3B2]">
         Registration progress
       </p>
       <p className="mt-2 text-3xl font-semibold text-white">
         {progress.percent}%
       </p>
-      <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
+      <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">
         {progress.submittedUnits} of {progress.totalUnits} units submitted
       </p>
       <div
@@ -124,7 +131,7 @@ function RegistrationProgressSummary({
         role="progressbar"
       >
         <div
-          className="h-full rounded-full bg-violet-400"
+          className="h-full rounded-full bg-[#7553FF]"
           style={{ width: `${progress.percent}%` }}
         />
       </div>
@@ -176,10 +183,10 @@ function LaunchDialog({
   if (state?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-xl flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-xl flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
                 Resident registration
               </p>
               <h3 className="mt-2 text-xl font-semibold text-white">
@@ -189,8 +196,8 @@ function LaunchDialog({
             <Badge tone="success">Open</Badge>
           </div>
 
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          <div className="rounded-lg border border-[#141119] bg-[#2E2936] px-4 py-4">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
               Units submitted
             </p>
             <p className="mt-2 text-2xl font-semibold text-white">
@@ -203,7 +210,7 @@ function LaunchDialog({
           <div>
             <label
               htmlFor="registration-link"
-              className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]"
+              className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]"
             >
               Registration link
             </label>
@@ -211,11 +218,11 @@ function LaunchDialog({
               id="registration-link"
               readOnly
               value={state.data.registrationUrl}
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 font-mono text-xs text-white outline-none"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 font-mono text-xs text-white outline-none"
             />
           </div>
 
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
             This link is now recoverable for future sharing. Copying or opening
             it later will not rotate access.
           </p>
@@ -240,11 +247,11 @@ function LaunchDialog({
     <Overlay>
       <form
         action={formAction}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
               Resident registration
             </p>
             <h3 className="mt-2 text-xl font-semibold text-white">
@@ -268,7 +275,7 @@ function LaunchDialog({
           : null}
 
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
             How will residents identify their unit?
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -293,10 +300,10 @@ function LaunchDialog({
                   type="button"
                   onClick={() => setRegistrationMode(option.mode)}
                   className={[
-                    "min-h-28 rounded-xl border px-4 py-3 text-left transition-colors",
+                    "min-h-28 rounded-lg border px-4 py-3 text-left transition-colors",
                     selected
-                      ? "border-violet-400/50 bg-violet-500/10"
-                      : "border-[var(--border)] bg-[var(--surface-strong)] hover:bg-[var(--surface-muted)]",
+                      ? "border-[#7553FF] bg-[rgba(117,83,255,0.08)]"
+                      : "border-[#141119] bg-[#2E2936] hover:bg-[#342F3D]",
                   ].join(" ")}
                 >
                   <span className="flex items-start justify-between gap-3">
@@ -304,12 +311,12 @@ function LaunchDialog({
                       <span className="block text-sm font-semibold text-white">
                         {option.label}
                       </span>
-                      <span className="mt-2 block text-xs leading-5 text-[var(--text-muted)]">
+                      <span className="mt-2 block text-xs leading-5 text-[#A9A3B2]">
                         {option.description}
                       </span>
                     </span>
                     {selected ? (
-                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-violet-400/20 text-violet-100">
+                      <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-[#7553FF]/20 text-violet-100">
                         <Check aria-hidden="true" className="h-3.5 w-3.5" />
                       </span>
                     ) : null}
@@ -322,19 +329,19 @@ function LaunchDialog({
 
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_150px]">
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
               Public title
             </span>
             <input
               name="public_title"
               defaultValue={defaultTitle}
               required
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none focus:border-[#7553FF]"
             />
           </label>
 
           <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
               Resident limit
             </span>
             <input
@@ -344,26 +351,26 @@ function LaunchDialog({
               max={50}
               defaultValue={3}
               required
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none focus:border-[#7553FF]"
             />
           </label>
         </div>
 
         <label className="block">
-          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
             Public instructions
           </span>
           <textarea
             name="public_instructions"
             rows={3}
-            className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/50"
+            className="mt-2 w-full resize-y rounded-lg border border-[#141119] bg-[#2E2936] px-3 py-3 text-sm text-white outline-none focus:border-[#7553FF]"
           />
         </label>
 
         {isExistingUnitsMode ? (
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
                 Participating units
               </p>
               <div className="flex gap-2">
@@ -388,13 +395,13 @@ function LaunchDialog({
               {units.map((unit) => (
                 <label
                   key={unit.id}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 text-sm text-white"
+                  className="flex items-center gap-3 rounded-lg border border-[#141119] bg-[#2E2936] px-3 py-3 text-sm text-white"
                 >
                   <input
                     type="checkbox"
                     checked={selectedUnitIds.has(unit.id)}
                     onChange={() => toggleUnit(unit.id)}
-                    className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
+                    className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[#7553FF]"
                   />
                   <span className="min-w-0 truncate">{unit.label}</span>
                 </label>
@@ -402,13 +409,13 @@ function LaunchDialog({
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm leading-6 text-[var(--text-muted)]">
+          <div className="rounded-lg border border-[#141119] bg-[#2E2936] px-4 py-3 text-sm leading-6 text-[#A9A3B2]">
             Use this when the community does not have a complete or reliable unit list yet. Resident submissions remain pending registration data for later review.
           </div>
         )}
 
         {state && !state.success ? (
-          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
             {state.error}
           </p>
         ) : null}
@@ -449,10 +456,10 @@ function ReplaceLinkDialog({
   if (state?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-xl flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-xl flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
                 Resident registration
               </p>
               <h3 className="mt-2 text-xl font-semibold text-white">
@@ -465,7 +472,7 @@ function ReplaceLinkDialog({
           <div>
             <label
               htmlFor="replacement-registration-link"
-              className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]"
+              className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]"
             >
               Registration link
             </label>
@@ -473,11 +480,11 @@ function ReplaceLinkDialog({
               id="replacement-registration-link"
               readOnly
               value={state.data.registrationUrl}
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 font-mono text-xs text-white outline-none"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 font-mono text-xs text-white outline-none"
             />
           </div>
 
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
             Copy or open this secure replacement link now. The previous
             registration link has been invalidated, and this replacement can be
             recovered for future sharing.
@@ -503,16 +510,16 @@ function ReplaceLinkDialog({
     <Overlay>
       <form
         action={formAction}
-        className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex w-full max-w-lg flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl"
       >
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
             Resident registration
           </p>
           <h3 className="mt-2 text-xl font-semibold text-white">
             Replace registration link
           </h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+          <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
             {campaign.publicTitle}
           </p>
         </div>
@@ -520,14 +527,14 @@ function ReplaceLinkDialog({
         <input type="hidden" name="campaign_id" value={campaign.id} />
         <input type="hidden" name="community_id" value={communityId} />
 
-        <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+        <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
           Creating a replacement link invalidates the previous registration
           link. Use this only when the current plaintext link is unavailable or
           should no longer be used.
         </p>
 
         {state && !state.success ? (
-          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
             {state.error}
           </p>
         ) : null}
@@ -564,30 +571,30 @@ function CancelRegistrationDialog({
   if (state?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-lg flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
               Resident registration
             </p>
             <h3 className="mt-2 text-xl font-semibold text-white">
               Registration cancelled
             </h3>
-            <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+            <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
               Previously received registrations were preserved.
             </p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[#A9A3B2]">
                 Units preserved
               </p>
               <p className="mt-2 text-2xl font-semibold text-white">
                 {state.data.preservedUnitCount}
               </p>
             </div>
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+            <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.18em] text-[#A9A3B2]">
                 Submissions preserved
               </p>
               <p className="mt-2 text-2xl font-semibold text-white">
@@ -610,16 +617,16 @@ function CancelRegistrationDialog({
     <Overlay>
       <form
         action={formAction}
-        className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex w-full max-w-lg flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl"
       >
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
             Resident registration
           </p>
           <h3 className="mt-2 text-xl font-semibold text-white">
             Cancel registration campaign?
           </h3>
-          <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+          <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
             {campaign.publicTitle}
           </p>
         </div>
@@ -627,13 +634,13 @@ function CancelRegistrationDialog({
         <input type="hidden" name="campaign_id" value={campaign.id} />
         <input type="hidden" name="community_id" value={communityId} />
 
-        <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+        <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
           The registration link will stop accepting new submissions. Previously
           received registrations will be preserved.
         </p>
 
         {state && !state.success ? (
-          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
             {state.error}
           </p>
         ) : null}
@@ -665,6 +672,8 @@ function ActiveRegistrationLinkControls({
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   function recoverLink(onSuccess: (url: string) => Promise<void> | void) {
     setMessage(null);
@@ -690,6 +699,7 @@ function ActiveRegistrationLinkControls({
   }
 
   function copyCurrentLink() {
+    setMenuOpen(false);
     recoverLink(async (url) => {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -698,6 +708,7 @@ function ActiveRegistrationLinkControls({
   }
 
   function openCurrentLink() {
+    setMenuOpen(false);
     setMessage(null);
     setCopied(false);
 
@@ -726,41 +737,89 @@ function ActiveRegistrationLinkControls({
 
   if (!campaign.activeCampaignAccessRecoverable) {
     return (
-      <div className="flex flex-col gap-3">
-        <p className="max-w-2xl rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
-          Current registration link cannot be recovered. Replace the
-          registration link once to enable future re-sharing.
-        </p>
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={onReplace}>
-            Replace registration link
-          </Button>
-          <Button type="button" variant="secondary" onClick={onCancel}>
-            Cancel registration
-          </Button>
-        </div>
+      <div className="flex flex-wrap justify-end gap-2">
+        <button
+          type="button"
+          onClick={onReplace}
+          className={registrationSecondaryActionClass}
+        >
+          Replace link
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[rgba(255,102,126,0.22)] bg-[rgba(255,102,126,0.06)] px-3 text-xs font-semibold text-[#FFC1CB]"
+        >
+          Cancel campaign
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-end gap-3">
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="secondary" onClick={copyCurrentLink} disabled={isPending}>
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+        onClick={() => setMenuOpen((value) => !value)}
+        className={registrationSecondaryActionClass}
+      >
+        <MoreHorizontal className="size-4" aria-hidden />
+        Actions
+      </button>
+
+      <FloatingActionMenu
+        anchorRef={triggerRef}
+        className="w-60 border-[#141119] bg-[#24202B] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.44)]"
+        onClose={() => setMenuOpen(false)}
+        open={menuOpen}
+      >
+        <button
+          type="button"
+          role="menuitem"
+          onClick={copyCurrentLink}
+          disabled={isPending}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
+        >
           {copied ? "Copied" : isPending ? "Preparing..." : "Copy registration link"}
-        </Button>
-        <Button type="button" variant="secondary" onClick={openCurrentLink} disabled={isPending}>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={openCurrentLink}
+          disabled={isPending}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
+        >
           Open registration
-        </Button>
-        <Button type="button" variant="secondary" onClick={onReplace}>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setMenuOpen(false);
+            onReplace();
+          }}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+        >
           Replace registration link
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel}>
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setMenuOpen(false);
+            onCancel();
+          }}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#E99AA7] hover:bg-[rgba(255,102,126,0.07)] hover:text-[#FFC1CB]"
+        >
           Cancel registration
-        </Button>
-      </div>
+        </button>
+      </FloatingActionMenu>
+
       {message ? (
-        <p className="max-w-2xl rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+        <p className="absolute right-0 top-12 z-50 w-72 rounded-lg border border-[rgba(255,102,126,0.24)] bg-[#2E2936] px-3 py-2 text-xs text-[#FFC1CB] shadow-xl">
           {message}
         </p>
       ) : null}
@@ -799,18 +858,18 @@ export function CommunityRegistrationCard({
   return (
     <section
       id="resident-registration"
-      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 lg:p-5"
+      className="relative overflow-visible rounded-[10px] border border-[#141119] bg-[#24202B] p-4 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] lg:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
             Resident registration
           </p>
           <h2 className="mt-2 text-xl font-semibold text-white">
             {campaign ? statusLabel(campaign.status) : "No active registration campaign"}
           </h2>
           {campaign ? (
-            <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+            <p className="mt-1 text-sm leading-6 text-[#A9A3B2]">
               {campaign.publicTitle}
             </p>
           ) : null}
@@ -823,16 +882,16 @@ export function CommunityRegistrationCard({
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] px-4 py-3">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#A9A3B2]">
             Units submitted
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
             {unitSubmittedText}
           </p>
         </div>
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3">
-          <p className="text-[10px] uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] px-4 py-3">
+          <p className="text-[10px] uppercase tracking-[0.18em] text-[#A9A3B2]">
             Participating units
           </p>
           <p className="mt-2 text-2xl font-semibold text-white">
@@ -847,7 +906,7 @@ export function CommunityRegistrationCard({
       </div>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-        <p className="max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
+        <p className="max-w-2xl text-sm leading-6 text-[#A9A3B2]">
           {campaign
             ? campaignOpen
               ? "Open campaign link sharing is available without rotating access when the current link is recoverable."
@@ -856,7 +915,7 @@ export function CommunityRegistrationCard({
         </p>
 
         {!hasOperationalCampaign ? (
-          <Button
+          <button
             type="button"
             onClick={() => setShowLaunchDialog(true)}
             disabled={!canStart}
@@ -865,16 +924,18 @@ export function CommunityRegistrationCard({
                 ? "Start a resident registration campaign."
                 : "An operational registration campaign already exists."
             }
+            className={registrationPrimaryActionClass}
           >
-            Start registration campaign
-          </Button>
+            Start registration
+          </button>
         ) : campaign ? (
           <div className="flex flex-wrap gap-2">
             {canOpenReview ? (
               <Link
                 href={`/products/entry/communities/${communityId}/registration`}
+                className={registrationPrimaryActionClass}
               >
-                <Button type="button">Review registrations</Button>
+                Review registrations
               </Link>
             ) : null}
             {campaignOpen ? (
@@ -886,13 +947,13 @@ export function CommunityRegistrationCard({
               />
             ) : null}
             {!campaignOpen && canCancelCampaign ? (
-              <Button
+              <button
                 type="button"
-                variant="secondary"
                 onClick={() => setShowCancelDialog(true)}
+                className={registrationSecondaryActionClass}
               >
                 Cancel registration
-              </Button>
+              </button>
             ) : null}
           </div>
         ) : null}
