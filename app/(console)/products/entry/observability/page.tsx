@@ -1294,7 +1294,7 @@ export default async function EntryObservabilityPage(props: {
   return (
     <div className={cn(rubik.className, "space-y-4")}>
       <PageHeader
-        title="ENTRY observability"
+        title="ENTRY monitors"
         description="Operational health, incidents, usage, and cost visibility for ENTRY."
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
