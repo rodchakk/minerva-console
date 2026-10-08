@@ -10,7 +10,7 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { CommunityUnitQuickActions } from "@/features/entry/communities/CommunityUnitQuickActions";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
 import { UnitResidentActions } from "@/features/entry/communities/UnitResidentActions";
@@ -77,7 +77,7 @@ function Tag({
   children,
   tone = "default",
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
   tone?: "default" | "success" | "warning";
 }) {
   return (
@@ -108,16 +108,16 @@ function SummaryMetric({
   hint: string;
   label: string;
   onClick?: () => void;
-  value: React.ReactNode;
+  value: ReactNode;
 }) {
-  const Component = onClick ? "button" : "div";
-
   return (
-    <Component
-      {...(onClick ? { onClick, type: "button" as const } : {})}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-disabled={!onClick}
       className={cn(
         "min-h-[84px] border-t border-white/[0.07] px-4 py-3.5 text-left first:border-t-0 lg:border-l lg:border-t-0 lg:first:border-l-0",
-        onClick && "transition hover:bg-white/[0.015]",
+        onClick ? "transition hover:bg-white/[0.015]" : "cursor-default",
         active &&
           "bg-[rgba(117,83,255,0.055)] shadow-[inset_0_-2px_0_#7553FF]",
       )}
@@ -127,7 +127,7 @@ function SummaryMetric({
       </p>
       <div className="mt-1.5 text-xl font-semibold text-white">{value}</div>
       <p className="mt-1 text-[10px] text-[#A9A3B2]">{hint}</p>
-    </Component>
+    </button>
   );
 }
 
@@ -653,14 +653,27 @@ export function CommunityUnitDetailWorkspace({
               {unit.activePassItems.length === 0 ? (
                 <div className="grid min-h-[260px] place-items-center px-6 text-center">
                   <div>
-                    <p className="text-sm font-semibold text-white">No active passes</p>
+                    <p className="text-sm font-semibold text-white">
+                      {unit.activePasses > 0
+                        ? `${unit.activePasses} active pass${unit.activePasses === 1 ? "" : "es"} reported`
+                        : "No active passes"}
+                    </p>
                     <p className="mt-1 text-xs text-[#A9A3B2]">
-                      This unit currently has no active frequent-access passes.
+                      {unit.activePasses > 0
+                        ? "Pass details are not available on this record."
+                        : "This unit currently has no active frequent-access passes."}
                     </p>
                   </div>
                 </div>
               ) : (
-                <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-xs">
+                <div>
+                  {unit.activePasses > unit.activePassItems.length ? (
+                    <div className="border-b border-[#141119] bg-[rgba(117,83,255,0.04)] px-4 py-2 text-[10px] text-[#A9A3B2]">
+                      {unit.activePasses - unit.activePassItems.length} additional active pass
+                      {unit.activePasses - unit.activePassItems.length === 1 ? "" : "es"} reported without detail rows.
+                    </div>
+                  ) : null}
+                  <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-xs">
                   <thead className="sticky top-0 z-10 border-b border-[#141119] bg-[#1F1B26] text-[#8F879D]">
                     <tr className="text-[10px] uppercase tracking-[0.13em]">
                       <th className="px-3 py-2.5 font-semibold">Pass</th>
@@ -681,7 +694,8 @@ export function CommunityUnitDetailWorkspace({
                       </tr>
                     ))}
                   </tbody>
-                </table>
+                  </table>
+                </div>
               )}
             </div>
           )}
