@@ -29,6 +29,7 @@ export type CommunityUserRecord = {
   houseId: string;
   houseLabel: string;
   isActive: boolean;
+  isPrimary: boolean;
   phone: string;
   role: string;
   userId: string;
@@ -155,6 +156,7 @@ function mapUser(value: unknown): CommunityUserRecord | null {
       coerceString(record.unit_label) ||
       "No unit linked",
     isActive: record.is_active === undefined ? true : coerceBoolean(record.is_active),
+    isPrimary: coerceBoolean(record.is_primary),
     phone: coerceString(record.phone),
     role: normalizeRole(coerceString(record.role)),
     userId,
@@ -172,6 +174,7 @@ export async function getCommunityUsersPage(
     { data: communityData },
     { data: housesData, error: housesError },
     { data: usersData, error: usersError },
+    { data: primaryAssignmentsData },
   ] = await Promise.all([
     supabase
       .from("communities")
@@ -187,6 +190,12 @@ export async function getCommunityUsersPage(
       p_community_id: communityId,
       p_include_inactive: true,
     }),
+    supabase
+      .from("house_residents")
+      .select("house_id,user_id,is_primary")
+      .eq("community_id", communityId)
+      .eq("is_active", true)
+      .eq("is_primary", true),
   ]);
 
   const community = mapCommunity(communityData);
@@ -195,11 +204,32 @@ export async function getCommunityUsersPage(
     : housesData
         .map(mapHouse)
         .filter((house): house is CommunityUserHouse => house !== null);
+  const primaryAssignments = new Set(
+    (Array.isArray(primaryAssignmentsData) ? primaryAssignmentsData : [])
+      .filter((item) => item && typeof item === "object")
+      .map((item) => {
+        const record = item as Record<string, unknown>;
+        const houseId = coerceString(record.house_id);
+        const userId = coerceString(record.user_id);
+        return houseId && userId ? `${houseId}:${userId}` : "";
+      })
+      .filter(Boolean),
+  );
+
   const users = usersError || !Array.isArray(usersData)
     ? []
     : usersData
         .map(mapUser)
         .filter((user): user is CommunityUserRecord => user !== null)
+        .map((user) => ({
+          ...user,
+          isPrimary:
+            user.isPrimary ||
+            Boolean(
+              user.houseId &&
+                primaryAssignments.has(`${user.houseId}:${user.userId}`),
+            ),
+        }))
         .sort((a, b) => a.fullName.localeCompare(b.fullName));
 
   return {
