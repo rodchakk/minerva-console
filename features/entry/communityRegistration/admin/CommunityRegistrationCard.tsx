@@ -176,7 +176,7 @@ function LaunchDialog({
   if (state?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-xl flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-xl flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
@@ -189,7 +189,7 @@ function LaunchDialog({
             <Badge tone="success">Open</Badge>
           </div>
 
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-4">
+          <div className="rounded-lg border border-[#141119] bg-[#2E2936] px-4 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
               Units submitted
             </p>
@@ -211,11 +211,11 @@ function LaunchDialog({
               id="registration-link"
               readOnly
               value={state.data.registrationUrl}
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 font-mono text-xs text-white outline-none"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 font-mono text-xs text-white outline-none"
             />
           </div>
 
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
             This link is now recoverable for future sharing. Copying or opening
             it later will not rotate access.
           </p>
@@ -240,7 +240,7 @@ function LaunchDialog({
     <Overlay>
       <form
         action={formAction}
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col gap-5 overflow-y-auto rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl"
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -293,10 +293,10 @@ function LaunchDialog({
                   type="button"
                   onClick={() => setRegistrationMode(option.mode)}
                   className={[
-                    "min-h-28 rounded-xl border px-4 py-3 text-left transition-colors",
+                    "min-h-28 rounded-lg border px-4 py-3 text-left transition-colors",
                     selected
-                      ? "border-violet-400/50 bg-violet-500/10"
-                      : "border-[var(--border)] bg-[var(--surface-strong)] hover:bg-[var(--surface-muted)]",
+                      ? "border-[#7553FF] bg-[rgba(117,83,255,0.08)]"
+                      : "border-[#141119] bg-[#2E2936] hover:bg-[#342F3D]",
                   ].join(" ")}
                 >
                   <span className="flex items-start justify-between gap-3">
@@ -329,7 +329,7 @@ function LaunchDialog({
               name="public_title"
               defaultValue={defaultTitle}
               required
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none focus:border-[#7553FF]"
             />
           </label>
 
@@ -344,7 +344,7 @@ function LaunchDialog({
               max={50}
               defaultValue={3}
               required
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none focus:border-[#7553FF]"
             />
           </label>
         </div>
@@ -356,7 +356,7 @@ function LaunchDialog({
           <textarea
             name="public_instructions"
             rows={3}
-            className="mt-2 w-full resize-y rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/50"
+            className="mt-2 w-full resize-y rounded-lg border border-[#141119] bg-[#2E2936] px-3 py-3 text-sm text-white outline-none focus:border-[#7553FF]"
           />
         </label>
 
@@ -388,13 +388,13 @@ function LaunchDialog({
               {units.map((unit) => (
                 <label
                   key={unit.id}
-                  className="flex items-center gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-3 text-sm text-white"
+                  className="flex items-center gap-3 rounded-lg border border-[#141119] bg-[#2E2936] px-3 py-3 text-sm text-white"
                 >
                   <input
                     type="checkbox"
                     checked={selectedUnitIds.has(unit.id)}
                     onChange={() => toggleUnit(unit.id)}
-                    className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[var(--primary)]"
+                    className="h-4 w-4 rounded border-slate-500 bg-slate-900 text-[#7553FF]"
                   />
                   <span className="min-w-0 truncate">{unit.label}</span>
                 </label>
@@ -402,13 +402,13 @@ function LaunchDialog({
             </div>
           </div>
         ) : (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm leading-6 text-[#A9A3B2]">
+          <div className="rounded-lg border border-[#141119] bg-[#2E2936] px-4 py-3 text-sm leading-6 text-[#A9A3B2]">
             Use this when the community does not have a complete or reliable unit list yet. Resident submissions remain pending registration data for later review.
           </div>
         )}
 
         {state && !state.success ? (
-          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
             {state.error}
           </p>
         ) : null}
@@ -449,7 +449,7 @@ function ReplaceLinkDialog({
   if (state?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-xl flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-xl flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
@@ -473,11 +473,11 @@ function ReplaceLinkDialog({
               id="replacement-registration-link"
               readOnly
               value={state.data.registrationUrl}
-              className="mt-2 h-11 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-3 font-mono text-xs text-white outline-none"
+              className="mt-2 h-11 w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 font-mono text-xs text-white outline-none"
             />
           </div>
 
-          <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+          <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
             Copy or open this secure replacement link now. The previous
             registration link has been invalidated, and this replacement can be
             recovered for future sharing.
@@ -503,7 +503,7 @@ function ReplaceLinkDialog({
     <Overlay>
       <form
         action={formAction}
-        className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex w-full max-w-lg flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl"
       >
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
@@ -520,14 +520,14 @@ function ReplaceLinkDialog({
         <input type="hidden" name="campaign_id" value={campaign.id} />
         <input type="hidden" name="community_id" value={communityId} />
 
-        <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+        <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
           Creating a replacement link invalidates the previous registration
           link. Use this only when the current plaintext link is unavailable or
           should no longer be used.
         </p>
 
         {state && !state.success ? (
-          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
             {state.error}
           </p>
         ) : null}
@@ -564,7 +564,7 @@ function CancelRegistrationDialog({
   if (state?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-lg flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
               Resident registration
@@ -610,7 +610,7 @@ function CancelRegistrationDialog({
     <Overlay>
       <form
         action={formAction}
-        className="flex w-full max-w-lg flex-col gap-5 rounded-2xl border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex w-full max-w-lg flex-col gap-5 rounded-[10px] border border-[#141119] bg-[#26222F] p-6 shadow-xl"
       >
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#BEB4FF]">
@@ -627,13 +627,13 @@ function CancelRegistrationDialog({
         <input type="hidden" name="campaign_id" value={campaign.id} />
         <input type="hidden" name="community_id" value={communityId} />
 
-        <p className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
+        <p className="rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm leading-6 text-amber-50/90">
           The registration link will stop accepting new submissions. Previously
           received registrations will be preserved.
         </p>
 
         {state && !state.success ? (
-          <p className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
+          <p className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm leading-6 text-rose-100">
             {state.error}
           </p>
         ) : null}
