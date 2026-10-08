@@ -53,7 +53,7 @@ const actionButtonVariants = {
   danger:
     "border-rose-400/20 bg-rose-500/10 text-rose-200 hover:border-rose-300/35 hover:bg-rose-500/15",
   ghost:
-    "border-transparent bg-transparent text-[var(--text-muted)] hover:bg-white/5 hover:text-white",
+    "border-transparent bg-transparent text-[#8F879D] hover:bg-white/5 hover:text-white",
   primary:
     "border-[#120539] bg-[#7553FF] text-white shadow-[0_2px_0_#120539] hover:bg-[#8062ff]",
   secondary:
@@ -103,7 +103,7 @@ function IconSubmitButton({
       aria-label={label}
       title={label}
       disabled={disabled || pending}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-[var(--text-muted)] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/40 disabled:cursor-not-allowed disabled:opacity-35"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-[#8F879D] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-35"
     >
       {pending ? (
         <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
@@ -131,10 +131,10 @@ function MenuSubmitButton({
       disabled={pending}
       role="menuitem"
       className={cn(
-        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-violet-300/35 disabled:cursor-not-allowed disabled:opacity-60",
+        "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-60",
         tone === "danger"
           ? "text-rose-200 hover:bg-rose-500/10"
-          : "text-[var(--foreground)] hover:bg-white/6",
+          : "text-white hover:bg-white/6",
       )}
     >
       {pending ? <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" /> : icon}
@@ -163,7 +163,7 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
       <input type="hidden" name="community_id" value={communityId} />
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,32%)_auto] lg:items-end">
         <label className="min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
             Destination name
           </span>
           <input
@@ -179,7 +179,7 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
           />
         </label>
         <label className="min-w-0">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
             Category (optional)
           </span>
           <input
@@ -202,16 +202,16 @@ function CreateDestinationForm({ communityId }: { communityId: string }) {
 function EmptyDestinations({ state }: { state: CommunityDestinationsManagerProps["state"] }) {
   if (state === "unavailable") {
     return (
-      <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5 text-sm leading-6 text-[var(--text-muted)]">
+      <div className="rounded-lg border border-dashed border-[#141119] bg-[#2E2936] px-4 py-5 text-sm leading-6 text-[#8F879D]">
         Destination catalog is not available yet. Apply the ENTRY manual access migration first.
       </div>
     );
   }
 
   return (
-    <div className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-strong)] px-4 py-5">
+    <div className="rounded-lg border border-dashed border-[#141119] bg-[#2E2936] px-4 py-5">
       <p className="text-sm font-semibold text-white">No manual destinations configured yet.</p>
-      <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+      <p className="mt-1 text-sm leading-6 text-[#8F879D]">
         Create a destination to make it available to guards.
       </p>
     </div>
@@ -259,7 +259,7 @@ function RenameDestinationForm({
       <input type="hidden" name="community_id" value={communityId} />
       <input type="hidden" name="destination_id" value={destination.id} />
       <label className="min-w-0">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
           Destination name
         </span>
         <input
@@ -272,12 +272,12 @@ function RenameDestinationForm({
             if (error) setError("");
           }}
           onKeyDown={handleKeyDown}
-          className="mt-2 h-10 w-full rounded-md border border-violet-300/35 bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition focus:border-violet-200 focus:ring-2 focus:ring-violet-300/10"
+          className="mt-2 h-10 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm font-medium text-white outline-none transition focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
         />
         {error ? <span className="mt-1 block text-xs text-amber-200">{error}</span> : null}
       </label>
       <label className="min-w-0">
-        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
           Optional category
         </span>
         <input
@@ -286,7 +286,7 @@ function RenameDestinationForm({
           onChange={(event) => setCategory(event.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Optional category"
-          className="mt-2 h-10 w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50 focus:ring-2 focus:ring-violet-300/10"
+          className="mt-2 h-10 w-full rounded-md border border-[#141119] bg-[#24202B] px-3 text-sm font-medium text-white outline-none transition placeholder:text-[#8F879D] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
         />
       </label>
       <div className="flex flex-wrap gap-2">
@@ -330,7 +330,7 @@ function DestinationActions({
         aria-haspopup="menu"
         aria-label={`Actions for ${destination.name}`}
         onClick={onToggleMenu}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-[var(--text-muted)] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-violet-300/40"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent text-[#8F879D] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#7553FF]"
       >
         <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
       </button>
@@ -344,7 +344,7 @@ function DestinationActions({
           type="button"
           role="menuitem"
           onClick={onRename}
-          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-[var(--foreground)] transition hover:bg-white/6 focus:outline-none focus:ring-2 focus:ring-violet-300/35"
+          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-semibold text-white transition hover:bg-white/6 focus:outline-none focus:ring-2 focus:ring-[#7553FF]"
         >
           <Pencil aria-hidden="true" className="h-4 w-4" />
           Rename
