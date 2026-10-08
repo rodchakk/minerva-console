@@ -6,10 +6,12 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
+  ChevronRight,
   ClipboardList,
   Clock3,
   Copy,
   FileText,
+  Filter,
   GitMerge,
   Home,
   Mail,
@@ -20,6 +22,7 @@ import {
   Search,
   TriangleAlert,
   Users,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -695,13 +698,21 @@ function Metric({
   );
 }
 
-type UnitFilter =
-  | "pending"
-  | "duplicates"
-  | "reviewed"
-  | "activation"
+type UnitWorkflowFilter =
   | "all"
+  | "pending"
+  | "reviewed"
+  | "confirmed"
+  | "activation"
   | "resolved";
+
+type UnitAttentionFilter =
+  | "all"
+  | "duplicates"
+  | "incomplete"
+  | "shared_contact"
+  | "contacted"
+  | "new_info";
 
 export function ReviewWorkspace({
   campaign,
@@ -740,7 +751,9 @@ export function ReviewWorkspace({
     { tone: "error" | "success"; text: string } | null
   >(null);
   const [bulkPending, startBulkTransition] = useTransition();
-  const [unitFilter, setUnitFilter] = useState<UnitFilter>("pending");
+  const [unitFilter, setUnitFilter] = useState<UnitWorkflowFilter>("pending");
+  const [attentionFilter, setAttentionFilter] = useState<UnitAttentionFilter>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [unitSearch, setUnitSearch] = useState("");
   const [pendingUnitId, setPendingUnitId] = useState<string | null>(null);
   const [selectedContactPosition, setSelectedContactPosition] = useState("");
@@ -753,6 +766,7 @@ export function ReviewWorkspace({
     useState<CommunityRegistrationConfirmationReport | null>(null);
   const [previewMode, setPreviewMode] = useState<"single" | "selection">("single");
   const selectionRequestRef = useRef(0);
+  const filterRef = useRef<HTMLDivElement>(null);
   const [reviewState, reviewAction, reviewPending] = useActionState(
     markCommunityRegistrationUnitReviewed,
     initialActionState,
