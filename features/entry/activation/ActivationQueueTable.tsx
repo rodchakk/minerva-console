@@ -2160,7 +2160,10 @@ export function ActivationQueueTable({
                 />
               </div>
 
-              <div className="relative mt-4 grid grid-cols-4">
+              <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                Activation progress
+              </p>
+              <div className="relative mt-2.5 grid grid-cols-4">
                 <span className="absolute left-[12%] right-[12%] top-[10px] h-px bg-white/10" />
                 {getActivationStage(activeRow).map((stage, index) => (
                   <div key={stage.label} className="relative z-10 text-center">
@@ -2244,8 +2247,8 @@ export function ActivationQueueTable({
                   <p className="text-xs font-semibold text-white">Invitation history</p>
                 </div>
                 {[
-                  ["First invitation", activeRow.firstInvitationSentAt],
-                  ["Last invitation", activeRow.lastInvitationSentAt],
+                  ["First invitation sent", activeRow.firstInvitationSentAt],
+                  ["Last invitation sent", activeRow.lastInvitationSentAt],
                   ["Attempts", String(activeRow.invitationAttemptCount)],
                   ["Last PIN generated", activeRow.lastPinGeneratedAt],
                 ].map(([label, value]) => (
