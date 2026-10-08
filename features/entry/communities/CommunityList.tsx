@@ -1235,7 +1235,7 @@ function KeyDetails({ community }: { community: CommunityListItem }) {
     },
     {
       icon: Users,
-      label: "Members",
+      label: "Residents",
       value: String(community.totalMembers),
     },
     {
