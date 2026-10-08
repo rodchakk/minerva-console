@@ -148,62 +148,43 @@ function MetricCard({
   label,
   value,
   hint,
-  tone = "violet",
+  active = false,
+  onClick,
 }: {
   icon: React.ReactNode;
   label: string;
   value: number;
   hint: string;
-  tone?: "violet" | "green" | "orange" | "blue" | "amber" | "cyan";
+  active?: boolean;
+  onClick?: () => void;
 }) {
-  const toneClasses = {
-    violet: "border-violet-400/15 bg-violet-500/10 text-violet-200",
-    green: "border-emerald-400/15 bg-emerald-500/10 text-emerald-200",
-    orange: "border-orange-400/15 bg-orange-500/10 text-orange-200",
-    blue: "border-sky-400/15 bg-sky-500/10 text-sky-200",
-    amber: "border-amber-400/15 bg-amber-500/10 text-amber-200",
-    cyan: "border-cyan-400/15 bg-cyan-500/10 text-cyan-200",
-  }[tone];
-
-  return (
-    <article className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[0_12px_32px_rgba(2,6,23,0.18)]">
-      <div className="flex items-start gap-3">
-        <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg border ${toneClasses}`}>
+  const content = (
+    <>
+      <div className="flex items-center gap-2 text-[#8F879D]">
+        <span className="grid size-7 place-items-center rounded-[6px] border border-white/[0.09] bg-white/[0.02] text-[#CFC7FF]">
           {icon}
-        </div>
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-            {label}
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-white">{value}</p>
-          <p className="mt-1 truncate text-xs text-[var(--text-muted)]">{hint}</p>
-        </div>
+        </span>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.14em]">
+          {label}
+        </p>
       </div>
-    </article>
+      <p className="mt-2 text-xl font-semibold text-white">{value}</p>
+      <p className="mt-1 text-[10px] text-[#A9A3B2]">{hint}</p>
+    </>
   );
-}
 
-function FilterButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-md border px-3 py-2 text-xs font-semibold transition ${
-        active
-          ? "border-violet-400/35 bg-violet-500/18 text-white"
-          : "border-white/8 bg-white/[0.035] text-[var(--text-muted)] hover:border-white/15 hover:bg-white/[0.06] hover:text-white"
-      }`}
-    >
-      {children}
+  const className = `min-h-[96px] px-4 py-3.5 text-left transition ${
+    active
+      ? "bg-[rgba(117,83,255,0.055)] shadow-[inset_0_-2px_0_#7553FF]"
+      : "hover:bg-white/[0.015]"
+  }`;
+
+  return onClick ? (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
     </button>
+  ) : (
+    <article className={className}>{content}</article>
   );
 }
 
