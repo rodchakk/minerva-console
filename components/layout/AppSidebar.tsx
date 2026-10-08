@@ -2,10 +2,9 @@
 
 import { useState, type ComponentType } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Building2,
-  BarChart3,
   Bell,
   ChevronRight,
   ChevronsLeft,
@@ -16,6 +15,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   MessageSquare,
+  Monitor,
   ScrollText,
   SlidersHorizontal,
   Users,
@@ -30,6 +30,10 @@ type AppSidebarProps = {
 };
 
 type NavItem = {
+  children?: Array<{
+    href: string;
+    label: string;
+  }>;
   disabled?: boolean;
   label: string;
   href: string | null;
@@ -61,7 +65,18 @@ const entryNavItems: NavItem[] = [
   { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
   { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
   { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
-  { label: "Observability", href: "/products/entry/observability", icon: BarChart3 },
+  {
+    label: "Monitors",
+    href: "/products/entry/observability",
+    icon: Monitor,
+    children: [
+      { label: "Overview", href: "/products/entry/observability" },
+      { label: "Communications", href: "/products/entry/observability/notifications" },
+      { label: "Background", href: "/products/entry/observability/background" },
+      { label: "Performance", href: "/products/entry/observability/performance" },
+      { label: "Diagnostics", href: "/products/entry/observability/diagnostics" },
+    ],
+  },
 ];
 
 const systemNavGroup: NavGroup = {
@@ -126,7 +141,24 @@ function SidebarNav({
   onClose: () => void;
 }) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const searchParams = useSearchParams();
   const navGroups = isEntryContext(pathname) ? entryNavGroups : minervaNavGroups;
+
+  const withMonitorFilters = (href: string) => {
+    if (!href.startsWith("/products/entry/observability")) {
+      return href;
+    }
+
+    const params = new URLSearchParams();
+    const range = searchParams.get("range");
+    const community = searchParams.get("community");
+
+    if (range && range !== "24h") params.set("range", range);
+    if (community) params.set("community", community);
+
+    const query = params.toString();
+    return query ? `${href}?${query}` : href;
+  };
 
   const toggleGroup = (groupId: string, currentIsOpen: boolean) => {
     setOpenGroups((prev) => ({
@@ -194,36 +226,76 @@ function SidebarNav({
                   }
 
                   return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      className={cn(
-                        "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1",
-                        accent.ring,
-                        active
-                          ? "bg-white/[0.07] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
-                          : "text-slate-300 hover:bg-white/[0.04] hover:text-white",
-                      )}
-                    >
-                      {active ? (
-                        <span
+                    <div key={item.href}>
+                      <Link
+                        href={withMonitorFilters(item.href)}
+                        onClick={onClose}
+                        className={cn(
+                          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1",
+                          accent.ring,
+                          active
+                            ? "bg-white/[0.07] text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]"
+                            : "text-slate-300 hover:bg-white/[0.04] hover:text-white",
+                        )}
+                      >
+                        {active ? (
+                          <span
+                            className={cn(
+                              "absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full",
+                              accent.rail,
+                            )}
+                          />
+                        ) : null}
+                        <Icon
                           className={cn(
-                            "absolute bottom-1.5 left-0 top-1.5 w-0.5 rounded-full",
-                            accent.rail,
+                            "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
+                            active
+                              ? accent.icon
+                              : "text-slate-400 group-hover:text-slate-200",
                           )}
                         />
+                        <span className="truncate">{item.label}</span>
+                        {item.children ? (
+                          <ChevronRight
+                            className={cn(
+                              "ml-auto h-3.5 w-3.5 shrink-0 stroke-[1.75] transition-transform",
+                              active ? "rotate-90 text-slate-300" : "text-slate-500",
+                            )}
+                          />
+                        ) : null}
+                      </Link>
+
+                      {item.children && active ? (
+                        <div className="ml-[18px] mt-1 space-y-0.5 border-l border-white/[0.10] pl-3">
+                          {item.children.map((child) => {
+                            const childActive =
+                              child.href === "/products/entry/observability"
+                                ? pathname === child.href
+                                : pathname === child.href || pathname.startsWith(`${child.href}/`);
+
+                            return (
+                              <Link
+                                key={child.href}
+                                href={withMonitorFilters(child.href)}
+                                onClick={onClose}
+                                className={cn(
+                                  "relative flex min-h-8 items-center rounded-md px-2 py-1 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1",
+                                  accent.ring,
+                                  childActive
+                                    ? "bg-white/[0.055] text-white"
+                                    : "text-slate-400 hover:bg-white/[0.035] hover:text-slate-200",
+                                )}
+                              >
+                                {childActive ? (
+                                  <span className="absolute -left-[13px] top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-[var(--console-accent)]" />
+                                ) : null}
+                                <span className="truncate">{child.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
                       ) : null}
-                      <Icon
-                        className={cn(
-                          "h-4 w-4 shrink-0 transition-colors stroke-[1.75]",
-                          active
-                            ? accent.icon
-                            : "text-slate-400 group-hover:text-slate-200",
-                        )}
-                      />
-                      <span className="truncate">{item.label}</span>
-                    </Link>
+                    </div>
                   );
                 })}
               </div>
