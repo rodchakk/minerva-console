@@ -232,7 +232,7 @@ export default async function EntryObservabilityPerformancePage(props: {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="ENTRY observability / Performance"
+        title="ENTRY monitors / Performance"
         description="Latency, real-user measurements, provider usage, and variable cost."
         actions={
           <ObservabilityFilters
