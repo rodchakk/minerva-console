@@ -950,21 +950,35 @@ export function CommunityUsersClient({
       </div>
 
       {modal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Close dialog"
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-            onClick={closeModal}
-          />
+        <div
+          className={
+            modal === "manage"
+              ? "pointer-events-none fixed inset-0 z-50"
+              : "fixed inset-0 z-50 flex items-center justify-center p-4"
+          }
+        >
+          {modal === "create" ? (
+            <button
+              type="button"
+              aria-label="Close dialog"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+              onClick={closeModal}
+            />
+          ) : null}
 
-          <section className="relative z-10 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-xl border border-[var(--border)] bg-[var(--surface-elevated)] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.5)]">
-            <div className="flex items-start justify-between gap-4 border-b border-white/8 pb-4">
+          <section
+            className={
+              modal === "manage"
+                ? "pointer-events-auto absolute bottom-5 right-5 top-[76px] z-10 w-[560px] overflow-y-auto rounded-[10px] border border-[#141119] bg-[#292431] p-4 shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none"
+                : "relative z-10 max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-[10px] border border-[#141119] bg-[#292431] p-5 shadow-[0_28px_90px_rgba(0,0,0,0.5)]"
+            }
+          >
+            <div className="sticky top-0 z-10 -mx-4 -mt-4 mb-4 flex items-start justify-between gap-4 border-b border-[#141119] bg-[#292431] px-4 py-4">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
                   {modal === "create" ? "ENTRY user creation" : "User management"}
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">
+                <h2 className="mt-1.5 text-xl font-semibold tracking-[-0.02em] text-white">
                   {modal === "create" ? "Create ENTRY user" : selectedUser?.fullName}
                 </h2>
                 {modal === "manage" && selectedUser ? (
@@ -978,7 +992,7 @@ export function CommunityUsersClient({
                 type="button"
                 onClick={closeModal}
                 disabled={isPending}
-                className="grid h-9 w-9 place-items-center rounded-md border border-white/10 text-[var(--text-muted)] transition hover:text-white"
+                className="grid size-8 place-items-center rounded-md border border-[#141119] bg-[#2E2936] text-[#8F879D] transition hover:text-white"
               >
                 <X className="h-4 w-4" aria-hidden />
               </button>
