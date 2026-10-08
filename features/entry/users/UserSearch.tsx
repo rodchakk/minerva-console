@@ -243,12 +243,6 @@ export function UserSearch() {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [manageMode, selectedKey]);
 
-  useEffect(() => {
-    if (selectedKey && !selectedUser) {
-      setSelectedKey(null);
-    }
-  }, [selectedKey, selectedUser]);
-
   function syncUser(user: UserSearchItem, changes: Partial<UserSearchItem>) {
     setOverrides((current) => ({
       ...current,
