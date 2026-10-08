@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Building2 } from "lucide-react";
-import { Rubik } from "next/font/google";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { ActivationQueueReviewAcknowledge } from "@/features/entry/activation/ActivationQueueReviewAcknowledge";
 import { ActivationQueueTable } from "@/features/entry/activation/ActivationQueueTable";
@@ -8,12 +7,6 @@ import { getActivationQueuePageData } from "@/features/entry/activation/actions"
 import { LaunchCampaignButton } from "@/features/entry/onboardingCampaigns/LaunchCampaignButton";
 import { getCampaignPreview } from "@/features/entry/onboardingCampaigns/actions";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
-import { cn } from "@/lib/supabase/utils";
-
-const rubik = Rubik({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-});
 
 function getSingleParam(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -38,12 +31,7 @@ export default async function ActivationQueuePage(
     campaignPreview.ready + campaignPreview.alreadyInvited > 0;
 
   return (
-    <div
-      className={cn(
-        rubik.className,
-        "relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 bg-[#2E2936] text-[#E7E5EA] lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]",
-      )}
-    >
+    <div className="relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 bg-[#2E2936] text-[#E7E5EA] lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]">
       <header className="flex flex-col gap-4 pt-1 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
