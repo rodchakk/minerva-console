@@ -965,36 +965,10 @@ export function ReviewWorkspace({
           (candidate) => candidate.id === duplicateDialogCandidateId,
         ) ?? null
       : null;
-  const registrationSearchByUnitId = useMemo(() => {
-    const map = new Map<string, string>();
-
-    for (const unit of duplicateData.units) {
-      const textParts = [
-        unit.label,
-        unit.reference,
-        ...unit.residents.flatMap((resident) => [
-          resident.fullName,
-          resident.email,
-          resident.phone,
-          resident.normalizedFullName,
-          resident.normalizedEmail,
-        ]),
-      ];
-      const phoneParts = unit.residents.flatMap((resident) => [
-        resident.phone,
-        resident.normalizedPhone,
-      ]);
-
-      map.set(
-        unit.id,
-        `${textParts.map(normalizedSearchText).join(" ")} ${phoneParts
-          .map(normalizedSearchPhone)
-          .join(" ")}`,
-      );
-    }
-
-    return map;
-  }, [duplicateData.units]);
+  const duplicateUnitById = useMemo(
+    () => new Map(duplicateData.units.map((unit) => [unit.id, unit])),
+    [duplicateData.units],
+  );
 
   const dataCompleteByUnitId = useMemo(() => {
     const map = new Map<string, boolean>();
@@ -1105,6 +1079,7 @@ export function ReviewWorkspace({
 
     return map;
   }, [duplicateData.units, latestContactByUnitId]);
+
   const reportableUnitIds = useMemo(
     () =>
       activeUnits
@@ -1117,14 +1092,15 @@ export function ReviewWorkspace({
   const selectedResidentCount = activeUnits
     .filter((unit) => selectedReportUnitIds.includes(unit.id))
     .reduce((total, unit) => total + unit.residentCount, 0);
-  const unitFilterCounts = useMemo(
+
+  const workflowFilterCounts = useMemo(
     () => ({
       activation: activeUnits.filter(
         (unit) => unit.status.trim().toLowerCase() === "processed",
       ).length,
       all: activeUnits.length,
-      duplicates: activeUnits.filter((unit) =>
-        duplicateCandidatesByUnit.has(unit.id),
+      confirmed: activeUnits.filter(
+        (unit) => unit.status.trim().toLowerCase() === "confirmed",
       ).length,
       pending: activeUnits.filter((unit) =>
         ["submitted", "needs_correction", "edit_enabled"].includes(
@@ -1132,12 +1108,97 @@ export function ReviewWorkspace({
         ),
       ).length,
       resolved: resolvedUnits.length,
-      reviewed: activeUnits.filter((unit) =>
-        ["reviewed", "confirmed"].includes(unit.status.trim().toLowerCase()),
+      reviewed: activeUnits.filter(
+        (unit) => unit.status.trim().toLowerCase() === "reviewed",
       ).length,
     }),
-    [activeUnits, duplicateCandidatesByUnit, resolvedUnits.length],
+    [activeUnits, resolvedUnits.length],
   );
+
+  const attentionFilterCounts = useMemo(
+    () => ({
+      all: activeUnits.length,
+      contacted: activeUnits.filter(
+        (unit) => contactStateByUnitId.get(unit.id) === "contacted",
+      ).length,
+      duplicates: activeUnits.filter((unit) =>
+        duplicateCandidatesByUnit.has(unit.id),
+      ).length,
+      incomplete: activeUnits.filter(
+        (unit) => dataCompleteByUnitId.get(unit.id) === false,
+      ).length,
+      new_info: activeUnits.filter(
+        (unit) => contactStateByUnitId.get(unit.id) === "new_info",
+      ).length,
+      shared_contact: activeUnits.filter(
+        (unit) => (sharedContactIssuesByUnitId.get(unit.id)?.length ?? 0) > 0,
+      ).length,
+    }),
+    [
+      activeUnits,
+      contactStateByUnitId,
+      dataCompleteByUnitId,
+      duplicateCandidatesByUnit,
+      sharedContactIssuesByUnitId,
+    ],
+  );
+
+  const registrationSearchByUnitId = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const unit of duplicateData.units) {
+      const duplicateMatches = duplicateCandidatesByUnit.get(unit.id) ?? [];
+      const sharedIssues = sharedContactIssuesByUnitId.get(unit.id) ?? [];
+      const contactState = contactStateByUnitId.get(unit.id) ?? "";
+      const complete = dataCompleteByUnitId.get(unit.id) === true;
+      const textParts = [
+        unit.label,
+        unit.reference,
+        unit.status,
+        statusLabel(unit.status),
+        unit.lifecycle.label,
+        complete
+          ? "information complete data complete complete"
+          : "information incomplete data incomplete missing information",
+        duplicateMatches.length > 0
+          ? "possible duplicate duplicates duplicate review"
+          : "",
+        sharedIssues.some((issue) => issue.kind === "email")
+          ? "shared email"
+          : "",
+        sharedIssues.some((issue) => issue.kind === "phone")
+          ? "shared phone"
+          : "",
+        contactState === "contacted"
+          ? "contacted whatsapp follow up"
+          : contactState === "new_info"
+            ? "new information needed follow up"
+            : "",
+        ...unit.residents.flatMap((resident) => [
+          resident.fullName,
+          resident.email,
+          resident.phone,
+          resident.normalizedFullName,
+          resident.normalizedEmail,
+          resident.normalizedPhone,
+        ]),
+      ];
+
+      map.set(
+        unit.id,
+        textParts.map(normalizedSearchText).join(" "),
+      );
+    }
+
+    return map;
+  }, [
+    contactStateByUnitId,
+    dataCompleteByUnitId,
+    duplicateCandidatesByUnit,
+    duplicateData.units,
+    sharedContactIssuesByUnitId,
+  ]);
+
   const visibleUnits = useMemo(() => {
     const normalizedSearch = normalizedSearchText(unitSearch);
     const normalizedPhone = normalizedSearchPhone(unitSearch);
@@ -1153,31 +1214,60 @@ export function ReviewWorkspace({
           searchable.includes(normalizedSearch) ||
           (normalizedPhone.length > 0 && searchable.includes(normalizedPhone));
         const normalizedStatus = unit.status.trim().toLowerCase();
-        const matchesFilter =
+
+        const matchesWorkflow =
           unitFilter === "all" ||
           (unitFilter === "pending" &&
             ["submitted", "needs_correction", "edit_enabled"].includes(
               normalizedStatus,
             )) ||
-          (unitFilter === "reviewed" &&
-            ["reviewed", "confirmed"].includes(normalizedStatus)) ||
+          (unitFilter === "reviewed" && normalizedStatus === "reviewed") ||
+          (unitFilter === "confirmed" && normalizedStatus === "confirmed") ||
           (unitFilter === "activation" && normalizedStatus === "processed") ||
-          (unitFilter === "duplicates" && duplicateCandidatesByUnit.has(unit.id)) ||
           unitFilter === "resolved";
 
-        return matchesSearch && matchesFilter;
+        const matchesAttention =
+          attentionFilter === "all" ||
+          (attentionFilter === "duplicates" &&
+            duplicateCandidatesByUnit.has(unit.id)) ||
+          (attentionFilter === "incomplete" &&
+            dataCompleteByUnitId.get(unit.id) === false) ||
+          (attentionFilter === "shared_contact" &&
+            (sharedContactIssuesByUnitId.get(unit.id)?.length ?? 0) > 0) ||
+          (attentionFilter === "contacted" &&
+            contactStateByUnitId.get(unit.id) === "contacted") ||
+          (attentionFilter === "new_info" &&
+            contactStateByUnitId.get(unit.id) === "new_info");
+
+        return matchesSearch && matchesWorkflow && matchesAttention;
       })
-      .sort(
-        (left, right) =>
-          Number(dataCompleteByUnitId.get(right.id) === true) -
-          Number(dataCompleteByUnitId.get(left.id) === true),
-      );
+      .sort((left, right) => {
+        const leftPriority =
+          Number(duplicateCandidatesByUnit.has(left.id)) * 4 +
+          Number(dataCompleteByUnitId.get(left.id) === false) * 3 +
+          Number(contactStateByUnitId.get(left.id) === "new_info") * 2 +
+          Number(left.status.trim().toLowerCase() === "submitted");
+        const rightPriority =
+          Number(duplicateCandidatesByUnit.has(right.id)) * 4 +
+          Number(dataCompleteByUnitId.get(right.id) === false) * 3 +
+          Number(contactStateByUnitId.get(right.id) === "new_info") * 2 +
+          Number(right.status.trim().toLowerCase() === "submitted");
+
+        if (rightPriority !== leftPriority) return rightPriority - leftPriority;
+        return left.label.localeCompare(right.label, "es-HN", {
+          numeric: true,
+          sensitivity: "base",
+        });
+      });
   }, [
     activeUnits,
+    attentionFilter,
+    contactStateByUnitId,
     dataCompleteByUnitId,
     duplicateCandidatesByUnit,
     registrationSearchByUnitId,
     resolvedUnits,
+    sharedContactIssuesByUnitId,
     unitFilter,
     unitSearch,
   ]);
