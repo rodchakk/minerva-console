@@ -1510,8 +1510,21 @@ export function CommunityUsersClient({
                       </select>
                     </label>
                     <div className="sm:col-span-2 flex justify-end gap-2 border-t border-white/8 pt-4">
-                      <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
-                      <Button onClick={submitEdit} disabled={isPending}>{isPending ? "Saving..." : "Save changes"}</Button>
+                      <Button
+                        variant="secondary"
+                        className={entryButtonClass("secondary")}
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className={entryButtonClass("primary")}
+                        onClick={submitEdit}
+                        disabled={isPending}
+                      >
+                        {isPending ? "Saving..." : "Save changes"}
+                      </Button>
                     </div>
                   </div>
                 ) : null}
@@ -1591,12 +1604,14 @@ export function CommunityUsersClient({
                     <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
                       <Button
                         variant="secondary"
+                        className={entryButtonClass("secondary")}
                         onClick={() => setManageMode("view")}
                         disabled={isPending}
                       >
                         Cancel
                       </Button>
                       <Button
+                        className={entryButtonClass("primary")}
                         onClick={submitRoleChange}
                         disabled={isPending || roleDraft === selectedUser.role}
                       >
@@ -1685,8 +1700,21 @@ export function CommunityUsersClient({
                       </label>
                     </div>
                     <div className="flex justify-end gap-2 border-t border-white/8 pt-4">
-                      <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
-                      <Button onClick={submitPassword} disabled={isPending}>{isPending ? "Updating..." : "Reset password"}</Button>
+                      <Button
+                        variant="secondary"
+                        className={entryButtonClass("secondary")}
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className={entryButtonClass("primary")}
+                        onClick={submitPassword}
+                        disabled={isPending}
+                      >
+                        {isPending ? "Updating..." : "Reset password"}
+                      </Button>
                     </div>
                   </div>
                 ) : null}
@@ -1704,8 +1732,22 @@ export function CommunityUsersClient({
                       </p>
                     </div>
                     <div className="mt-4 flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
-                      <Button variant={selectedUser.isActive ? "danger" : "primary"} onClick={submitStatusChange} disabled={isPending}>
+                      <Button
+                        variant="secondary"
+                        className={entryButtonClass("secondary")}
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant={selectedUser.isActive ? "danger" : "primary"}
+                        className={entryButtonClass(
+                          selectedUser.isActive ? "danger" : "primary",
+                        )}
+                        onClick={submitStatusChange}
+                        disabled={isPending}
+                      >
                         {isPending ? "Updating..." : selectedUser.isActive ? "Deactivate user" : "Reactivate user"}
                       </Button>
                     </div>
