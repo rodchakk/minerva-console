@@ -716,6 +716,18 @@ test("observability workspace routes, filters, loading state, and sidebar entry 
   assert.match(loading, /EntryObservabilityLoading/);
 });
 
+
+
+test("workspace sections use the lightest existing observability read model", () => {
+  assert.match(queries, /model === "background"[\s\S]*sa_get_entry_observability_v5/);
+  assert.match(queries, /model === "performance"[\s\S]*sa_get_entry_observability_v4/);
+  assert.match(queries, /sa_get_entry_observability_v3/);
+  assert.match(page, /model: "overview"/);
+  assert.match(backgroundPage, /model: "background"/);
+  assert.match(performancePage, /model: "performance"/);
+  assert.match(diagnosticsPage, /model: "diagnostics"/);
+});
+
 test("CI executes focused ENTRY Observability regressions", () => {
   assert.match(ci, /ENTRY Observability regressions/);
   assert.match(ci, /node --test tests\/entry-observability\.test\.mjs/);
