@@ -21,6 +21,7 @@ import {
   type CommunityWithProgressItem,
 } from "@/features/entry/communities/queries";
 import { getCustomerProfileForCommunity } from "@/features/entry/customers/queries";
+import { getCommunityUsersPage } from "@/features/entry/users/queries";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
 import { cn } from "@/lib/supabase/utils";
 
@@ -236,8 +237,14 @@ export default async function CommunitySetupPage(
 
   if (!community) notFound();
 
-  const [previews, adminActivity, onboardingDetail, registrationState, customerProfile] =
-    await Promise.all([
+  const [
+    previews,
+    adminActivity,
+    onboardingDetail,
+    registrationState,
+    customerProfile,
+    usersPage,
+  ] = await Promise.all([
       getCommunityDetailPreviews(community.id, {
         allowMessages: community.allowMessages,
       }),
@@ -245,6 +252,7 @@ export default async function CommunitySetupPage(
       getCommunityOnboardingDetail(community.id),
       getCommunityRegistrationAdminState(community.id),
       getCustomerProfileForCommunity(community.id),
+      getCommunityUsersPage(community.id),
     ]);
 
   const requestedTab = getSingleParam(searchParams.tab);
@@ -281,6 +289,11 @@ export default async function CommunitySetupPage(
     registrationState.campaign?.status,
     registrationState.hasOperationalCampaign,
   );
+  const userAccountCount = usersPage.users.length;
+  const activeUserAccountCount = usersPage.users.filter(
+    (user) => user.isActive,
+  ).length;
+  const inactiveUserAccountCount = userAccountCount - activeUserAccountCount;
 
   return (
     <div
@@ -360,7 +373,7 @@ export default async function CommunitySetupPage(
       </section>
 
       <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
-        <div className="grid xl:grid-cols-[minmax(0,1.55fr)_repeat(3,minmax(170px,.72fr))]">
+        <div className="grid xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(145px,.66fr))]">
           <div className="min-h-[122px] px-5 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
               Community status
@@ -409,11 +422,28 @@ export default async function CommunitySetupPage(
             className="min-h-[122px] border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
           >
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
-              Residents
+              Directory
             </p>
-            <p className="mt-2 text-lg font-semibold text-white">{community.totalMembers}</p>
+            <p className="mt-2 text-lg font-semibold text-white">
+              {community.totalUnits} units
+            </p>
             <p className="mt-2 text-xs text-[#A9A3B2]">
-              Across {community.totalUnits} units
+              {community.totalMembers} residents linked
+            </p>
+          </Link>
+
+          <Link
+            href={`/products/entry/communities/${community.id}/users`}
+            className="min-h-[122px] border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+              Users & access
+            </p>
+            <p className="mt-2 text-lg font-semibold text-white">
+              {userAccountCount} accounts
+            </p>
+            <p className="mt-2 text-xs text-[#A9A3B2]">
+              {activeUserAccountCount} active · {inactiveUserAccountCount} inactive
             </p>
           </Link>
 
@@ -468,6 +498,8 @@ export default async function CommunitySetupPage(
           facilitiesLabel={facilitiesLabel}
           initialTab={initialTab}
           memberCount={community.totalMembers}
+          userAccountCount={userAccountCount}
+          activeUserAccountCount={activeUserAccountCount}
           nextActionDescription={
             attentionItem.title === "No critical attention items"
               ? "No critical blockers were detected. Continue with " +
