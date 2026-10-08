@@ -103,7 +103,7 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
   if (community.nextStepKey === "residents") {
     return {
       href: `/products/entry/communities/${community.id}/users`,
-      label: "Review users",
+      label: "Manage users & access",
     };
   }
 
