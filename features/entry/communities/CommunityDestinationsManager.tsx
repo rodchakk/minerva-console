@@ -21,7 +21,6 @@ import {
 } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/Badge";
 import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
@@ -468,14 +467,26 @@ export function CommunityDestinationsManager({
       }),
     [destinations],
   );
-  const [orderedDestinations, setOrderedDestinations] =
-    useState<CommunityDestinationPreview[]>(sortedDestinations);
+  const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
+  const orderedDestinations = useMemo(() => {
+    if (!orderedIds) return sortedDestinations;
 
-  useEffect(() => {
-    if (!isSavingOrder && !draggingId) {
-      setOrderedDestinations(sortedDestinations);
-    }
-  }, [draggingId, isSavingOrder, sortedDestinations]);
+    const destinationById = new Map(
+      sortedDestinations.map((destination) => [destination.id, destination]),
+    );
+    const ordered = orderedIds
+      .map((id) => destinationById.get(id))
+      .filter(
+        (destination): destination is CommunityDestinationPreview =>
+          Boolean(destination),
+      );
+    const knownIds = new Set(ordered.map((destination) => destination.id));
+    const missing = sortedDestinations.filter(
+      (destination) => !knownIds.has(destination.id),
+    );
+
+    return [...ordered, ...missing];
+  }, [orderedIds, sortedDestinations]);
 
   function handleDragStart(
     event: DragEvent<HTMLButtonElement>,
@@ -527,21 +538,24 @@ export function CommunityDestinationsManager({
       return;
     }
 
-    const previousOrder = orderedDestinations;
+    const previousOrderIds = orderedDestinations.map(
+      (destination) => destination.id,
+    );
     const nextOrder = [...orderedDestinations];
     const [moved] = nextOrder.splice(sourceIndex, 1);
     nextOrder.splice(targetIndex, 0, moved);
-    setOrderedDestinations(nextOrder);
+    const nextOrderIds = nextOrder.map((destination) => destination.id);
+    setOrderedIds(nextOrderIds);
     clearDragState();
 
     startReorderTransition(async () => {
       const result = await reorderCommunityDestinationsAction({
         communityId,
-        orderedDestinationIds: nextOrder.map((destination) => destination.id),
+        orderedDestinationIds: nextOrderIds,
       });
 
       if (!result.success) {
-        setOrderedDestinations(previousOrder);
+        setOrderedIds(previousOrderIds);
         setReorderError(result.error ?? "Could not save destination order.");
         return;
       }
