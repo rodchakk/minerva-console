@@ -16,7 +16,7 @@ export function UnitBulkDeleteManager({
   triggerClassName,
   triggerLabel = "Manage / delete units",
   units,
-  wrapperClassName = "",
+  wrapperClassName,
 }: {
   communityId: string;
   triggerClassName?: string;
@@ -116,7 +116,7 @@ export function UnitBulkDeleteManager({
   if (units.length === 0) return null;
 
   return (
-    <div className={wrapperClassName || "mb-4 flex justify-end"}>
+    <div className={wrapperClassName ?? "mb-4 flex justify-end"}>
       {triggerClassName ? (
         <button
           type="button"
