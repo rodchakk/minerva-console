@@ -2,6 +2,7 @@ import "server-only";
 
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   coerceBoolean,
   coerceString,
@@ -170,6 +171,7 @@ export async function getCommunityUsersPage(
   await requireSuperadmin();
 
   const supabase = await createClient();
+  const adminSupabase = createAdminClient();
   const [
     { data: communityData },
     { data: housesData, error: housesError },
@@ -190,7 +192,7 @@ export async function getCommunityUsersPage(
       p_community_id: communityId,
       p_include_inactive: true,
     }),
-    supabase
+    adminSupabase
       .from("house_residents")
       .select("house_id,user_id,is_primary")
       .eq("community_id", communityId)
