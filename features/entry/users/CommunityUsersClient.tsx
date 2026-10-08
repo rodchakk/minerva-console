@@ -13,13 +13,13 @@ import {
   Filter,
   Home,
   KeyRound,
-   Pencil,
+  Pencil,
   Plus,
   Search,
   Shield,
   ShieldCheck,
   UserCheck,
-   UsersRound,
+  UsersRound,
   UserX,
   X,
 } from "lucide-react";
@@ -39,6 +39,7 @@ import {
 import {
   createCommunityUserAction,
   setCommunityUserPasswordAction,
+  setCommunityUserRoleAction,
   type CommunityUserRole,
 } from "@/features/entry/users/communityUserActions";
 import {
@@ -60,7 +61,8 @@ type RoleFilter =
   | "UNASSIGNED";
 type StatusFilter = "all" | "active" | "inactive";
 type ModalState = "create" | "manage" | null;
-type ManageMode = "view" | "edit" | "password" | "status";
+type ManageMode = "view" | "edit" | "role" | "password" | "status";
+type EditableCommunityRole = "ADMIN" | "RESIDENT";
 
 type CommunityUsersClientProps = {
   community: CommunityUsersPageCommunity;
@@ -253,6 +255,7 @@ export function CommunityUsersClient({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [draft, setDraft] = useState<UserDraft | null>(null);
   const [createDraft, setCreateDraft] = useState<CreateDraft>(EMPTY_CREATE_DRAFT);
+  const [roleDraft, setRoleDraft] = useState<EditableCommunityRole>("RESIDENT");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showCreatePassword, setShowCreatePassword] = useState(false);
@@ -355,6 +358,7 @@ export function CommunityUsersClient({
     setSelectedUserId(null);
     setDraft(null);
     setCreateDraft(EMPTY_CREATE_DRAFT);
+    setRoleDraft("RESIDENT");
     setPassword("");
     setConfirmPassword("");
     setShowCreatePassword(false);
@@ -382,6 +386,7 @@ export function CommunityUsersClient({
     setSelectedUserId(user.userId);
     setDraft(buildUserDraft(user));
     setManageMode(mode);
+    setRoleDraft(user.role === "ADMIN" ? "ADMIN" : "RESIDENT");
     setPassword("");
     setConfirmPassword("");
     setShowPassword(false);
@@ -523,6 +528,43 @@ export function CommunityUsersClient({
         phone: draft.phone.trim(),
       });
       setMessage("User updated successfully.");
+      setManageMode("view");
+      router.refresh();
+    });
+  }
+
+  function submitRoleChange() {
+    if (!selectedUser) return;
+    setError(null);
+
+    if (selectedUser.role !== "ADMIN" && selectedUser.role !== "RESIDENT") {
+      setError("Only Resident and Admin accounts can be changed from this control.");
+      return;
+    }
+
+    if (roleDraft === selectedUser.role) {
+      setManageMode("view");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await setCommunityUserRoleAction({
+        communityId: community.id,
+        role: roleDraft,
+        userId: selectedUser.userId,
+      });
+
+      if (!result.success) {
+        setError(result.error ?? "Could not change this account role.");
+        return;
+      }
+
+      syncUser({ ...selectedUser, role: roleDraft });
+      setMessage(
+        roleDraft === "ADMIN"
+          ? "User promoted to Admin."
+          : "User changed to Resident.",
+      );
       setManageMode("view");
       router.refresh();
     });
@@ -1327,6 +1369,27 @@ export function CommunityUsersClient({
                         <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
                       </button>
 
+                      {selectedUser.role === "ADMIN" || selectedUser.role === "RESIDENT" ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRoleDraft(selectedUser.role as EditableCommunityRole);
+                            setManageMode("role");
+                            setError(null);
+                          }}
+                          className="flex w-full items-center justify-between border-b border-[#141119] px-3.5 py-3 text-left transition hover:bg-white/[0.025]"
+                        >
+                          <span className="flex items-center gap-2.5 text-xs font-semibold text-white">
+                            <ShieldCheck className="size-4 text-[#BEB4FF]" aria-hidden />
+                            Change role
+                          </span>
+                          <span className="flex items-center gap-2 text-[10px] text-[#8F879D]">
+                            {getRoleLabel(selectedUser.role)}
+                            <ChevronRight className="size-4" aria-hidden />
+                          </span>
+                        </button>
+                      ) : null}
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1431,6 +1494,96 @@ export function CommunityUsersClient({
                     <div className="sm:col-span-2 flex justify-end gap-2 border-t border-white/8 pt-4">
                       <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
                       <Button onClick={submitEdit} disabled={isPending}>{isPending ? "Saving..." : "Save changes"}</Button>
+                    </div>
+                  </div>
+                ) : null}
+
+                {manageMode === "role" ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-sm font-semibold text-white">Change community role</p>
+                      <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">
+                        This changes the permissions this account receives inside {community.name}.
+                        Guard accounts use a separate access model and are intentionally excluded.
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRoleDraft("RESIDENT")}
+                        className={`rounded-lg border p-4 text-left transition ${
+                          roleDraft === "RESIDENT"
+                            ? "border-[#7553FF] bg-[rgba(117,83,255,0.08)] shadow-[0_0_0_1px_rgba(117,83,255,0.24)]"
+                            : "border-[#141119] bg-white/[0.012] hover:bg-white/[0.025]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-2.5 text-sm font-semibold text-white">
+                            <Home className="size-4 text-sky-300" aria-hidden />
+                            Resident
+                          </span>
+                          {roleDraft === "RESIDENT" ? (
+                            <Check className="size-4 text-[#BEB4FF]" aria-hidden />
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
+                          Standard resident access tied to the assigned unit.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setRoleDraft("ADMIN")}
+                        className={`rounded-lg border p-4 text-left transition ${
+                          roleDraft === "ADMIN"
+                            ? "border-[#7553FF] bg-[rgba(117,83,255,0.08)] shadow-[0_0_0_1px_rgba(117,83,255,0.24)]"
+                            : "border-[#141119] bg-white/[0.012] hover:bg-white/[0.025]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="flex items-center gap-2.5 text-sm font-semibold text-white">
+                            <ShieldCheck className="size-4 text-amber-300" aria-hidden />
+                            Admin
+                          </span>
+                          {roleDraft === "ADMIN" ? (
+                            <Check className="size-4 text-[#BEB4FF]" aria-hidden />
+                          ) : null}
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
+                          Elevated community administration permissions while keeping the unit relationship.
+                        </p>
+                      </button>
+                    </div>
+
+                    {roleDraft !== selectedUser.role ? (
+                      <div
+                        className={`rounded-lg border px-3.5 py-3 text-xs leading-5 ${
+                          roleDraft === "ADMIN"
+                            ? "border-amber-400/20 bg-amber-500/[0.07] text-amber-100"
+                            : "border-sky-400/20 bg-sky-500/[0.06] text-sky-100"
+                        }`}
+                      >
+                        {roleDraft === "ADMIN"
+                          ? "This grants administrative permissions for this community."
+                          : "This removes administrative permissions and keeps the account as a resident."}
+                      </div>
+                    ) : null}
+
+                    <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
+                      <Button
+                        variant="secondary"
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={submitRoleChange}
+                        disabled={isPending || roleDraft === selectedUser.role}
+                      >
+                        {isPending ? "Updating..." : "Change role"}
+                      </Button>
                     </div>
                   </div>
                 ) : null}
