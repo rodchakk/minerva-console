@@ -213,3 +213,14 @@ test("Activation Queue does not treat digits inside an email as a phone query", 
     /const normalizedDigits = isPhoneLikeQuery\s*\?\s*searchQuery\.replace\(\/\\D\+\/g, ""\)\s*:\s*"";/,
   );
 });
+
+
+test("Activation Queue filter menu closes with Escape", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(source, /useEffect\(\(\) => \{[\s\S]*filterOpen/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /setFilterOpen\(false\)/);
+  assert.match(source, /document\.addEventListener\("keydown", handleEscape\)/);
+  assert.match(source, /document\.removeEventListener\("keydown", handleEscape\)/);
+});
