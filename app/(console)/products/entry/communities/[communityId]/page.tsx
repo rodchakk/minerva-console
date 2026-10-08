@@ -1,27 +1,18 @@
 import Link from "next/link";
 import { Rubik } from "next/font/google";
 import { notFound } from "next/navigation";
-import {
-  Activity,
-  Building2,
-  CalendarDays,
-  ChevronRight,
-  Clock3,
-  MoreHorizontal,
-  Users,
-} from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { CommunityAdminActivityDrawer } from "@/features/entry/communities/CommunityAdminActivityDrawer";
 import { CommunityDestinationsManager } from "@/features/entry/communities/CommunityDestinationsManager";
+import { CommunityDetailWorkspace } from "@/features/entry/communities/CommunityDetailWorkspace";
 import { CommunityFacilitiesDrawer } from "@/features/entry/communities/CommunityFacilitiesDrawer";
 import { CommunityOnboardingReadinessPanel } from "@/features/entry/communities/CommunityOnboardingReadinessPanel";
-import { CommunityUnitsWorkspace } from "@/features/entry/communities/CommunityUnitsWorkspace";
 import { CommunityRegistrationCard } from "@/features/entry/communityRegistration/admin/CommunityRegistrationCard";
 import { getCommunityRegistrationAdminState } from "@/features/entry/communityRegistration/admin/queries";
 import { getCommunityAdminActivityPreview } from "@/features/entry/communities/activityQueries";
 import {
   getCommunityDetailPreviews,
-  getCommunityUnitsPageData,
   type CommunityDetailPreviews,
 } from "@/features/entry/communities/detailQueries";
 import {
@@ -37,6 +28,12 @@ const rubik = Rubik({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
+
+type WorkspaceTab = "overview" | "setup" | "activity";
+
+function getSingleParam(value: string | string[] | undefined) {
+  return Array.isArray(value) ? (value[0] ?? "") : (value ?? "");
+}
 
 function getProgressPercent(completed: number, total: number) {
   if (total <= 0) return 0;
@@ -54,14 +51,18 @@ function needsSetupAttention(community: CommunityWithProgressItem) {
 function getSetupLabel(community: CommunityWithProgressItem) {
   if (needsSetupAttention(community)) return "Needs attention";
   if (community.onboardingStatus === "complete_active") return "Complete";
-  if (community.onboardingStatus === "ready_for_final_review") return "Ready for review";
+  if (community.onboardingStatus === "ready_for_final_review") {
+    return "Ready for review";
+  }
   return "Pending setup";
 }
 
 function getSetupTone(community: CommunityWithProgressItem) {
   if (needsSetupAttention(community)) return "warning" as const;
   if (community.onboardingStatus === "complete_active") return "success" as const;
-  if (community.onboardingStatus === "ready_for_final_review") return "success" as const;
+  if (community.onboardingStatus === "ready_for_final_review") {
+    return "success" as const;
+  }
   return "info" as const;
 }
 
@@ -107,7 +108,7 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
 
   if (community.nextStepKey === "final_review") {
     return {
-      href: "#setup-progress",
+      href: `/products/entry/communities/${community.id}?tab=setup#community-workspace`,
       label: "Final review",
     };
   }
@@ -120,59 +121,69 @@ function getPrimaryAction(community: CommunityWithProgressItem) {
   }
 
   return {
-    href: "#setup-progress",
+    href: `/products/entry/communities/${community.id}?tab=setup#community-workspace`,
     label: needsSetupAttention(community) ? "Review setup" : "Continue setup",
   };
 }
 
-function getAttentionItems(
+function getAttentionItem(
   community: CommunityWithProgressItem,
   previews: CommunityDetailPreviews,
   blockers: string[],
 ) {
-  const items: Array<{ description: string; title: string }> = blockers.map(
-    (blocker) => ({
+  if (blockers.length > 0) {
+    return {
       description: "Resolve this item before completing onboarding.",
-      title: blocker,
-    }),
-  );
+      title: blockers[0] ?? "Setup blocker",
+    };
+  }
 
-  if (items.length === 0 && (community.totalUnits <= 0 || community.nextStepKey === "units")) {
-    items.push({
+  if (community.totalUnits <= 0 || community.nextStepKey === "units") {
+    return {
       description: "Units are required to manage residents and control access.",
       title: "Create unit records",
-    });
+    };
   }
 
-  if (items.length === 0 && community.activationPendingCount > 0) {
-    items.push({
+  if (community.activationPendingCount > 0) {
+    return {
       description: "Prepared residents are waiting in the activation queue.",
       title: "Review pending activations",
-    });
+    };
   }
 
-  if (items.length === 0 && community.allowReservations && previews.facilities.state !== "live") {
-    items.push({
+  if (community.allowReservations && previews.facilities.state !== "live") {
+    return {
       description: "Reservable areas can be configured before using reservations.",
       title: "Configure facilities",
-    });
+    };
   }
 
-  if (previews.users.state === "unavailable") {
-    items.push({
-      description: "The user preview could not be loaded safely right now.",
-      title: "User preview unavailable",
-    });
-  }
+  return {
+    description: "No immediate blockers were detected in the readiness gate.",
+    title: "No critical attention items",
+  };
+}
 
-  if (items.length === 0) {
-    items.push({
-      description: "No immediate blockers were detected in the readiness gate.",
-      title: "No critical attention items",
-    });
-  }
+function formatRegistrationStatus(
+  status: string | undefined,
+  hasOperationalCampaign: boolean,
+) {
+  if (!status) return "Not started";
+  if (!hasOperationalCampaign) return "Previous campaign";
 
-  return items.slice(0, 1);
+  switch (status.trim().toLowerCase()) {
+    case "open":
+      return "Campaign open";
+    case "paused":
+      return "Campaign paused";
+    case "review":
+      return "In review";
+    case "confirmed":
+      return "Confirmed";
+    default:
+      return status;
+  }
 }
 
 function DimensionalActionLink({
@@ -185,11 +196,12 @@ function DimensionalActionLink({
   variant?: "primary" | "secondary";
 }) {
   const primary = variant === "primary";
-  const className =
-    "relative isolate inline-flex h-10 items-center justify-center rounded-[7px] px-4 text-sm font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#2E2936]";
 
-  const content = (
-    <>
+  return (
+    <Link
+      href={href}
+      className="relative isolate inline-flex h-10 items-center justify-center rounded-[7px] px-4 text-sm font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#2E2936]"
+    >
       <span
         aria-hidden
         className={cn(
@@ -208,84 +220,38 @@ function DimensionalActionLink({
             : "border-[#141119] bg-[#2E2936]",
         )}
       />
-      <span className="relative -translate-y-0.5 inline-flex items-center gap-2">
-        {children}
-      </span>
-    </>
-  );
-
-  if (href.startsWith("#")) {
-    return (
-      <a href={href} className={className}>
-        {content}
-      </a>
-    );
-  }
-
-  return (
-    <Link href={href} className={className}>
-      {content}
+      <span className="relative -translate-y-0.5">{children}</span>
     </Link>
-  );
-}
-
-function MetricItem({
-  icon: Icon,
-  label,
-  value,
-  note,
-  className,
-}: {
-  icon: typeof Building2;
-  label: string;
-  value: React.ReactNode;
-  note: string;
-  className?: string;
-}) {
-  return (
-    <article
-      className={cn(
-        "grid min-h-[88px] grid-cols-[36px_minmax(0,1fr)] items-center gap-x-3 px-4 py-3",
-        className,
-      )}
-    >
-      <span className="grid size-9 place-items-center rounded-full border border-white/[0.14] bg-white/[0.02] text-[#D8D3E7]">
-        <Icon className="size-4 stroke-[1.7]" aria-hidden />
-      </span>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-[0.12em] text-[#8F879D]">{label}</p>
-        <p className="mt-1 text-xl font-bold leading-none text-white">{value}</p>
-        <p className="mt-1 truncate text-[10px] text-[#A9A3B2]">{note}</p>
-      </div>
-    </article>
   );
 }
 
 export default async function CommunitySetupPage(
   props: PageProps<"/products/entry/communities/[communityId]">,
 ) {
-  const { communityId } = await props.params;
+  const [{ communityId }, searchParams] = await Promise.all([
+    props.params,
+    props.searchParams,
+  ]);
   const community = await getCommunityWithProgress(communityId);
 
   if (!community) notFound();
 
-  const [
-    previews,
-    unitsData,
-    adminActivity,
-    onboardingDetail,
-    registrationState,
-    customerProfile,
-  ] = await Promise.all([
-    getCommunityDetailPreviews(community.id, {
-      allowMessages: community.allowMessages,
-    }),
-    getCommunityUnitsPageData({ communityId: community.id }),
-    getCommunityAdminActivityPreview(community.id, 50),
-    getCommunityOnboardingDetail(community.id),
-    getCommunityRegistrationAdminState(community.id),
-    getCustomerProfileForCommunity(community.id),
-  ]);
+  const [previews, adminActivity, onboardingDetail, registrationState, customerProfile] =
+    await Promise.all([
+      getCommunityDetailPreviews(community.id, {
+        allowMessages: community.allowMessages,
+      }),
+      getCommunityAdminActivityPreview(community.id, 40),
+      getCommunityOnboardingDetail(community.id),
+      getCommunityRegistrationAdminState(community.id),
+      getCustomerProfileForCommunity(community.id),
+    ]);
+
+  const requestedTab = getSingleParam(searchParams.tab);
+  const initialTab: WorkspaceTab =
+    requestedTab === "setup" || requestedTab === "activity"
+      ? requestedTab
+      : "overview";
 
   const primaryAction = getPrimaryAction(community);
   const progressPercent = getProgressPercent(
@@ -293,14 +259,28 @@ export default async function CommunitySetupPage(
     community.totalTasks,
   );
   const nextStepLabel = getOnboardingNextStepLabel(community.nextStepKey);
-  const attentionItem = getAttentionItems(
+  const attentionItem = getAttentionItem(
     community,
     previews,
     onboardingDetail?.blockers ?? [],
-  )[0];
-  const shouldShowSetupProgress =
-    onboardingDetail?.onboardingStatus !== "complete_active" &&
-    community.onboardingStatus !== "complete_active";
+  );
+  const activeDestinationCount = previews.destinations.items.filter(
+    (destination) => destination.isActive,
+  ).length;
+  const facilitiesLabel =
+    previews.facilities.state === "disabled"
+      ? "Reservations disabled"
+      : previews.facilities.state === "live"
+        ? previews.facilities.activeCount +
+          " active " +
+          (previews.facilities.activeCount === 1 ? "facility" : "facilities")
+        : previews.facilities.state === "unavailable"
+          ? "Facilities unavailable"
+          : "Not configured";
+  const registrationStatus = formatRegistrationStatus(
+    registrationState.campaign?.status,
+    registrationState.hasOperationalCampaign,
+  );
 
   return (
     <div
@@ -328,96 +308,92 @@ export default async function CommunitySetupPage(
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2.5">
-          <DimensionalActionLink href="/products/entry/communities" variant="secondary">
+        <div className="flex flex-wrap items-start gap-2.5">
+          <DimensionalActionLink
+            href="/products/entry/communities"
+            variant="secondary"
+          >
             Back to communities
           </DimensionalActionLink>
+
+          <details className="relative">
+            <summary className="grid h-10 w-10 cursor-pointer list-none place-items-center rounded-[7px] border border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] [&::-webkit-details-marker]:hidden">
+              <MoreHorizontal className="size-4" aria-hidden />
+              <span className="sr-only">More community actions</span>
+            </summary>
+            <div className="absolute right-0 top-12 z-40 w-60 overflow-hidden rounded-lg border border-[#141119] bg-[#24202B] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.34)]">
+              <Link
+                href={
+                  customerProfile
+                    ? `/products/entry/customers/${customerProfile.id}`
+                    : `/products/entry/customers/new?community_id=${community.id}`
+                }
+                className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+              >
+                {customerProfile ? "Customer profile" : "Create customer profile"}
+              </Link>
+              <Link
+                href={`/products/entry/communities/${community.id}/staff`}
+                className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+              >
+                Community operators
+              </Link>
+              <Link
+                href={`/products/entry/settings?community_id=${community.id}`}
+                className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+              >
+                Community settings
+              </Link>
+              <Link
+                href={`/products/entry/messages?community_id=${community.id}`}
+                className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+              >
+                Send message
+              </Link>
+            </div>
+          </details>
+
           <DimensionalActionLink href={primaryAction.href}>
             {primaryAction.label}
           </DimensionalActionLink>
         </div>
       </section>
 
-      <section className="flex flex-wrap items-center gap-2">
-        <Link
-          href={`/products/entry/communities/${community.id}/users`}
-          className="inline-flex h-9 items-center rounded-[7px] border border-[#141119] bg-[#24202B] px-3 text-xs font-semibold text-white transition hover:bg-[#2A2630]"
-        >
-          Manage residents
-        </Link>
-        <Link
-          href={`/products/entry/activation?community_id=${community.id}`}
-          className="inline-flex h-9 items-center rounded-[7px] border border-[#141119] bg-[#24202B] px-3 text-xs font-semibold text-white transition hover:bg-[#2A2630]"
-        >
-          Activation queue
-        </Link>
-        <a
-          href="#resident-registration"
-          className="inline-flex h-9 items-center rounded-[7px] border border-[#141119] bg-[#24202B] px-3 text-xs font-semibold text-white transition hover:bg-[#2A2630]"
-        >
-          Registration
-        </a>
-
-        <details className="relative">
-          <summary className="inline-flex h-9 cursor-pointer list-none items-center gap-2 rounded-[7px] border border-[#141119] bg-[#24202B] px-3 text-xs font-semibold text-white transition hover:bg-[#2A2630] [&::-webkit-details-marker]:hidden">
-            <MoreHorizontal className="size-4" aria-hidden />
-            More
-          </summary>
-          <div className="absolute left-0 top-11 z-40 w-64 overflow-hidden rounded-lg border border-[#141119] bg-[#24202B] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.34)]">
-            <Link
-              href={
-                customerProfile
-                  ? `/products/entry/customers/${customerProfile.id}`
-                  : `/products/entry/customers/new?community_id=${community.id}`
-              }
-              className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
-            >
-              {customerProfile ? "Customer profile" : "Create customer profile"}
-            </Link>
-            <Link
-              href={`/products/entry/communities/${community.id}/staff`}
-              className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
-            >
-              Community operators
-            </Link>
-            <Link
-              href={`/products/entry/settings?community_id=${community.id}`}
-              className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
-            >
-              Community settings
-            </Link>
-            <Link
-              href={`/products/entry/messages?community_id=${community.id}`}
-              className="block rounded-md px-3 py-2 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
-            >
-              Send message
-            </Link>
-          </div>
-        </details>
-      </section>
-
       <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
-        <div className="grid xl:grid-cols-[1.2fr_.9fr_1fr_1fr]">
-          <div className="min-h-[112px] px-5 py-4">
+        <div className="grid xl:grid-cols-[minmax(0,1.55fr)_repeat(3,minmax(170px,.72fr))]">
+          <div className="min-h-[122px] px-5 py-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
-              Community readiness
+              Community status
             </p>
-            <h2 className="mt-2 text-lg font-semibold text-white">
-              {getSetupLabel(community)}
-            </h2>
-            <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
-              {attentionItem?.title === "No critical attention items"
-                ? "No critical attention items detected. This community is ready to continue from its current checkpoint."
-                : attentionItem?.description}
+            <div className="mt-2 flex items-center gap-2.5">
+              <span
+                className={cn(
+                  "size-2.5 rounded-full",
+                  attentionItem.title === "No critical attention items"
+                    ? "bg-[#67D7A5] shadow-[0_0_0_4px_rgba(103,215,165,0.08)]"
+                    : "bg-[#F6C941] shadow-[0_0_0_4px_rgba(246,201,65,0.08)]",
+                )}
+              />
+              <h2 className="text-lg font-semibold text-white">
+                {getSetupLabel(community)}
+              </h2>
+            </div>
+            <p className="mt-2 max-w-xl text-xs leading-5 text-[#A9A3B2]">
+              {attentionItem.title === "No critical attention items"
+                ? "Nothing critical is blocking this community. Continue from the current readiness checkpoint."
+                : attentionItem.description}
             </p>
           </div>
 
-          <div className="min-h-[112px] border-t border-white/[0.07] px-5 py-4 xl:border-l xl:border-t-0">
+          <Link
+            href={`/products/entry/communities/${community.id}?tab=setup#community-workspace`}
+            className="min-h-[122px] border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
+          >
             <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
-              Setup progress
+              Setup
             </p>
-            <p className="mt-2 text-base font-semibold text-white">
-              {community.completedTasks} / {community.totalTasks} tasks complete
+            <p className="mt-2 text-lg font-semibold text-white">
+              {community.completedTasks} / {community.totalTasks}
             </p>
             <div className="mt-3 h-1.5 rounded-full bg-white/[0.08]">
               <div
@@ -426,166 +402,110 @@ export default async function CommunitySetupPage(
               />
             </div>
             <p className="mt-2 text-xs text-[#8F879D]">{progressPercent}% complete</p>
-          </div>
+          </Link>
 
-          <div className="min-h-[112px] border-t border-white/[0.07] px-5 py-4 xl:border-l xl:border-t-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
-              Next step
-            </p>
-            <p className="mt-2 text-base font-semibold text-white">{nextStepLabel}</p>
-            <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
-              Continue from the current setup checkpoint.
-            </p>
-          </div>
-
-          <div className="min-h-[112px] border-t border-white/[0.07] px-5 py-4 xl:border-l xl:border-t-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
-              What needs attention
-            </p>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {attentionItem?.title ?? "No critical attention items"}
-            </p>
-            <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
-              {attentionItem?.description}
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] sm:grid-cols-2 xl:grid-cols-5">
-        <MetricItem
-          icon={Building2}
-          label="Units"
-          value={community.totalUnits}
-          note="Total units"
-          className="border-b border-[#141119] sm:border-r xl:border-b-0"
-        />
-        <MetricItem
-          icon={Users}
-          label="Members"
-          value={community.totalMembers}
-          note="Total residents"
-          className="border-b border-[#141119] xl:border-r xl:border-b-0"
-        />
-        <MetricItem
-          icon={Clock3}
-          label="Pending activations"
-          value={community.activationPendingCount}
-          note="Waiting in queue"
-          className="border-b border-[#141119] sm:border-r xl:border-b-0"
-        />
-        <MetricItem
-          icon={CalendarDays}
-          label="Facilities"
-          value={previews.facilities.state === "live" ? previews.facilities.activeCount : "—"}
-          note={
-            previews.facilities.state === "disabled"
-              ? "Reservations disabled"
-              : previews.facilities.state === "live"
-                ? "Active facilities"
-                : "Not configured"
-          }
-          className="border-b border-[#141119] xl:border-r xl:border-b-0"
-        />
-        <MetricItem
-          icon={Activity}
-          label="Admin activity"
-          value={adminActivity.state === "live" ? adminActivity.total : "—"}
-          note="Recent administrative events"
-        />
-      </section>
-
-      <nav className="sticky top-0 z-20 flex gap-5 border-b border-white/[0.07] bg-[rgba(46,41,54,0.96)] px-1 backdrop-blur">
-        {[
-          ["Overview", "#community-overview"],
-          ["Units", "#units"],
-          ["Registration", "#resident-registration"],
-          ["Destinations", "#manual-destinations"],
-          ["Setup", "#setup-progress"],
-        ].map(([label, href], index) => (
-          <a
-            key={label}
-            href={href}
-            className={cn(
-              "relative py-2.5 text-xs font-semibold",
-              index === 0
-                ? "text-white after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-[#7553FF]"
-                : "text-[#8F879D] hover:text-white",
-            )}
+          <Link
+            href={`/products/entry/communities/${community.id}/units`}
+            className="min-h-[122px] border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
           >
-            {label}
-          </a>
-        ))}
-      </nav>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+              Residents
+            </p>
+            <p className="mt-2 text-lg font-semibold text-white">{community.totalMembers}</p>
+            <p className="mt-2 text-xs text-[#A9A3B2]">
+              Across {community.totalUnits} units
+            </p>
+          </Link>
 
-      <div id="community-overview" className="space-y-4">
-        <CommunityUnitsWorkspace
-          communityId={community.id}
-          units={unitsData.items}
-        />
-
-        <CommunityRegistrationCard
-          campaign={registrationState.campaign}
-          communityId={community.id}
-          communityName={community.name}
-          hasOperationalCampaign={registrationState.hasOperationalCampaign}
-          registrationProgress={registrationState.registrationProgress}
-          submittedUnitCount={registrationState.submittedUnitCount}
-          totalCampaignUnitCount={registrationState.totalCampaignUnitCount}
-          totalUnits={community.totalUnits}
-          units={registrationState.units}
-        />
-
-        <div id="manual-destinations">
-          <CommunityDestinationsManager
-            communityId={community.id}
-            destinations={previews.destinations.items}
-            state={previews.destinations.state}
-          />
+          <Link
+            href={`/products/entry/activation?community_id=${community.id}`}
+            className="min-h-[122px] border-t border-white/[0.07] px-5 py-4 transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+              Pending activation
+            </p>
+            <p className="mt-2 text-lg font-semibold text-white">
+              {community.activationPendingCount}
+            </p>
+            <p className="mt-2 text-xs text-[#A9A3B2]">
+              {community.activationPendingCount === 0
+                ? "No residents waiting"
+                : "Residents waiting in queue"}
+            </p>
+          </Link>
         </div>
+      </section>
 
-        <section className="relative grid gap-3 overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] p-4 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] md:grid-cols-2">
-          <div>
-            <p className="text-sm font-semibold text-white">Facilities</p>
-            <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">
-              {previews.facilities.state === "live"
-                ? `${previews.facilities.activeCount} active facilities configured.`
-                : "Review reservation availability and facility configuration."}
-            </p>
-            <div className="mt-3">
-              <CommunityFacilitiesDrawer
-                communityId={community.id}
-                facilities={previews.facilities.items}
-                state={previews.facilities.state}
-                triggerLabel="Manage facilities"
-              />
-            </div>
-          </div>
-
-          <div className="border-t border-white/[0.07] pt-4 md:border-l md:border-t-0 md:pl-4 md:pt-0">
-            <p className="text-sm font-semibold text-white">Admin activity</p>
-            <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">
-              Review important administrative actions recorded for this community.
-            </p>
-            <div className="mt-3">
-              <CommunityAdminActivityDrawer
-                activities={adminActivity.items}
-                triggerLabel="View activity"
-              />
-            </div>
-          </div>
-        </section>
-
-        {shouldShowSetupProgress ? (
-          <div id="setup-progress">
+      <div id="community-workspace">
+        <CommunityDetailWorkspace
+          activityControl={
+            <CommunityAdminActivityDrawer
+              activities={adminActivity.items}
+              triggerLabel="View all activity"
+            />
+          }
+          activityItems={adminActivity.items}
+          adminActivityCount={
+            adminActivity.state === "unavailable" ? null : adminActivity.total
+          }
+          communityId={community.id}
+          destinationActiveCount={activeDestinationCount}
+          destinationsManager={
+            <CommunityDestinationsManager
+              communityId={community.id}
+              destinations={previews.destinations.items}
+              state={previews.destinations.state}
+            />
+          }
+          facilityControl={
+            <CommunityFacilitiesDrawer
+              communityId={community.id}
+              facilities={previews.facilities.items}
+              state={previews.facilities.state}
+              triggerLabel="Manage facilities"
+            />
+          }
+          facilitiesLabel={facilitiesLabel}
+          initialTab={initialTab}
+          memberCount={community.totalMembers}
+          nextActionDescription={
+            attentionItem.title === "No critical attention items"
+              ? "No critical blockers were detected. Continue with " +
+                nextStepLabel.toLowerCase() +
+                "."
+              : attentionItem.description
+          }
+          nextActionHref={primaryAction.href}
+          nextActionLabel={primaryAction.label}
+          pendingActivationCount={community.activationPendingCount}
+          registrationManager={
+            <CommunityRegistrationCard
+              campaign={registrationState.campaign}
+              communityId={community.id}
+              communityName={community.name}
+              hasOperationalCampaign={registrationState.hasOperationalCampaign}
+              registrationProgress={registrationState.registrationProgress}
+              submittedUnitCount={registrationState.submittedUnitCount}
+              totalCampaignUnitCount={registrationState.totalCampaignUnitCount}
+              totalUnits={community.totalUnits}
+              units={registrationState.units}
+            />
+          }
+          registrationStatus={registrationStatus}
+          registrationSubmittedResidents={
+            registrationState.registrationProgress.submittedResidents
+          }
+          registrationSubmittedUnits={registrationState.submittedUnitCount}
+          setupPanel={
             <CommunityOnboardingReadinessPanel
               communityId={community.id}
               detail={onboardingDetail}
               nextStepKey={community.nextStepKey}
               progressLabel={`${community.completedTasks} / ${community.totalTasks} tasks completed.`}
             />
-          </div>
-        ) : null}
+          }
+          unitCount={community.totalUnits}
+        />
       </div>
     </div>
   );
