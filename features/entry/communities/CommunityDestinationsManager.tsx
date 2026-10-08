@@ -22,6 +22,7 @@ import {
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/Badge";
+import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
   createCommunityDestinationAction,
@@ -48,20 +49,6 @@ type SubmitButtonProps = {
   variant?: "primary" | "secondary" | "ghost" | "danger";
 };
 
-const actionButtonBase =
-  "inline-flex h-9 items-center justify-center rounded-[7px] border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45";
-
-const actionButtonVariants = {
-  danger:
-    "border-rose-400/20 bg-rose-500/10 text-rose-200 hover:border-rose-300/35 hover:bg-rose-500/15",
-  ghost:
-    "border-transparent bg-transparent text-[#8F879D] hover:bg-white/5 hover:text-white",
-  primary:
-    "border-[#120539] bg-[#7553FF] text-white shadow-[0_2px_0_#120539] hover:bg-[#8062ff]",
-  secondary:
-    "border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] hover:bg-[#342F3D]",
-};
-
 function SubmitButton({
   children,
   disabled = false,
@@ -74,7 +61,7 @@ function SubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className={cn(actionButtonBase, actionButtonVariants[variant])}
+      className={entryButtonClass(variant)}
     >
       {pending ? (
         <>
@@ -270,7 +257,7 @@ function RenameDestinationForm({
         <button
           type="button"
           onClick={onCancel}
-          className={cn(actionButtonBase, actionButtonVariants.ghost)}
+          className={entryButtonClass("secondary")}
         >
           <X aria-hidden="true" className="mr-2 h-4 w-4" />
           Cancel
@@ -577,7 +564,7 @@ export function CommunityDestinationsManager({
         <button
           type="button"
           onClick={() => setShowCreateForm((value) => !value)}
-          className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3.5 text-xs font-semibold text-white shadow-[0_2px_0_#120539]"
+          className={entryButtonClass("primary")}
         >
           {showCreateForm ? "Close form" : "+ Create destination"}
         </button>
