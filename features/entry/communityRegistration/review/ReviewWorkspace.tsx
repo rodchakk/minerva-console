@@ -1484,40 +1484,80 @@ export function ReviewWorkspace({
   return (
     <div className="space-y-3">
       {loadError ? (
-        <div className="rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+        <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
           {loadError}
         </div>
       ) : null}
 
-      <section aria-label="Registration summary" className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-        <Metric icon={ClipboardList} label="Submitted" value={summary.submitted} />
-        <Metric icon={Clock3} label="Ready for Patronato" value={summary.reviewed} tone="amber" />
-        <Metric icon={TriangleAlert} label="Needs correction" value={summary.needsCorrection} tone="amber" />
-        <Metric icon={Clock3} label="Correction open" value={summary.editEnabled} tone="amber" />
-        <Metric icon={CheckCircle2} label="Patronato approved" value={summary.confirmed} tone="emerald" />
-        <Metric
-          active={unitFilter === "duplicates"}
-          icon={TriangleAlert}
-          label="Duplicates"
-          onClick={() => setUnitFilter("duplicates")}
-          tone="amber"
-          value={duplicateData.candidateCount}
-        />
-        <Metric icon={Users} label="Residents" value={summary.currentResidentCount} />
+      <section
+        aria-label="Registration summary"
+        className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:grid-cols-4"
+      >
+        {([
+          {
+            active: unitFilter === "pending" && attentionFilter === "all",
+            label: "Needs review",
+            value: workflowFilterCounts.pending,
+            hint: "Submitted or correction work",
+            onClick: () => {
+              setUnitFilter("pending");
+              setAttentionFilter("all");
+            },
+          },
+          {
+            active: unitFilter === "reviewed" && attentionFilter === "all",
+            label: "Ready for Patronato",
+            value: workflowFilterCounts.reviewed,
+            hint: "Waiting for approval",
+            onClick: () => {
+              setUnitFilter("reviewed");
+              setAttentionFilter("all");
+            },
+          },
+          {
+            active: unitFilter === "confirmed" && attentionFilter === "all",
+            label: "Patronato approved",
+            value: workflowFilterCounts.confirmed,
+            hint: "Ready for activation handoff",
+            onClick: () => {
+              setUnitFilter("confirmed");
+              setAttentionFilter("all");
+            },
+          },
+          {
+            active: unitFilter === "activation" && attentionFilter === "all",
+            label: "Activation Queue",
+            value: workflowFilterCounts.activation,
+            hint: `${summary.currentResidentCount} residents in campaign`,
+            onClick: () => {
+              setUnitFilter("activation");
+              setAttentionFilter("all");
+            },
+          },
+        ] as const).map((item, index) => (
+          <button
+            key={item.label}
+            type="button"
+            onClick={item.onClick}
+            className={`min-h-[84px] px-4 py-3.5 text-left transition hover:bg-white/[0.015] ${
+              index > 0 ? "border-t border-white/[0.07] lg:border-l lg:border-t-0" : ""
+            } ${
+              item.active
+                ? "bg-[rgba(117,83,255,0.055)] shadow-[inset_0_-2px_0_#7553FF]"
+                : ""
+            }`}
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8F879D]">
+              {item.label}
+            </p>
+            <p className="mt-1.5 text-xl font-semibold text-white">{item.value}</p>
+            <p className="mt-1 text-[10px] text-[#A9A3B2]">{item.hint}</p>
+          </button>
+        ))}
       </section>
 
-      {summary.confirmed > 0 ? (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-emerald-400/25 bg-emerald-500/[0.08] px-4 py-2.5 text-sm text-emerald-50/90">
-          <span className="flex items-center gap-2">
-            <CheckCircle2 className="size-4 shrink-0 text-emerald-300" aria-hidden />
-            {summary.confirmed} {summary.confirmed === 1 ? "unit is" : "units are"} approved by Patronato and ready to move to Activation Queue.
-          </span>
-          <Badge tone="success">Ready for handoff</Badge>
-        </div>
-      ) : null}
-
       {campaignStatus === "open" || campaignStatus === "paused" ? (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-4 py-2.5 text-sm text-amber-50/85">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.055] px-4 py-2 text-xs text-amber-50/85">
           <span>
             {campaignStatus === "open"
               ? "Registration remains open while submitted households are reviewed."
@@ -1527,291 +1567,438 @@ export function ReviewWorkspace({
         </div>
       ) : null}
 
-      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/12 text-violet-200 ring-1 ring-inset ring-violet-400/20">
-              <FileText className="size-4" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">
-                {selectedReportUnitIds.length} {selectedReportUnitIds.length === 1 ? "unit" : "units"} selected
-                <span className="font-normal text-[var(--text-muted)]"> · {selectedResidentCount} {selectedResidentCount === 1 ? "resident" : "residents"}</span>
-              </p>
-              <p className="mt-0.5 truncate text-xs text-[var(--text-muted)]">
-                <span className={selectionMissingFieldCount > 0 ? "text-amber-300" : "text-emerald-300"}>
-                  Missing fields: {selectionLoading ? "Calculating..." : selectionMissingFieldCount}
-                </span>
-                <span> · </span>
-                <span className={selectionMissingEmailCount > 0 ? "text-amber-300" : "text-emerald-300"}>
-                  Missing emails: {selectionLoading ? "Calculating..." : selectionMissingEmailCount}
-                </span>
-              </p>
-            </div>
+      <section className="relative flex min-h-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] xl:h-[clamp(36rem,calc(100dvh-21rem),56rem)]">
+        <div className="grid gap-3 border-b border-[#141119] px-4 py-3 lg:grid-cols-[auto_minmax(320px,1fr)_auto] lg:items-center">
+          <div className="min-w-[220px]">
+            <h2 className="text-base font-semibold text-white">Household review</h2>
+            <p className="mt-1 text-[10px] text-[#A9A3B2]">
+              {visibleUnits.length} visible · {summary.totalUnits} total units
+            </p>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
+
+          <label className="relative block w-full max-w-[680px]">
+            <span className="sr-only">Search registration records</span>
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8F879D]"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={unitSearch}
+              onChange={(event) => setUnitSearch(event.target.value)}
+              placeholder="Search unit, reference, resident, email, phone, status or issue..."
+              className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
+            />
+          </label>
+
+          <div ref={filterRef} className="relative justify-self-end">
+            <button
               type="button"
-              variant="secondary"
-              onClick={selectAllReportableUnits}
-              disabled={reportableUnitIds.length === 0 || selectionLoading}
+              onClick={() => setFilterOpen((value) => !value)}
+              aria-expanded={filterOpen}
+              className="inline-flex h-9 min-w-[104px] items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119]"
             >
-              Select all
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={clearReportSelection}
-              disabled={selectedReportUnitIds.length === 0 || selectionLoading}
-            >
-              Clear
-            </Button>
-            {selectedReadyForPatronatoIds.length > 0 ? (
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={runReadyForPatronatoBatch}
-                disabled={bulkPending || Boolean(loadError)}
-              >
-                {bulkPending
-                  ? "Updating..."
-                  : `Ready for Patronato (${selectedReadyForPatronatoIds.length})`}
-              </Button>
+              <Filter className="size-3.5" aria-hidden />
+              Filters
+              <span className="grid size-4 place-items-center rounded-[4px] bg-[#7553FF] text-[9px] text-white">
+                {1 + Number(attentionFilter !== "all")}
+              </span>
+            </button>
+
+            {filterOpen ? (
+              <div className="absolute right-0 top-11 z-40 w-[330px] overflow-hidden rounded-lg border border-[#141119] bg-[#24202B] shadow-[0_18px_45px_rgba(0,0,0,0.42)]">
+                <div className="flex items-center justify-between border-b border-[#141119] px-3.5 py-3">
+                  <div>
+                    <p className="text-xs font-semibold text-white">Filter registrations</p>
+                    <p className="mt-0.5 text-[10px] text-[#8F879D]">
+                      Combine workflow and attention filters.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUnitFilter("all");
+                      setAttentionFilter("all");
+                    }}
+                    className="text-[10px] font-semibold text-[#BEB4FF] hover:text-white"
+                  >
+                    Clear
+                  </button>
+                </div>
+
+                <div className="p-2.5">
+                  <p className="px-2 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                    Workflow
+                  </p>
+                  {([
+                    ["all", "All active records", workflowFilterCounts.all],
+                    ["pending", "Needs review", workflowFilterCounts.pending],
+                    ["reviewed", "Ready for Patronato", workflowFilterCounts.reviewed],
+                    ["confirmed", "Patronato approved", workflowFilterCounts.confirmed],
+                    ["activation", "Activation Queue", workflowFilterCounts.activation],
+                    ["resolved", "Resolved duplicates", workflowFilterCounts.resolved],
+                  ] as const).map(([value, label, count]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setUnitFilter(value)}
+                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs ${
+                        unitFilter === value
+                          ? "bg-[rgba(117,83,255,0.08)] text-white"
+                          : "text-[#D3CEDA] hover:bg-white/[0.03] hover:text-white"
+                      }`}
+                    >
+                      <span>{label}</span>
+                      <span className="text-[10px] text-[#8F879D]">{count}</span>
+                    </button>
+                  ))}
+
+                  <div className="my-2 border-t border-white/[0.07]" />
+                  <p className="px-2 pb-1.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                    Attention
+                  </p>
+                  {([
+                    ["all", "Any attention state", attentionFilterCounts.all],
+                    ["duplicates", "Possible duplicates", attentionFilterCounts.duplicates],
+                    ["incomplete", "Missing information", attentionFilterCounts.incomplete],
+                    ["shared_contact", "Shared contact", attentionFilterCounts.shared_contact],
+                    ["new_info", "New information needed", attentionFilterCounts.new_info],
+                    ["contacted", "Contacted", attentionFilterCounts.contacted],
+                  ] as const).map(([value, label, count]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setAttentionFilter(value)}
+                      className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs ${
+                        attentionFilter === value
+                          ? "bg-[rgba(117,83,255,0.08)] text-white"
+                          : "text-[#D3CEDA] hover:bg-white/[0.03] hover:text-white"
+                      }`}
+                    >
+                      <span>{label}</span>
+                      <span className="text-[10px] text-[#8F879D]">{count}</span>
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    onClick={() => setFilterOpen(false)}
+                    className="mt-2 h-8 w-full rounded-md border border-[#141119] bg-[#2E2936] text-xs font-semibold text-white"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
             ) : null}
-            {selectedApprovedForActivationIds.length > 0 ? (
-              <Button
-                type="button"
-                onClick={runActivationQueueBatch}
-                disabled={bulkPending || Boolean(loadError)}
-              >
-                {bulkPending
-                  ? "Moving..."
-                  : `Move to Activation Queue (${selectedApprovedForActivationIds.length})`}
-              </Button>
-            ) : null}
-            <span className="mx-1 hidden h-7 w-px bg-[var(--border)] lg:block" aria-hidden />
-            <Button
-              type="button"
-              className="gap-2"
-              onClick={() =>
-                void openReport(
-                  selectedReportUnitIds,
-                  selectedReportUnitIds.length === 1 ? "single" : "selection",
-                )
-              }
-              disabled={selectedReportUnitIds.length === 0 || reportLoading}
-            >
-              <FileText className="size-4" aria-hidden />
-              {reportLoading ? "Generating..." : "Generate report"}
-            </Button>
           </div>
         </div>
 
+        {selectedReportUnitIds.length > 0 ? (
+          <div className="flex flex-col gap-3 border-b border-[#141119] bg-[rgba(117,83,255,0.035)] px-4 py-2.5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-white">
+                {selectedReportUnitIds.length} {selectedReportUnitIds.length === 1 ? "unit" : "units"} selected · {selectedResidentCount} {selectedResidentCount === 1 ? "resident" : "residents"}
+              </p>
+              <p className="mt-1 text-[10px] text-[#A9A3B2]">
+                Missing fields: {selectionLoading ? "Calculating..." : selectionMissingFieldCount}
+                {" · "}
+                Missing emails: {selectionLoading ? "Calculating..." : selectionMissingEmailCount}
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Button type="button" variant="ghost" onClick={clearReportSelection} disabled={selectionLoading}>
+                Clear
+              </Button>
+              {selectedReadyForPatronatoIds.length > 0 ? (
+                <Button type="button" variant="secondary" onClick={runReadyForPatronatoBatch} disabled={bulkPending || Boolean(loadError)}>
+                  {bulkPending ? "Updating..." : `Ready for Patronato (${selectedReadyForPatronatoIds.length})`}
+                </Button>
+              ) : null}
+              {selectedApprovedForActivationIds.length > 0 ? (
+                <Button type="button" onClick={runActivationQueueBatch} disabled={bulkPending || Boolean(loadError)}>
+                  {bulkPending ? "Moving..." : `Move to Activation Queue (${selectedApprovedForActivationIds.length})`}
+                </Button>
+              ) : null}
+              <Button
+                type="button"
+                variant="secondary"
+                className="gap-2"
+                onClick={() =>
+                  void openReport(
+                    selectedReportUnitIds,
+                    selectedReportUnitIds.length === 1 ? "single" : "selection",
+                  )
+                }
+                disabled={reportLoading}
+              >
+                <FileText className="size-4" aria-hidden />
+                {reportLoading ? "Generating..." : "Generate report"}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
         {reportError ? (
-          <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-sm text-rose-100">
+          <p className="mx-4 mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
             {reportError}
           </p>
         ) : null}
         {bulkFeedback ? (
-          <p
-            className={`mt-3 rounded-lg border px-3 py-2 text-sm ${
-              bulkFeedback.tone === "success"
-                ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-100"
-                : "border-rose-400/20 bg-rose-500/10 text-rose-100"
-            }`}
-          >
+          <p className={`mx-4 mt-3 rounded-lg border px-3 py-2 text-xs ${
+            bulkFeedback.tone === "success"
+              ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-100"
+              : "border-rose-400/20 bg-rose-500/10 text-rose-100"
+          }`}>
             {bulkFeedback.text}
           </p>
         ) : null}
-        {selectedReportUnitIds.some(
-          (unitId) =>
-            ["submitted", "confirmed"].includes(statusByUnitId.get(unitId) ?? "") &&
-            Boolean(duplicateCandidatesByUnit.get(unitId)?.length),
-        ) ? (
-          <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-3 py-2 text-xs leading-5 text-amber-100">
-            Units with unresolved duplicate matches are excluded from Patronato and Activation Queue workflow actions.
-          </p>
-        ) : null}
-      </section>
 
-      <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-20rem),50rem)] xl:grid-cols-[minmax(460px,0.92fr)_minmax(0,1.08fr)]">
-        <section className="flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
-          <div className="border-b border-[var(--border)] p-4">
-            <div className="flex items-start justify-between gap-3">
+        <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable] [touch-action:pan-y]">
+          <table className="w-full min-w-[1180px] table-fixed border-collapse text-left text-xs">
+            <colgroup>
+              <col className="w-11" />
+              <col className="w-[17%]" />
+              <col className="w-[22%]" />
+              <col className="w-[14%]" />
+              <col className="w-[18%]" />
+              <col className="w-[16%]" />
+              <col className="w-[12%]" />
+              <col className="w-9" />
+            </colgroup>
+            <thead className="sticky top-0 z-10 border-b border-[#141119] bg-[#1F1B26] text-[#8F879D]">
+              <tr className="text-[10px] uppercase tracking-[0.13em]">
+                <th className="px-3 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={
+                      visibleUnits.length > 0 &&
+                      visibleUnits.every((unit) =>
+                        selectedReportUnitIds.includes(unit.id),
+                      )
+                    }
+                    onChange={(event) => {
+                      if (event.target.checked) {
+                        saveReportSelection(
+                          Array.from(
+                            new Set([
+                              ...selectedReportUnitIds,
+                              ...visibleUnits
+                                .filter(
+                                  (unit) =>
+                                    unit.status !== "unregistered" &&
+                                    unit.residentCount > 0,
+                                )
+                                .map((unit) => unit.id),
+                            ]),
+                          ),
+                        );
+                      } else {
+                        const visibleIds = new Set(visibleUnits.map((unit) => unit.id));
+                        saveReportSelection(
+                          selectedReportUnitIds.filter((id) => !visibleIds.has(id)),
+                        );
+                      }
+                    }}
+                    className="size-4 accent-[#7553FF]"
+                    aria-label="Select visible units"
+                  />
+                </th>
+                <th className="px-3 py-2.5 font-semibold">Unit</th>
+                <th className="px-3 py-2.5 font-semibold">Residents</th>
+                <th className="px-3 py-2.5 font-semibold">Information</th>
+                <th className="px-3 py-2.5 font-semibold">Attention</th>
+                <th className="px-3 py-2.5 font-semibold">Workflow</th>
+                <th className="px-3 py-2.5 font-semibold">Submitted</th>
+                <th className="px-2 py-2.5"><span className="sr-only">Open details</span></th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-[#141119] text-[#D6D0DC]">
+              {visibleUnits.map((unit) => {
+                const canOpen =
+                  unit.status !== "unregistered" && unit.residentCount > 0;
+                const active = selectedUnitId === unit.id;
+                const selectedForReport = selectedReportUnitIds.includes(unit.id);
+                const duplicateMatches = duplicateCandidatesByUnit.get(unit.id) ?? [];
+                const model = duplicateUnitById.get(unit.id);
+                const residents = model?.residents ?? [];
+                const primaryResident = residents[0]?.fullName ?? "No resident details";
+                const complete = dataCompleteByUnitId.get(unit.id) === true;
+                const sharedIssues = sharedContactIssuesByUnitId.get(unit.id) ?? [];
+                const contactState = contactStateByUnitId.get(unit.id) ?? null;
+                const attentionItems = [
+                  duplicateMatches.length > 0 ? "Possible duplicate" : null,
+                  !complete ? "Missing information" : null,
+                  contactState === "new_info" ? "New information" : null,
+                  sharedIssues.length > 0 ? "Shared contact" : null,
+                  contactState === "contacted" ? "Contacted" : null,
+                ].filter((value): value is string => Boolean(value));
+                const attentionLabel = attentionItems[0] ?? "Clear";
+                const additionalAttention = Math.max(0, attentionItems.length - 1);
+
+                return (
+                  <tr
+                    key={unit.id}
+                    tabIndex={canOpen ? 0 : -1}
+                    onClick={() => {
+                      if (!canOpen) return;
+                      if (!active) setPendingUnitId(unit.id);
+                      router.push(
+                        `/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(unit.id)}`,
+                        { scroll: false },
+                      );
+                    }}
+                    onKeyDown={(event) => {
+                      if (!canOpen || (event.key !== "Enter" && event.key !== " ")) return;
+                      event.preventDefault();
+                      if (!active) setPendingUnitId(unit.id);
+                      router.push(
+                        `/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(unit.id)}`,
+                        { scroll: false },
+                      );
+                    }}
+                    className={`outline-none transition ${
+                      canOpen ? "cursor-pointer hover:bg-white/[0.018]" : "opacity-55"
+                    } ${
+                      active
+                        ? "bg-[rgba(117,83,255,0.075)] shadow-[inset_2px_0_0_#7553FF]"
+                        : selectedForReport
+                          ? "bg-[rgba(117,83,255,0.035)]"
+                          : ""
+                    }`}
+                  >
+                    <td className="px-3 py-2.5 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selectedForReport}
+                        disabled={!canOpen}
+                        onClick={(event) => event.stopPropagation()}
+                        onChange={() => toggleReportUnit(unit.id)}
+                        className="size-4 accent-[#7553FF]"
+                        aria-label={`Select ${unit.label}`}
+                      />
+                    </td>
+                    <td className="px-3 py-2.5 align-top">
+                      <p className="truncate font-semibold text-white" title={unit.label}>
+                        {unit.label}
+                      </p>
+                      <p className="mt-1 truncate text-[10px] text-[#8F879D]">
+                        {model?.reference || "No reference"}
+                      </p>
+                    </td>
+                    <td className="px-3 py-2.5 align-top">
+                      <p className="truncate font-semibold text-white" title={primaryResident}>
+                        {primaryResident}
+                      </p>
+                      <p className="mt-1 text-[10px] text-[#8F879D]">
+                        {unit.residentCount} {unit.residentCount === 1 ? "resident" : "residents"}
+                      </p>
+                    </td>
+                    <td className="px-3 py-2.5 align-top">
+                      <span
+                        className={`inline-flex min-h-6 items-center rounded-[4px] border px-2 py-1 text-[10px] font-semibold ${
+                          complete
+                            ? "border-[rgba(103,215,165,0.20)] bg-[rgba(103,215,165,0.06)] text-[#8EE2B9]"
+                            : "border-[rgba(243,202,87,0.22)] bg-[rgba(243,202,87,0.06)] text-[#F2D77B]"
+                        }`}
+                      >
+                        {complete ? "Complete" : "Incomplete"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 align-top">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`inline-flex min-h-6 items-center rounded-[4px] border px-2 py-1 text-[10px] font-semibold ${
+                            attentionLabel === "Clear" || attentionLabel === "Contacted"
+                              ? "border-white/10 bg-white/[0.025] text-[#C8C1CD]"
+                              : "border-[rgba(243,202,87,0.22)] bg-[rgba(243,202,87,0.06)] text-[#F2D77B]"
+                          }`}
+                        >
+                          {attentionLabel}
+                        </span>
+                        {additionalAttention > 0 ? (
+                          <span className="text-[10px] text-[#8F879D]">+{additionalAttention}</span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5 align-top">
+                      <Badge tone={statusTone(unit.status)}>
+                        {unitFilter === "resolved"
+                          ? "Resolved duplicate"
+                          : statusLabel(unit.status)}
+                      </Badge>
+                    </td>
+                    <td className="px-3 py-2.5 align-top text-[#A9A3B2]">
+                      {formatDate(unit.submittedAt)}
+                    </td>
+                    <td className="px-2 py-2.5 align-middle text-right">
+                      {canOpen ? (
+                        <ChevronRight
+                          className={`ml-auto size-4 ${
+                            active ? "text-[#D8D1FF]" : "text-[#8F879D]"
+                          }`}
+                          aria-hidden
+                        />
+                      ) : null}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+
+          {visibleUnits.length === 0 ? (
+            <div className="grid min-h-56 place-items-center px-6 text-center">
               <div>
-                <h2 className="text-base font-semibold text-white">Units</h2>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Open a unit or use its checkbox for reports and bulk workflow actions.
+                <p className="text-sm font-semibold text-white">
+                  No registrations match this view
+                </p>
+                <p className="mt-1 text-xs text-[#A9A3B2]">
+                  Clear the search or filters to show household registrations again.
                 </p>
               </div>
-              <Badge tone="default">{summary.totalUnits}</Badge>
             </div>
+          ) : null}
+        </div>
 
-            <label className="relative mt-4 block">
-              <span className="sr-only">Search units</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
-              <input
-                type="search"
-                value={unitSearch}
-                onChange={(event) => setUnitSearch(event.target.value)}
-                placeholder="Search unit, resident, email or phone..."
-                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
-              />
-            </label>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#141119] bg-[#1F1B26] px-4 py-2 text-[10px] text-[#8F879D]">
+          <span>
+            Showing {visibleUnits.length} record{visibleUnits.length === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={selectAllReportableUnits}
+              className="font-semibold text-[#BEB4FF] hover:text-white"
+            >
+              Select all reportable
+            </button>
+            <span>{summary.currentResidentCount} residents · {summary.totalUnits} units</span>
+          </div>
+        </div>
+      </section>
 
-            <div className="mt-3 flex gap-1 overflow-x-auto pb-1" aria-label="Unit filters">
-              {([
-                ["pending", "Pending"],
-                ["duplicates", "Duplicates"],
-                ["reviewed", "Patronato"],
-                ["activation", "Activation"],
-                ["all", "All"],
-                ["resolved", "Resolved"],
-              ] as const).map(([value, label]) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setUnitFilter(value)}
-                  aria-pressed={unitFilter === value}
-                  className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                    unitFilter === value
-                      ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
-                      : "border-[var(--border)] text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-white"
-                  }`}
-                >
-                  {label} <span className="ml-1 opacity-70">{unitFilterCounts[value]}</span>
-                </button>
-              ))}
+      {selectedUnit && selectedUnitId ? (
+        <section className="fixed bottom-5 right-5 top-[76px] z-40 flex w-[560px] min-w-0 flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none" aria-busy={detailPending}>
+          <div className="flex h-12 shrink-0 items-center justify-between border-b border-[#141119] px-4">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">
+                Household review
+              </p>
+              <p className="mt-0.5 text-[10px] text-[#8F879D]">
+                Review details and take the next workflow action.
+              </p>
             </div>
+            <Link
+              href={`/products/entry/communities/${communityId}/registration`}
+              scroll={false}
+              className="grid size-8 place-items-center rounded-md border border-[#141119] bg-[#2E2936] text-[#8F879D] transition hover:text-white"
+              aria-label="Close household review"
+            >
+              <X className="size-4" aria-hidden />
+            </Link>
           </div>
-
-          <div className="min-h-0 flex-1 space-y-1.5 overflow-y-auto overscroll-contain p-3 [scrollbar-gutter:stable]">
-            {visibleUnits.map((unit) => {
-              const canOpen = unit.status !== "unregistered" && unit.residentCount > 0;
-              const active = selectedUnitId === unit.id;
-              const selectedForReport = selectedReportUnitIds.includes(unit.id);
-              const duplicateMatches = duplicateCandidatesByUnit.get(unit.id) ?? [];
-              const sharedContactIssues = sharedContactIssuesByUnitId.get(unit.id) ?? [];
-              const contactState = contactStateByUnitId.get(unit.id) ?? null;
-              const hasSharedEmail = sharedContactIssues.some((issue) => issue.kind === "email");
-              const hasSharedPhone = sharedContactIssues.some((issue) => issue.kind === "phone");
-              const content = (
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate text-sm font-semibold text-white">{unit.label}</p>
-                      {active ? (
-                        <span className="text-[10px] font-semibold uppercase text-violet-200">Open</span>
-                      ) : null}
-                    </div>
-                    <p className="mt-1 text-xs text-[var(--text-muted)]">
-                      {unit.residentCount} {unit.residentCount === 1 ? "resident" : "residents"}
-                      {unit.hasPendingObservation ? " · pending observation" : ""}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                    {dataCompleteByUnitId.get(unit.id) === true ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">
-                        <CheckCircle2 className="size-3" aria-hidden />
-                        Information complete
-                      </span>
-                    ) : dataCompleteByUnitId.get(unit.id) === false ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/25 bg-rose-500/10 px-2.5 py-1 text-[10px] font-semibold text-rose-200">
-                        <TriangleAlert className="size-3" aria-hidden />
-                        Information incomplete
-                      </span>
-                    ) : null}
-                    {hasSharedEmail ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
-                        <Mail className="size-3" aria-hidden />
-                        Shared email
-                      </span>
-                    ) : null}
-                    {hasSharedPhone ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
-                        <Phone className="size-3" aria-hidden />
-                        Shared phone
-                      </span>
-                    ) : null}
-                    {contactState === "contacted" ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/25 bg-emerald-500/10 px-2.5 py-1 text-[10px] font-semibold text-emerald-200">
-                        <Check className="size-3" aria-hidden />
-                        Contacted
-                      </span>
-                    ) : contactState === "new_info" ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
-                        <TriangleAlert className="size-3" aria-hidden />
-                        New information needed
-                      </span>
-                    ) : null}
-                    {duplicateMatches.length > 0 ? (
-                      <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-200">
-                        <TriangleAlert className="size-3" aria-hidden />
-                        {duplicateMatches.length === 1
-                          ? "Possible duplicate"
-                          : `${duplicateMatches.length} matches`}
-                      </span>
-                    ) : null}
-                    <Badge tone={statusTone(unit.status)}>
-                      {unitFilter === "resolved" ? "Resolved duplicate" : statusLabel(unit.status)}
-                    </Badge>
-                  </div>
-                </div>
-              );
-
-              return canOpen ? (
-                <div
-                  key={unit.id}
-                  className={`flex min-h-[62px] items-stretch overflow-hidden rounded-lg border transition-colors ${
-                    active
-                      ? "border-violet-400/55 bg-violet-500/[0.07] ring-1 ring-inset ring-violet-400/10"
-                      : selectedForReport
-                        ? "border-[var(--border)] bg-violet-500/[0.04]"
-                        : "border-[var(--border)] bg-[var(--surface-strong)]"
-                  }`}
-                >
-                  <label
-                    className={`grid w-11 shrink-0 cursor-pointer place-items-center border-r border-white/[0.07] transition ${selectedForReport ? "bg-violet-500/12" : "hover:bg-white/[0.03]"}`}
-                    title="Select unit"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedForReport}
-                      onChange={() => toggleReportUnit(unit.id)}
-                      className="size-4 accent-violet-500"
-                      aria-label={`Select ${unit.label}`}
-                    />
-                  </label>
-                  <Link
-                    href={`/products/entry/communities/${communityId}/registration?unit=${encodeURIComponent(unit.id)}`}
-                    scroll={false}
-                    onNavigate={() => {
-                      if (!active) setPendingUnitId(unit.id);
-                    }}
-                    aria-current={active ? "page" : undefined}
-                    className="min-w-0 flex-1 px-3 py-2.5 transition hover:bg-white/[0.025]"
-                  >
-                    {content}
-                  </Link>
-                </div>
-              ) : (
-                <div
-                  key={unit.id}
-                  className="min-h-[62px] rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 opacity-60"
-                >
-                  {content}
-                </div>
-              );
-            })}
-            {visibleUnits.length === 0 ? (
-              <div className="grid min-h-32 place-items-center px-4 text-center text-sm text-[var(--text-muted)]">
-                No units match this filter.
-              </div>
-            ) : null}
-          </div>
-        </section>
-
-        <section className="relative flex min-h-[520px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0" aria-busy={detailPending}>
           {detailPending ? (
             <div className="absolute inset-0 z-20 grid place-items-center bg-[var(--surface)]/92 p-6 backdrop-blur-sm">
               <div className="w-full max-w-xl animate-pulse space-y-4" aria-label="Loading unit">
@@ -2566,7 +2753,7 @@ export function ReviewWorkspace({
             </>
           )}
         </section>
-      </div>
+      ) : null}
 
       {showCorrectionRequest && selectedUnit && selectedUnitId ? (
         <CorrectionRequestDialog
