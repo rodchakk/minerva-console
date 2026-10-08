@@ -36,6 +36,7 @@ import {
 } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import {
   confirmAndPrepareCommunityRegistrationActivation,
   createOrReplaceCommunityRegistrationCorrectionLink,
@@ -2685,14 +2686,25 @@ export function ReviewWorkspace({
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">
                   {canQuickEditUnit ? (
-                    <Button type="button" variant="secondary" className="gap-2" onClick={() => setEditingUnit(true)}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className={entryButtonClass("secondary", "gap-2")}
+                      onClick={() => setEditingUnit(true)}
+                    >
                       <Pencil className="size-3.5" aria-hidden /> Edit
                     </Button>
                   ) : null}
 
                 {isPreparedForActivation ? (
                   <Link href={activationQueueUrl}>
-                      <Button type="button" className="gap-2">View in Activation Queue <ArrowRight className="size-3.5" aria-hidden /></Button>
+                      <Button
+                        type="button"
+                        className={entryButtonClass("primary", "gap-2")}
+                      >
+                        View in Activation Queue
+                        <ArrowRight className="size-3.5" aria-hidden />
+                      </Button>
                   </Link>
                 ) : null}
 
@@ -2700,6 +2712,7 @@ export function ReviewWorkspace({
                   <Button
                     type="button"
                     variant="secondary"
+                    className={entryButtonClass("secondary")}
                     onClick={() => setShowCorrectionRequest(true)}
                   >
                       <TriangleAlert className="mr-2 size-3.5" aria-hidden /> Request correction
@@ -2709,6 +2722,7 @@ export function ReviewWorkspace({
                 {canCreateCorrectionLink ? (
                   <Button
                     type="button"
+                    className={entryButtonClass("primary")}
                     onClick={() => setCorrectionLinkMode("create")}
                   >
                     Create correction link
@@ -2719,6 +2733,7 @@ export function ReviewWorkspace({
                   <Button
                     type="button"
                     variant="secondary"
+                    className={entryButtonClass("secondary")}
                     onClick={() => setCorrectionLinkMode("replace")}
                   >
                     Replace correction link
@@ -2730,7 +2745,7 @@ export function ReviewWorkspace({
                     type="button"
                     onClick={() => setShowActivationHandoff(true)}
                     disabled={Boolean(loadError)}
-                    className="gap-2"
+                    className={entryButtonClass("primary", "gap-2")}
                   >
                     {selectedStatus === "confirmed"
                       ? "Move to Activation Queue"
@@ -2753,8 +2768,12 @@ export function ReviewWorkspace({
                   <form action={reviewAction}>
                     <input type="hidden" name="campaign_unit_id" value={selectedUnitId} />
                     <input type="hidden" name="community_id" value={communityId} />
-                    <Button type="submit" disabled={reviewPending || Boolean(loadError)}>
-                        {reviewPending ? "Updating..." : "Ready for Patronato"}
+                    <Button
+                      type="submit"
+                      disabled={reviewPending || Boolean(loadError)}
+                      className={entryButtonClass("primary")}
+                    >
+                      {reviewPending ? "Updating..." : "Ready for Patronato"}
                     </Button>
                   </form>
                 ) : null}

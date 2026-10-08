@@ -24,6 +24,7 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import {
   prepareConsoleResidentAccess,
   type PrepareConsoleResidentAccessResult,
@@ -1359,91 +1360,94 @@ export function CommunityUsersClient({
                       </div>
                     </section>
 
-                    <section className="overflow-hidden rounded-lg border border-[#141119] bg-white/[0.012]">
-                      <div className="border-b border-[#141119] px-3.5 py-3">
+                    <section className="rounded-lg border border-[#141119] bg-white/[0.012] p-3.5">
+                      <div>
                         <p className="text-xs font-semibold text-white">Account actions</p>
                         <p className="mt-1 text-[10px] text-[#8F879D]">
                           Changes here affect this user&apos;s ENTRY access.
                         </p>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDraft(buildUserDraft(selectedUser));
-                          setManageMode("edit");
-                          setError(null);
-                        }}
-                        className="flex w-full items-center justify-between border-b border-[#141119] px-3.5 py-3 text-left transition hover:bg-white/[0.025]"
-                      >
-                        <span className="flex items-center gap-2.5 text-xs font-semibold text-white">
-                          <Pencil className="size-4 text-[#BEB4FF]" aria-hidden />
-                          Edit account
-                        </span>
-                        <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
-                      </button>
-
-                      {selectedUser.role === "ADMIN" || selectedUser.role === "RESIDENT" ? (
+                      <div className="mt-3 grid gap-2 sm:grid-cols-2">
                         <button
                           type="button"
                           onClick={() => {
-                            setRoleDraft(selectedUser.role as EditableCommunityRole);
-                            setManageMode("role");
+                            setDraft(buildUserDraft(selectedUser));
+                            setManageMode("edit");
                             setError(null);
                           }}
-                          className="flex w-full items-center justify-between border-b border-[#141119] px-3.5 py-3 text-left transition hover:bg-white/[0.025]"
+                          className={entryButtonClass("secondary", "w-full justify-between px-3.5")}
                         >
-                          <span className="flex items-center gap-2.5 text-xs font-semibold text-white">
-                            <ShieldCheck className="size-4 text-[#BEB4FF]" aria-hidden />
-                            Change role
+                          <span className="flex items-center gap-2">
+                            <Pencil className="size-3.5 text-[#BEB4FF]" aria-hidden />
+                            Edit account
                           </span>
-                          <span className="flex items-center gap-2 text-[10px] text-[#8F879D]">
-                            {getRoleLabel(selectedUser.role)}
-                            <ChevronRight className="size-4" aria-hidden />
-                          </span>
+                          <ChevronRight className="size-3.5 text-[#8F879D]" aria-hidden />
                         </button>
-                      ) : null}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setPassword("");
-                          setConfirmPassword("");
-                          setShowPassword(false);
-                          setShowConfirmPassword(false);
-                          setCopiedPassword(false);
-                          setManageMode("password");
-                          setError(null);
-                        }}
-                        className="flex w-full items-center justify-between border-b border-[#141119] px-3.5 py-3 text-left transition hover:bg-white/[0.025]"
-                      >
-                        <span className="flex items-center gap-2.5 text-xs font-semibold text-white">
-                          <KeyRound className="size-4 text-[#BEB4FF]" aria-hidden />
-                          Reset password
-                        </span>
-                        <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
-                      </button>
+                        {selectedUser.role === "ADMIN" || selectedUser.role === "RESIDENT" ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRoleDraft(selectedUser.role as EditableCommunityRole);
+                              setManageMode("role");
+                              setError(null);
+                            }}
+                            className={entryButtonClass("secondary", "w-full justify-between px-3.5")}
+                          >
+                            <span className="flex items-center gap-2">
+                              <ShieldCheck className="size-3.5 text-[#BEB4FF]" aria-hidden />
+                              Change role
+                            </span>
+                            <span className="flex items-center gap-1.5 text-[10px] text-[#8F879D]">
+                              {getRoleLabel(selectedUser.role)}
+                              <ChevronRight className="size-3.5" aria-hidden />
+                            </span>
+                          </button>
+                        ) : null}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setManageMode("status");
-                          setError(null);
-                        }}
-                        className={`flex w-full items-center justify-between px-3.5 py-3 text-left transition hover:bg-white/[0.025] ${
-                          selectedUser.isActive ? "text-[#FFB6C1]" : "text-[#8EE2B9]"
-                        }`}
-                      >
-                        <span className="flex items-center gap-2.5 text-xs font-semibold">
-                          {selectedUser.isActive ? (
-                            <UserX className="size-4" aria-hidden />
-                          ) : (
-                            <UserCheck className="size-4" aria-hidden />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setPassword("");
+                            setConfirmPassword("");
+                            setShowPassword(false);
+                            setShowConfirmPassword(false);
+                            setCopiedPassword(false);
+                            setManageMode("password");
+                            setError(null);
+                          }}
+                          className={entryButtonClass("secondary", "w-full justify-between px-3.5")}
+                        >
+                          <span className="flex items-center gap-2">
+                            <KeyRound className="size-3.5 text-[#BEB4FF]" aria-hidden />
+                            Reset password
+                          </span>
+                          <ChevronRight className="size-3.5 text-[#8F879D]" aria-hidden />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setManageMode("status");
+                            setError(null);
+                          }}
+                          className={entryButtonClass(
+                            selectedUser.isActive ? "danger" : "secondary",
+                            "w-full justify-between px-3.5",
                           )}
-                          {selectedUser.isActive ? "Deactivate account" : "Reactivate account"}
-                        </span>
-                        <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
-                      </button>
+                        >
+                          <span className="flex items-center gap-2">
+                            {selectedUser.isActive ? (
+                              <UserX className="size-3.5" aria-hidden />
+                            ) : (
+                              <UserCheck className="size-3.5 text-[#8EE2B9]" aria-hidden />
+                            )}
+                            {selectedUser.isActive ? "Deactivate account" : "Reactivate account"}
+                          </span>
+                          <ChevronRight className="size-3.5 text-[#8F879D]" aria-hidden />
+                        </button>
+                      </div>
                     </section>
 
                     <div className="rounded-lg border border-[rgba(117,83,255,0.20)] bg-[rgba(117,83,255,0.05)] px-3.5 py-3">
@@ -1506,8 +1510,21 @@ export function CommunityUsersClient({
                       </select>
                     </label>
                     <div className="sm:col-span-2 flex justify-end gap-2 border-t border-white/8 pt-4">
-                      <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
-                      <Button onClick={submitEdit} disabled={isPending}>{isPending ? "Saving..." : "Save changes"}</Button>
+                      <Button
+                        variant="secondary"
+                        className={entryButtonClass("secondary")}
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className={entryButtonClass("primary")}
+                        onClick={submitEdit}
+                        disabled={isPending}
+                      >
+                        {isPending ? "Saving..." : "Save changes"}
+                      </Button>
                     </div>
                   </div>
                 ) : null}
@@ -1587,12 +1604,14 @@ export function CommunityUsersClient({
                     <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
                       <Button
                         variant="secondary"
+                        className={entryButtonClass("secondary")}
                         onClick={() => setManageMode("view")}
                         disabled={isPending}
                       >
                         Cancel
                       </Button>
                       <Button
+                        className={entryButtonClass("primary")}
                         onClick={submitRoleChange}
                         disabled={isPending || roleDraft === selectedUser.role}
                       >
@@ -1681,8 +1700,21 @@ export function CommunityUsersClient({
                       </label>
                     </div>
                     <div className="flex justify-end gap-2 border-t border-white/8 pt-4">
-                      <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
-                      <Button onClick={submitPassword} disabled={isPending}>{isPending ? "Updating..." : "Reset password"}</Button>
+                      <Button
+                        variant="secondary"
+                        className={entryButtonClass("secondary")}
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className={entryButtonClass("primary")}
+                        onClick={submitPassword}
+                        disabled={isPending}
+                      >
+                        {isPending ? "Updating..." : "Reset password"}
+                      </Button>
                     </div>
                   </div>
                 ) : null}
@@ -1700,8 +1732,22 @@ export function CommunityUsersClient({
                       </p>
                     </div>
                     <div className="mt-4 flex justify-end gap-2">
-                      <Button variant="secondary" onClick={() => setManageMode("view")} disabled={isPending}>Cancel</Button>
-                      <Button variant={selectedUser.isActive ? "danger" : "primary"} onClick={submitStatusChange} disabled={isPending}>
+                      <Button
+                        variant="secondary"
+                        className={entryButtonClass("secondary")}
+                        onClick={() => setManageMode("view")}
+                        disabled={isPending}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant={selectedUser.isActive ? "danger" : "primary"}
+                        className={entryButtonClass(
+                          selectedUser.isActive ? "danger" : "primary",
+                        )}
+                        onClick={submitStatusChange}
+                        disabled={isPending}
+                      >
                         {isPending ? "Updating..." : selectedUser.isActive ? "Deactivate user" : "Reactivate user"}
                       </Button>
                     </div>

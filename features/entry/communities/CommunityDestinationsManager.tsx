@@ -1,9 +1,8 @@
 "use client";
 
 import {
-  ArrowDown,
-  ArrowUp,
   Loader2,
+  GripVertical,
   MoreHorizontal,
   Pencil,
   Power,
@@ -15,17 +14,20 @@ import {
   useMemo,
   useRef,
   useState,
+  useTransition,
+  type DragEvent,
   type KeyboardEvent,
   type ReactNode,
 } from "react";
 import { useFormStatus } from "react-dom";
-import { Badge } from "@/components/ui/Badge";
+import { useRouter } from "next/navigation";
+import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
   createCommunityDestinationAction,
   renameCommunityDestinationAction,
+  reorderCommunityDestinationsAction,
   setCommunityDestinationActiveAction,
-  updateCommunityDestinationOrderAction,
 } from "@/features/entry/communities/actions";
 import type {
   CommunityDestinationPreview,
@@ -46,20 +48,6 @@ type SubmitButtonProps = {
   variant?: "primary" | "secondary" | "ghost" | "danger";
 };
 
-const actionButtonBase =
-  "inline-flex h-9 items-center justify-center rounded-[7px] border px-3 text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45";
-
-const actionButtonVariants = {
-  danger:
-    "border-rose-400/20 bg-rose-500/10 text-rose-200 hover:border-rose-300/35 hover:bg-rose-500/15",
-  ghost:
-    "border-transparent bg-transparent text-[#8F879D] hover:bg-white/5 hover:text-white",
-  primary:
-    "border-[#120539] bg-[#7553FF] text-white shadow-[0_2px_0_#120539] hover:bg-[#8062ff]",
-  secondary:
-    "border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] hover:bg-[#342F3D]",
-};
-
 function SubmitButton({
   children,
   disabled = false,
@@ -72,41 +60,13 @@ function SubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className={cn(actionButtonBase, actionButtonVariants[variant])}
+      className={entryButtonClass(variant)}
     >
       {pending ? (
         <>
           <Loader2 aria-hidden="true" className="mr-2 h-4 w-4 animate-spin" />
           {pendingLabel}
         </>
-      ) : (
-        children
-      )}
-    </button>
-  );
-}
-
-function IconSubmitButton({
-  children,
-  disabled,
-  label,
-}: {
-  children: ReactNode;
-  disabled?: boolean;
-  label: string;
-}) {
-  const { pending } = useFormStatus();
-
-  return (
-    <button
-      type="submit"
-      aria-label={label}
-      title={label}
-      disabled={disabled || pending}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-transparent bg-transparent text-[#8F879D] transition hover:border-white/12 hover:bg-white/[0.045] hover:text-white focus:outline-none focus:ring-2 focus:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-35"
-    >
-      {pending ? (
-        <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
       ) : (
         children
       )}
@@ -296,7 +256,7 @@ function RenameDestinationForm({
         <button
           type="button"
           onClick={onCancel}
-          className={cn(actionButtonBase, actionButtonVariants.ghost)}
+          className={entryButtonClass("secondary")}
         >
           <X aria-hidden="true" className="mr-2 h-4 w-4" />
           Cancel
@@ -376,106 +336,111 @@ function DestinationActions({
 }
 
 function DestinationRow({
-  canMoveDown,
-  canMoveUp,
   communityId,
   destination,
+  draggingId,
   editingId,
+  isDropTarget,
   menuOpenId,
+  onDragEnd,
+  onDragOver,
+  onDragStart,
+  onDrop,
   setEditingId,
   setMenuOpenId,
 }: {
-  canMoveDown: boolean;
-  canMoveUp: boolean;
   communityId: string;
   destination: CommunityDestinationPreview;
+  draggingId: string | null;
   editingId: string | null;
+  isDropTarget: boolean;
   menuOpenId: string | null;
+  onDragEnd: () => void;
+  onDragOver: (event: DragEvent<HTMLDivElement>, destinationId: string) => void;
+  onDragStart: (event: DragEvent<HTMLButtonElement>, destinationId: string) => void;
+  onDrop: (event: DragEvent<HTMLDivElement>, destinationId: string) => void;
   setEditingId: (id: string | null) => void;
   setMenuOpenId: (id: string | null) => void;
 }) {
   const isEditing = editingId === destination.id;
   const isMenuOpen = menuOpenId === destination.id;
+  const isDragging = draggingId === destination.id;
 
   return (
     <div
+      onDragOver={(event) => onDragOver(event, destination.id)}
+      onDrop={(event) => onDrop(event, destination.id)}
       className={cn(
-        "grid gap-3 px-4 py-3 transition sm:grid-cols-[minmax(0,1fr)_180px_100px_112px] sm:items-center",
+        "grid gap-3 px-4 py-3 transition sm:grid-cols-[36px_minmax(0,1fr)_180px_100px_72px] sm:items-center",
         !destination.isActive && "bg-white/[0.015]",
+        isDragging && "opacity-45",
+        isDropTarget &&
+          !isDragging &&
+          "bg-[rgba(117,83,255,0.055)] shadow-[inset_0_2px_0_#7553FF]",
       )}
     >
-      <div className={cn(isEditing ? "col-span-4 min-w-0" : "contents")}>
-        {isEditing ? (
+      {isEditing ? (
+        <div className="col-span-5 min-w-0">
           <RenameDestinationForm
             communityId={communityId}
             destination={destination}
             onCancel={() => setEditingId(null)}
           />
-        ) : (
-          <>
-            <div className={cn("min-w-0", !destination.isActive && "opacity-70")}>
-              <p className="truncate text-sm font-semibold text-white">
-                {destination.name}
-              </p>
-              <p className="mt-1 text-[11px] text-[#8F879D]">
-                Display order {destination.sortOrder}
-              </p>
-            </div>
-            <div className="text-xs text-[#CFC9D6]">
-              {destination.category || "No category"}
-            </div>
-            <div>
-              <span
-                className={cn(
-                  "inline-flex min-h-6 items-center rounded-[4px] border px-2 py-1 text-[11px] font-semibold",
-                  destination.isActive
-                    ? "border-[rgba(103,215,165,0.20)] bg-[rgba(103,215,165,0.06)] text-[#8EE2B9]"
-                    : "border-[rgba(228,194,106,0.20)] bg-[rgba(228,194,106,0.06)] text-[#F0D995]",
-                )}
-              >
-                {destination.isActive ? "Active" : "Inactive"}
-              </span>
-            </div>
-          </>
-        )}
-      </div>
-
-      {!isEditing ? (
-        <div className="flex items-center gap-1.5 sm:justify-end">
-          <form action={updateCommunityDestinationOrderAction}>
-            <input type="hidden" name="community_id" value={communityId} />
-            <input type="hidden" name="destination_id" value={destination.id} />
-            <input type="hidden" name="direction" value="up" />
-            <IconSubmitButton
-              disabled={!canMoveUp}
-              label={`Move ${destination.name} up`}
-            >
-              <ArrowUp aria-hidden="true" className="h-4 w-4" />
-            </IconSubmitButton>
-          </form>
-          <form action={updateCommunityDestinationOrderAction}>
-            <input type="hidden" name="community_id" value={communityId} />
-            <input type="hidden" name="destination_id" value={destination.id} />
-            <input type="hidden" name="direction" value="down" />
-            <IconSubmitButton
-              disabled={!canMoveDown}
-              label={`Move ${destination.name} down`}
-            >
-              <ArrowDown aria-hidden="true" className="h-4 w-4" />
-            </IconSubmitButton>
-          </form>
-          <DestinationActions
-            communityId={communityId}
-            destination={destination}
-            isOpen={isMenuOpen}
-            onRename={() => {
-              setMenuOpenId(null);
-              setEditingId(destination.id);
-            }}
-            onToggleMenu={() => setMenuOpenId(isMenuOpen ? null : destination.id)}
-          />
         </div>
-      ) : null}
+      ) : (
+        <>
+          <button
+            type="button"
+            draggable
+            onDragStart={(event) => onDragStart(event, destination.id)}
+            onDragEnd={onDragEnd}
+            aria-label={`Drag to reorder ${destination.name}`}
+            title="Drag to reorder"
+            className="grid size-8 cursor-grab place-items-center rounded-md border border-transparent text-[#8F879D] transition hover:border-white/10 hover:bg-white/[0.035] hover:text-white active:cursor-grabbing focus:outline-none focus:ring-2 focus:ring-[#7553FF]"
+          >
+            <GripVertical className="size-4" aria-hidden />
+          </button>
+
+          <div className={cn("min-w-0", !destination.isActive && "opacity-70")}>
+            <p className="truncate text-sm font-semibold text-white">
+              {destination.name}
+            </p>
+            <p className="mt-1 text-[11px] text-[#8F879D]">
+              Drag to change display order
+            </p>
+          </div>
+
+          <div className="text-xs text-[#CFC9D6]">
+            {destination.category || "No category"}
+          </div>
+
+          <div>
+            <span
+              className={cn(
+                "inline-flex min-h-6 items-center rounded-[4px] border px-2 py-1 text-[11px] font-semibold",
+                destination.isActive
+                  ? "border-[rgba(103,215,165,0.20)] bg-[rgba(103,215,165,0.06)] text-[#8EE2B9]"
+                  : "border-[rgba(228,194,106,0.20)] bg-[rgba(228,194,106,0.06)] text-[#F0D995]",
+              )}
+            >
+              {destination.isActive ? "Active" : "Inactive"}
+            </span>
+          </div>
+
+          <div className="flex justify-end">
+            <DestinationActions
+              communityId={communityId}
+              destination={destination}
+              isOpen={isMenuOpen}
+              onRename={() => {
+                setMenuOpenId(null);
+                setEditingId(destination.id);
+              }}
+              onToggleMenu={() => setMenuOpenId(isMenuOpen ? null : destination.id)}
+            />
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -485,9 +450,15 @@ export function CommunityDestinationsManager({
   destinations,
   state,
 }: CommunityDestinationsManagerProps) {
+  const router = useRouter();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const [reorderError, setReorderError] = useState<string | null>(null);
+  const [isSavingOrder, startReorderTransition] = useTransition();
+
   const sortedDestinations = useMemo(
     () =>
       [...destinations].sort((a, b) => {
@@ -496,6 +467,102 @@ export function CommunityDestinationsManager({
       }),
     [destinations],
   );
+  const [orderedIds, setOrderedIds] = useState<string[] | null>(null);
+  const orderedDestinations = useMemo(() => {
+    if (!orderedIds) return sortedDestinations;
+
+    const destinationById = new Map(
+      sortedDestinations.map((destination) => [destination.id, destination]),
+    );
+    const ordered = orderedIds
+      .map((id) => destinationById.get(id))
+      .filter(
+        (destination): destination is CommunityDestinationPreview =>
+          Boolean(destination),
+      );
+    const knownIds = new Set(ordered.map((destination) => destination.id));
+    const missing = sortedDestinations.filter(
+      (destination) => !knownIds.has(destination.id),
+    );
+
+    return [...ordered, ...missing];
+  }, [orderedIds, sortedDestinations]);
+
+  function handleDragStart(
+    event: DragEvent<HTMLButtonElement>,
+    destinationId: string,
+  ) {
+    setReorderError(null);
+    setDraggingId(destinationId);
+    setDropTargetId(destinationId);
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", destinationId);
+  }
+
+  function handleDragOver(
+    event: DragEvent<HTMLDivElement>,
+    destinationId: string,
+  ) {
+    if (!draggingId || draggingId === destinationId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDropTargetId(destinationId);
+  }
+
+  function clearDragState() {
+    setDraggingId(null);
+    setDropTargetId(null);
+  }
+
+  function handleDrop(
+    event: DragEvent<HTMLDivElement>,
+    destinationId: string,
+  ) {
+    event.preventDefault();
+    const sourceId = draggingId || event.dataTransfer.getData("text/plain");
+
+    if (!sourceId || sourceId === destinationId) {
+      clearDragState();
+      return;
+    }
+
+    const sourceIndex = orderedDestinations.findIndex(
+      (destination) => destination.id === sourceId,
+    );
+    const targetIndex = orderedDestinations.findIndex(
+      (destination) => destination.id === destinationId,
+    );
+
+    if (sourceIndex < 0 || targetIndex < 0) {
+      clearDragState();
+      return;
+    }
+
+    const previousOrderIds = orderedDestinations.map(
+      (destination) => destination.id,
+    );
+    const nextOrder = [...orderedDestinations];
+    const [moved] = nextOrder.splice(sourceIndex, 1);
+    nextOrder.splice(targetIndex, 0, moved);
+    const nextOrderIds = nextOrder.map((destination) => destination.id);
+    setOrderedIds(nextOrderIds);
+    clearDragState();
+
+    startReorderTransition(async () => {
+      const result = await reorderCommunityDestinationsAction({
+        communityId,
+        orderedDestinationIds: nextOrderIds,
+      });
+
+      if (!result.success) {
+        setOrderedIds(previousOrderIds);
+        setReorderError(result.error ?? "Could not save destination order.");
+        return;
+      }
+
+      router.refresh();
+    });
+  }
 
   return (
     <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
@@ -505,13 +572,13 @@ export function CommunityDestinationsManager({
             Manual access destinations
           </h2>
           <p className="mt-1 text-sm leading-6 text-[#A9A3B2]">
-            Destinations available to guards during manual access.
+            Destinations available to guards during manual access. Drag rows to reorder them.
           </p>
         </div>
         <button
           type="button"
           onClick={() => setShowCreateForm((value) => !value)}
-          className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3.5 text-xs font-semibold text-white shadow-[0_2px_0_#120539]"
+          className={entryButtonClass("primary")}
         >
           {showCreateForm ? "Close form" : "+ Create destination"}
         </button>
@@ -519,28 +586,43 @@ export function CommunityDestinationsManager({
 
       {showCreateForm ? <CreateDestinationForm communityId={communityId} /> : null}
 
-      {sortedDestinations.length === 0 ? (
+      {reorderError ? (
+        <p className="border-b border-rose-400/20 bg-rose-500/10 px-4 py-2 text-xs text-rose-100">
+          {reorderError}
+        </p>
+      ) : isSavingOrder ? (
+        <p className="border-b border-[#141119] bg-[rgba(117,83,255,0.035)] px-4 py-2 text-xs text-[#BEB4FF]">
+          Saving destination order…
+        </p>
+      ) : null}
+
+      {orderedDestinations.length === 0 ? (
         <div className="p-4">
           <EmptyDestinations state={state} />
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-[minmax(0,1fr)_180px_100px_112px] gap-3 border-b border-[#141119] bg-[#1F1B26] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+          <div className="grid grid-cols-[36px_minmax(0,1fr)_180px_100px_72px] gap-3 border-b border-[#141119] bg-[#1F1B26] px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+            <span aria-hidden />
             <span>Destination</span>
             <span>Category</span>
             <span>Status</span>
-            <span className="text-right">Controls</span>
+            <span className="text-right">Actions</span>
           </div>
           <div className="divide-y divide-[#141119]">
-            {sortedDestinations.map((destination, index) => (
+            {orderedDestinations.map((destination) => (
               <DestinationRow
                 key={destination.id}
-                canMoveDown={index < sortedDestinations.length - 1}
-                canMoveUp={index > 0}
                 communityId={communityId}
                 destination={destination}
+                draggingId={draggingId}
                 editingId={editingId}
+                isDropTarget={dropTargetId === destination.id}
                 menuOpenId={menuOpenId}
+                onDragEnd={clearDragState}
+                onDragOver={handleDragOver}
+                onDragStart={handleDragStart}
+                onDrop={handleDrop}
                 setEditingId={setEditingId}
                 setMenuOpenId={setMenuOpenId}
               />
