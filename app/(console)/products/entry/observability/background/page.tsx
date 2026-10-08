@@ -242,7 +242,7 @@ export default async function EntryObservabilityBackgroundPage(props: {
   const searchParams = await props.searchParams;
   const range = normalizeEntryObservabilityRange(searchParams.range);
   const communityId = Array.isArray(searchParams.community) ? searchParams.community[0] : searchParams.community;
-  const result = await getEntryObservability({ communityId: communityId ?? null, range });
+  const result = await getEntryObservability({ communityId: communityId ?? null, model: "background", range });
   const communities = result.state === "ready" ? result.data.communities : [];
   const selectedCommunity =
     communityId && communities.some((community) => community.id === communityId) ? communityId : null;
