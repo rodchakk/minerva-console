@@ -101,8 +101,8 @@ test("Console makes Patronato approval explicit before Activation Queue handoff"
     /This household is authorized and ready to move to Activation Queue\./,
   );
   assert.match(workspace, /Approval history/);
-  assert.match(workspace, /label="Ready for Patronato"/);
-  assert.match(workspace, /label="Patronato approved"/);
+  assert.match(workspace, /label: "Ready for Patronato"/);
+  assert.match(workspace, /label: "Patronato approved"/);
   assert.match(workspace, /approvalAlreadyRecorded/);
   assert.match(workspace, /Patronato approval is already recorded\./);
   assert.match(workspace, /Move to Activation Queue/);
