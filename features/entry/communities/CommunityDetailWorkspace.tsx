@@ -27,6 +27,7 @@ type CommunityDetailWorkspaceProps = {
   destinationsManager: ReactNode;
   facilityControl: ReactNode;
   facilitiesLabel: string;
+  initialTab?: WorkspaceTab;
   memberCount: number;
   nextActionDescription: string;
   nextActionHref: string;
@@ -160,6 +161,7 @@ export function CommunityDetailWorkspace({
   destinationsManager,
   facilityControl,
   facilitiesLabel,
+  initialTab = "overview",
   memberCount,
   nextActionDescription,
   nextActionHref,
@@ -172,7 +174,7 @@ export function CommunityDetailWorkspace({
   setupPanel,
   unitCount,
 }: CommunityDetailWorkspaceProps) {
-  const [tab, setTab] = useState<WorkspaceTab>("overview");
+  const [tab, setTab] = useState<WorkspaceTab>(initialTab);
   const [modal, setModal] = useState<ModalKind>(null);
   const recentActivity = activityItems.slice(0, 3);
 
