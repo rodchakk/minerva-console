@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Send } from "lucide-react";
 import { useFormStatus } from "react-dom";
+import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import { replyToEntrySupportTicket } from "@/features/entry/support/actions";
 import { cn } from "@/lib/supabase/utils";
 
@@ -49,7 +50,7 @@ function SendReplyButton() {
     <button
       type="submit"
       disabled={pending}
-      className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-transparent bg-[var(--console-accent)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50 disabled:cursor-not-allowed disabled:opacity-50"
+      className={entryButtonClass("primary", "min-w-[92px]")}
     >
       <Send className="h-4 w-4 stroke-[1.75]" />
       {pending ? "Sending..." : "Send"}
@@ -72,17 +73,17 @@ function MessageBubble({
     <div className={cn("flex", staff ? "justify-end" : "justify-start")}>
       <article
         className={cn(
-          "max-w-[92%] rounded-md border px-3.5 py-3 sm:max-w-[76%]",
+          "max-w-[92%] rounded-[8px] border px-3.5 py-3 sm:max-w-[76%]",
           staff
-            ? "border-violet-400/25 bg-violet-500/[0.10]"
-            : "border-[var(--console-border)] bg-[var(--console-surface-raised)]",
+            ? "border-[rgba(117,83,255,0.28)] bg-[rgba(117,83,255,0.10)]"
+            : "border-[#141119] bg-[#2A2631]",
         )}
       >
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <p
             className={cn(
               "text-[10px] font-semibold uppercase tracking-[0.14em]",
-              staff ? "text-violet-200" : "text-[var(--console-text-muted)]",
+              staff ? "text-[#D8D1FF]" : "text-[#A9A3B2]",
             )}
           >
             {author}
@@ -90,7 +91,7 @@ function MessageBubble({
           <span
             className={cn(
               "text-[11px]",
-              staff ? "text-violet-300/70" : "text-[var(--console-text-soft)]",
+              staff ? "text-[#9F94C8]" : "text-[#8F879D]",
             )}
           >
             {formatDateTime(createdAt)}
@@ -159,17 +160,17 @@ export function SupportConversation({
   }, [latestMessageKey, scrollToLatest]);
 
   return (
-    <section className="flex h-[clamp(560px,72vh,720px)] flex-col overflow-hidden rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)]">
+    <section className="flex h-[clamp(590px,72vh,760px)] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B]">
       <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-4 sm:px-5">
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BEB4FF]">
             Conversation
           </p>
           <h2 className="mt-1 truncate text-base font-semibold text-white">
             Ticket activity
           </h2>
         </div>
-        <p className="shrink-0 rounded-md border border-[var(--console-border)] bg-white/[0.025] px-2.5 py-0.5 text-[11px] font-semibold text-[var(--console-text-muted)]">
+        <p className="shrink-0 rounded-[4px] border border-[#141119] bg-[#2E2936] px-2.5 py-1 text-[10px] font-semibold text-[#A9A3B2]">
           {messageCount} {messageCount === 1 ? "message" : "messages"}
         </p>
       </div>
@@ -180,7 +181,7 @@ export function SupportConversation({
         </div>
       ) : null}
 
-      <div className="relative min-h-0 flex-1 border-t border-[var(--console-border)]">
+      <div className="relative min-h-0 flex-1 border-t border-[#141119]">
         <div
           ref={scrollRef}
           className="h-full overflow-y-auto px-4 py-5 sm:px-5"
@@ -217,7 +218,10 @@ export function SupportConversation({
         {hasNewMessages ? (
           <button
             type="button"
-            className="absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 text-xs font-semibold text-slate-100 shadow-[0_10px_28px_rgba(0,0,0,0.4)] transition hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+            className={entryButtonClass(
+              "secondary",
+              "absolute bottom-3 left-1/2 h-8 -translate-x-1/2 rounded-full px-3.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)]",
+            )}
             onClick={() => scrollToLatest()}
           >
             New messages
@@ -228,7 +232,7 @@ export function SupportConversation({
 
       <form
         action={replyToEntrySupportTicket}
-        className="shrink-0 border-t border-[var(--console-border)] bg-[var(--console-surface)] px-4 py-4 sm:px-5"
+        className="shrink-0 border-t border-[#141119] bg-[#24202B] px-4 py-4 sm:px-5"
       >
         <input type="hidden" name="ticketId" value={ticket.id} />
         <label
@@ -244,7 +248,7 @@ export function SupportConversation({
           maxLength={4000}
           rows={3}
           placeholder="Write a reply to the requester..."
-          className="max-h-32 min-h-24 w-full resize-y rounded-md border border-[var(--console-border-strong)] bg-[var(--console-surface-raised)] px-3.5 py-3 text-sm leading-6 text-white outline-none transition placeholder:text-[var(--console-text-muted)] hover:border-white/20 focus-visible:border-[var(--console-accent-border)] focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+          className="max-h-32 min-h-24 w-full resize-y rounded-[8px] border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3.5 py-3 text-sm leading-6 text-white shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
         />
         <div className="mt-3 flex items-center justify-end">
           <SendReplyButton />
