@@ -83,11 +83,15 @@ test("resident-side actions do not require an unrelated bulk selection", () => {
 
   assert.match(
     source,
-    /runResidentEmail\(activeRow\.id\)[\s\S]*disabled=\{!communityId \|\| phase !== "idle"\}/,
+    /runResidentEmail\(activeRow\.id\)[\s\S]*disabled=\{!activeRowActionable \|\| phase !== "idle"\}/,
   );
   assert.match(
     source,
-    /runResidentPin\(activeRow\.id\)[\s\S]*disabled=\{!communityId \|\| phase !== "idle"\}/,
+    /runResidentPin\(activeRow\.id\)[\s\S]*disabled=\{!activeRowActionable \|\| phase !== "idle"\}/,
+  );
+  assert.doesNotMatch(
+    source,
+    /runResident(?:Email|Pin)\(activeRow\.id\)[\s\S]{0,180}selectedCount === 0/,
   );
 });
 
@@ -98,8 +102,8 @@ test("resident email action preserves an existing multi-selection for batch invi
     source,
     /function runResidentEmail\(rowId: string\) \{[\s\S]*if \(selectedIds\.length > 1\) \{[\s\S]*setPhase\("confirmingEmail"\);[\s\S]*return;[\s\S]*setSelectedIds\(\[rowId\]\)/,
   );
-  assert.match(source, /selectedCount > 1[\s\S]*selectedCount} invites/);
-  assert.match(source, /selectedCount > 1[\s\S]*selectedCount} selected/);
+  assert.match(source, /function runResidentEmail\(rowId: string\)[\s\S]*selectedIds\.length > 1/);
+  assert.match(source, /\{selectedCount\} resident\{selectedCount === 1 \? "" : "s"\} selected/);
 });
 
 test("Activation Queue resident detail shows derived progress and queue blockers without backend changes", () => {
