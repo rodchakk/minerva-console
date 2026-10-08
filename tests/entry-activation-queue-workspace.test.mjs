@@ -227,3 +227,15 @@ test("Activation Queue filter menu closes with Escape", () => {
   assert.match(source, /document\.addEventListener\("keydown", handleEscape\)/);
   assert.match(source, /document\.removeEventListener\("keydown", handleEscape\)/);
 });
+
+
+test("Activation Queue filter menu closes when clicking outside", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(source, /useRef<HTMLDivElement>\(null\)/);
+  assert.match(source, /handlePointerDown/);
+  assert.match(source, /filterMenuRef\.current\?\.contains\(target\)/);
+  assert.match(source, /document\.addEventListener\("pointerdown", handlePointerDown\)/);
+  assert.match(source, /document\.removeEventListener\("pointerdown", handlePointerDown\)/);
+  assert.match(source, /ref=\{filterMenuRef\}/);
+});
