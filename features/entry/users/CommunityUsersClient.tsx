@@ -1041,6 +1041,12 @@ export function CommunityUsersClient({
                   <div className="mt-2 flex flex-wrap gap-2">
                     <RoleBadge role={selectedUser.role} />
                     <StatusBadge isActive={selectedUser.isActive} />
+                    {selectedUser.isPrimary ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-[4px] border border-[rgba(117,83,255,0.24)] bg-[rgba(117,83,255,0.07)] px-2 py-1 text-[11px] font-semibold text-[#D8D1FF]">
+                        <Home className="size-3.5" aria-hidden />
+                        Primary resident
+                      </span>
+                    ) : null}
                   </div>
                 ) : null}
               </div>
@@ -1328,6 +1334,14 @@ export function CommunityUsersClient({
                           ["Access identity", getIdentityLabel(selectedUser)],
                           ["Identity type", getIdentityType(selectedUser)],
                           ["Role", getRoleLabel(selectedUser.role)],
+                          ...(selectedUser.houseId
+                            ? [[
+                                "Household role",
+                                selectedUser.isPrimary
+                                  ? "Primary resident"
+                                  : "Household member",
+                              ]]
+                            : []),
                           ["Unit", selectedUser.houseLabel],
                           ["Phone", selectedUser.phone || "Not provided"],
                           ["Status", selectedUser.isActive ? "Active" : "Inactive"],
