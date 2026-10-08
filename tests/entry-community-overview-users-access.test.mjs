@@ -39,14 +39,36 @@ test("community directory drawer no longer calls account management View members
   assert.match(source, /Most residents/);
 });
 
-test("community users screen is named Users & Access and explains its scope", () => {
+test("Users & Access is a table-first identity and access workspace", () => {
   const source = read("features/entry/users/CommunityUsersClient.tsx");
 
-  assert.match(source, />Users & Access</);
+  assert.match(source, />\s*Users & Access\s*</);
   assert.match(
     source,
-    /Manage user accounts, login identities, roles, unit assignment, and access status/,
+    /Manage login identities, roles, unit assignment, credentials, and account access/,
   );
-  assert.match(source, /label="Total accounts"/);
+  assert.match(source, /Search name, email, username, phone, unit, role or status/);
+  assert.match(source, /Filter accounts/);
+  assert.match(source, /type RoleFilter[\s\S]*"OPERATOR"/);
+  assert.match(source, /min-w-\[1180px\] table-fixed/);
+  assert.match(source, /scrollbar-gutter:stable/);
+  assert.match(source, /fixed inset-0 z-50/);
+  assert.match(source, /w-\[560px\]/);
+  assert.match(source, /Account details/);
+  assert.match(source, /Account actions/);
+  assert.match(source, /Edit account/);
+  assert.match(source, /Reset password/);
+  assert.match(source, /Deactivate account/);
   assert.match(source, /Back to community/);
+});
+
+test("Users & Access summary exposes accounts, residents, and operators without six dashboard cards", () => {
+  const source = read("features/entry/users/CommunityUsersClient.tsx");
+
+  assert.match(source, /label="Accounts"/);
+  assert.match(source, /label="Active access"/);
+  assert.match(source, /label="Residents"/);
+  assert.match(source, /label="Operators"/);
+  assert.match(source, /privilegedCount = adminCount \+ guardCount/);
+  assert.doesNotMatch(source, /xl:grid-cols-6/);
 });
