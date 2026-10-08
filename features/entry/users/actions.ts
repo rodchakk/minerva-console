@@ -19,13 +19,43 @@ export type UserSearchItem = {
   communityCity: string;
   communityId: string;
   communityName: string;
+  createdAt: string;
   email: string;
   fullName: string;
+  houseId: string;
   houseLabel: string;
   id: string;
   isActive: boolean;
+  isPrimary: boolean;
+  lastSignIn: string;
+  phone: string;
   role: string;
   username: string;
+};
+
+export type GlobalUserHouseOption = {
+  id: string;
+  isActive: boolean;
+  label: string;
+};
+
+export type GlobalUserManagementContext = {
+  error?: string;
+  houses: GlobalUserHouseOption[];
+  success: boolean;
+};
+
+export type SetCommunityUserUnitInput = {
+  communityId: string;
+  houseId: string;
+  userId: string;
+};
+
+export type SetCommunityUserUnitResult = {
+  error?: string;
+  houseLabel?: string;
+  isPrimary?: boolean;
+  success: boolean;
 };
 
 export type UserSearchState = {
@@ -210,14 +240,19 @@ export async function searchUsersAction(
         return {
           communityId: coerceString(record.community_id),
           communityName: coerceString(record.community_name),
+          createdAt: coerceString(record.created_at),
           email: coerceString(record.email, "No email"),
           fullName: coerceString(record.full_name, "Unnamed user"),
+          houseId: coerceString(record.house_id),
           houseLabel: coerceString(record.house_label),
           id:
             coerceString(record.user_id) ||
             coerceString(record.id) ||
             crypto.randomUUID(),
           isActive: coerceBoolean(record.is_active),
+          isPrimary: false,
+          lastSignIn: coerceString(record.last_sign_in),
+          phone: coerceString(record.phone),
           role: coerceString(record.role, "Unknown"),
         };
       })
@@ -228,7 +263,12 @@ export async function searchUsersAction(
   );
   const userIds = Array.from(new Set(baseResults.map((item) => item.id).filter(Boolean)));
 
-  const [{ data: communitiesData }, { data: profilesData }] = await Promise.all([
+  const adminSupabase = createAdminClient();
+  const [
+    { data: communitiesData },
+    { data: profilesData },
+    { data: primaryAssignmentsData },
+  ] = await Promise.all([
     communityIds.length > 0
       ? supabase
           .from("communities")
@@ -240,6 +280,14 @@ export async function searchUsersAction(
           .from("profiles")
           .select("user_id,community_id,username")
           .in("user_id", userIds)
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    userIds.length > 0
+      ? adminSupabase
+          .from("house_residents")
+          .select("community_id,house_id,user_id,is_primary")
+          .in("user_id", userIds)
+          .eq("is_active", true)
+          .eq("is_primary", true)
       : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
   ]);
 
@@ -258,6 +306,19 @@ export async function searchUsersAction(
     ]),
   );
 
+  const primaryAssignmentKeys = new Set(
+    (Array.isArray(primaryAssignmentsData) ? primaryAssignmentsData : [])
+      .map((assignment) => {
+        const userId = coerceString(assignment.user_id);
+        const communityId = coerceString(assignment.community_id);
+        const houseId = coerceString(assignment.house_id);
+        return userId && communityId && houseId
+          ? `${userId}::${communityId}::${houseId}`
+          : "";
+      })
+      .filter(Boolean),
+  );
+
   const results = Array.isArray(data)
     ? baseResults.map((item) => {
         const community = communitiesById.get(item.communityId);
@@ -269,6 +330,11 @@ export async function searchUsersAction(
           communityCity: community?.city ?? "",
           communityName: item.communityName || "Unknown community",
           houseLabel: item.houseLabel || "",
+          isPrimary:
+            Boolean(item.houseId) &&
+            primaryAssignmentKeys.has(
+              `${item.id}::${item.communityId}::${item.houseId}`,
+            ),
           username,
         };
       })
@@ -277,6 +343,251 @@ export async function searchUsersAction(
   return {
     query,
     results,
+  };
+}
+
+export async function getGlobalUserManagementContextAction(
+  communityId: string,
+  userId: string,
+): Promise<GlobalUserManagementContext> {
+  await requireSuperadmin();
+
+  if (!communityId.trim() || !userId.trim()) {
+    return {
+      error: "Community and user are required.",
+      houses: [],
+      success: false,
+    };
+  }
+
+  const adminSupabase = createAdminClient();
+  const [{ data: membership }, { data: houses, error: housesError }] =
+    await Promise.all([
+      adminSupabase
+        .from("community_members")
+        .select("user_id")
+        .eq("community_id", communityId)
+        .eq("user_id", userId)
+        .maybeSingle(),
+      adminSupabase
+        .from("houses")
+        .select("id,house_label,is_active")
+        .eq("community_id", communityId)
+        .order("house_label", { ascending: true }),
+    ]);
+
+  if (!membership) {
+    return {
+      error: "User not found in this community.",
+      houses: [],
+      success: false,
+    };
+  }
+
+  if (housesError) {
+    return {
+      error: housesError.message,
+      houses: [],
+      success: false,
+    };
+  }
+
+  return {
+    houses: (Array.isArray(houses) ? houses : []).map((house) => ({
+      id: coerceString(house.id),
+      isActive:
+        house.is_active === undefined ? true : coerceBoolean(house.is_active),
+      label: coerceString(house.house_label, "Unnamed unit"),
+    })),
+    success: true,
+  };
+}
+
+export async function setCommunityUserUnitAction(
+  input: SetCommunityUserUnitInput,
+): Promise<SetCommunityUserUnitResult> {
+  const actor = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  const houseId = input.houseId.trim();
+
+  if (!communityId || !userId || !houseId) {
+    return {
+      error: "Community, user, and unit are required.",
+      success: false,
+    };
+  }
+
+  const adminSupabase = createAdminClient();
+  const [
+    { data: profile, error: profileError },
+    { data: targetHouse, error: houseError },
+    { data: activeAssignments, error: assignmentError },
+  ] = await Promise.all([
+    adminSupabase
+      .from("profiles")
+      .select("house_id,role")
+      .eq("community_id", communityId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    adminSupabase
+      .from("houses")
+      .select("id,house_label,is_active")
+      .eq("community_id", communityId)
+      .eq("id", houseId)
+      .maybeSingle(),
+    adminSupabase
+      .from("house_residents")
+      .select("id,house_id,is_primary,is_primary_contact,is_active")
+      .eq("community_id", communityId)
+      .eq("user_id", userId)
+      .eq("is_active", true),
+  ]);
+
+  if (profileError) return { error: profileError.message, success: false };
+  if (houseError) return { error: houseError.message, success: false };
+  if (assignmentError) return { error: assignmentError.message, success: false };
+  if (!profile) return { error: "User not found in this community.", success: false };
+  if (!targetHouse) return { error: "Unit not found in this community.", success: false };
+  if (targetHouse.is_active === false) {
+    return { error: "Activate this unit before assigning a user to it.", success: false };
+  }
+
+  const normalizedRole = coerceString(profile.role).trim().toUpperCase();
+  if (normalizedRole === "GUARD") {
+    return {
+      error: "Guard accounts are not assigned to residential units.",
+      success: false,
+    };
+  }
+
+  if (coerceString(profile.house_id) === houseId) {
+    const currentAssignment = (Array.isArray(activeAssignments) ? activeAssignments : []).find(
+      (assignment) => coerceString(assignment.house_id) === houseId,
+    );
+    return {
+      houseLabel: coerceString(targetHouse.house_label, "Unnamed unit"),
+      isPrimary: currentAssignment ? coerceBoolean(currentAssignment.is_primary) : false,
+      success: true,
+    };
+  }
+
+  const previousWasPrimary = (Array.isArray(activeAssignments) ? activeAssignments : []).some(
+    (assignment) => coerceBoolean(assignment.is_primary),
+  );
+
+  const { data: targetPrimary } = await adminSupabase
+    .from("house_residents")
+    .select("id")
+    .eq("community_id", communityId)
+    .eq("house_id", houseId)
+    .eq("is_active", true)
+    .eq("is_primary", true)
+    .neq("user_id", userId)
+    .limit(1)
+    .maybeSingle();
+
+  const shouldRemainPrimary = previousWasPrimary && !targetPrimary;
+
+  const { error: profileUpdateError } = await adminSupabase
+    .from("profiles")
+    .update({ house_id: houseId })
+    .eq("community_id", communityId)
+    .eq("user_id", userId);
+
+  if (profileUpdateError) {
+    return { error: profileUpdateError.message, success: false };
+  }
+
+  const { error: deactivateError } = await adminSupabase
+    .from("house_residents")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("community_id", communityId)
+    .eq("user_id", userId)
+    .neq("house_id", houseId)
+    .eq("is_active", true);
+
+  if (deactivateError) {
+    return { error: deactivateError.message, success: false };
+  }
+
+  const { data: existingTarget } = await adminSupabase
+    .from("house_residents")
+    .select("id")
+    .eq("community_id", communityId)
+    .eq("house_id", houseId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const assignmentPayload = {
+    is_active: true,
+    is_primary: shouldRemainPrimary,
+    is_primary_contact: shouldRemainPrimary,
+    updated_at: new Date().toISOString(),
+  };
+
+  const assignmentResult = existingTarget
+    ? await adminSupabase
+        .from("house_residents")
+        .update(assignmentPayload)
+        .eq("id", existingTarget.id)
+    : await adminSupabase.from("house_residents").insert({
+        community_id: communityId,
+        house_id: houseId,
+        user_id: userId,
+        ...assignmentPayload,
+      });
+
+  if (assignmentResult.error) {
+    return { error: assignmentResult.error.message, success: false };
+  }
+
+  const details = {
+    from_house_id: coerceString(profile.house_id) || null,
+    is_primary: shouldRemainPrimary,
+    target_user_id: userId,
+    to_house_id: houseId,
+  };
+
+  await Promise.allSettled([
+    adminSupabase.from("system_event_log").insert({
+      actor_id: actor.user.id,
+      community_id: communityId,
+      details,
+      entity_id: userId,
+      entity_type: "user",
+      event_type: "COMMUNITY_USER_UNIT_CHANGED",
+      message: "Community user unit changed by superadmin",
+      module: "superadmin",
+      severity: "INFO",
+      source: "minerva_console",
+      user_id: userId,
+    }),
+    adminSupabase.from("superadmin_audit_log").insert({
+      action: "community_user.unit_change",
+      actor_user_id: actor.user.id,
+      metadata: details,
+      target_id: userId,
+      target_type: "user",
+    }),
+  ]);
+
+  revalidateCommunityUserPaths(communityId, houseId);
+  return {
+    houseLabel: coerceString(targetHouse.house_label, "Unnamed unit"),
+    isPrimary: shouldRemainPrimary,
+    success: true,
   };
 }
 
