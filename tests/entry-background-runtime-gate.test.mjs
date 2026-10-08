@@ -8,6 +8,7 @@ const sql = readFileSync(join(root, "supabase/migrations/20261002011548_entry_ba
 const recoverySql = readFileSync(join(root, "supabase/migrations/20261007185013_entry_background_recovery_stage.sql"), "utf8");
 const scheduleSql = readFileSync(join(root, "supabase/migrations/20261007185142_entry_background_recovery_schedule_stagger.sql"), "utf8");
 const ocrRetrySql = readFileSync(join(root, "supabase/migrations/20261008201200_entry_ocr_retry_recovery.sql"), "utf8");
+const webPushRecoverySql = readFileSync(join(root, "supabase/migrations/20261008220500_entry_web_push_recovery.sql"), "utf8");
 
 test("background runtime gate defaults to severe load shedding", () => {
   assert.match(sql, /mode in \('NORMAL', 'DEGRADED', 'SEVERE'\)/);
@@ -114,4 +115,16 @@ test("recovery permits bounded OCR retry while web push remains blocked", () => 
   assert.doesNotMatch(recovery[0], /entry-web-push-dispatch/);
   assert.match(ocrRetrySql, /pg_try_advisory_xact_lock\(v_lock_key\)/);
   assert.doesNotMatch(ocrRetrySql, /cron\.alter_job/);
+});
+
+
+test("final recovery stage permits bounded web push without activating its cron", () => {
+  const recovery = webPushRecoverySql.match(/elsif v_mode = 'RECOVERY'[\s\S]*?elsif v_mode = 'DEGRADED'/);
+  assert.ok(recovery, "RECOVERY branch must exist");
+  assert.match(recovery[0], /entry-web-push-dispatch/);
+  assert.match(webPushRecoverySql, /jsonb_build_object\('source', 'pg_cron', 'limit', 10\)/);
+  assert.match(webPushRecoverySql, /timeout_milliseconds := 10000/);
+  assert.match(webPushRecoverySql, /pg_try_advisory_xact_lock\(v_lock_key\)/);
+  assert.doesNotMatch(webPushRecoverySql, /cron\.alter_job/);
+  assert.doesNotMatch(webPushRecoverySql, /active\s*:=\s*true/);
 });
