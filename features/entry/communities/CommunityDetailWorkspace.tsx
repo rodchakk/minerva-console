@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ChevronRight,
   ClipboardCheck,
+  Clock3,
   MapPinned,
   Users,
   X,
@@ -229,6 +230,31 @@ export function CommunityDetailWorkspace({
                   href={"/products/entry/communities/" + communityId + "/units"}
                 >
                   Open directory
+                  <ChevronRight className="size-3.5" aria-hidden />
+                </WorkspaceButton>
+              }
+            />
+
+            <OperationRow
+              icon={Clock3}
+              title="Activation queue"
+              description="Review residents prepared for activation and continue invitation or PIN workflows."
+              stat={
+                pendingActivationCount +
+                " pending resident" +
+                (pendingActivationCount === 1 ? "" : "s")
+              }
+              statNote={
+                pendingActivationCount === 0
+                  ? "Queue is currently clear"
+                  : "Residents waiting for activation"
+              }
+              action={
+                <WorkspaceButton
+                  href={"/products/entry/activation?community_id=" + communityId}
+                  primary={pendingActivationCount > 0}
+                >
+                  Open queue
                   <ChevronRight className="size-3.5" aria-hidden />
                 </WorkspaceButton>
               }
