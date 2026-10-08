@@ -170,7 +170,7 @@ function BackgroundDashboard({ data }: { data: EntryObservabilityData }) {
                   {formatNumber(queue.openCount)} open
                 </span>
                 <span className="rounded-md border border-white/10 bg-white/[0.03] px-2 py-1 text-xs text-slate-300">
-                  {formatNumber(queue.failedCount)} failed
+                  {formatNumber(queue.failedCount)} system failed
                 </span>
                 {queue.deliveryUnavailableCount > 0 ? (
                   <span className="rounded-md border border-amber-400/20 bg-amber-500/[0.08] px-2 py-1 text-xs text-amber-200">
