@@ -155,9 +155,9 @@ export function CommunityFacilitiesDrawer({
   }
 
   const addFacilityForm = canCreateFacilities ? (
-    <div className="rounded-xl border border-[#141119] bg-[var(--surface)] p-4">
+    <div className="rounded-lg border border-[#141119] bg-[#24202B] p-4">
       <label className="block">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
           Add facility
         </span>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -167,14 +167,14 @@ export function CommunityFacilitiesDrawer({
             autoComplete="off"
             value={facilityName}
             onChange={(event) => setFacilityName(event.target.value)}
-            className="h-11 min-w-0 flex-1 rounded-lg border border-[#141119] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
+            className="h-11 min-w-0 flex-1 rounded-lg border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none transition placeholder:text-[#8F879D] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
             placeholder="Casa Club, Pool, Gym..."
           />
           <button
             type="button"
             disabled={isCreating}
             onClick={submitFacility}
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-transparent bg-[var(--primary)] px-4 text-sm font-semibold text-white transition hover:bg-[var(--primary-strong)] disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-transparent bg-[#7553FF] px-4 text-sm font-semibold text-white transition hover:bg-[#8062FF] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isCreating ? "Adding..." : "Add facility"}
           </button>
@@ -221,14 +221,14 @@ export function CommunityFacilitiesDrawer({
                 <h2 className="mt-2 text-2xl font-semibold text-white">
                   Facilities workspace
                 </h2>
-                <p className="mt-1 text-sm text-[var(--text-muted)]">
+                <p className="mt-1 text-sm text-[#8F879D]">
                   Review reservable spaces without leaving the operational workspace.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="grid h-10 w-10 place-items-center rounded-lg border border-[#141119] bg-white/5 text-xl text-[var(--text-muted)] transition hover:border-violet-300/40 hover:text-white"
+                className="grid h-10 w-10 place-items-center rounded-lg border border-[#141119] bg-white/5 text-xl text-[#8F879D] transition hover:border-[#7553FF] hover:text-white"
                 aria-label="Close facilities drawer"
               >
                 x
@@ -236,24 +236,24 @@ export function CommunityFacilitiesDrawer({
             </div>
 
             <div className="grid gap-4 border-b border-[#141119] px-6 py-5 md:grid-cols-3">
-              <div className="rounded-lg border border-[#141119] bg-[var(--surface)] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              <div className="rounded-lg border border-[#141119] bg-[#24202B] px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8F879D]">
                   Total facilities
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-white">
                   {facilities.length}
                 </p>
               </div>
-              <div className="rounded-lg border border-[#141119] bg-[var(--surface)] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              <div className="rounded-lg border border-[#141119] bg-[#24202B] px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8F879D]">
                   Active
                 </p>
                 <p className="mt-2 text-2xl font-semibold text-white">
                   {activeCount}
                 </p>
               </div>
-              <div className="rounded-lg border border-[#141119] bg-[var(--surface)] px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.18em] text-[var(--text-muted)]">
+              <div className="rounded-lg border border-[#141119] bg-[#24202B] px-4 py-4">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#8F879D]">
                   Readiness
                 </p>
                 <p className="mt-2 text-lg font-semibold text-white">
@@ -270,12 +270,12 @@ export function CommunityFacilitiesDrawer({
 
             <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
               {stateCopy ? (
-                <div className="grid min-h-0 flex-1 place-items-center rounded-xl border border-dashed border-[#141119] bg-[var(--surface)] px-6 text-center">
+                <div className="grid min-h-0 flex-1 place-items-center rounded-lg border border-dashed border-[#141119] bg-[#24202B] px-6 text-center">
                   <div className="w-full max-w-xl">
                     <p className="text-lg font-semibold text-white">
                       {stateCopy.title}
                     </p>
-                    <p className="mx-auto mt-2 max-w-md text-sm text-[var(--text-muted)]">
+                    <p className="mx-auto mt-2 max-w-md text-sm text-[#8F879D]">
                       {stateCopy.body}
                     </p>
                     <div className="mt-5 text-left">{addFacilityForm}</div>
@@ -285,14 +285,14 @@ export function CommunityFacilitiesDrawer({
                 <>
                   {addFacilityForm}
                   <label className="relative block">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)]">
+                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8F879D]">
                       /
                     </span>
                     <input
                       value={query}
                       onChange={(event) => setQuery(event.target.value)}
                       placeholder="Search by facility name or price..."
-                      className="h-12 w-full rounded-lg border border-[#141119] bg-[var(--surface-strong)] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
+                      className="h-12 w-full rounded-lg border border-[#141119] bg-[#2E2936] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-[#8F879D] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
                     />
                   </label>
 
@@ -304,8 +304,8 @@ export function CommunityFacilitiesDrawer({
                         onClick={() => setFilter(item.value)}
                         className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
                           filter === item.value
-                            ? "border-violet-300/50 bg-[var(--primary)] text-white shadow-[0_14px_32px_rgba(112,104,255,0.28)]"
-                            : "border-[#141119] bg-white/5 text-[var(--text-muted)] hover:border-violet-300/40 hover:text-white"
+                            ? "border-[#7553FF] bg-[#7553FF] text-white shadow-[0_14px_32px_rgba(112,104,255,0.28)]"
+                            : "border-[#141119] bg-white/5 text-[#8F879D] hover:border-[#7553FF] hover:text-white"
                         }`}
                       >
                         {item.label}
@@ -313,8 +313,8 @@ export function CommunityFacilitiesDrawer({
                     ))}
                   </div>
 
-                  <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[28px] border border-[#141119] bg-[var(--surface)]">
-                    <div className="grid grid-cols-[minmax(180px,1.2fr)_110px_120px_120px_110px] border-b border-white/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B]">
+                    <div className="grid grid-cols-[minmax(180px,1.2fr)_110px_120px_120px_110px] border-b border-white/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
                       <span>Facility</span>
                       <span className="text-center">Status</span>
                       <span className="text-center">Slot</span>
@@ -328,7 +328,7 @@ export function CommunityFacilitiesDrawer({
                           <p className="text-base font-semibold text-white">
                             No facilities match this view
                           </p>
-                          <p className="mt-2 text-sm text-[var(--text-muted)]">
+                          <p className="mt-2 text-sm text-[#8F879D]">
                             Try another filter or clear the search field.
                           </p>
                         </div>
@@ -345,7 +345,7 @@ export function CommunityFacilitiesDrawer({
                               onClick={() => setSelectedId(facility.id)}
                               className={`grid w-full grid-cols-[minmax(180px,1.2fr)_110px_120px_120px_110px] items-center rounded-lg border px-3 py-3 text-left text-sm transition ${
                                 selected
-                                  ? "border-violet-300/50 bg-violet-400/12 shadow-[0_12px_34px_rgba(112,104,255,0.16)]"
+                                  ? "border-[#7553FF] bg-[rgba(117,83,255,0.10)] shadow-[0_12px_34px_rgba(112,104,255,0.16)]"
                                   : "border-transparent hover:border-[#141119] hover:bg-white/5"
                               }`}
                             >
@@ -361,7 +361,7 @@ export function CommunityFacilitiesDrawer({
                               <span className="text-center font-semibold text-white">
                                 {facility.pricePerSlot}
                               </span>
-                              <span className="text-right text-[var(--text-muted)]">
+                              <span className="text-right text-[#8F879D]">
                                 {facility.opensAt} - {facility.closesAt}
                               </span>
                             </button>
@@ -376,10 +376,10 @@ export function CommunityFacilitiesDrawer({
 
             <div className="border-t border-[#141119] bg-[rgba(9,12,24,0.84)] px-6 py-5">
               {selectedFacility ? (
-                <div className="rounded-[28px] border border-[#141119] bg-[var(--surface)] p-5">
+                <div className="rounded-[10px] border border-[#141119] bg-[#24202B] p-5">
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <div className="grid h-16 w-16 place-items-center rounded-lg bg-[var(--primary)] text-2xl text-white">
+                      <div className="grid h-16 w-16 place-items-center rounded-lg bg-[#7553FF] text-2xl text-white">
                         F
                       </div>
                       <div>
@@ -396,7 +396,7 @@ export function CommunityFacilitiesDrawer({
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-lg border border-[#141119] bg-white/5 px-4 py-2 text-sm font-semibold text-[var(--text-muted)]">
+                    <div className="rounded-lg border border-[#141119] bg-white/5 px-4 py-2 text-sm font-semibold text-[#8F879D]">
                       Read-only
                     </div>
                   </div>
@@ -413,9 +413,9 @@ export function CommunityFacilitiesDrawer({
                     ].map(([label, value]) => (
                       <div
                         key={label}
-                        className="rounded-lg border border-white/8 bg-[var(--surface-strong)] px-4 py-3"
+                        className="rounded-lg border border-white/8 bg-[#2E2936] px-4 py-3"
                       >
-                        <p className="text-xs text-[var(--text-muted)]">{label}</p>
+                        <p className="text-xs text-[#8F879D]">{label}</p>
                         <p className="mt-2 text-sm font-semibold text-white">{value}</p>
                       </div>
                     ))}
@@ -431,7 +431,7 @@ export function CommunityFacilitiesDrawer({
                         key={label}
                         type="button"
                         disabled
-                        className="rounded-lg border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-[var(--text-muted)]"
+                        className="rounded-lg border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-[#8F879D]"
                       >
                         {label} <span className="ml-2 text-xs">Coming soon</span>
                       </button>
@@ -439,7 +439,7 @@ export function CommunityFacilitiesDrawer({
                   </div>
                 </div>
               ) : (
-                <div className="rounded-[22px] border border-dashed border-[#141119] bg-white/3 px-4 py-5 text-sm text-[var(--text-muted)]">
+                <div className="rounded-lg border border-dashed border-[#141119] bg-white/3 px-4 py-5 text-sm text-[#8F879D]">
                   Select a facility to see details here.
                 </div>
               )}
