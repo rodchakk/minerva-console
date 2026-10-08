@@ -257,7 +257,7 @@ export default async function EntryObservabilityDiagnosticsPage(props: {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="ENTRY observability / Diagnostics"
+        title="ENTRY monitors / Diagnostics"
         description="Incident history, saved troubleshooting bundles, and operational audit context."
         actions={
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
