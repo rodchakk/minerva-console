@@ -31,7 +31,7 @@ export default async function ActivationQueuePage(
     campaignPreview.ready + campaignPreview.alreadyInvited > 0;
 
   return (
-    <div className="relative left-1/2 w-[calc(100vw-2rem)] max-w-[2200px] -translate-x-1/2 space-y-3 bg-[#2E2936] text-[#E7E5EA] lg:w-[calc(100vw-19rem)] 2xl:w-[calc(100vw-19.5rem)]">
+    <div className="-mx-4 -my-4 min-h-[calc(100vh-4rem)] space-y-3 bg-[#2E2936] px-4 py-4 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7">
       <header className="flex flex-col gap-4 pt-1 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
