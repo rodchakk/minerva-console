@@ -85,3 +85,16 @@ test("Community Directory marks the titular as Primary resident in the drawer", 
   assert.match(source, /resident\.userId === selectedUnit\.primaryResidentId/);
   assert.match(source, /selectedUnit\.primaryResidentName/);
 });
+
+test("Community Directory keeps chrome fixed and scrolls only table data on desktop", () => {
+  const source = read("features/entry/communities/CommunityDirectoryWorkspace.tsx");
+
+  assert.match(source, /desktopWorkspaceHeight/);
+  assert.match(source, /getBoundingClientRect\(\)\.top/);
+  assert.match(source, /window\.innerHeight - top - 16/);
+  assert.match(source, /lg:overflow-hidden/);
+  assert.match(source, /lg:h-full lg:min-h-0/);
+  assert.match(source, /lg:min-h-0/);
+  assert.match(source, /overflow-auto overscroll-contain/);
+  assert.match(source, /\[touch-action:pan-y\]/);
+});
