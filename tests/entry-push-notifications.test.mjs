@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "utf8");
 
 const migration = read("supabase/migrations/20260910020000_entry_ticket_push_notifications.sql");
+const recoveryMigration = read("supabase/migrations/20261008220500_entry_web_push_recovery.sql");
 const server = read("features/entry/push/server.ts");
 const control = read("features/entry/push/EntryPushControl.tsx");
 const signOut = read("features/entry/push/EntryPushSignOutForm.tsx");
@@ -21,6 +22,7 @@ const fieldTickets = read("app/(field)/field/entry/tickets/page.tsx");
 const nextConfig = read("next.config.ts");
 const packageJson = JSON.parse(read("package.json"));
 const packageLock = read("package-lock.json");
+const webPushTypes = read("types/web-push.d.ts");
 
 test("Web Push uses one active browser endpoint owner and current authorization", () => {
   assert.match(migration, /unique index[\s\S]*entry_web_push_subscriptions_active_endpoint_uidx[\s\S]*where is_active = true/i);
@@ -150,6 +152,18 @@ test("dispatcher is secret-protected and scheduling is opt-in through pg_cron + 
     migration,
     /^\s*(?:select|perform)\s+(?:public\.)?install_entry_web_push_dispatch_schedule_v1\s*\(/im,
   );
+});
+
+test("recovery dispatcher is bounded by default and at the provider boundary", () => {
+  assert.match(server, /dispatchPendingEntryPushes\(limit = 10\)/);
+  assert.match(server, /Math\.min\(Math\.trunc\(limit\) \|\| 10, 25\)/);
+  assert.match(server, /timeout: 8000/);
+  assert.match(webPushTypes, /timeout\?: number/);
+  assert.match(dispatchRoute, /body\.limit \?\? 10/);
+  assert.match(dispatchRoute, /Math\.min\(Math\.trunc\(requestedLimit\), 25\)/);
+  assert.match(recoveryMigration, /jsonb_build_object\('source', 'pg_cron', 'limit', 10\)/);
+  assert.match(recoveryMigration, /timeout_milliseconds := 10000/);
+  assert.doesNotMatch(recoveryMigration, /cron\.alter_job/);
 });
 
 test("worker cache headers and dependency lock are production reproducible", () => {
