@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import {
-  Activity,
   Building2,
   CalendarDays,
   ChevronRight,
   ClipboardCheck,
   Clock3,
   MapPinned,
+  ShieldCheck,
   Users,
   X,
 } from "lucide-react";
@@ -30,6 +30,8 @@ type CommunityDetailWorkspaceProps = {
   facilitiesLabel: string;
   initialTab?: WorkspaceTab;
   memberCount: number;
+  userAccountCount: number;
+  activeUserAccountCount: number;
   nextActionDescription: string;
   nextActionHref: string;
   nextActionLabel: string;
@@ -186,6 +188,8 @@ export function CommunityDetailWorkspace({
   facilitiesLabel,
   initialTab = "overview",
   memberCount,
+  userAccountCount,
+  activeUserAccountCount,
   nextActionDescription,
   nextActionHref,
   nextActionLabel,
@@ -238,20 +242,37 @@ export function CommunityDetailWorkspace({
             </div>
 
             <OperationRow
-              icon={Users}
-              title="Residents & units"
-              description="Manage households, residents, ownership, and unit-level access."
+              icon={Building2}
+              title="Community Directory"
+              description="Manage households, primary residents, ownership, and unit-level access."
               stat={unitCount + " units · " + memberCount + " residents"}
-              statNote={
-                pendingActivationCount === 0
-                  ? "No pending activations"
-                  : pendingActivationCount + " pending activation" + (pendingActivationCount === 1 ? "" : "s")
-              }
+              statNote="Physical directory and household context"
               action={
                 <WorkspaceButton
                   href={"/products/entry/communities/" + communityId + "/units"}
                 >
                   Open directory
+                  <ChevronRight className="size-3.5" aria-hidden />
+                </WorkspaceButton>
+              }
+            />
+
+            <OperationRow
+              icon={ShieldCheck}
+              title="Users & access"
+              description="Manage login identities, roles, credentials, unit assignment, and account status."
+              stat={userAccountCount + " user account" + (userAccountCount === 1 ? "" : "s")}
+              statNote={
+                activeUserAccountCount +
+                " active · " +
+                Math.max(0, userAccountCount - activeUserAccountCount) +
+                " inactive"
+              }
+              action={
+                <WorkspaceButton
+                  href={"/products/entry/communities/" + communityId + "/users"}
+                >
+                  Manage users
                   <ChevronRight className="size-3.5" aria-hidden />
                 </WorkspaceButton>
               }
@@ -349,6 +370,8 @@ export function CommunityDetailWorkspace({
               </p>
               <div className="mt-3 divide-y divide-white/[0.06]">
                 {[
+                  ["Directory residents", String(memberCount)],
+                  ["User accounts", String(userAccountCount)],
                   ["Activation queue", String(pendingActivationCount)],
                   ["Registration intake", String(registrationSubmittedUnits)],
                   ["Active destinations", String(destinationActiveCount)],

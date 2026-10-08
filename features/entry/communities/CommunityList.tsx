@@ -43,7 +43,7 @@ type PendingCommunityAction = {
   nextIsActive: boolean;
 };
 
-type DrawerTab = "overview" | "setup" | "members";
+type DrawerTab = "overview" | "setup" | "users";
 type SortMode = "name_asc" | "name_desc" | "members_desc" | "progress_desc";
 
 const setupStageLabels = [
@@ -536,7 +536,7 @@ export function CommunityList({
               >
                 <option value="name_asc">Name (A–Z)</option>
                 <option value="name_desc">Name (Z–A)</option>
-                <option value="members_desc">Most members</option>
+                <option value="members_desc">Most residents</option>
                 <option value="progress_desc">Setup progress</option>
               </select>
               <ChevronDown
@@ -976,7 +976,7 @@ function CommunityDrawer({
           {[
             ["overview", "Overview"],
             ["setup", "Setup"],
-            ["members", "Members"],
+            ["users", "Users"],
           ].map(([value, label]) => (
             <button
               key={value}
@@ -1063,12 +1063,12 @@ function CommunityDrawer({
           </>
         ) : null}
 
-        {drawerTab === "members" ? (
+        {drawerTab === "users" ? (
           <section className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <StatPanel
                 icon={Users}
-                label="Members"
+                label="Residents"
                 value={String(community.totalMembers)}
               />
               <StatPanel
@@ -1090,12 +1090,23 @@ function CommunityDrawer({
 
             <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] p-4">
               <p className="text-sm font-semibold text-white">
-                Resident operations
+                Users & access
               </p>
               <p className="mt-2 text-xs leading-5 text-[#A9A3B2]">
-                Review community users or open the activation queue for prepared
-                residents awaiting account activation.
+                Manage resident, admin, and guard accounts, including roles,
+                login identities, account status, and unit assignment.
               </p>
+              {community.activationPendingCount > 0 ? (
+                <div className="mt-3">
+                  <DimensionalLink
+                    href={getActivationQueueHref(community.id)}
+                    variant="secondary"
+                    className="w-full"
+                  >
+                    Open activation queue
+                  </DimensionalLink>
+                </div>
+              ) : null}
             </div>
           </section>
         ) : null}
@@ -1135,17 +1146,11 @@ function CommunityDrawer({
               Open community
             </DimensionalLink>
             <DimensionalLink
-              href={
-                community.activationPendingCount > 0
-                  ? getActivationQueueHref(community.id)
-                  : getUsersHref(community.id)
-              }
+              href={getUsersHref(community.id)}
               variant="secondary"
               className="w-full"
             >
-              {community.activationPendingCount > 0
-                ? "Activation queue"
-                : "View members"}
+              Manage users
             </DimensionalLink>
           </div>
         </div>
@@ -1235,7 +1240,7 @@ function KeyDetails({ community }: { community: CommunityListItem }) {
     },
     {
       icon: Users,
-      label: "Members",
+      label: "Residents",
       value: String(community.totalMembers),
     },
     {
