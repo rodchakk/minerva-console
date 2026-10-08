@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { Check, MoreHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { FloatingActionMenu } from "@/components/ui/FloatingActionMenu";
 import {
   cancelCommunityRegistrationCampaign,
   launchCommunityRegistrationCampaign,
@@ -37,6 +38,12 @@ type CommunityRegistrationCardProps = {
 const initialState: LaunchCommunityRegistrationCampaignResult | null = null;
 const initialReplaceState: ReplaceCommunityRegistrationLinkResult | null = null;
 const initialCancelState: CancelCommunityRegistrationCampaignResult | null = null;
+
+const registrationPrimaryActionClass =
+  "inline-flex h-9 min-w-[152px] items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] outline-none transition hover:bg-[#8062FF] focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45";
+
+const registrationSecondaryActionClass =
+  "inline-flex h-9 min-w-[112px] items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] outline-none transition hover:bg-[#342F3D] focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45";
 
 function statusLabel(status: string) {
   const normalized = status.trim().toLowerCase();
@@ -665,6 +672,8 @@ function ActiveRegistrationLinkControls({
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   function recoverLink(onSuccess: (url: string) => Promise<void> | void) {
     setMessage(null);
@@ -690,6 +699,7 @@ function ActiveRegistrationLinkControls({
   }
 
   function copyCurrentLink() {
+    setMenuOpen(false);
     recoverLink(async (url) => {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -698,6 +708,7 @@ function ActiveRegistrationLinkControls({
   }
 
   function openCurrentLink() {
+    setMenuOpen(false);
     setMessage(null);
     setCopied(false);
 
@@ -726,20 +737,20 @@ function ActiveRegistrationLinkControls({
 
   if (!campaign.activeCampaignAccessRecoverable) {
     return (
-      <div className="flex flex-col items-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <button
           type="button"
           onClick={onReplace}
-          className="inline-flex h-9 items-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119]"
+          className={registrationSecondaryActionClass}
         >
-          Replace registration link
+          Replace link
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="text-xs font-medium text-[#E99AA7] hover:text-[#FFC1CB]"
+          className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[rgba(255,102,126,0.22)] bg-[rgba(255,102,126,0.06)] px-3 text-xs font-semibold text-[#FFC1CB]"
         >
-          Cancel registration
+          Cancel campaign
         </button>
       </div>
     );
@@ -747,44 +758,66 @@ function ActiveRegistrationLinkControls({
 
   return (
     <div className="relative">
-      <details>
-        <summary className="grid size-9 cursor-pointer list-none place-items-center rounded-[7px] border border-[#141119] bg-[#2E2936] text-white shadow-[0_2px_0_#141119] [&::-webkit-details-marker]:hidden">
-          <MoreHorizontal className="size-4" aria-hidden />
-          <span className="sr-only">Registration actions</span>
-        </summary>
-        <div className="absolute right-0 top-11 z-40 w-56 rounded-lg border border-[#141119] bg-[#24202B] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.34)]">
-          <button
-            type="button"
-            onClick={copyCurrentLink}
-            disabled={isPending}
-            className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
-          >
-            {copied ? "Copied" : isPending ? "Preparing..." : "Copy registration link"}
-          </button>
-          <button
-            type="button"
-            onClick={openCurrentLink}
-            disabled={isPending}
-            className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
-          >
-            Open registration
-          </button>
-          <button
-            type="button"
-            onClick={onReplace}
-            className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
-          >
-            Replace registration link
-          </button>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#E99AA7] hover:bg-[rgba(255,102,126,0.07)] hover:text-[#FFC1CB]"
-          >
-            Cancel registration
-          </button>
-        </div>
-      </details>
+      <button
+        ref={triggerRef}
+        type="button"
+        aria-expanded={menuOpen}
+        aria-haspopup="menu"
+        onClick={() => setMenuOpen((value) => !value)}
+        className={registrationSecondaryActionClass}
+      >
+        <MoreHorizontal className="size-4" aria-hidden />
+        Actions
+      </button>
+
+      <FloatingActionMenu
+        anchorRef={triggerRef}
+        className="w-60 border-[#141119] bg-[#24202B] p-1.5 shadow-[0_18px_42px_rgba(0,0,0,0.44)]"
+        onClose={() => setMenuOpen(false)}
+        open={menuOpen}
+      >
+        <button
+          type="button"
+          role="menuitem"
+          onClick={copyCurrentLink}
+          disabled={isPending}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
+        >
+          {copied ? "Copied" : isPending ? "Preparing..." : "Copy registration link"}
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={openCurrentLink}
+          disabled={isPending}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
+        >
+          Open registration
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setMenuOpen(false);
+            onReplace();
+          }}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+        >
+          Replace registration link
+        </button>
+        <button
+          type="button"
+          role="menuitem"
+          onClick={() => {
+            setMenuOpen(false);
+            onCancel();
+          }}
+          className="block w-full rounded-md px-3 py-2 text-left text-xs font-medium text-[#E99AA7] hover:bg-[rgba(255,102,126,0.07)] hover:text-[#FFC1CB]"
+        >
+          Cancel registration
+        </button>
+      </FloatingActionMenu>
+
       {message ? (
         <p className="absolute right-0 top-12 z-50 w-72 rounded-lg border border-[rgba(255,102,126,0.24)] bg-[#2E2936] px-3 py-2 text-xs text-[#FFC1CB] shadow-xl">
           {message}
@@ -825,7 +858,7 @@ export function CommunityRegistrationCard({
   return (
     <section
       id="resident-registration"
-      className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] p-4 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] lg:p-5"
+      className="relative overflow-visible rounded-[10px] border border-[#141119] bg-[#24202B] p-4 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] lg:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -882,7 +915,7 @@ export function CommunityRegistrationCard({
         </p>
 
         {!hasOperationalCampaign ? (
-          <Button
+          <button
             type="button"
             onClick={() => setShowLaunchDialog(true)}
             disabled={!canStart}
@@ -891,16 +924,18 @@ export function CommunityRegistrationCard({
                 ? "Start a resident registration campaign."
                 : "An operational registration campaign already exists."
             }
+            className={registrationPrimaryActionClass}
           >
-            Start registration campaign
-          </Button>
+            Start registration
+          </button>
         ) : campaign ? (
           <div className="flex flex-wrap gap-2">
             {canOpenReview ? (
               <Link
                 href={`/products/entry/communities/${communityId}/registration`}
+                className={registrationPrimaryActionClass}
               >
-                <Button type="button">Review registrations</Button>
+                Review registrations
               </Link>
             ) : null}
             {campaignOpen ? (
@@ -912,13 +947,13 @@ export function CommunityRegistrationCard({
               />
             ) : null}
             {!campaignOpen && canCancelCampaign ? (
-              <Button
+              <button
                 type="button"
-                variant="secondary"
                 onClick={() => setShowCancelDialog(true)}
+                className={registrationSecondaryActionClass}
               >
                 Cancel registration
-              </Button>
+              </button>
             ) : null}
           </div>
         ) : null}
