@@ -1307,7 +1307,7 @@ export function CommunityUsersClient({
                       <div className="border-b border-[#141119] px-3.5 py-3">
                         <p className="text-xs font-semibold text-white">Account actions</p>
                         <p className="mt-1 text-[10px] text-[#8F879D]">
-                          Changes here affect this user's ENTRY access.
+                          Changes here affect this user&apos;s ENTRY access.
                         </p>
                       </div>
 
