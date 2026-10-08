@@ -69,7 +69,7 @@ export default async function EntryNotificationObservabilityPage(props: {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="ENTRY observability / Communications"
+        title="ENTRY monitors / Communications"
         description="Push, email, worker, provider, and delivery evidence for ENTRY communications."
         actions={
           <ObservabilityFilters
