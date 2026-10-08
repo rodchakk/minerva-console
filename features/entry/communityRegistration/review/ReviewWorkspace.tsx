@@ -1739,6 +1739,16 @@ export function ReviewWorkspace({
           </div>
         ) : null}
 
+        {selectedReportUnitIds.some(
+          (unitId) =>
+            ["submitted", "confirmed"].includes(statusByUnitId.get(unitId) ?? "") &&
+            Boolean(duplicateCandidatesByUnit.get(unitId)?.length),
+        ) ? (
+          <p className="mx-4 mt-3 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-3 py-2 text-xs leading-5 text-amber-100">
+            Units with unresolved duplicate matches remain selectable for reports, but are excluded from Patronato and Activation Queue bulk workflow actions.
+          </p>
+        ) : null}
+
         {reportError ? (
           <p className="mx-4 mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-3 py-2 text-xs text-rose-100">
             {reportError}
