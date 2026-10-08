@@ -587,10 +587,10 @@ export function CommunityUsersClient({
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
                 MINERVA CONSOLE / ENTRY
               </p>
-              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Community users</h1>
+              <h1 className="mt-3 text-3xl font-semibold tracking-tight text-white">Users & Access</h1>
               <p className="mt-1 text-sm font-semibold text-violet-100">{community.name}</p>
               <p className="mt-2 max-w-2xl text-sm text-[var(--text-muted)]">
-                Manage residents, admins, and guards for this community.
+                Manage user accounts, login identities, roles, unit assignment, and access status for this community.
               </p>
             </div>
           </div>
@@ -599,7 +599,7 @@ export function CommunityUsersClient({
             <Link href={`/products/entry/communities/${community.id}`}>
               <Button variant="secondary">
                 <Building2 className="mr-2 h-4 w-4" aria-hidden />
-                Back to community details
+                Back to community
               </Button>
             </Link>
             <Button onClick={openCreate}>
@@ -622,7 +622,7 @@ export function CommunityUsersClient({
         ) : null}
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <MetricCard icon={<UsersRound className="h-5 w-5" />} label="Total users" value={users.length} hint="Linked to community" />
+          <MetricCard icon={<UsersRound className="h-5 w-5" />} label="Total accounts" value={users.length} hint="Linked to community" />
           <MetricCard icon={<UserCheck className="h-5 w-5" />} label="Active" value={activeCount} hint="Currently enabled" tone="green" />
           <MetricCard icon={<UserX className="h-5 w-5" />} label="Inactive" value={inactiveCount} hint="Blocked from access" tone="orange" />
           <MetricCard icon={<Home className="h-5 w-5" />} label="Residents" value={residentCount} hint="Resident accounts" tone="blue" />
