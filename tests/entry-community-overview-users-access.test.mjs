@@ -72,3 +72,25 @@ test("Users & Access summary exposes accounts, residents, and operators without 
   assert.match(source, /privilegedCount = adminCount \+ guardCount/);
   assert.doesNotMatch(source, /xl:grid-cols-6/);
 });
+
+
+test("Users & Access supports intentional Resident/Admin role changes from the details drawer", () => {
+  const client = read("features/entry/users/CommunityUsersClient.tsx");
+  const actions = read("features/entry/users/communityUserActions.ts");
+
+  assert.match(client, /Change role/);
+  assert.match(client, /setCommunityUserRoleAction/);
+  assert.match(client, /roleDraft/);
+  assert.match(client, /Resident/);
+  assert.match(client, /Admin/);
+  assert.match(client, /Guard accounts use a separate access model/);
+  assert.match(client, /This grants administrative permissions/);
+  assert.match(client, /This removes administrative permissions/);
+
+  assert.match(actions, /setCommunityUserRoleAction/);
+  assert.match(actions, /role: "ADMIN" \| "RESIDENT"/);
+  assert.match(actions, /Only Resident and Admin accounts can be switched here/);
+  assert.match(actions, /\.from\("community_members"\)/);
+  assert.match(actions, /COMMUNITY_USER_ROLE_CHANGED/);
+  assert.match(actions, /community_user\.role_change/);
+});
