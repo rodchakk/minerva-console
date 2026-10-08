@@ -581,17 +581,34 @@ export function CommunityDirectoryWorkspace({
                 <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Household</p></div>
                 {selectedUnit.residents.length > 0 ? (
                   <div className="divide-y divide-white/[0.06]">
-                    {selectedUnit.residents.map((resident) => (
-                      <div key={resident.userId} className="px-3 py-2.5">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <p className="truncate text-[11px] font-semibold text-white">{resident.fullName}</p>
-                            <p className="mt-1 truncate text-[10px] text-[#8F879D]">{resident.email || resident.phone || resident.account}</p>
+                    {selectedUnit.residents.map((resident) => {
+                      const isPrimaryResident =
+                        resident.isPrimary ||
+                        resident.userId === selectedUnit.primaryResidentId ||
+                        Boolean(
+                          selectedUnit.primaryResidentName &&
+                            resident.fullName.trim().toLowerCase() ===
+                              selectedUnit.primaryResidentName.trim().toLowerCase(),
+                        );
+
+                      return (
+                        <div key={resident.userId} className="px-3 py-2.5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="truncate text-[11px] font-semibold text-white">
+                                {resident.fullName}
+                              </p>
+                              <p className="mt-1 truncate text-[10px] text-[#8F879D]">
+                                {resident.email || resident.phone || resident.account}
+                              </p>
+                            </div>
+                            <Tag tone={isPrimaryResident ? "success" : "default"}>
+                              {isPrimaryResident ? "Primary resident" : "Resident"}
+                            </Tag>
                           </div>
-                          <Tag>{resident.isPrimary ? "Primary" : "Resident"}</Tag>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <p className="px-3 py-4 text-[11px] text-[#A9A3B2]">No residents are currently linked to this unit.</p>
