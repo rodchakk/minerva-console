@@ -1275,30 +1275,60 @@ export function CommunityUsersClient({
             ) : selectedUser ? (
               <div className="mt-5">
                 {manageMode === "view" ? (
-                  <>
-                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                      {[
-                        ["Access identity", getIdentityLabel(selectedUser)],
-                        ["Role", getRoleLabel(selectedUser.role)],
-                        ["Unit", selectedUser.houseLabel],
-                        ["Phone", selectedUser.phone || "Not provided"],
-                        ["Status", selectedUser.isActive ? "Active" : "Inactive"],
-                        ["Identity type", getIdentityType(selectedUser)],
-                      ].map(([label, value]) => (
-                        <div key={label} className="rounded-lg border border-white/8 bg-white/[0.025] p-3">
-                          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{label}</p>
-                          <p className="mt-2 truncate text-sm font-semibold text-white">{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-5 grid gap-2 sm:grid-cols-3">
+                  <div className="space-y-4">
+                    <section className="overflow-hidden rounded-lg border border-[#141119] bg-white/[0.012]">
+                      <div className="border-b border-[#141119] px-3.5 py-3">
+                        <p className="text-xs font-semibold text-white">Account details</p>
+                        <p className="mt-1 text-[10px] text-[#8F879D]">
+                          Identity and access context for this community.
+                        </p>
+                      </div>
+                      <div className="divide-y divide-white/[0.06]">
+                        {[
+                          ["Access identity", getIdentityLabel(selectedUser)],
+                          ["Identity type", getIdentityType(selectedUser)],
+                          ["Role", getRoleLabel(selectedUser.role)],
+                          ["Unit", selectedUser.houseLabel],
+                          ["Phone", selectedUser.phone || "Not provided"],
+                          ["Status", selectedUser.isActive ? "Active" : "Inactive"],
+                        ].map(([label, value]) => (
+                          <div
+                            key={label}
+                            className="grid grid-cols-[150px_minmax(0,1fr)] gap-3 px-3.5 py-3"
+                          >
+                            <span className="text-[11px] text-[#8F879D]">{label}</span>
+                            <strong className="truncate text-right text-[11px] font-semibold text-white" title={value}>
+                              {value}
+                            </strong>
+                          </div>
+                        ))}
+                      </div>
+                    </section>
+
+                    <section className="overflow-hidden rounded-lg border border-[#141119] bg-white/[0.012]">
+                      <div className="border-b border-[#141119] px-3.5 py-3">
+                        <p className="text-xs font-semibold text-white">Account actions</p>
+                        <p className="mt-1 text-[10px] text-[#8F879D]">
+                          Changes here affect this user's ENTRY access.
+                        </p>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => { setDraft(buildUserDraft(selectedUser)); setManageMode("edit"); setError(null); }}
-                        className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/[0.025] p-3 text-left text-sm font-semibold text-white transition hover:border-violet-400/25 hover:bg-violet-500/[0.06]"
+                        onClick={() => {
+                          setDraft(buildUserDraft(selectedUser));
+                          setManageMode("edit");
+                          setError(null);
+                        }}
+                        className="flex w-full items-center justify-between border-b border-[#141119] px-3.5 py-3 text-left transition hover:bg-white/[0.025]"
                       >
-                        <Pencil className="h-4 w-4 text-violet-200" /> Edit user
+                        <span className="flex items-center gap-2.5 text-xs font-semibold text-white">
+                          <Pencil className="size-4 text-[#BEB4FF]" aria-hidden />
+                          Edit account
+                        </span>
+                        <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
                       </button>
+
                       <button
                         type="button"
                         onClick={() => {
@@ -1310,24 +1340,50 @@ export function CommunityUsersClient({
                           setManageMode("password");
                           setError(null);
                         }}
-                        className="flex items-center gap-3 rounded-lg border border-white/8 bg-white/[0.025] p-3 text-left text-sm font-semibold text-white transition hover:border-violet-400/25 hover:bg-violet-500/[0.06]"
+                        className="flex w-full items-center justify-between border-b border-[#141119] px-3.5 py-3 text-left transition hover:bg-white/[0.025]"
                       >
-                        <KeyRound className="h-4 w-4 text-violet-200" /> Reset password
+                        <span className="flex items-center gap-2.5 text-xs font-semibold text-white">
+                          <KeyRound className="size-4 text-[#BEB4FF]" aria-hidden />
+                          Reset password
+                        </span>
+                        <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
                       </button>
+
                       <button
                         type="button"
-                        onClick={() => { setManageMode("status"); setError(null); }}
-                        className={`flex items-center gap-3 rounded-lg border p-3 text-left text-sm font-semibold transition ${
-                          selectedUser.isActive
-                            ? "border-rose-400/15 bg-rose-500/[0.06] text-rose-100 hover:border-rose-400/30"
-                            : "border-emerald-400/15 bg-emerald-500/[0.06] text-emerald-100 hover:border-emerald-400/30"
+                        onClick={() => {
+                          setManageMode("status");
+                          setError(null);
+                        }}
+                        className={`flex w-full items-center justify-between px-3.5 py-3 text-left transition hover:bg-white/[0.025] ${
+                          selectedUser.isActive ? "text-[#FFB6C1]" : "text-[#8EE2B9]"
                         }`}
                       >
-                        {selectedUser.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                        {selectedUser.isActive ? "Deactivate user" : "Reactivate user"}
+                        <span className="flex items-center gap-2.5 text-xs font-semibold">
+                          {selectedUser.isActive ? (
+                            <UserX className="size-4" aria-hidden />
+                          ) : (
+                            <UserCheck className="size-4" aria-hidden />
+                          )}
+                          {selectedUser.isActive ? "Deactivate account" : "Reactivate account"}
+                        </span>
+                        <ChevronRight className="size-4 text-[#8F879D]" aria-hidden />
                       </button>
+                    </section>
+
+                    <div className="rounded-lg border border-[rgba(117,83,255,0.20)] bg-[rgba(117,83,255,0.05)] px-3.5 py-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">
+                        Access context
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-[#D3CEDA]">
+                        {selectedUser.role === "RESIDENT"
+                          ? "Resident access is tied to the assigned community unit and account activation state."
+                          : selectedUser.role === "GUARD"
+                            ? "Guard access is operator-level and is not tied to a residential unit."
+                            : "This account has elevated community access based on its assigned role."}
+                      </p>
                     </div>
-                  </>
+                  </div>
                 ) : null}
 
                 {manageMode === "edit" && draft ? (
