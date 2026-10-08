@@ -111,7 +111,7 @@ test("Activation Queue resident detail shows derived progress and queue blockers
 
   assert.match(source, /Activation progress/);
   assert.match(source, /Queue checks/);
-  assert.match(source, /No blockers detected/);
+  assert.match(source, /Queue checks clear/);
   assert.match(source, /getQueueBlockers/);
   assert.match(source, /getActivationStage/);
   assert.doesNotMatch(source, /supabase\.(?:from|rpc|insert|update|upsert)\(/);
