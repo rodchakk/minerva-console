@@ -54,7 +54,7 @@ function WorkspaceButton({
   primary?: boolean;
 }) {
   const className =
-    "relative isolate inline-flex h-9 w-[156px] items-center justify-center rounded-[7px] border-0 bg-transparent px-3 text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#2E2936]";
+    "relative isolate inline-flex h-9 w-[180px] items-center justify-center whitespace-nowrap rounded-[7px] border-0 bg-transparent px-3 text-xs font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] focus-visible:ring-offset-2 focus-visible:ring-offset-[#2E2936]";
 
   const content = (
     <>
@@ -113,7 +113,7 @@ function OperationRow({
   title: string;
 }) {
   return (
-    <div className="grid gap-4 border-b border-[#141119] px-4 py-3.5 last:border-b-0 md:grid-cols-[minmax(0,1.2fr)_minmax(190px,.72fr)_160px] md:items-center">
+    <div className="grid gap-4 border-b border-[#141119] px-4 py-3.5 last:border-b-0 md:grid-cols-[minmax(0,1.2fr)_minmax(190px,.72fr)_190px] md:items-center">
       <div className="flex min-w-0 items-start gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-[8px] border border-white/[0.10] bg-white/[0.018] text-[#D8D3E7]">
           <Icon className="size-4 stroke-[1.7]" aria-hidden />
