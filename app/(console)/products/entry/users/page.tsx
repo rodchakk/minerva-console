@@ -33,8 +33,8 @@ export default async function EntryUsersPage(
             ENTRY users
           </h1>
           <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
-            Search people across ENTRY communities and jump directly into the
-            right community when you need to manage an account.
+            Find any ENTRY account and manage access, identity, role, and unit
+            assignment from one workspace.
           </p>
         </div>
       </section>
