@@ -375,6 +375,7 @@ export function CommunityDetailWorkspace({
                   ["Activation queue", String(pendingActivationCount)],
                   ["Registration intake", String(registrationSubmittedUnits)],
                   ["Active destinations", String(destinationActiveCount)],
+                  ["Admin activity", adminActivityCount === null ? "—" : String(adminActivityCount)],
                 ].map(([label, value]) => (
                   <div
                     key={label}
