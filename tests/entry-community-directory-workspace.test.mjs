@@ -77,3 +77,11 @@ test("Unit manager supports reusable menu trigger without removing delete protec
   assert.match(source, /Only empty units can be deleted/);
   assert.match(source, /event\.key === "Escape"/);
 });
+
+test("Community Directory marks the titular as Primary resident in the drawer", () => {
+  const source = read("features/entry/communities/CommunityDirectoryWorkspace.tsx");
+
+  assert.match(source, /Primary resident/);
+  assert.match(source, /resident\.userId === selectedUnit\.primaryResidentId/);
+  assert.match(source, /selectedUnit\.primaryResidentName/);
+});
