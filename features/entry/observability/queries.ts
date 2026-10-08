@@ -962,6 +962,7 @@ function mapNotificationPayload(
 
 export async function getEntryObservability(input: {
   communityId?: string | null;
+  model?: "overview" | "background" | "performance" | "diagnostics";
   range: EntryObservabilityTimeRange;
 }): Promise<EntryObservabilityResult> {
   await requireSuperadmin();
@@ -971,11 +972,21 @@ export async function getEntryObservability(input: {
   const endsAt = new Date().toISOString();
   const communityId = input.communityId?.trim() || null;
 
-  const { data, error } = await supabase.rpc("sa_get_entry_observability_v5", {
+  const args = {
     p_community_id: communityId,
     p_ends_at: endsAt,
     p_starts_at: startsAt,
-  });
+  };
+
+  const model = input.model ?? "background";
+  const request =
+    model === "background"
+      ? supabase.rpc("sa_get_entry_observability_v5", args)
+      : model === "performance"
+        ? supabase.rpc("sa_get_entry_observability_v4", args)
+        : supabase.rpc("sa_get_entry_observability_v3", args);
+
+  const { data, error } = await request;
 
   if (error) {
     return {
