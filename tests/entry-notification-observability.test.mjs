@@ -20,6 +20,9 @@ const page = read("app/(console)/products/entry/observability/page.tsx");
 const notificationsPage = read(
   "app/(console)/products/entry/observability/notifications/page.tsx",
 );
+const observabilityNav = read(
+  "features/entry/observability/ObservabilityWorkspaceNav.tsx",
+);
 const drilldown = read(
   "features/entry/observability/NotificationObservabilityDrilldown.tsx",
 );
