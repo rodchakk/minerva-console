@@ -9,7 +9,7 @@ turns all background load back on.
 
 - **SEVERE** — no incident-relevant high-frequency background job is allowed to run.
 - **DEGRADED** — only the bounded community mobile-push worker and mobile receipt worker may run.
-- **RECOVERY** — keeps those two workers available and additionally permits database-only maintenance: observability reconciliation, stale push sweeping, edge rate-limit cleanup, and stale-record expiration. OCR and web-push fan-out remain blocked.
+- **RECOVERY** — keeps those two workers available, permits database-only maintenance, and permits the bounded OCR retry worker. Foreground CHECK_IN already dispatches OCR directly; the retry worker exists only to recover transient provider/network failures. Web-push fan-out remains blocked.
 - **NORMAL** — the runtime gate permits all configured jobs.
 
 Every allowed job also takes a transaction-scoped advisory lock. If the previous
@@ -28,10 +28,14 @@ invocation is still running, the next cron tick exits successfully with
 7. After a longer stable window, move to **RECOVERY**, not **NORMAL**.
 8. Re-enable database-only jobs in this order: **entry-observability-incident-reconcile**,
    **community-message-push-stale-sweeper**, **cleanup-edge-rate-limits**, then
-   **expire-stale-records**. Keep OCR and web push disabled while this stage is observed.
-9. Move to **NORMAL** only with observed headroom, then restore
-   **entry-web-push-dispatch** and **entry-plate-ocr-queue** one at a time.
-10. If Auth/REST 5xx, cron startup timeouts, or connection pressure returns, set
+   **expire-stale-records**.
+9. After those remain stable, permit and activate **entry-plate-ocr-queue** while staying
+   in **RECOVERY**. This worker is bounded to three queued items per run and is needed
+   to retry OCR work left PENDING after transient provider failures. Keep
+   **entry-web-push-dispatch** blocked.
+10. Move to **NORMAL** only with observed headroom, then restore
+   **entry-web-push-dispatch** as the final provider-fan-out stage.
+11. If Auth/REST 5xx, cron startup timeouts, or connection pressure returns, set
     runtime mode back to **SEVERE** before investigating. Do not mass-toggle jobs.
 
 ## Rollback principle
