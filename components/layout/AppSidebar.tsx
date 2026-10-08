@@ -2,7 +2,7 @@
 
 import { useState, type ComponentType } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Building2,
   Bell,
@@ -141,7 +141,24 @@ function SidebarNav({
   onClose: () => void;
 }) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+  const searchParams = useSearchParams();
   const navGroups = isEntryContext(pathname) ? entryNavGroups : minervaNavGroups;
+
+  const withMonitorFilters = (href: string) => {
+    if (!href.startsWith("/products/entry/observability")) {
+      return href;
+    }
+
+    const params = new URLSearchParams();
+    const range = searchParams.get("range");
+    const community = searchParams.get("community");
+
+    if (range && range !== "24h") params.set("range", range);
+    if (community) params.set("community", community);
+
+    const query = params.toString();
+    return query ? `${href}?${query}` : href;
+  };
 
   const toggleGroup = (groupId: string, currentIsOpen: boolean) => {
     setOpenGroups((prev) => ({
@@ -211,7 +228,7 @@ function SidebarNav({
                   return (
                     <div key={item.href}>
                       <Link
-                        href={item.href}
+                        href={withMonitorFilters(item.href)}
                         onClick={onClose}
                         className={cn(
                           "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[14px] font-medium leading-4 transition-colors focus-visible:outline-none focus-visible:ring-1",
@@ -259,7 +276,7 @@ function SidebarNav({
                             return (
                               <Link
                                 key={child.href}
-                                href={child.href}
+                                href={withMonitorFilters(child.href)}
                                 onClick={onClose}
                                 className={cn(
                                   "relative flex min-h-8 items-center rounded-md px-2 py-1 text-[13px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-1",
