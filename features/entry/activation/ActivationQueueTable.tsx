@@ -2,7 +2,9 @@
 
 import {
   CheckCircle2,
-  Clock3,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
   KeyRound,
   Mail,
   Pencil,
@@ -10,12 +12,10 @@ import {
   Send,
   TriangleAlert,
   UserPlus,
-  Users,
   X,
-  type LucideIcon,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type {
@@ -221,7 +221,7 @@ function EditActivationEmailModal({
   if (result?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-emerald-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-emerald-400/20 bg-[#292431] p-6 shadow-xl">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
               <CheckCircle2 className="size-5" aria-hidden />
@@ -235,7 +235,7 @@ function EditActivationEmailModal({
               </p>
             </div>
           </div>
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
+          <p className="text-sm leading-6 text-[#A9A3B2]">
             {result.data.changed
               ? "Previous activation credentials were invalidated. This resident is back in Pending and is ready for a new invitation."
               : "This is already the current activation email. No activation credentials or queue state were changed."}
@@ -254,17 +254,17 @@ function EditActivationEmailModal({
     <Overlay>
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-[#141119] bg-[#292431] p-6 shadow-xl"
       >
         <div>
           <h3 className="text-lg font-semibold text-white">Change activation email</h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+          <p className="mt-1 text-sm leading-6 text-[#A9A3B2]">
             Correct the email used for this resident&apos;s pre-activation flow.
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        <div className="rounded-xl border border-[#141119] bg-[#2E2936] p-3.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
             Current email
           </p>
           <p className="mt-1 break-all text-sm text-slate-200">{row.email}</p>
@@ -285,7 +285,7 @@ function EditActivationEmailModal({
             autoFocus
             required
             disabled={saving}
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/15 disabled:opacity-60"
+            className="w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-[#A9A3B2] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/15 disabled:opacity-60"
             placeholder="resident@example.com"
           />
         </label>
@@ -355,7 +355,7 @@ function EditActivationPhoneModal({
   if (result?.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-emerald-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-emerald-400/20 bg-[#292431] p-6 shadow-xl">
           <div className="flex items-start gap-3">
             <span className="grid size-10 shrink-0 place-items-center rounded-full bg-emerald-500/10 text-emerald-300 ring-1 ring-inset ring-emerald-400/20">
               <CheckCircle2 className="size-5" aria-hidden />
@@ -369,7 +369,7 @@ function EditActivationPhoneModal({
               </p>
             </div>
           </div>
-          <p className="text-sm leading-6 text-[var(--text-muted)]">
+          <p className="text-sm leading-6 text-[#A9A3B2]">
             {!result.data.changed
               ? "This is already the current activation phone. No queue state was changed."
               : result.data.activation_reset
@@ -390,17 +390,17 @@ function EditActivationPhoneModal({
     <Overlay>
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl"
+        className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-[#141119] bg-[#292431] p-6 shadow-xl"
       >
         <div>
           <h3 className="text-lg font-semibold text-white">Change activation phone</h3>
-          <p className="mt-1 text-sm leading-6 text-[var(--text-muted)]">
+          <p className="mt-1 text-sm leading-6 text-[#A9A3B2]">
             Correct the phone number that will be stored for this resident.
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+        <div className="rounded-xl border border-[#141119] bg-[#2E2936] p-3.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
             Current phone
           </p>
           <p className="mt-1 break-all text-sm text-slate-200">{row.phone}</p>
@@ -421,7 +421,7 @@ function EditActivationPhoneModal({
             autoFocus
             required
             disabled={saving}
-            className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/15 disabled:opacity-60"
+            className="w-full rounded-lg border border-[#141119] bg-[#2E2936] px-3 py-2.5 text-sm text-white outline-none transition placeholder:text-[#A9A3B2] focus:border-violet-400/60 focus:ring-2 focus:ring-violet-400/15 disabled:opacity-60"
             placeholder="+504 9999-9999"
           />
         </label>
@@ -440,7 +440,7 @@ function EditActivationPhoneModal({
             className={
               row.method === "phone_pin"
                 ? "text-xs leading-5 text-amber-100/80"
-                : "text-xs leading-5 text-[var(--text-muted)]"
+                : "text-xs leading-5 text-[#A9A3B2]"
             }
           >
             {row.method === "phone_pin"
@@ -483,9 +483,9 @@ function ResultModal({
   if (!result.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-rose-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-rose-400/20 bg-[#292431] p-6 shadow-xl">
           <h3 className="text-lg font-semibold text-white">PIN generation failed</h3>
-          <p className="text-sm text-[var(--text-muted)]">{result.error}</p>
+          <p className="text-sm text-[#A9A3B2]">{result.error}</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>Close</Button>
           </div>
@@ -522,7 +522,7 @@ function ResultModal({
 
   return (
     <Overlay>
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[10px] border border-[#141119] bg-[#292431] shadow-xl">
         <div className="flex-shrink-0 border-b border-white/10 p-6">
           <h3 className="text-lg font-semibold text-white">PIN generation results</h3>
           <div className="mt-3 flex flex-wrap gap-3">
@@ -536,7 +536,7 @@ function ResultModal({
           </div>
 
           {isAllFailed ? (
-            <div className="mt-3 rounded-2xl border border-rose-400/20 bg-rose-500/10 px-4 py-3">
+            <div className="mt-3 rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3">
               <p className="text-sm font-semibold text-rose-200">
                 All selected rows failed. Check that the residents are in a valid
                 state and try again.
@@ -545,7 +545,7 @@ function ResultModal({
           ) : null}
 
           {isPartialFailure && !isAllFailed ? (
-            <div className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3">
+            <div className="mt-3 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3">
               <p className="text-sm font-semibold text-amber-100">
                 {data.failed_count} row{data.failed_count !== 1 ? "s" : ""} failed.
                 PINs were generated for the rest.
@@ -554,7 +554,7 @@ function ResultModal({
           ) : null}
 
           {generatedItems.length > 0 ? (
-            <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
+            <div className="mt-3 rounded-lg border border-violet-400/20 bg-violet-500/10 px-4 py-3">
               <p className="text-sm font-semibold text-violet-100">
                 Save or copy these PINs now. For security, this screen may not show
                 them again after you close it.
@@ -569,20 +569,20 @@ function ResultModal({
               {generatedItems.map((item) => (
                 <div
                   key={item.queue_id}
-                  className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] p-4"
+                  className="rounded-lg border border-white/10 bg-[#2E2936] p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0 space-y-1">
                       <p className="font-semibold text-white">
                         {item.resident_name ?? "Unnamed resident"}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-xs text-[#A9A3B2]">
                         {item.unit_label ?? "-"}
                         {item.email ? ` · ${item.email}` : ""}
                         {item.phone ? ` · ${item.phone}` : ""}
                       </p>
                       {item.suggested_username ? (
-                        <p className="text-xs text-[var(--text-muted)]">
+                        <p className="text-xs text-[#A9A3B2]">
                           Username:{" "}
                           <span className="font-medium text-slate-200">
                             {item.suggested_username}
@@ -592,7 +592,7 @@ function ResultModal({
                     </div>
                     <div className="flex flex-shrink-0 flex-col items-end gap-2">
                       <div className="rounded-xl border border-violet-400/20 bg-[rgba(9,12,24,0.72)] px-4 py-2 text-center">
-                        <p className="text-xs font-medium text-[var(--text-muted)]">
+                        <p className="text-xs font-medium text-[#A9A3B2]">
                           Activation PIN
                         </p>
                         <p className="font-mono text-xl font-bold tracking-widest text-violet-200">
@@ -618,13 +618,13 @@ function ResultModal({
 
           {otherItems.length > 0 ? (
             <div className="mt-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#A9A3B2]">
                 Skipped / failed
               </p>
               {otherItems.map((item) => (
                 <div
                   key={item.queue_id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm"
                 >
                   <span className="text-slate-200">
                     {item.resident_name ?? item.queue_id}
@@ -634,7 +634,7 @@ function ResultModal({
                       {item.status}
                     </Badge>
                     {item.message ? (
-                      <span className="text-xs text-[var(--text-muted)]">
+                      <span className="text-xs text-[#A9A3B2]">
                         {item.message}
                       </span>
                     ) : null}
@@ -670,9 +670,9 @@ function EmailResultModal({
   if (!result.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-rose-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-rose-400/20 bg-[#292431] p-6 shadow-xl">
           <h3 className="text-lg font-semibold text-white">Email sending failed</h3>
-          <p className="text-sm text-[var(--text-muted)]">{result.error}</p>
+          <p className="text-sm text-[#A9A3B2]">{result.error}</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>Close</Button>
           </div>
@@ -690,7 +690,7 @@ function EmailResultModal({
 
   return (
     <Overlay>
-      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-[10px] border border-[#141119] bg-[#292431] shadow-xl">
         <div className="flex-shrink-0 border-b border-white/10 p-6">
           <h3 className="text-lg font-semibold text-white">Email invitation results</h3>
           <div className="mt-3 flex flex-wrap gap-3">
@@ -700,7 +700,7 @@ function EmailResultModal({
             {!data.metadata_persisted ? <Badge tone="warning">metadata warning</Badge> : null}
           </div>
           {data.warning ? (
-            <div className="mt-4 rounded-2xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+            <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
               {data.warning}
             </div>
           ) : null}
@@ -711,7 +711,7 @@ function EmailResultModal({
             <div className="space-y-2">
               <p className="text-xs font-semibold uppercase tracking-wide text-violet-300">Successfully Sent</p>
               {sentItems.map((item) => (
-                <div key={item.queue_id} className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] px-4 py-3">
+                <div key={item.queue_id} className="rounded-lg border border-white/10 bg-[#2E2936] px-4 py-3">
                   <p className="text-sm font-medium text-slate-200">{item.email}</p>
                   {item.message ? (
                     <p className="mt-1 text-xs text-amber-100">{item.message}</p>
@@ -723,13 +723,13 @@ function EmailResultModal({
 
           {(failedItems.length > 0 || skippedItems.length > 0) && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">Failed / Skipped</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#A9A3B2]">Failed / Skipped</p>
               {[...failedItems, ...skippedItems].map((item) => (
-                <div key={item.queue_id} className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm">
+                <div key={item.queue_id} className="flex flex-col gap-1 rounded-lg border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm">
                   <span className="text-slate-200 font-medium">{item.email}</span>
                   <div className="flex items-center gap-2">
                     <Badge tone={item.status === "failed" ? "danger" : "default"}>{item.status}</Badge>
-                    <span className="text-xs text-[var(--text-muted)]">{item.message}</span>
+                    <span className="text-xs text-[#A9A3B2]">{item.message}</span>
                   </div>
                 </div>
               ))}
@@ -760,9 +760,9 @@ function CreateUserResultModal({
   if (!result.success) {
     return (
       <Overlay>
-        <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-rose-400/20 bg-[var(--surface-elevated)] p-6 shadow-xl">
+        <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-rose-400/20 bg-[#292431] p-6 shadow-xl">
           <h3 className="text-lg font-semibold text-white">User creation failed</h3>
-          <p className="text-sm text-[var(--text-muted)]">{result.error}</p>
+          <p className="text-sm text-[#A9A3B2]">{result.error}</p>
           <div className="flex justify-end">
             <Button onClick={onClose}>Close</Button>
           </div>
@@ -795,7 +795,7 @@ function CreateUserResultModal({
 
   return (
     <Overlay>
-      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] shadow-xl">
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-[10px] border border-[#141119] bg-[#292431] shadow-xl">
         <div className="flex-shrink-0 border-b border-white/10 p-6">
           <h3 className="text-lg font-semibold text-white">Created user results</h3>
           <div className="mt-3 flex flex-wrap gap-3">
@@ -809,7 +809,7 @@ function CreateUserResultModal({
           </div>
 
           {activatedItems.length > 0 ? (
-            <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3">
+            <div className="mt-3 rounded-lg border border-violet-400/20 bg-violet-500/10 px-4 py-3">
               <p className="text-sm font-semibold text-violet-100">
                 Save these temporary credentials now. They will not be shown again
                 after you close this window.
@@ -824,18 +824,18 @@ function CreateUserResultModal({
               {activatedItems.map((item) => (
                 <div
                   key={item.queue_id}
-                  className="rounded-2xl border border-white/10 bg-[var(--surface-strong)] p-4"
+                  className="rounded-lg border border-white/10 bg-[#2E2936] p-4"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="min-w-0 space-y-1">
                       <p className="font-semibold text-white">
                         {item.resident_name ?? "Unnamed resident"}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-xs text-[#A9A3B2]">
                         {item.unit_label ?? "-"}
                         {item.auth_type ? ` · ${item.auth_type}` : ""}
                       </p>
-                      <p className="text-xs text-[var(--text-muted)]">
+                      <p className="text-xs text-[#A9A3B2]">
                         Login:{" "}
                         <span className="font-medium text-slate-200">
                           {item.login_identity ?? "Not available"}
@@ -845,7 +845,7 @@ function CreateUserResultModal({
 
                     <div className="flex flex-shrink-0 flex-col items-end gap-2">
                       <div className="rounded-xl border border-violet-400/20 bg-[rgba(9,12,24,0.72)] px-4 py-2 text-center">
-                        <p className="text-xs font-medium text-[var(--text-muted)]">
+                        <p className="text-xs font-medium text-[#A9A3B2]">
                           Temporary password
                         </p>
                         <p className="font-mono text-lg font-bold tracking-wide text-violet-200">
@@ -869,13 +869,13 @@ function CreateUserResultModal({
 
           {otherItems.length > 0 ? (
             <div className="mt-4 space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#A9A3B2]">
                 Skipped / failed
               </p>
               {otherItems.map((item) => (
                 <div
                   key={item.queue_id}
-                  className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm"
+                  className="flex items-center justify-between gap-3 rounded-lg border border-white/10 bg-[rgba(9,12,24,0.56)] px-4 py-3 text-sm"
                 >
                   <span className="text-slate-200">
                     {item.resident_name ?? item.queue_id}
@@ -885,7 +885,7 @@ function CreateUserResultModal({
                       {item.status}
                     </Badge>
                     {item.message ? (
-                      <span className="text-xs text-[var(--text-muted)]">
+                      <span className="text-xs text-[#A9A3B2]">
                         {item.message}
                       </span>
                     ) : null}
@@ -1054,58 +1054,117 @@ function getQueueBlockers(row: ActivationQueueRow) {
   return Array.from(new Set(blockers));
 }
 
-function QueueMetric({
-  active,
-  description,
-  icon: Icon,
-  label,
-  onClick,
-  tone,
-  value,
-}: {
-  active: boolean;
-  description: string;
-  icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-  tone: "violet" | "amber" | "blue" | "emerald" | "rose";
-  value: number;
-}) {
-  const toneClass =
-    tone === "amber"
-      ? "bg-amber-500/12 text-amber-300 ring-amber-400/20"
-      : tone === "blue"
-        ? "bg-sky-500/12 text-sky-300 ring-sky-400/20"
-        : tone === "emerald"
-          ? "bg-emerald-500/12 text-emerald-300 ring-emerald-400/20"
-          : tone === "rose"
-            ? "bg-rose-500/12 text-rose-300 ring-rose-400/20"
-            : "bg-violet-500/12 text-violet-200 ring-violet-400/20";
+const ACTIVATION_QUEUE_PAGE_SIZE = 50;
 
+type ResidentRecommendation = {
+  action: "create" | "email" | "none" | "pin";
+  description: string;
+  label: string;
+};
+
+function getResidentRecommendation(row: ActivationQueueRow): ResidentRecommendation {
+  if (row.status === "activated") {
+    return {
+      action: "none",
+      label: "No activation action required",
+      description: "This resident has already completed account activation.",
+    };
+  }
+
+  if (row.status === "skipped") {
+    return {
+      action: "none",
+      label: "Review skipped resident",
+      description: "This resident is outside the normal activation flow.",
+    };
+  }
+
+  if (row.status === "failed") {
+    return {
+      action: "none",
+      label: "Review queue blockers",
+      description: hasValue(row.lastError)
+        ? row.lastError
+        : "Resolve the queue error before attempting another activation action.",
+    };
+  }
+
+  if (row.status === "invited") {
+    return {
+      action: "none",
+      label: "Wait for resident activation",
+      description:
+        "An invitation has already been sent. Resend only after confirming non-delivery with the resident.",
+    };
+  }
+
+  if (row.status === "pin_generated") {
+    if (row.method === "email" && hasValue(row.email)) {
+      return {
+        action: "email",
+        label: "Send activation invite",
+        description:
+          "The PIN is ready. Send the activation email so the resident can complete the flow.",
+      };
+    }
+
+    return {
+      action: "pin",
+      label: "Generate / refresh PIN",
+      description:
+        "A PIN exists for this resident. Refresh it only when a new credential is required.",
+    };
+  }
+
+  if (row.method === "email" && hasValue(row.email)) {
+    return {
+      action: "email",
+      label: "Send activation invite",
+      description:
+        "Generate the activation credential and send the resident invitation by email.",
+    };
+  }
+
+  if (row.method === "not_configured") {
+    return {
+      action: "create",
+      label: "Choose activation method",
+      description:
+        "This resident does not have an activation method configured yet.",
+    };
+  }
+
+  return {
+    action: "pin",
+    label: "Generate activation PIN",
+    description:
+      "Prepare the resident credential so activation can continue.",
+  };
+}
+
+function QueueTag({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: "danger" | "default" | "info" | "success" | "warning";
+}) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`min-w-0 rounded-xl border px-4 py-3 text-left transition ${
-        active
-          ? "border-violet-400/45 bg-violet-500/[0.08] ring-1 ring-inset ring-violet-400/10"
-          : "border-[var(--border)] bg-[var(--surface)] hover:border-white/15 hover:bg-white/[0.025]"
+    <span
+      className={`inline-flex min-h-6 items-center whitespace-nowrap rounded-[4px] border px-2 py-1 text-[10px] font-semibold ${
+        tone === "success"
+          ? "border-[rgba(103,215,165,0.20)] bg-[rgba(103,215,165,0.06)] text-[#8EE2B9]"
+          : tone === "danger"
+            ? "border-[rgba(255,102,126,0.22)] bg-[rgba(255,102,126,0.06)] text-[#FFC1CB]"
+            : tone === "warning"
+              ? "border-[rgba(243,202,87,0.22)] bg-[rgba(243,202,87,0.06)] text-[#F2D77B]"
+              : tone === "info"
+                ? "border-[rgba(117,83,255,0.24)] bg-[rgba(117,83,255,0.08)] text-[#D8D1FF]"
+                : "border-white/10 bg-white/[0.025] text-[#C8C1CD]"
       }`}
     >
-      <div className="flex items-start gap-3">
-        <span className={`grid size-10 shrink-0 place-items-center rounded-full ring-1 ring-inset ${toneClass}`}>
-          <Icon className="size-4.5" aria-hidden />
-        </span>
-        <div className="min-w-0">
-          <p className="text-[11px] font-medium text-[var(--text-muted)]">{label}</p>
-          <p className="mt-0.5 text-2xl font-semibold leading-none text-white">{value}</p>
-          <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-[var(--text-muted)]">
-            {description}
-          </p>
-        </div>
-      </div>
-    </button>
+      {label}
+    </span>
   );
 }
 
@@ -1115,9 +1174,11 @@ export function ActivationQueueTable({
   rows,
 }: ActivationQueueTableProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [activeRowId, setActiveRowId] = useState<string | null>(rows[0]?.id ?? null);
+  const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [queueView, setQueueView] = useState<QueueView>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [page, setPage] = useState(1);
   const [followUpView, setFollowUpView] = useState<FollowUpView>(
     rows.some((row) => row.followUpStatus === "needs_follow_up")
       ? "needs_follow_up"
@@ -1125,6 +1186,19 @@ export function ActivationQueueTable({
   );
   const [emailEditorRowId, setEmailEditorRowId] = useState<string | null>(null);
   const [phoneEditorRowId, setPhoneEditorRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!filterOpen) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [filterOpen]);
 
   const queueCounts = useMemo(
     () => ({
@@ -1207,10 +1281,27 @@ export function ActivationQueueTable({
     });
   }, [followUpView, queueView, rows, searchQuery]);
 
-  const visibleRowIds = useMemo(
-    () => filteredRows.map((row) => row.id),
-    [filteredRows],
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredRows.length / ACTIVATION_QUEUE_PAGE_SIZE),
   );
+  const currentPage = Math.min(page, pageCount);
+  const pageStartIndex = (currentPage - 1) * ACTIVATION_QUEUE_PAGE_SIZE;
+  const pagedRows = filteredRows.slice(
+    pageStartIndex,
+    pageStartIndex + ACTIVATION_QUEUE_PAGE_SIZE,
+  );
+  const visibleRowIds = useMemo(
+    () => pagedRows.map((row) => row.id),
+    [pagedRows],
+  );
+  const visibleStart = filteredRows.length === 0 ? 0 : pageStartIndex + 1;
+  const visibleEnd = Math.min(
+    pageStartIndex + ACTIVATION_QUEUE_PAGE_SIZE,
+    filteredRows.length,
+  );
+  const activeFilterCount =
+    (queueView === "all" ? 0 : 1) + (followUpView === "all" ? 0 : 1);
   const allVisibleSelected =
     visibleRowIds.length > 0 &&
     visibleRowIds.every((rowId) => selectedIds.includes(rowId));
@@ -1218,12 +1309,9 @@ export function ActivationQueueTable({
   const selectedRows = rows.filter((row) => selectedIds.includes(row.id));
   const createUserTargetIds = selectedIds;
   const createUserTargetCount = selectedCount;
-  const activeRow =
-    filteredRows.find((row) => row.id === activeRowId) ??
-    rows.find((row) => row.id === activeRowId) ??
-    filteredRows[0] ??
-    rows[0] ??
-    null;
+  const activeRow = activeRowId
+    ? rows.find((row) => row.id === activeRowId) ?? null
+    : null;
   const activeRowBlockers = activeRow ? getQueueBlockers(activeRow) : [];
   const emailEditorRow = emailEditorRowId
     ? rows.find((row) => row.id === emailEditorRowId) ?? null
@@ -1366,6 +1454,30 @@ export function ActivationQueueTable({
     setPhase("confirmingCreateUser");
   }
 
+  const activeRecommendation = activeRow
+    ? getResidentRecommendation(activeRow)
+    : null;
+  const activeRowActionable =
+    !!activeRow && !["activated", "skipped"].includes(activeRow.status);
+
+  function runRecommendedAction() {
+    if (!activeRow || !activeRecommendation) return;
+
+    if (activeRecommendation.action === "email") {
+      runResidentEmail(activeRow.id);
+      return;
+    }
+
+    if (activeRecommendation.action === "pin") {
+      runResidentPin(activeRow.id);
+      return;
+    }
+
+    if (activeRecommendation.action === "create") {
+      runResidentCreateUser(activeRow.id);
+    }
+  }
+
   const canGenerate = selectedCount > 0 && Boolean(communityId);
   const canCreateUsers = selectedCount > 0 && Boolean(communityId);
   const selectedEmailEligible =
@@ -1397,18 +1509,18 @@ export function ActivationQueueTable({
 
       {phase === "confirming" ? (
         <Overlay>
-          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-[#141119] bg-[#292431] p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-white">
               Generate activation PINs?
             </h3>
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
+            <p className="text-sm leading-6 text-[#A9A3B2]">
               This will generate activation PINs for{" "}
               <span className="font-semibold text-slate-100">{selectedCount}</span>{" "}
               selected prepared resident{selectedCount !== 1 ? "s" : ""}. It will{" "}
               <span className="font-semibold text-slate-100">not</span> create
               ENTRY users yet.
             </p>
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
+            <p className="text-sm leading-6 text-[#A9A3B2]">
               PINs will expire in 7 days and can be regenerated.
             </p>
             <div className="flex flex-wrap justify-end gap-3">
@@ -1425,7 +1537,7 @@ export function ActivationQueueTable({
 
       {phase === "loading" ? (
         <Overlay>
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] px-8 py-6 shadow-xl">
+          <div className="rounded-[10px] border border-[#141119] bg-[#292431] px-8 py-6 shadow-xl">
             <p className="text-sm font-semibold text-white">Generating PINs...</p>
           </div>
         </Overlay>
@@ -1441,13 +1553,13 @@ export function ActivationQueueTable({
 
       {phase === "confirmingEmail" ? (
         <Overlay>
-          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-[#141119] bg-[#292431] p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-white">
               {someSelectedAreInvited
                 ? "Resend activation email?"
                 : "Send email invites?"}
             </h3>
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
+            <p className="text-sm leading-6 text-[#A9A3B2]">
               {someSelectedAreInvited ? (
                 <>
                   A new PIN will be generated and the activation email will be
@@ -1481,7 +1593,7 @@ export function ActivationQueueTable({
 
       {phase === "loadingEmail" ? (
         <Overlay>
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] px-8 py-6 shadow-xl">
+          <div className="rounded-[10px] border border-[#141119] bg-[#292431] px-8 py-6 shadow-xl">
             <p className="text-sm font-semibold text-white">Sending emails...</p>
           </div>
         </Overlay>
@@ -1493,7 +1605,7 @@ export function ActivationQueueTable({
 
       {phase === "choosingAccess" ? (
         <Overlay>
-          <div className="flex w-full max-w-2xl flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex w-full max-w-2xl flex-col gap-4 rounded-[10px] border border-[#141119] bg-[#292431] p-6 shadow-xl">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-violet-200">
                 ENTRY user creation
@@ -1501,7 +1613,7 @@ export function ActivationQueueTable({
               <h3 className="mt-1 text-xl font-semibold text-white">
                 Create ENTRY user{selectedCount !== 1 ? "s" : ""}
               </h3>
-              <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
+              <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
                 Choose how you want to create the selected resident{selectedCount !== 1 ? "s" : ""}.
                 This same standard is used across Minerva Console.
               </p>
@@ -1539,11 +1651,11 @@ export function ActivationQueueTable({
 
       {phase === "confirmingCreateUser" ? (
         <Overlay>
-          <div className="flex w-full max-w-md flex-col gap-4 rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-xl">
+          <div className="flex w-full max-w-md flex-col gap-4 rounded-[10px] border border-[#141119] bg-[#292431] p-6 shadow-xl">
             <h3 className="text-lg font-semibold text-white">
               Create active ENTRY users?
             </h3>
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
+            <p className="text-sm leading-6 text-[#A9A3B2]">
               This will immediately create active ENTRY users for{" "}
               <span className="font-semibold text-slate-100">
                 {createUserTargetCount}
@@ -1551,7 +1663,7 @@ export function ActivationQueueTable({
               resident{createUserTargetCount !== 1 ? "s" : ""} and generate a
               temporary password for each one.
             </p>
-            <p className="text-sm leading-6 text-[var(--text-muted)]">
+            <p className="text-sm leading-6 text-[#A9A3B2]">
               Use this when you need to finish activation from the console instead
               of waiting for the resident to complete it.
             </p>
@@ -1569,7 +1681,7 @@ export function ActivationQueueTable({
 
       {phase === "loadingCreateUser" ? (
         <Overlay>
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface-elevated)] px-8 py-6 shadow-xl">
+          <div className="rounded-[10px] border border-[#141119] bg-[#292431] px-8 py-6 shadow-xl">
             <p className="text-sm font-semibold text-white">Creating users...</p>
           </div>
         </Overlay>
@@ -1584,625 +1696,675 @@ export function ActivationQueueTable({
       ) : null}
 
       <section className="space-y-3">
-        <div className="flex flex-col gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-center gap-3">
-            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-violet-500/12 text-violet-200 ring-1 ring-inset ring-violet-400/20">
-              <Users className="size-4" aria-hidden />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">
-                {selectedCount > 0
-                  ? `${selectedCount} resident${selectedCount === 1 ? "" : "s"} selected`
-                  : `${queueCounts.ready} residents still in the activation flow`}
-              </p>
-              <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                {selectedCount > 0
-                  ? "Bulk actions apply only to the selected residents."
-                  : "Select residents below for PIN and invite actions."}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
+        <div className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]">
+          <div className="grid xl:grid-cols-[minmax(250px,1.2fr)_repeat(3,minmax(150px,.7fr))]">
+            <button
               type="button"
-              disabled={!canGenerate || phase !== "idle"}
-              onClick={() => setPhase("confirming")}
-              className="gap-2"
-            >
-              <KeyRound className="size-4" aria-hidden />
-              Generate PIN
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canCreateUsers || phase !== "idle"}
               onClick={() => {
-                setAccessMode("email");
-                setPhase("choosingAccess");
+                setQueueView(queueCounts.errors > 0 ? "errors" : "ready");
+                setFollowUpView("all");
+                setPage(1);
               }}
-              className="gap-2"
+              className="min-h-[86px] px-4 py-3.5 text-left transition hover:bg-white/[0.015]"
             >
-              <UserPlus className="size-4" aria-hidden />
-              Create user
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={!canGenerate || phase !== "idle"}
-              onClick={() => setPhase("confirmingEmail")}
-              className="gap-2"
-            >
-              <Send className="size-4" aria-hidden />
-              {selectedCount > 1
-                ? `${allSelectedAreInvited ? "Resend" : "Send"} ${selectedCount} invites`
-                : allSelectedAreInvited
-                  ? "Resend invite"
-                  : "Send invite"}
-            </Button>
-          </div>
-        </div>
-
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
-          <QueueMetric
-            active={queueView === "ready"}
-            description="Prepared residents still awaiting completion."
-            icon={Users}
-            label="Ready now"
-            onClick={() => setQueueView("ready")}
-            tone="violet"
-            value={queueCounts.ready}
-          />
-          <QueueMetric
-            active={queueView === "pending_pin"}
-            description="Prepared and waiting for an activation PIN."
-            icon={Clock3}
-            label="Pending PIN"
-            onClick={() => setQueueView("pending_pin")}
-            tone="amber"
-            value={queueCounts.pending_pin}
-          />
-          <QueueMetric
-            active={queueView === "pending_invite"}
-            description="PIN is ready, but the invitation has not been sent yet."
-            icon={Mail}
-            label="Pending invite"
-            onClick={() => setQueueView("pending_invite")}
-            tone="blue"
-            value={queueCounts.pending_invite}
-          />
-          <QueueMetric
-            active={queueView === "awaiting_activation"}
-            description="Invitation sent; waiting for the resident to complete activation."
-            icon={Send}
-            label="Awaiting activation"
-            onClick={() => setQueueView("awaiting_activation")}
-            tone="violet"
-            value={queueCounts.awaiting_activation}
-          />
-          <QueueMetric
-            active={queueView === "activated"}
-            description="Residents with completed account activation."
-            icon={CheckCircle2}
-            label="Activated"
-            onClick={() => setQueueView("activated")}
-            tone="emerald"
-            value={queueCounts.activated}
-          />
-          <QueueMetric
-            active={queueView === "errors"}
-            description="Queue rows requiring operator attention."
-            icon={TriangleAlert}
-            label="Errors"
-            onClick={() => setQueueView("errors")}
-            tone="rose"
-            value={queueCounts.errors}
-          />
-        </div>
-
-        <div className="grid gap-2 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.65fr)]">
-          <button
-            type="button"
-            onClick={() => setQueueView(queueCounts.errors > 0 ? "errors" : "ready")}
-            className={`flex items-center justify-between gap-4 rounded-xl border px-4 py-3 text-left ${
-              queueCounts.errors > 0
-                ? "border-rose-400/25 bg-rose-500/[0.07]"
-                : "border-emerald-400/20 bg-emerald-500/[0.06]"
-            }`}
-          >
-            <div className="flex min-w-0 items-center gap-3">
-              <span className={`grid size-9 shrink-0 place-items-center rounded-full ${
-                queueCounts.errors > 0
-                  ? "bg-rose-500/12 text-rose-300"
-                  : "bg-emerald-500/12 text-emerald-300"
-              }`}>
-                {queueCounts.errors > 0 ? (
-                  <TriangleAlert className="size-4" aria-hidden />
-                ) : (
-                  <CheckCircle2 className="size-4" aria-hidden />
-                )}
-              </span>
-              <div className="min-w-0">
-                <p className={`text-sm font-semibold ${
-                  queueCounts.errors > 0 ? "text-rose-100" : "text-emerald-100"
-                }`}>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8F879D]">
+                Queue status
+              </p>
+              <div className="mt-2 flex items-center gap-2.5">
+                <span
+                  className={`size-2 rounded-full ${
+                    queueCounts.errors > 0
+                      ? "bg-[#FF667E] shadow-[0_0_0_4px_rgba(255,102,126,0.08)]"
+                      : "bg-[#67D7A5] shadow-[0_0_0_4px_rgba(103,215,165,0.08)]"
+                  }`}
+                />
+                <p className="text-sm font-semibold text-white">
                   {queueCounts.errors > 0 ? "Needs attention" : "Queue checks clear"}
                 </p>
-                <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                  {queueCounts.errors > 0
-                    ? `${queueCounts.errors} resident${queueCounts.errors === 1 ? "" : "s"} currently have queue errors.`
-                    : "No queue rows are currently reporting activation errors."}
-                </p>
               </div>
-            </div>
-            <span className="shrink-0 text-xs font-semibold text-[var(--text-muted)]">
-              {queueCounts.errors > 0 ? "View errors" : "View ready"}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              setFollowUpView(
-                followUpCounts.needs_follow_up > 0 ? "needs_follow_up" : "all",
-              )
-            }
-            className="flex items-center gap-3 rounded-xl border border-sky-400/15 bg-sky-500/[0.045] px-4 py-3 text-left"
-          >
-            <span className="grid size-9 shrink-0 place-items-center rounded-full bg-sky-500/10 text-sky-300">
-              <Clock3 className="size-4" aria-hidden />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-white">Follow-up snapshot</p>
-              <p className="mt-0.5 text-xs leading-5 text-[var(--text-muted)]">
-                {queueCounts.ready} pending · {followUpCounts.not_invited} not invited ·{" "}
-                {followUpCounts.recent} recent · {followUpCounts.waiting} waiting ·{" "}
-                {followUpCounts.needs_follow_up} need follow-up
+              <p className="mt-1.5 text-[11px] leading-4 text-[#A9A3B2]">
+                {queueCounts.errors > 0
+                  ? `${queueCounts.errors} resident${queueCounts.errors === 1 ? "" : "s"} currently have queue errors.`
+                  : "No activation errors are currently blocking resident activation."}
               </p>
-              {followUpCounts.fourteen_plus > 0 || followUpCounts.high_attempts > 0 ? (
-                <p className="mt-1 text-[10px] font-medium text-amber-200/80">
-                  {followUpCounts.fourteen_plus > 0
-                    ? `${followUpCounts.fourteen_plus} at 14+ days`
-                    : ""}
-                  {followUpCounts.fourteen_plus > 0 && followUpCounts.high_attempts > 0
-                    ? " · "
-                    : ""}
-                  {followUpCounts.high_attempts > 0
-                    ? `${followUpCounts.high_attempts} with 5+ invitations`
-                    : ""}
-                </p>
-              ) : null}
-            </div>
-          </button>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setQueueView("ready");
+                setFollowUpView("all");
+                setPage(1);
+              }}
+              className="min-h-[86px] border-t border-white/[0.07] px-4 py-3.5 text-left transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8F879D]">
+                Ready now
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-white">{queueCounts.ready}</p>
+              <p className="mt-1 text-[10px] text-[#A9A3B2]">Prepared residents</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setQueueView("awaiting_activation");
+                setFollowUpView("all");
+                setPage(1);
+              }}
+              className="min-h-[86px] border-t border-white/[0.07] px-4 py-3.5 text-left transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8F879D]">
+                Awaiting activation
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-white">
+                {queueCounts.awaiting_activation}
+              </p>
+              <p className="mt-1 text-[10px] text-[#A9A3B2]">Invitation already sent</p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setQueueView("ready");
+                setFollowUpView("needs_follow_up");
+                setPage(1);
+              }}
+              className="min-h-[86px] border-t border-white/[0.07] px-4 py-3.5 text-left transition hover:bg-white/[0.015] xl:border-l xl:border-t-0"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#8F879D]">
+                Needs follow-up
+              </p>
+              <p className="mt-1.5 text-xl font-semibold text-white">
+                {followUpCounts.needs_follow_up}
+              </p>
+              <p className="mt-1 text-[10px] text-[#A9A3B2]">Operator attention</p>
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-3 xl:h-[clamp(34rem,calc(100dvh-24rem),52rem)] xl:grid-cols-[minmax(0,1fr)_360px]">
-          <section className="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
-            <div className="border-b border-[var(--border)] px-3 py-3">
-              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex gap-1 overflow-x-auto pb-1" aria-label="Activation queue filters">
-                  {(["all", "ready", "pending_pin", "pending_invite", "awaiting_activation", "activated", "errors"] as QueueView[]).map((view) => (
-                    <button
-                      key={view}
-                      type="button"
-                      onClick={() => setQueueView(view)}
-                      aria-pressed={queueView === view}
-                      className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition ${
-                        queueView === view
-                          ? "border-violet-400/40 bg-violet-500/15 text-violet-100"
-                          : "border-[var(--border)] text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-white"
-                      }`}
-                    >
-                      {getQueueViewLabel(view)}{" "}
-                      <span className="ml-1 opacity-70">{queueCounts[view]}</span>
-                    </button>
-                  ))}
-                </div>
-
-                <label className="relative block xl:w-[20rem]">
-                  <span className="sr-only">Search activation queue</span>
-                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--text-muted)]" aria-hidden />
-                  <input
-                    value={searchQuery}
-                    onChange={(event) => setSearchQuery(event.target.value)}
-                    placeholder="Search name, unit, email, phone or username..."
-                    className="h-9 w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] pl-9 pr-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-400/45"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Activation follow-up filters">
-                <span className="mr-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                  Follow-up
-                </span>
-                {followUpFilterOrder.map((view) => (
-                  <button
-                    key={view}
-                    type="button"
-                    onClick={() => setFollowUpView(view)}
-                    aria-pressed={followUpView === view}
-                    className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition ${
-                      followUpView === view
-                        ? view === "needs_follow_up"
-                          ? "border-rose-400/35 bg-rose-500/10 text-rose-100"
-                          : "border-sky-400/35 bg-sky-500/10 text-sky-100"
-                        : "border-[var(--border)] text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-white"
-                    }`}
-                  >
-                    {getFollowUpFilterLabel(view)}{" "}
-                    <span className="ml-1 opacity-70">{followUpCounts[view]}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
-                <label className="inline-flex items-center gap-2 text-xs font-medium text-slate-200">
-                  <input
-                    type="checkbox"
-                    checked={allVisibleSelected}
-                    onChange={toggleAllVisibleRows}
-                    className="size-4 accent-violet-500"
-                  />
-                  Select all visible
-                </label>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {selectedCount > 0
-                    ? `${selectedCount} selected`
-                    : `${filteredRows.length} visible residents`}
-                </p>
-              </div>
+        <section className="relative flex min-h-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] xl:h-[calc(100dvh-17rem)]">
+          <div className="grid gap-3 border-b border-[#141119] px-4 py-3 lg:grid-cols-[auto_minmax(280px,1fr)_auto_auto] lg:items-center">
+            <div className="min-w-[180px]">
+              <h2 className="text-base font-semibold text-white">Residents</h2>
+              <p className="mt-1 text-[10px] text-[#A9A3B2]">
+                {rows.length} total · select a row for details
+              </p>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]">
-              <table className="w-full min-w-[1320px] table-fixed border-collapse text-left text-xs">
-                <thead className="sticky top-0 z-10 border-b border-white/[0.08] bg-[rgba(12,17,25,0.96)] text-[var(--text-muted)] backdrop-blur">
-                  <tr>
-                    <th className="w-11 px-3 py-2.5">
-                      <span className="sr-only">Select row</span>
-                    </th>
-                    <th className="w-[13%] px-3 py-2.5 font-semibold">Unit</th>
-                    <th className="w-[18%] px-3 py-2.5 font-semibold">Resident</th>
-                    <th className="w-[21%] px-3 py-2.5 font-semibold">Contact</th>
-                    <th className="w-[15%] px-3 py-2.5 font-semibold">Username</th>
-                    <th className="w-[11%] px-3 py-2.5 font-semibold">Method</th>
-                    <th className="w-[10%] px-3 py-2.5 font-semibold">Status</th>
-                    <th className="w-[13%] px-3 py-2.5 font-semibold">Follow-up</th>
-                    <th className="w-[15%] px-3 py-2.5 font-semibold">Last activation</th>
-                    <th className="w-[15%] px-3 py-2.5 font-semibold">Created</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/[0.07] text-slate-200">
-                  {filteredRows.map((row) => {
-                    const isSelected = selectedIds.includes(row.id);
-                    const isActive = activeRow?.id === row.id;
+            <label className="relative block w-full max-w-[520px]">
+              <span className="sr-only">Search activation queue</span>
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8F879D]"
+                aria-hidden
+              />
+              <input
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search name, unit, email, phone or username..."
+                className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
+              />
+            </label>
 
-                    return (
-                      <tr
-                        key={row.id}
-                        onClick={() => focusRow(row.id)}
-                        className={`cursor-pointer transition ${
-                          isActive
-                            ? "bg-violet-500/[0.10] ring-1 ring-inset ring-violet-400/25"
-                            : isSelected
-                              ? "bg-violet-500/[0.055]"
-                              : "hover:bg-white/[0.025]"
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setFilterOpen((value) => !value)}
+                className="inline-flex h-9 min-w-[104px] items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119]"
+                aria-expanded={filterOpen}
+              >
+                <Filter className="size-3.5" aria-hidden />
+                Filters
+                {activeFilterCount > 0 ? (
+                  <span className="grid size-4 place-items-center rounded-[4px] bg-[#7553FF] text-[9px] text-white">
+                    {activeFilterCount}
+                  </span>
+                ) : null}
+              </button>
+
+              {filterOpen ? (
+                <div className="absolute right-0 top-11 z-30 w-72 overflow-hidden rounded-lg border border-[#141119] bg-[#24202B] shadow-[0_18px_45px_rgba(0,0,0,0.42)]">
+                  <div className="flex items-center justify-between border-b border-[#141119] px-3.5 py-3">
+                    <p className="text-xs font-semibold text-white">Filter residents</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQueueView("all");
+                        setFollowUpView("all");
+                        setPage(1);
+                      }}
+                      className="text-[10px] font-semibold text-[#BEB4FF] hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  <div className="p-2.5" aria-label="Activation queue filters">
+                    <p className="px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                      Activation state
+                    </p>
+                    {(
+                      [
+                        "all",
+                        "ready",
+                        "pending_pin",
+                        "pending_invite",
+                        "awaiting_activation",
+                        "activated",
+                        "errors",
+                      ] as QueueView[]
+                    ).map((view) => (
+                      <button
+                        key={view}
+                        type="button"
+                        onClick={() => {
+                          setQueueView(view);
+                          setPage(1);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs ${
+                          queueView === view
+                            ? "bg-[rgba(117,83,255,0.08)] text-white"
+                            : "text-[#D3CEDA] hover:bg-white/[0.03] hover:text-white"
                         }`}
                       >
-                        <td className="px-3 py-2.5 align-top">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleRow(row.id)}
-                            onClick={(event) => event.stopPropagation()}
-                            className="size-4 accent-violet-500"
-                            aria-label={`Select ${row.resident}`}
-                          />
-                        </td>
-                        <td className="px-3 py-2.5 align-top font-medium text-white">
-                          <span className="block truncate" title={row.unit}>{row.unit}</span>
-                        </td>
-                        <td className="px-3 py-2.5 align-top">
-                          <span className="block truncate font-medium text-white" title={row.resident}>
-                            {row.resident}
-                          </span>
-                          {hasValue(row.lastError) ? (
-                            <span className="mt-1 block truncate text-[10px] text-rose-200" title={row.lastError}>
-                              {row.lastError}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="px-3 py-2.5 align-top">
-                          <span className="block truncate" title={row.phone}>{row.phone}</span>
-                          <span className="mt-1 block truncate text-[var(--text-muted)]" title={row.email}>{row.email}</span>
-                        </td>
-                        <td className="px-3 py-2.5 align-top">
-                          <span className="block truncate" title={row.suggestedUsername}>{row.suggestedUsername}</span>
-                        </td>
-                        <td className="px-3 py-2.5 align-top">
-                          <Badge tone={getMethodTone(row.method)}>{getMethodLabel(row.method)}</Badge>
-                        </td>
-                        <td className="px-3 py-2.5 align-top">
-                          <Badge tone={getStatusTone(row.status)}>{getStatusLabel(row.status)}</Badge>
-                        </td>
-                        <td className="px-3 py-2.5 align-top">
-                          <Badge tone={getFollowUpTone(row.followUpStatus)}>
-                            {getFollowUpLabel(row.followUpStatus)}
-                          </Badge>
-                          {row.followUpStatus !== "completed" ? (
-                            <span className="mt-1 block text-[10px] text-[var(--text-muted)]">
-                              {row.invitationAttemptCount} invitation{row.invitationAttemptCount === 1 ? "" : "s"}
-                            </span>
-                          ) : null}
-                          {row.followUpStatus === "needs_follow_up" &&
-                          (row.daysSinceLastInvitation ?? 0) >= 14 ? (
-                            <span className="mt-1 block text-[10px] font-semibold text-rose-200">
-                              14+ days
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 align-top">
-                          <span className="block text-slate-200">{row.lastActivationAt}</span>
-                          {row.lastActivationChannel !== "—" ? (
-                            <span className="mt-1 block text-[10px] text-[var(--text-muted)]">
-                              {row.lastActivationChannel}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-2.5 align-top text-[var(--text-muted)]">
-                          {row.createdAt}
-                        </td>
-                      </tr>
-                    );
-                  })}
+                        <span>{getQueueViewLabel(view)}</span>
+                        <span className="text-[10px] text-[#8F879D]">{queueCounts[view]}</span>
+                      </button>
+                    ))}
 
-                  {filteredRows.length === 0 ? (
-                    <tr>
-                      <td colSpan={10} className="px-6 py-16 text-center text-sm text-[var(--text-muted)]">
-                        No residents match this queue view.
+                    <div className="my-2 border-t border-white/[0.06]" />
+
+                    <p className="px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                      Follow-up
+                    </p>
+                    {followUpFilterOrder.map((view) => (
+                      <button
+                        key={view}
+                        type="button"
+                        onClick={() => {
+                          setFollowUpView(view);
+                          setPage(1);
+                        }}
+                        className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-xs ${
+                          followUpView === view
+                            ? "bg-[rgba(117,83,255,0.08)] text-white"
+                            : "text-[#D3CEDA] hover:bg-white/[0.03] hover:text-white"
+                        }`}
+                      >
+                        <span>{getFollowUpFilterLabel(view)}</span>
+                        <span className="text-[10px] text-[#8F879D]">{followUpCounts[view]}</span>
+                      </button>
+                    ))}
+
+                    <div className="mt-2 border-t border-[#141119] pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setFilterOpen(false)}
+                        className="inline-flex h-8 w-full items-center justify-center rounded-[6px] border border-[#141119] bg-[#2E2936] text-xs font-semibold text-white"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={toggleAllVisibleRows}
+              disabled={visibleRowIds.length === 0}
+              className="inline-flex h-9 min-w-[112px] items-center justify-center whitespace-nowrap rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] disabled:opacity-45"
+            >
+              {allVisibleSelected ? "Clear visible" : "Select visible"}
+            </button>
+          </div>
+
+          {selectedCount > 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#141119] bg-[rgba(117,83,255,0.055)] px-4 py-2.5">
+              <p className="text-xs font-semibold text-[#D8D1FF]">
+                {selectedCount} resident{selectedCount === 1 ? "" : "s"} selected
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAccessMode("email");
+                    setPhase("choosingAccess");
+                  }}
+                  disabled={!canCreateUsers || phase !== "idle"}
+                  className="inline-flex h-8 items-center gap-2 rounded-[6px] border border-[#141119] bg-[#2E2936] px-3 text-[11px] font-semibold text-white disabled:opacity-45"
+                >
+                  <UserPlus className="size-3.5" aria-hidden />
+                  Create user
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhase("confirmingEmail")}
+                  disabled={!canGenerate || phase !== "idle"}
+                  className="inline-flex h-8 items-center gap-2 rounded-[6px] border border-[#141119] bg-[#2E2936] px-3 text-[11px] font-semibold text-white disabled:opacity-45"
+                >
+                  <Send className="size-3.5" aria-hidden />
+                  {allSelectedAreInvited ? "Resend invite" : "Send invite"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhase("confirming")}
+                  disabled={!canGenerate || phase !== "idle"}
+                  className="inline-flex h-8 items-center gap-2 rounded-[6px] border border-[#120539] bg-[#7553FF] px-3 text-[11px] font-semibold text-white shadow-[0_2px_0_#120539] disabled:opacity-45"
+                >
+                  <KeyRound className="size-3.5" aria-hidden />
+                  Generate PIN
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="min-h-0 flex-1 overflow-auto overscroll-contain [scrollbar-gutter:stable]">
+            <table className="w-full min-w-[1160px] table-fixed border-collapse text-left text-xs">
+              <thead className="sticky top-0 z-10 border-b border-[#141119] bg-[#1F1B26] text-[#8F879D]">
+                <tr className="text-[10px] uppercase tracking-[0.13em]">
+                  <th className="w-11 px-3 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={allVisibleSelected}
+                      onChange={toggleAllVisibleRows}
+                      className="size-4 accent-[#7553FF]"
+                      aria-label="Select all visible residents"
+                    />
+                  </th>
+                  <th className="w-[9%] px-3 py-2.5 font-semibold">Unit</th>
+                  <th className="w-[18%] px-3 py-2.5 font-semibold">Resident</th>
+                  <th className="w-[21%] px-3 py-2.5 font-semibold">Contact</th>
+                  <th className="w-[15%] px-3 py-2.5 font-semibold">Username</th>
+                  <th className="w-[11%] px-3 py-2.5 font-semibold">Method</th>
+                  <th className="w-[13%] px-3 py-2.5 font-semibold">Status</th>
+                  <th className="w-[14%] px-3 py-2.5 font-semibold">Follow-up</th>
+                  <th className="w-[15%] px-3 py-2.5 font-semibold">Last action</th>
+                  <th className="w-9 px-2 py-2.5"><span className="sr-only">Open details</span></th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-[#141119] text-[#D6D0DC]">
+                {pagedRows.map((row) => {
+                  const isSelected = selectedIds.includes(row.id);
+                  const isActive = activeRow?.id === row.id;
+
+                  return (
+                    <tr
+                      key={row.id}
+                      tabIndex={0}
+                      onClick={() => focusRow(row.id)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          focusRow(row.id);
+                        }
+                      }}
+                      className={`cursor-pointer outline-none transition ${
+                        isActive
+                          ? "bg-[rgba(117,83,255,0.075)] shadow-[inset_2px_0_0_#7553FF]"
+                          : isSelected
+                            ? "bg-[rgba(117,83,255,0.035)]"
+                            : "hover:bg-white/[0.018]"
+                      }`}
+                    >
+                      <td className="px-3 py-2.5 align-top">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleRow(row.id)}
+                          onClick={(event) => event.stopPropagation()}
+                          className="size-4 accent-[#7553FF]"
+                          aria-label={`Select ${row.resident}`}
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 align-top font-medium text-white">
+                        <span className="block truncate" title={row.unit}>{row.unit}</span>
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <span className="block truncate font-semibold text-white" title={row.resident}>
+                          {row.resident}
+                        </span>
+                        {hasValue(row.lastError) ? (
+                          <span className="mt-1 block truncate text-[10px] text-[#FFC1CB]" title={row.lastError}>
+                            {row.lastError}
+                          </span>
+                        ) : (
+                          <span className="mt-1 block text-[10px] text-[#8F879D]">Resident</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <span className="block truncate" title={row.phone}>{row.phone}</span>
+                        <span className="mt-1 block truncate text-[10px] text-[#8F879D]" title={row.email}>
+                          {row.email}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <span className="block truncate" title={row.suggestedUsername}>
+                          {row.suggestedUsername}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <QueueTag
+                          tone={getMethodTone(row.method)}
+                          label={getMethodLabel(row.method)}
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <QueueTag
+                          tone={getStatusTone(row.status)}
+                          label={getStatusLabel(row.status)}
+                        />
+                      </td>
+                      <td className="px-3 py-2.5 align-top">
+                        <QueueTag
+                          tone={getFollowUpTone(row.followUpStatus)}
+                          label={getFollowUpLabel(row.followUpStatus)}
+                        />
+                        {row.followUpStatus !== "completed" ? (
+                          <span className="mt-1 block text-[10px] text-[#8F879D]">
+                            {row.invitationAttemptCount} invitation{row.invitationAttemptCount === 1 ? "" : "s"}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2.5 align-top">
+                        <span className="block text-[#D6D0DC]">{row.lastActivationAt}</span>
+                        {row.lastActivationChannel !== "—" ? (
+                          <span className="mt-1 block text-[10px] text-[#8F879D]">
+                            {row.lastActivationChannel}
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-2 py-2.5 align-middle text-right">
+                        <ChevronRight
+                          className={`ml-auto size-4 ${
+                            isActive ? "text-[#D8D1FF]" : "text-[#8F879D]"
+                          }`}
+                          aria-hidden
+                        />
                       </td>
                     </tr>
-                  ) : null}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
 
-            <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[var(--border)] px-4 py-2.5 text-xs text-[var(--text-muted)]">
-              <span>
-                Showing {filteredRows.length} of {rows.length} residents
-              </span>
-              <span>{selectedCount} selected</span>
-            </div>
-          </section>
-
-          <aside className="flex min-h-[560px] min-w-0 flex-col overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] xl:min-h-0">
-            {!activeRow ? (
-              <div className="grid flex-1 place-items-center px-6 text-center">
-                <div>
-                  <Users className="mx-auto size-6 text-violet-300" aria-hidden />
-                  <p className="mt-3 text-sm font-semibold text-white">Select a resident</p>
-                  <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
-                    Open a queue row to review activation status and available actions.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--border)] p-4">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <span className="grid size-11 shrink-0 place-items-center rounded-full bg-violet-500/15 text-sm font-semibold text-violet-100 ring-1 ring-inset ring-violet-400/20">
-                      {getInitials(activeRow.resident)}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <p className="truncate text-sm font-semibold text-white">{activeRow.resident}</p>
-                        <Badge tone={getStatusTone(activeRow.status)}>{getStatusLabel(activeRow.status)}</Badge>
-                      </div>
-                      <p className="mt-1 text-xs text-[var(--text-muted)]">{activeRow.unit}</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setActiveRowId(null)}
-                    className="grid size-8 shrink-0 place-items-center rounded-lg border border-[var(--border)] text-[var(--text-muted)] transition hover:bg-white/5 hover:text-white"
-                    aria-label="Close resident details"
-                  >
-                    <X className="size-3.5" aria-hidden />
-                  </button>
-                </div>
-
-                <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable]">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                      Activation progress
-                    </p>
-                    <div className="mt-3 grid grid-cols-4 gap-1.5">
-                      {getActivationStage(activeRow).map((stage, index) => (
-                        <div key={stage.label} className="min-w-0">
-                          <div className="flex items-center">
-                            <span className={`grid size-6 shrink-0 place-items-center rounded-full text-[10px] font-semibold ${
-                              stage.done
-                                ? "bg-violet-500 text-white"
-                                : "bg-white/[0.06] text-[var(--text-muted)] ring-1 ring-inset ring-white/10"
-                            }`}>
-                              {stage.done ? "✓" : index + 1}
-                            </span>
-                            {index < 3 ? (
-                              <span className={`h-px flex-1 ${
-                                stage.done ? "bg-violet-400/55" : "bg-white/10"
-                              }`} />
-                            ) : null}
-                          </div>
-                          <p className={`mt-1.5 truncate text-[9px] ${
-                            stage.done ? "text-slate-200" : "text-[var(--text-muted)]"
-                          }`}>
-                            {stage.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] p-3.5">
-                    <p className="text-xs font-semibold text-white">Details</p>
-                    <dl className="mt-3 space-y-2.5 text-xs">
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Unit</dt>
-                        <dd className="text-right text-slate-200">{activeRow.unit}</dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Username</dt>
-                        <dd className="max-w-[60%] truncate text-right text-slate-200" title={activeRow.suggestedUsername}>
-                          {activeRow.suggestedUsername}
-                        </dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Method</dt>
-                        <dd className="text-right text-slate-200">{getMethodLabel(activeRow.method)}</dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Phone</dt>
-                        <dd className="max-w-[70%] text-right text-slate-200">
-                          <span className="block break-all">{activeRow.phone}</span>
-                          {!["activated", "skipped"].includes(activeRow.status) ? (
-                            <button
-                              type="button"
-                              onClick={() => setPhoneEditorRowId(activeRow.id)}
-                              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-300 transition hover:text-violet-200"
-                            >
-                              <Pencil className="size-3" aria-hidden />
-                              Edit phone
-                            </button>
-                          ) : null}
-                        </dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Email</dt>
-                        <dd className="max-w-[70%] text-right text-slate-200">
-                          <span className="block break-all">{activeRow.email}</span>
-                          {!["activated", "skipped"].includes(activeRow.status) ? (
-                            <button
-                              type="button"
-                              onClick={() => setEmailEditorRowId(activeRow.id)}
-                              className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-violet-300 transition hover:text-violet-200"
-                            >
-                              <Pencil className="size-3" aria-hidden />
-                              Edit email
-                            </button>
-                          ) : null}
-                        </dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Follow-up</dt>
-                        <dd className="text-right">
-                          <Badge tone={getFollowUpTone(activeRow.followUpStatus)}>
-                            {getFollowUpLabel(activeRow.followUpStatus)}
-                          </Badge>
-                        </dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">First invitation sent</dt>
-                        <dd className="text-right text-slate-200">{activeRow.firstInvitationSentAt}</dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Last invitation sent</dt>
-                        <dd className="text-right text-slate-200">{activeRow.lastInvitationSentAt}</dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Invitation attempts</dt>
-                        <dd className="text-right text-slate-200">{activeRow.invitationAttemptCount}</dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Last PIN generated</dt>
-                        <dd className="text-right text-slate-200">{activeRow.lastPinGeneratedAt}</dd>
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <dt className="text-[var(--text-muted)]">Created</dt>
-                        <dd className="text-right text-slate-200">{activeRow.createdAt}</dd>
-                      </div>
-                    </dl>
-                  </div>
-
-                  {activeRow.followUpStatus === "needs_follow_up" ||
-                  activeRow.invitationAttemptCount >= 5 ? (
-                    <div className="mt-4 rounded-lg border border-amber-400/20 bg-amber-500/[0.07] p-3.5">
-                      <p className="text-xs font-semibold text-amber-100">Follow-up guidance</p>
-                      <p className="mt-1 text-[11px] leading-5 text-amber-100/75">
-                        {activeRow.invitationAttemptCount >= 5
-                          ? "Several invitations have already been sent. Confirm the email or contact the resident by WhatsApp before sending another reminder."
-                          : `The last invitation was sent ${activeRow.daysSinceLastInvitation ?? 8} days ago. This resident is ready for a follow-up.`}
+                {pagedRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-16 text-center">
+                      <p className="text-sm font-semibold text-white">No residents match this view</p>
+                      <p className="mt-1 text-xs text-[#A9A3B2]">
+                        Clear the search or filters to show residents again.
                       </p>
-                    </div>
-                  ) : null}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
 
-                  <div className="mt-4">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                      Queue checks
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#141119] bg-[#1F1B26] px-4 py-2 text-[10px] text-[#8F879D]">
+            <span>
+              Showing {visibleStart}-{visibleEnd} of {filteredRows.length} matching residents
+              {selectedCount > 0 ? ` · ${selectedCount} selected` : ""}
+            </span>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.max(1, value - 1))}
+                disabled={currentPage <= 1}
+                className="grid size-7 place-items-center rounded-[6px] border border-[#141119] bg-[#2E2936] text-white disabled:opacity-35"
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="size-3.5" aria-hidden />
+              </button>
+              <span>{currentPage} / {pageCount}</span>
+              <button
+                type="button"
+                onClick={() => setPage((value) => Math.min(pageCount, value + 1))}
+                disabled={currentPage >= pageCount}
+                className="grid size-7 place-items-center rounded-[6px] border border-[#141119] bg-[#2E2936] text-white disabled:opacity-35"
+                aria-label="Next page"
+              >
+                <ChevronRight className="size-3.5" aria-hidden />
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {activeRow ? (
+          <aside className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
+            <div className="border-b border-[#141119] px-4 py-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="grid size-11 shrink-0 place-items-center rounded-full border border-[rgba(117,83,255,0.28)] bg-[rgba(117,83,255,0.08)] text-sm font-semibold text-[#E3DEFF]">
+                    {getInitials(activeRow.resident)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate text-base font-semibold text-white">
+                      {activeRow.resident}
                     </p>
-                    {activeRowBlockers.length === 0 ? (
-                      <div className="mt-2 flex items-start gap-2 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-3 py-3">
-                        <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden />
-                        <div>
-                          <p className="text-xs font-semibold text-emerald-100">No blockers detected</p>
-                          <p className="mt-1 text-[11px] leading-4 text-emerald-100/65">
-                            This queue row has the information required by its current activation method.
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="mt-2 space-y-2">
-                        {activeRowBlockers.map((blocker) => (
-                          <div key={blocker} className="flex items-start gap-2 rounded-lg border border-rose-400/20 bg-rose-500/[0.07] px-3 py-3">
-                            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-rose-300" aria-hidden />
-                            <p className="text-xs leading-5 text-rose-100">{blocker}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    <p className="mt-1 text-xs text-[#A9A3B2]">
+                      {activeRow.unit}{communityName ? ` · ${communityName}` : ""}
+                    </p>
                   </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveRowId(null)}
+                  className="grid size-8 shrink-0 place-items-center rounded-md border border-[#141119] bg-[#2E2936] text-[#8F879D] transition hover:text-white"
+                  aria-label="Close resident details"
+                >
+                  <X className="size-4" aria-hidden />
+                </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <QueueTag
+                  tone={getStatusTone(activeRow.status)}
+                  label={getStatusLabel(activeRow.status)}
+                />
+                <QueueTag
+                  tone={getFollowUpTone(activeRow.followUpStatus)}
+                  label={getFollowUpLabel(activeRow.followUpStatus)}
+                />
+              </div>
+
+              <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+                Activation progress
+              </p>
+              <div className="relative mt-2.5 grid grid-cols-4">
+                <span className="absolute left-[12%] right-[12%] top-[10px] h-px bg-white/10" />
+                {getActivationStage(activeRow).map((stage, index) => (
+                  <div key={stage.label} className="relative z-10 text-center">
+                    <span
+                      className={`mx-auto grid size-5 place-items-center rounded-full border text-[9px] font-semibold ${
+                        stage.done
+                          ? "border-[#7553FF] bg-[#7553FF] text-white"
+                          : "border-white/15 bg-[#292431] text-[#8F879D]"
+                      }`}
+                    >
+                      {stage.done ? "✓" : index + 1}
+                    </span>
+                    <p className={`mt-1.5 truncate text-[9px] ${
+                      stage.done ? "text-white" : "text-[#8F879D]"
+                    }`}>
+                      {stage.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="min-h-0 overflow-y-auto overscroll-contain p-3.5 [scrollbar-gutter:stable]">
+              <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
+                <div className="border-b border-white/[0.07] px-3 py-2.5">
+                  <p className="text-xs font-semibold text-white">Resident details</p>
+                </div>
+                {[
+                  ["Unit", activeRow.unit],
+                  ["Username", activeRow.suggestedUsername],
+                  ["Method", getMethodLabel(activeRow.method)],
+                  ["Last action", activeRow.lastActivationAt],
+                  ["Created", activeRow.createdAt],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 border-b border-white/[0.06] px-3 py-2.5 text-[11px] last:border-b-0"
+                  >
+                    <span className="text-[#8F879D]">{label}</span>
+                    <span className="break-words text-right text-white">{value}</span>
+                  </div>
+                ))}
+
+                <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 border-t border-white/[0.06] px-3 py-2.5 text-[11px]">
+                  <span className="text-[#8F879D]">Phone</span>
+                  <span className="text-right text-white">
+                    <span className="block break-all">{activeRow.phone}</span>
+                    {!["activated", "skipped"].includes(activeRow.status) ? (
+                      <button
+                        type="button"
+                        onClick={() => setPhoneEditorRowId(activeRow.id)}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-[#BEB4FF] hover:text-white"
+                      >
+                        <Pencil className="size-3" aria-hidden />
+                        Edit phone
+                      </button>
+                    ) : null}
+                  </span>
                 </div>
 
-                <div className="shrink-0 space-y-2 border-t border-[var(--border)] bg-[var(--surface-elevated)]/90 p-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    Actions
-                  </p>
-                  <Button
-                    type="button"
-                    onClick={() => runResidentPin(activeRow.id)}
-                    disabled={!communityId || phase !== "idle"}
-                    className="w-full justify-center gap-2"
-                  >
-                    <KeyRound className="size-3.5" aria-hidden />
-                    Generate PIN
-                  </Button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => runResidentEmail(activeRow.id)}
-                      disabled={!communityId || phase !== "idle"}
-                      className="gap-2"
-                    >
-                      <Mail className="size-3.5" aria-hidden />
-                      {selectedCount > 1
-                        ? `${allSelectedAreInvited ? "Resend" : "Send"} ${selectedCount} selected`
-                        : "Send invite"}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      onClick={() => runResidentCreateUser(activeRow.id)}
-                      disabled={!communityId || phase !== "idle"}
-                      className="gap-2"
-                    >
-                      <UserPlus className="size-3.5" aria-hidden />
-                      Create user
-                    </Button>
-                  </div>
+                <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 border-t border-white/[0.06] px-3 py-2.5 text-[11px]">
+                  <span className="text-[#8F879D]">Email</span>
+                  <span className="text-right text-white">
+                    <span className="block break-all">{activeRow.email}</span>
+                    {!["activated", "skipped"].includes(activeRow.status) ? (
+                      <button
+                        type="button"
+                        onClick={() => setEmailEditorRowId(activeRow.id)}
+                        className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-[#BEB4FF] hover:text-white"
+                      >
+                        <Pencil className="size-3" aria-hidden />
+                        Edit email
+                      </button>
+                    ) : null}
+                  </span>
                 </div>
-              </>
-            )}
+              </section>
+
+              <section className="mt-3 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
+                <div className="border-b border-white/[0.07] px-3 py-2.5">
+                  <p className="text-xs font-semibold text-white">Invitation history</p>
+                </div>
+                {[
+                  ["First invitation sent", activeRow.firstInvitationSentAt],
+                  ["Last invitation sent", activeRow.lastInvitationSentAt],
+                  ["Invitation attempts", String(activeRow.invitationAttemptCount)],
+                  ["Last PIN generated", activeRow.lastPinGeneratedAt],
+                ].map(([label, value]) => (
+                  <div
+                    key={label}
+                    className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 border-b border-white/[0.06] px-3 py-2.5 text-[11px] last:border-b-0"
+                  >
+                    <span className="text-[#8F879D]">{label}</span>
+                    <span className="break-words text-right text-white">{value}</span>
+                  </div>
+                ))}
+              </section>
+
+              {activeRow.followUpStatus === "needs_follow_up" ||
+              activeRow.invitationAttemptCount >= 5 ? (
+                <section className="mt-3 rounded-lg border border-[rgba(243,202,87,0.20)] bg-[rgba(243,202,87,0.055)] p-3">
+                  <p className="text-xs font-semibold text-[#F2D77B]">Follow-up guidance</p>
+                  <p className="mt-1.5 text-[11px] leading-5 text-[#D8CFAD]">
+                    {activeRow.invitationAttemptCount >= 5
+                      ? "Several invitations have already been sent. Confirm the resident contact information before sending another reminder."
+                      : `The last invitation was sent ${activeRow.daysSinceLastInvitation ?? 8} days ago. This resident is ready for follow-up.`}
+                  </p>
+                </section>
+              ) : null}
+
+              <section className={`mt-3 rounded-lg border p-3 ${
+                activeRowBlockers.length === 0
+                  ? "border-[rgba(103,215,165,0.18)] bg-[rgba(103,215,165,0.045)]"
+                  : "border-[rgba(255,102,126,0.20)] bg-[rgba(255,102,126,0.055)]"
+              }`}>
+                <p className={`text-xs font-semibold ${
+                  activeRowBlockers.length === 0 ? "text-[#8EE2B9]" : "text-[#FFC1CB]"
+                }`}>
+                  {activeRowBlockers.length === 0 ? "Queue checks clear" : "Queue blockers"}
+                </p>
+                <p className="mt-1.5 text-[11px] leading-5 text-[#A9A3B2]">
+                  {activeRowBlockers.length === 0
+                    ? "This resident has the information required by the current activation method."
+                    : activeRowBlockers.join(" · ")}
+                </p>
+              </section>
+            </div>
+
+            <div className="border-t border-[#141119] bg-[#292431] p-3">
+              {activeRecommendation ? (
+                <div className="mb-2.5 rounded-lg border border-[rgba(117,83,255,0.18)] bg-[rgba(117,83,255,0.055)] p-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[#BEB4FF]">
+                    Recommended next action
+                  </p>
+                  <p className="mt-1.5 text-xs font-semibold text-white">
+                    {activeRecommendation.label}
+                  </p>
+                  <p className="mt-1 text-[10px] leading-4 text-[#A9A3B2]">
+                    {activeRecommendation.description}
+                  </p>
+                </div>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={runRecommendedAction}
+                disabled={
+                  !activeRecommendation ||
+                  activeRecommendation.action === "none" ||
+                  phase !== "idle"
+                }
+                className="inline-flex h-9 w-full items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                {activeRecommendation?.label ?? "No recommended action"}
+              </button>
+
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => runResidentPin(activeRow.id)}
+                  disabled={!activeRowActionable || phase !== "idle"}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
+                >
+                  <KeyRound className="size-3" aria-hidden />
+                  PIN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runResidentEmail(activeRow.id)}
+                  disabled={!activeRowActionable || phase !== "idle"}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
+                >
+                  <Mail className="size-3" aria-hidden />
+                  Invite
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runResidentCreateUser(activeRow.id)}
+                  disabled={!activeRowActionable || phase !== "idle"}
+                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
+                >
+                  <UserPlus className="size-3" aria-hidden />
+                  Create user
+                </button>
+              </div>
+            </div>
           </aside>
-        </div>
+        ) : null}
       </section>
     </>
   );
