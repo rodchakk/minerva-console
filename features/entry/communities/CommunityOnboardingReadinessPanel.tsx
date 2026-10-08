@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { Check, ChevronRight } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
 import type { CommunityOnboardingDetail } from "@/features/entry/communities/queries";
 import {
   completeCommunityOnboardingAction,
@@ -11,6 +10,7 @@ import {
   type OnboardingActionResult,
 } from "@/features/entry/communities/onboardingActions";
 import { getOnboardingNextStepLabel } from "@/features/entry/onboardingCopy";
+import { cn } from "@/lib/supabase/utils";
 
 type CommunityOnboardingReadinessPanelProps = {
   communityId: string;
@@ -26,43 +26,26 @@ type RefinedTask = {
   label: string;
   statusLabel: string;
   statusTone: "success" | "warning" | "info";
-  summary: Record<string, unknown>;
 };
-
-function formatValue(value: unknown) {
-  if (value === null || value === undefined || value === "") {
-    return "-";
-  }
-
-  if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
-  }
-
-  if (typeof value === "number" || typeof value === "string") {
-    return String(value);
-  }
-
-  return "Available";
-}
 
 function getTaskDescription(key: string) {
   switch (key) {
     case "details":
       return "Basic community information and settings.";
     case "features":
-      return "Enabled essential community features.";
+      return "Essential ENTRY features are configured.";
     case "units":
-      return "All units and buildings have been added.";
+      return "Community units and buildings are ready.";
     case "admins":
     case "staff":
-      return "At least one admin is assigned.";
+      return "At least one community administrator is assigned.";
     case "facilities":
-      return "Facilities and amenities are set up.";
+      return "Facilities and reservation settings are configured.";
     case "activation_queue":
     case "review_activation_queue":
-      return "All pending activations have been reviewed.";
+      return "Pending resident activations have been reviewed.";
     case "final_review":
-      return "Run final validation to complete onboarding.";
+      return "Run the final readiness validation to complete onboarding.";
     default:
       return "Review this onboarding requirement.";
   }
@@ -81,17 +64,10 @@ function getTaskActionHref(communityId: string, key: string) {
     case "staff":
       return `/products/entry/communities/${communityId}/staff`;
     case "residents":
-      return `/products/entry/users?community_id=${communityId}`;
-    case "final_review":
-      return "#completion-actions";
+      return `/products/entry/communities/${communityId}/users`;
     default:
-      return "#setup-progress";
+      return null;
   }
-}
-
-function getProgressPercent(completed: number, total: number) {
-  if (total <= 0) return 0;
-  return Math.min(100, Math.round((completed / total) * 100));
 }
 
 function getTaskStatus(
@@ -99,103 +75,85 @@ function getTaskStatus(
   nextStepKey: string,
 ) {
   if (task.done) {
-    return { statusLabel: "Done", statusTone: "success" as const };
+    return {
+      statusLabel: "Complete",
+      statusTone: "success" as const,
+    };
   }
 
-  if (task.key === nextStepKey || (task.key === "admins" && nextStepKey === "staff")) {
-    return { statusLabel: "Pending", statusTone: "warning" as const };
+  if (
+    task.key === nextStepKey ||
+    (task.key === "admins" && nextStepKey === "staff")
+  ) {
+    return {
+      statusLabel: "Current",
+      statusTone: "warning" as const,
+    };
   }
 
-  return { statusLabel: "Review", statusTone: "info" as const };
+  return {
+    statusLabel: "Waiting",
+    statusTone: "info" as const,
+  };
 }
 
-function TaskActionLink({ href, tone }: { href: string; tone: RefinedTask["statusTone"] }) {
-  const className =
-    tone === "warning"
-      ? "text-xs font-semibold text-amber-200 transition hover:text-white"
-      : "text-xs font-semibold text-violet-200 transition hover:text-white";
-
-  if (href.startsWith("#")) {
-    return (
-      <a href={href} className={className}>
-        Review {"->"}
-      </a>
-    );
-  }
-
-  return (
-    <Link href={href} className={className}>
-      Review {"->"}
-    </Link>
-  );
+function getProgressPercent(completed: number, total: number) {
+  if (total <= 0) return 0;
+  return Math.min(100, Math.round((completed / total) * 100));
 }
 
-function TaskStatusIcon({ task }: { task: RefinedTask }) {
-  if (task.done) {
-    return (
-      <span className="grid h-8 w-8 place-items-center rounded-2xl border border-emerald-400/20 bg-emerald-500/10 text-sm text-emerald-300">
-        ✓
-      </span>
-    );
-  }
-
-  if (task.statusTone === "warning") {
-    return (
-      <span className="grid h-8 w-8 place-items-center rounded-2xl border border-amber-400/20 bg-amber-500/10 text-sm text-amber-300">
-        !
-      </span>
-    );
-  }
-
+function StatusChip({
+  label,
+  tone,
+}: {
+  label: string;
+  tone: RefinedTask["statusTone"];
+}) {
   return (
-    <span className="grid h-8 w-8 place-items-center rounded-2xl border border-violet-400/20 bg-violet-500/10 text-sm text-violet-200">
-      →
+    <span
+      className={cn(
+        "inline-flex min-h-6 items-center rounded-[4px] border px-2 py-1 text-[10px] font-semibold",
+        tone === "success" &&
+          "border-[rgba(103,215,165,0.20)] bg-[rgba(103,215,165,0.06)] text-[#8EE2B9]",
+        tone === "warning" &&
+          "border-[rgba(246,201,65,0.22)] bg-[rgba(246,201,65,0.06)] text-[#F2D77B]",
+        tone === "info" &&
+          "border-white/10 bg-white/[0.025] text-[#A9A3B2]",
+      )}
+    >
+      {label}
     </span>
   );
 }
 
-function ActivationQueueDetails({
-  detail,
-  task,
+function DimensionalButton({
+  children,
+  disabled,
+  onClick,
+  primary = true,
+  title,
 }: {
-  detail: CommunityOnboardingDetail;
-  task: RefinedTask;
+  children: React.ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+  primary?: boolean;
+  title?: string;
 }) {
-  if (!["activation_queue", "review_activation_queue"].includes(task.key)) {
-    return null;
-  }
-
-  const pendingCount = formatValue(
-    task.summary.pending_activations ??
-      task.summary.pending_count ??
-      task.summary.pending,
-  );
-  const reviewedAt = formatValue(
-    detail.activationQueueReviewedAt || task.summary.last_reviewed_at,
-  );
-  const reviewedBy = formatValue(task.summary.last_reviewed_by);
-
   return (
-    <div className="mt-4 grid gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] p-4 md:grid-cols-3">
-      <div className="rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-        <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
-          Pending activations
-        </p>
-        <p className="mt-2 text-lg font-semibold text-white">{pendingCount}</p>
-      </div>
-      <div className="rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-        <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
-          Last reviewed by
-        </p>
-        <p className="mt-2 text-sm font-semibold text-white">{reviewedBy}</p>
-      </div>
-      <div className="rounded-2xl border border-white/8 bg-[var(--surface-strong)] px-4 py-3">
-        <p className="text-xs uppercase tracking-[0.16em] text-[var(--text-muted)]">
-          Last reviewed
-        </p>
-        <p className="mt-2 text-sm font-semibold text-white">{reviewedAt}</p>
-      </div>
-    </div>
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      title={title}
+      className={cn(
+        "inline-flex h-10 items-center justify-center rounded-[7px] border px-4 text-sm font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF] disabled:cursor-not-allowed disabled:opacity-45",
+        primary
+          ? "border-[#120539] bg-[#7553FF] shadow-[0_2px_0_#120539]"
+          : "border-[#141119] bg-[#2E2936] shadow-[0_2px_0_#141119]",
+      )}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -222,6 +180,7 @@ export function CommunityOnboardingReadinessPanel({
 
     return detail.tasks.map((task) => {
       const status = getTaskStatus(task, nextStepKey);
+
       return {
         description: getTaskDescription(task.key),
         done: task.done,
@@ -229,7 +188,6 @@ export function CommunityOnboardingReadinessPanel({
         label: task.label,
         statusLabel: status.statusLabel,
         statusTone: status.statusTone,
-        summary: task.summary,
       };
     });
   }, [detail, nextStepKey]);
@@ -244,6 +202,7 @@ export function CommunityOnboardingReadinessPanel({
 
   function handleMarkReviewed() {
     setResult(null);
+
     startTransition(async () => {
       const actionResult = await markActivationQueueReviewedAction(communityId);
       setResult(actionResult);
@@ -252,6 +211,7 @@ export function CommunityOnboardingReadinessPanel({
 
   function handleComplete() {
     setResult(null);
+
     startTransition(async () => {
       const actionResult = await completeCommunityOnboardingAction({
         communityId,
@@ -263,189 +223,200 @@ export function CommunityOnboardingReadinessPanel({
 
   if (!detail) {
     return (
-      <section
-        id="setup-progress"
-        className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
-      >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-          Setup progress
+      <section className="relative rounded-[10px] border border-[#141119] bg-[#24202B] p-5 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BEB4FF]">
+          Setup
         </p>
-        <h2 className="mt-3 text-2xl font-semibold text-white">
+        <h2 className="mt-2 text-xl font-semibold text-white">
           Operational readiness
         </h2>
-        <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-          {progressLabel}
-        </p>
+        <p className="mt-2 text-sm text-[#A9A3B2]">{progressLabel}</p>
       </section>
     );
   }
 
   return (
-    <section
-      id="setup-progress"
-      className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5"
-    >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+    <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
+      <header className="grid gap-4 border-b border-[#141119] px-5 py-4 lg:grid-cols-[minmax(0,1fr)_270px] lg:items-center">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-violet-200">
-            Setup progress
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BEB4FF]">
+            Community setup
           </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-white">
-            {completedTasks} / {totalTasks} tasks completed
+          <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-white">
+            {completedTasks} / {totalTasks} tasks complete
           </h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--text-muted)]">
-            Complete the remaining readiness checks before finishing onboarding.
+          <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
+            Detailed onboarding checks live here so the community overview stays operational and lightweight.
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] p-4">
+        <div className="rounded-lg border border-white/[0.08] bg-white/[0.012] p-3.5">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-white">Overall progress</p>
-            <Badge tone="info">{progressPercent}%</Badge>
+            <span className="text-xs font-semibold text-white">Overall progress</span>
+            <span className="text-xs font-semibold text-[#D8D1FF]">
+              {progressPercent}%
+            </span>
           </div>
-          <div className="mt-4 h-3 rounded-full bg-white/8">
+          <div className="mt-3 h-1.5 rounded-full bg-white/[0.08]">
             <div
-              className="h-3 rounded-full bg-[var(--primary)]"
+              className="h-1.5 rounded-full bg-[#7553FF]"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <p className="mt-3 text-sm text-[var(--text-muted)]">
-            Next step: {getOnboardingNextStepLabel(nextStepKey)}.
+          <p className="mt-2 text-[11px] text-[#8F879D]">
+            Next: {getOnboardingNextStepLabel(nextStepKey)}
           </p>
         </div>
-      </div>
+      </header>
 
       {detail.blockers.length > 0 ? (
-        <div className="mt-6 rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-4">
-          <p className="text-sm font-semibold text-amber-100">
-            Readiness blockers
+        <div className="border-b border-[#141119] bg-[rgba(246,201,65,0.05)] px-5 py-3">
+          <p className="text-xs font-semibold text-[#F2D77B]">
+            {detail.blockers.length} readiness blocker
+            {detail.blockers.length === 1 ? "" : "s"}
           </p>
-          <ul className="mt-2 space-y-1 text-sm text-amber-50/90">
-            {detail.blockers.map((blocker) => (
-              <li key={blocker}>• {blocker}</li>
-            ))}
-          </ul>
+          <p className="mt-1 text-xs leading-5 text-[#D8CFAD]">
+            {detail.blockers.join(" · ")}
+          </p>
         </div>
-      ) : null}
+      ) : (
+        <div className="border-b border-[#141119] bg-[rgba(103,215,165,0.04)] px-5 py-3">
+          <p className="text-xs font-semibold text-[#8EE2B9]">
+            No readiness blockers detected
+          </p>
+        </div>
+      )}
 
-      <div className="mt-6 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface-strong)]">
-        <div className="grid grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px] gap-4 border-b border-[var(--border)] px-5 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
-          <p>Task</p>
-          <p>Description</p>
-          <p className="text-right">Status</p>
+      <div>
+        <div className="grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-b border-[#141119] bg-[#1F1B26] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D] md:grid-cols-[44px_minmax(0,1fr)_minmax(220px,.8fr)_120px]">
+          <span className="hidden md:block">Step</span>
+          <span>Requirement</span>
+          <span className="hidden md:block">Description</span>
+          <span className="text-right">Status</span>
         </div>
 
-        <div className="divide-y divide-[var(--border)]">
-          {refinedTasks.map((task) => (
-            <div key={task.key} className="px-5 py-4">
-              <div className="grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)_120px] xl:items-center">
-                <div className="flex items-start gap-3">
-                  <TaskStatusIcon task={task} />
-                  <div className="min-w-0">
-                    <p className="font-semibold text-white">{task.label}</p>
-                    <p className="mt-1 text-sm text-[var(--text-muted)] xl:hidden">
-                      {task.description}
-                    </p>
-                    {!task.done ? (
-                      <div className="mt-2 xl:hidden">
-                        <TaskActionLink
-                          href={getTaskActionHref(communityId, task.key)}
-                          tone={task.statusTone}
-                        />
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
+        {refinedTasks.map((task, index) => {
+          const href = getTaskActionHref(communityId, task.key);
 
-                <div className="hidden xl:block">
-                  <p className="text-sm text-[var(--text-muted)]">{task.description}</p>
-                </div>
-
-                <div className="flex items-center justify-between gap-3 xl:justify-end">
-                  {!task.done ? (
-                    <TaskActionLink
-                      href={getTaskActionHref(communityId, task.key)}
-                      tone={task.statusTone}
-                    />
-                  ) : null}
-                  <Badge tone={task.statusTone}>{task.statusLabel}</Badge>
-                </div>
+          return (
+            <div
+              key={task.key}
+              className={cn(
+                "grid grid-cols-[minmax(0,1fr)_120px] gap-3 border-b border-[#141119] px-5 py-3.5 last:border-b-0 md:grid-cols-[44px_minmax(0,1fr)_minmax(220px,.8fr)_120px] md:items-center",
+                !task.done &&
+                  task.statusTone === "warning" &&
+                  "bg-[rgba(117,83,255,0.045)] shadow-[inset_2px_0_0_#7553FF]",
+              )}
+            >
+              <div className="hidden md:block">
+                <span
+                  className={cn(
+                    "grid size-7 place-items-center rounded-full border text-[10px] font-semibold",
+                    task.done
+                      ? "border-[rgba(103,215,165,0.25)] bg-[rgba(103,215,165,0.07)] text-[#8EE2B9]"
+                      : task.statusTone === "warning"
+                        ? "border-[#7553FF] bg-[rgba(117,83,255,0.08)] text-[#D8D1FF]"
+                        : "border-white/15 bg-white/[0.02] text-[#8F879D]",
+                  )}
+                >
+                  {task.done ? <Check className="size-3.5" aria-hidden /> : index + 1}
+                </span>
               </div>
 
-              <ActivationQueueDetails detail={detail} task={task} />
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-white">{task.label}</p>
+                <p className="mt-1 text-[11px] leading-4 text-[#8F879D] md:hidden">
+                  {task.description}
+                </p>
+              </div>
+
+              <p className="hidden text-xs leading-5 text-[#A9A3B2] md:block">
+                {task.description}
+              </p>
+
+              <div className="flex items-center justify-end gap-2">
+                {href && !task.done ? (
+                  <Link
+                    href={href}
+                    className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#CFC7FF] hover:text-white"
+                  >
+                    Open
+                    <ChevronRight className="size-3" aria-hidden />
+                  </Link>
+                ) : null}
+                <StatusChip label={task.statusLabel} tone={task.statusTone} />
+              </div>
             </div>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
       {result ? (
         <div
-          className={`mt-5 rounded-2xl border px-4 py-3 text-sm ${
+          className={cn(
+            "border-t border-[#141119] px-5 py-3 text-xs font-medium",
             result.success
-              ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-200"
-              : "border-rose-400/20 bg-rose-500/10 text-rose-100"
-          }`}
+              ? "bg-[rgba(103,215,165,0.05)] text-[#8EE2B9]"
+              : "bg-[rgba(255,102,126,0.06)] text-[#FFC1CB]",
+          )}
         >
-          <p className="font-semibold">
-            {result.success ? result.message : result.error}
-          </p>
-          {!result.success && result.blockers?.length ? (
-            <ul className="mt-2 space-y-1">
-              {result.blockers.map((blocker) => (
-                <li key={blocker}>• {blocker}</li>
-              ))}
-            </ul>
-          ) : null}
+          {result.success ? result.message : result.error}
         </div>
       ) : null}
 
-      <div
-        id="completion-actions"
-        className="mt-6 grid gap-4 border-t border-[var(--border)] pt-6 xl:grid-cols-[minmax(0,1fr)_300px]"
-      >
-        <div className="space-y-4">
-          {canMarkActivationQueueReviewed ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={handleMarkReviewed}
-              disabled={isPending}
-            >
-              {isPending ? "Updating..." : "Mark activation queue reviewed"}
-            </Button>
-          ) : null}
-
+      <footer className="grid gap-4 border-t border-[#141119] bg-black/[0.035] px-5 py-4 xl:grid-cols-[minmax(0,1fr)_310px] xl:items-end">
+        <div>
+          <label className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+            Completion note
+          </label>
           <textarea
             value={completionNote}
             onChange={(event) => setCompletionNote(event.target.value)}
-            rows={4}
+            rows={3}
             placeholder="Optional completion notes..."
-            className="w-full rounded-[24px] border border-white/10 bg-[var(--surface-strong)] px-4 py-3 text-sm text-white outline-none transition placeholder:text-[var(--text-muted)] focus:border-violet-300/50"
+            className="mt-2 w-full resize-none rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 py-2.5 text-sm text-white shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
           />
+
+          {canMarkActivationQueueReviewed ? (
+            <div className="mt-3">
+              <DimensionalButton
+                primary={false}
+                onClick={handleMarkReviewed}
+                disabled={isPending}
+              >
+                {isPending ? "Updating..." : "Mark activation queue reviewed"}
+              </DimensionalButton>
+            </div>
+          ) : null}
         </div>
 
-        <div className="flex flex-col justify-end">
+        <div>
           {!isComplete ? (
-            <Button
-              type="button"
-              onClick={handleComplete}
-              disabled={isPending || !canComplete}
-              title={
-                canComplete
-                  ? "Complete onboarding and activate this community."
-                  : "Resolve blockers before completing onboarding."
-              }
-              className="min-h-14 w-full text-base"
-            >
-              {isPending ? "Completing..." : "Complete onboarding"}
-            </Button>
+            <>
+              <p className="mb-3 text-xs leading-5 text-[#A9A3B2]">
+                {canComplete
+                  ? "All readiness checks are clear. Completing onboarding will activate the community."
+                  : "Resolve readiness blockers before completing onboarding."}
+              </p>
+              <DimensionalButton
+                onClick={handleComplete}
+                disabled={isPending || !canComplete}
+                title={
+                  canComplete
+                    ? "Complete onboarding and activate this community."
+                    : "Resolve blockers before completing onboarding."
+                }
+              >
+                {isPending ? "Completing..." : "Complete onboarding"}
+              </DimensionalButton>
+            </>
           ) : (
-            <p className="rounded-[24px] border border-emerald-400/20 bg-emerald-500/10 px-4 py-4 text-sm font-semibold text-emerald-200">
+            <div className="rounded-lg border border-[rgba(103,215,165,0.20)] bg-[rgba(103,215,165,0.06)] px-4 py-3 text-sm font-semibold text-[#8EE2B9]">
               Community onboarding is complete and active.
-            </p>
+            </div>
           )}
         </div>
-      </div>
+      </footer>
     </section>
   );
 }
