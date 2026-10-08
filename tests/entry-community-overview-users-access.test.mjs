@@ -94,3 +94,19 @@ test("Users & Access supports intentional Resident/Admin role changes from the d
   assert.match(actions, /COMMUNITY_USER_ROLE_CHANGED/);
   assert.match(actions, /community_user\.role_change/);
 });
+
+
+test("Users & Access surfaces the household primary resident relationship", () => {
+  const queries = read("features/entry/users/queries.ts");
+  const client = read("features/entry/users/CommunityUsersClient.tsx");
+
+  assert.match(queries, /isPrimary: boolean/);
+  assert.match(queries, /\.from\("house_residents"\)/);
+  assert.match(queries, /\.select\("house_id,user_id,is_primary"\)/);
+  assert.match(queries, /\.eq\("is_primary", true\)/);
+  assert.match(queries, /primaryAssignments/);
+
+  assert.match(client, /Primary resident/);
+  assert.match(client, /Household role/);
+  assert.match(client, /Household member/);
+});
