@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { createCommunityFacilitiesAction } from "@/features/entry/communities/actions";
 import type {
@@ -198,9 +199,10 @@ export function CommunityFacilitiesDrawer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-9 w-[180px] items-center justify-center whitespace-nowrap rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] transition hover:bg-[#342F3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
+        className="inline-flex h-9 w-[190px] items-center justify-center gap-2 whitespace-nowrap rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold leading-none text-white shadow-[0_2px_0_#141119] transition hover:bg-[#342F3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
       >
-        {triggerLabel} {"->"}
+        <span className="whitespace-nowrap">{triggerLabel}</span>
+        <ChevronRight className="size-3.5 shrink-0" aria-hidden />
       </button>
 
       {open ? (
