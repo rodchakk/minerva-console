@@ -101,7 +101,8 @@ test("Users & Access surfaces the household primary resident relationship", () =
   const client = read("features/entry/users/CommunityUsersClient.tsx");
 
   assert.match(queries, /isPrimary: boolean/);
-  assert.match(queries, /\.from\("house_residents"\)/);
+  assert.match(queries, /createAdminClient/);
+  assert.match(queries, /adminSupabase[\s\S]*\.from\("house_residents"\)/);
   assert.match(queries, /\.select\("house_id,user_id,is_primary"\)/);
   assert.match(queries, /\.eq\("is_primary", true\)/);
   assert.match(queries, /primaryAssignments/);
