@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Clock3,
   MapPinned,
+  ShieldCheck,
   Users,
   X,
 } from "lucide-react";
@@ -242,7 +243,7 @@ export function CommunityDetailWorkspace({
             </div>
 
             <OperationRow
-              icon={Users}
+              icon={Building2}
               title="Community Directory"
               description="Manage households, primary residents, ownership, and unit-level access."
               stat={unitCount + " units · " + memberCount + " residents"}
@@ -258,7 +259,7 @@ export function CommunityDetailWorkspace({
             />
 
             <OperationRow
-              icon={Building2}
+              icon={ShieldCheck}
               title="Users & access"
               description="Manage login identities, roles, credentials, unit assignment, and account status."
               stat={userAccountCount + " user account" + (userAccountCount === 1 ? "" : "s")}
