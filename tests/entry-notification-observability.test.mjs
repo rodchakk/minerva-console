@@ -20,9 +20,7 @@ const page = read("app/(console)/products/entry/observability/page.tsx");
 const notificationsPage = read(
   "app/(console)/products/entry/observability/notifications/page.tsx",
 );
-const observabilityNav = read(
-  "features/entry/observability/ObservabilityWorkspaceNav.tsx",
-);
+const sidebar = read("components/layout/AppSidebar.tsx");
 const drilldown = read(
   "features/entry/observability/NotificationObservabilityDrilldown.tsx",
 );
@@ -428,10 +426,11 @@ test("returned contract excludes secrets, tokens, emails, bodies, URLs, and raw 
 test("overview and drill-down UI preserve filters and avoid fake healthy empty states", () => {
   assert.match(page, /\/products\/entry\/observability\/notifications/);
   assert.match(page, /flow\.key === "communications"/);
-  assert.match(notificationsPage, /ENTRY observability \/ Communications/);
+  assert.match(notificationsPage, /ENTRY monitors \/ Communications/);
   assert.doesNotMatch(notificationsPage, /Back to observability/);
   assert.match(notificationsPage, /basePath="\/products\/entry\/observability\/notifications"/);
-  assert.match(observabilityNav, /Communications/);
+  assert.match(sidebar, /label: "Monitors"/);
+  assert.match(sidebar, /label: "Communications"/);
   assert.match(drilldown, /No events stays Unknown/);
   assert.match(drilldown, /This remains Unknown, not Healthy/);
   assert.match(drilldown, /Event detail/);
