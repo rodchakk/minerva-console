@@ -15,7 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import type {
@@ -1178,6 +1178,7 @@ export function ActivationQueueTable({
   const [searchQuery, setSearchQuery] = useState("");
   const [queueView, setQueueView] = useState<QueueView>("all");
   const [filterOpen, setFilterOpen] = useState(false);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(1);
   const [followUpView, setFollowUpView] = useState<FollowUpView>(
     rows.some((row) => row.followUpStatus === "needs_follow_up")
@@ -1196,8 +1197,22 @@ export function ActivationQueueTable({
       }
     }
 
+    function handlePointerDown(event: PointerEvent) {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+
+      if (!filterMenuRef.current?.contains(target)) {
+        setFilterOpen(false);
+      }
+    }
+
     document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    document.addEventListener("pointerdown", handlePointerDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
   }, [filterOpen]);
 
   const queueCounts = useMemo(
@@ -1809,7 +1824,7 @@ export function ActivationQueueTable({
               />
             </label>
 
-            <div className="relative">
+            <div ref={filterMenuRef} className="relative">
               <button
                 type="button"
                 onClick={() => setFilterOpen((value) => !value)}
