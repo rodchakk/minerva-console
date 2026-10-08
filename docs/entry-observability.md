@@ -31,9 +31,13 @@ than raw log rows.
 
 ### Console workspace
 
-ENTRY Observability is presented as a workspace instead of one vertically
-unbounded dashboard. The secondary navigation intentionally follows monitor
-families rather than implementation files:
+The Console presents ENTRY Observability to operators as **Monitors**. It is a
+workspace instead of one vertically unbounded dashboard.
+
+Monitor families are nested directly under **Monitors** in the primary ENTRY
+sidebar, similar to Cloudflare's expandable product navigation. There is no
+second observability rail inside the content area, so tables, metrics, incidents,
+and diagnostics can use the full workspace width:
 
 - **Overview** — system status, critical flows, active incidents, and rollout/readiness.
 - **Communications** — push, email, worker, provider, retry, and delivery evidence.
@@ -41,10 +45,12 @@ families rather than implementation files:
 - **Performance** — latency distributions, real-user metrics, provider usage, and variable cost.
 - **Diagnostics** — incident history, diagnostic snapshots, and administrative audit context.
 
-Community and time-range filters are preserved when moving between sections.
-New telemetry should be placed on the narrowest owning page instead of growing
-Overview indefinitely. Overview remains the fast operational answer to
-"Is ENTRY healthy right now?"
+The existing `/products/entry/observability` routes remain canonical for
+backward compatibility. The operator-facing label is **Monitors**.
+
+Each page keeps its own community and time-range filters. New telemetry should
+be placed on the narrowest owning page instead of growing Overview indefinitely.
+Overview remains the fast operational answer to "Is ENTRY healthy right now?"
 
 ## Signal Ownership
 
