@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
+import { entryButtonClass } from "@/components/ui/entryButtonStyles";
 import { createCommunityFacilitiesAction } from "@/features/entry/communities/actions";
 import type {
   CommunityDetailPreviews,
@@ -156,31 +157,38 @@ export function CommunityFacilitiesDrawer({
   }
 
   const addFacilityForm = canCreateFacilities ? (
-    <div className="rounded-lg border border-[#141119] bg-[#24202B] p-4">
-      <label className="block">
-        <span className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
-          Add facility
-        </span>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+    <div className="rounded-[10px] border border-[#141119] bg-[#24202B] p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+        <label className="min-w-0 flex-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
+            Add facility
+          </span>
           <input
             id="entry-community-facility-name"
             name="entry_community_facility_name"
             autoComplete="off"
             value={facilityName}
             onChange={(event) => setFacilityName(event.target.value)}
-            className="h-11 min-w-0 flex-1 rounded-lg border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none transition placeholder:text-[#8F879D] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                if (facilityName.trim() && !isCreating) submitFacility();
+              }
+            }}
+            className="mt-2 h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm text-white shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
             placeholder="Casa Club, Pool, Gym..."
           />
-          <button
-            type="button"
-            disabled={isCreating}
-            onClick={submitFacility}
-            className="inline-flex h-11 items-center justify-center rounded-lg border border-transparent bg-[#7553FF] px-4 text-sm font-semibold text-white transition hover:bg-[#8062FF] disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isCreating ? "Adding..." : "Add facility"}
-          </button>
-        </div>
-      </label>
+        </label>
+        <button
+          type="button"
+          disabled={isCreating || !facilityName.trim()}
+          onClick={submitFacility}
+          className={entryButtonClass("primary", "sm:w-[150px]")}
+        >
+          <Plus className="size-3.5" aria-hidden />
+          {isCreating ? "Adding..." : "Add facility"}
+        </button>
+      </div>
       {createMessage ? (
         <p className="mt-2 text-sm font-semibold text-emerald-200">
           {createMessage}
@@ -230,15 +238,15 @@ export function CommunityFacilitiesDrawer({
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="grid h-10 w-10 place-items-center rounded-lg border border-[#141119] bg-white/5 text-xl text-[#8F879D] transition hover:border-[#7553FF] hover:text-white"
+                className="grid size-8 place-items-center rounded-md border border-[#141119] bg-[#2E2936] text-[#8F879D] transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
                 aria-label="Close facilities drawer"
               >
-                x
+                <X className="size-4" aria-hidden />
               </button>
             </div>
 
-            <div className="grid gap-4 border-b border-[#141119] px-6 py-5 md:grid-cols-3">
-              <div className="rounded-lg border border-[#141119] bg-[#24202B] px-4 py-4">
+            <div className="grid border-b border-[#141119] bg-[#24202B] md:grid-cols-3">
+              <div className="min-h-[88px] border-t border-white/[0.07] px-5 py-4 first:border-t-0 md:border-l md:border-t-0 md:first:border-l-0">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8F879D]">
                   Total facilities
                 </p>
@@ -246,7 +254,7 @@ export function CommunityFacilitiesDrawer({
                   {facilities.length}
                 </p>
               </div>
-              <div className="rounded-lg border border-[#141119] bg-[#24202B] px-4 py-4">
+              <div className="min-h-[88px] border-t border-white/[0.07] px-5 py-4 first:border-t-0 md:border-l md:border-t-0 md:first:border-l-0">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8F879D]">
                   Active
                 </p>
@@ -254,7 +262,7 @@ export function CommunityFacilitiesDrawer({
                   {activeCount}
                 </p>
               </div>
-              <div className="rounded-lg border border-[#141119] bg-[#24202B] px-4 py-4">
+              <div className="min-h-[88px] border-t border-white/[0.07] px-5 py-4 first:border-t-0 md:border-l md:border-t-0 md:first:border-l-0">
                 <p className="text-xs uppercase tracking-[0.18em] text-[#8F879D]">
                   Readiness
                 </p>
@@ -270,7 +278,7 @@ export function CommunityFacilitiesDrawer({
               </div>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col px-6 py-5">
+            <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
               {stateCopy ? (
                 <div className="grid min-h-0 flex-1 place-items-center rounded-lg border border-dashed border-[#141119] bg-[#24202B] px-6 text-center">
                   <div className="w-full max-w-xl">
@@ -286,36 +294,39 @@ export function CommunityFacilitiesDrawer({
               ) : (
                 <>
                   {addFacilityForm}
-                  <label className="relative block">
-                    <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[#8F879D]">
-                      /
-                    </span>
-                    <input
-                      value={query}
-                      onChange={(event) => setQuery(event.target.value)}
-                      placeholder="Search by facility name or price..."
-                      className="h-12 w-full rounded-lg border border-[#141119] bg-[#2E2936] pl-11 pr-4 text-sm text-white outline-none transition placeholder:text-[#8F879D] focus:border-[#141119] focus:ring-2 focus:ring-[#7553FF]"
-                    />
-                  </label>
+                  <div className="mt-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <label className="relative block min-w-0 flex-1">
+                      <span className="sr-only">Search facilities</span>
+                      <Search
+                        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#8F879D]"
+                        aria-hidden
+                      />
+                      <input
+                        value={query}
+                        onChange={(event) => setQuery(event.target.value)}
+                        placeholder="Search facility name or price..."
+                        className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-3 text-sm text-white shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
+                      />
+                    </label>
 
-                  <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2">
                     {filters.map((item) => (
                       <button
                         key={item.value}
                         type="button"
                         onClick={() => setFilter(item.value)}
-                        className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
-                          filter === item.value
-                            ? "border-[#7553FF] bg-[#7553FF] text-white shadow-[0_14px_32px_rgba(112,104,255,0.28)]"
-                            : "border-[#141119] bg-white/5 text-[#8F879D] hover:border-[#7553FF] hover:text-white"
-                        }`}
+                        className={entryButtonClass(
+                          filter === item.value ? "primary" : "secondary",
+                          "min-w-[68px]",
+                        )}
                       >
                         {item.label}
                       </button>
                     ))}
+                    </div>
                   </div>
 
-                  <div className="mt-5 min-h-0 flex-1 overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B]">
+                  <div className="mt-3 min-h-0 flex-1 overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B]">
                     <div className="grid grid-cols-[minmax(180px,1.2fr)_110px_120px_120px_110px] border-b border-white/8 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#8F879D]">
                       <span>Facility</span>
                       <span className="text-center">Status</span>
@@ -376,7 +387,7 @@ export function CommunityFacilitiesDrawer({
               )}
             </div>
 
-            <div className="border-t border-[#141119] bg-[rgba(9,12,24,0.84)] px-6 py-5">
+            <div className="border-t border-[#141119] bg-[#211D28] px-5 py-4">
               {selectedFacility ? (
                 <div className="rounded-[10px] border border-[#141119] bg-[#24202B] p-5">
                   <div className="flex flex-wrap items-start justify-between gap-4">
@@ -398,9 +409,9 @@ export function CommunityFacilitiesDrawer({
                         </div>
                       </div>
                     </div>
-                    <div className="rounded-lg border border-[#141119] bg-white/5 px-4 py-2 text-sm font-semibold text-[#8F879D]">
+                    <span className="inline-flex h-7 items-center rounded-[4px] border border-[#141119] bg-[#2E2936] px-2.5 text-[10px] font-semibold text-[#8F879D]">
                       Read-only
-                    </div>
+                    </span>
                   </div>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-4">
@@ -423,7 +434,7 @@ export function CommunityFacilitiesDrawer({
                     ))}
                   </div>
 
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                  <div className="mt-4 grid gap-2 md:grid-cols-3">
                     {[
                       "Edit facility",
                       "Disable facility",
@@ -433,9 +444,13 @@ export function CommunityFacilitiesDrawer({
                         key={label}
                         type="button"
                         disabled
-                        className="rounded-lg border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-[#8F879D]"
+                        className={entryButtonClass(
+                          "secondary",
+                          "w-full justify-center text-[#8F879D]",
+                        )}
                       >
-                        {label} <span className="ml-2 text-xs">Coming soon</span>
+                        {label}
+                        <span className="text-[9px] font-medium text-[#6F6878]">Soon</span>
                       </button>
                     ))}
                   </div>
