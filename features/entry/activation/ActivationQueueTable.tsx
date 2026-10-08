@@ -2249,7 +2249,7 @@ export function ActivationQueueTable({
                 {[
                   ["First invitation sent", activeRow.firstInvitationSentAt],
                   ["Last invitation sent", activeRow.lastInvitationSentAt],
-                  ["Attempts", String(activeRow.invitationAttemptCount)],
+                  ["Invitation attempts", String(activeRow.invitationAttemptCount)],
                   ["Last PIN generated", activeRow.lastPinGeneratedAt],
                 ].map(([label, value]) => (
                   <div
