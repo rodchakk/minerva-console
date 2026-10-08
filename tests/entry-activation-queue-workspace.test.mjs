@@ -44,24 +44,24 @@ test("Activation Queue keeps pending invite distinct from awaiting activation", 
     source,
     /case "awaiting_activation":[\s\S]*return row\.status === "invited"/,
   );
+  assert.match(source, /case "pending_invite":[\s\S]*return "Pending invite"/);
   assert.match(
     source,
-    /PIN is ready, but the invitation has not been sent yet\./,
-  );
-  assert.match(
-    source,
-    /Invitation sent; waiting for the resident to complete activation\./,
+    /case "awaiting_activation":[\s\S]*return "Awaiting activation"/,
   );
 });
 
-test("Activation Queue keeps the table and resident detail as independent scroll regions", () => {
+test("Activation Queue is table-first and opens resident details in a fixed drawer", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
 
   assert.match(source, /100dvh/);
   assert.match(source, /overflow-auto overscroll-contain/);
   assert.match(source, /overflow-y-auto overscroll-contain/);
   assert.match(source, /scrollbar-gutter:stable/);
-  assert.match(source, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
+  assert.match(source, /useState<string \| null>\(null\)/);
+  assert.match(source, /fixed bottom-5 right-5 top-\[76px\]/);
+  assert.match(source, /w-\[440px\]/);
+  assert.doesNotMatch(source, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
 });
 
 test("Activation Queue preserves the existing activation actions and adds direct resident PIN action", () => {
@@ -180,7 +180,7 @@ test("Activation Queue shows invitation history, follow-up age and PIN timing se
     "supabase/migrations/20260927054000_entry_activation_follow_up_buckets.sql",
   );
 
-  assert.match(table, /Last activation/);
+  assert.match(table, /Last action/);
   assert.match(table, /First invitation sent/);
   assert.match(table, /Last invitation sent/);
   assert.match(table, /Invitation attempts/);
