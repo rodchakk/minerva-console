@@ -218,7 +218,10 @@ export function SupportConversation({
         {hasNewMessages ? (
           <button
             type="button"
-            className="absolute bottom-3 left-1/2 inline-flex h-8 -translate-x-1/2 items-center gap-2 rounded-full border border-[var(--console-border-strong)] bg-[#2A2631] px-3.5 text-xs font-semibold text-slate-100 shadow-[0_10px_28px_rgba(0,0,0,0.4)] transition hover:border-[var(--console-accent-border)] hover:bg-[var(--console-surface-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+            className={entryButtonClass(
+              "secondary",
+              "absolute bottom-3 left-1/2 h-8 -translate-x-1/2 rounded-full px-3.5 shadow-[0_10px_28px_rgba(0,0,0,0.4)]",
+            )}
             onClick={() => scrollToLatest()}
           >
             New messages
