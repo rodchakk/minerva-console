@@ -50,6 +50,16 @@ export type CreateCommunityFacilitiesResult = {
   success: boolean;
 };
 
+export type ReorderCommunityDestinationsInput = {
+  communityId: string;
+  orderedDestinationIds: string[];
+};
+
+export type ReorderCommunityDestinationsResult = {
+  error?: string;
+  success: boolean;
+};
+
 function parseBooleanField(value: FormDataEntryValue | null) {
   return value === "on" || value === "true";
 }
@@ -705,6 +715,75 @@ export async function setCommunityDestinationActiveAction(formData: FormData) {
 
   revalidatePath(`/products/entry/communities/${communityId}`);
   redirect(getCommunityDestinationRedirect(communityId));
+}
+
+export async function reorderCommunityDestinationsAction(
+  input: ReorderCommunityDestinationsInput,
+): Promise<ReorderCommunityDestinationsResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+
+  if (previewReadOnlyError) {
+    return { error: previewReadOnlyError, success: false };
+  }
+
+  const communityId = input.communityId.trim();
+  const orderedDestinationIds = Array.from(
+    new Set(
+      input.orderedDestinationIds
+        .map((id) => id.trim())
+        .filter(Boolean),
+    ),
+  );
+
+  if (!communityId || orderedDestinationIds.length === 0) {
+    return { error: "Community and destination order are required.", success: false };
+  }
+
+  const supabase = await createClient();
+  const { data: currentRows, error: currentRowsError } = await supabase
+    .from("community_destinations")
+    .select("id")
+    .eq("community_id", communityId);
+
+  if (currentRowsError) {
+    return { error: currentRowsError.message, success: false };
+  }
+
+  const currentIds = new Set(
+    (Array.isArray(currentRows) ? currentRows : [])
+      .map((row) => coerceString((row as Record<string, unknown>).id))
+      .filter(Boolean),
+  );
+
+  if (
+    currentIds.size !== orderedDestinationIds.length ||
+    orderedDestinationIds.some((id) => !currentIds.has(id))
+  ) {
+    return {
+      error: "Destination order changed while you were editing. Refresh and try again.",
+      success: false,
+    };
+  }
+
+  const updates = await Promise.all(
+    orderedDestinationIds.map((destinationId, index) =>
+      supabase
+        .from("community_destinations")
+        .update({ sort_order: (index + 1) * 10 })
+        .eq("community_id", communityId)
+        .eq("id", destinationId),
+    ),
+  );
+
+  const failedUpdate = updates.find((result) => result.error);
+
+  if (failedUpdate?.error) {
+    return { error: failedUpdate.error.message, success: false };
+  }
+
+  revalidatePath(`/products/entry/communities/${communityId}`);
+  return { success: true };
 }
 
 export async function updateCommunityDestinationOrderAction(formData: FormData) {
