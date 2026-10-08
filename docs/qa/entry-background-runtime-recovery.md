@@ -9,7 +9,7 @@ turns all background load back on.
 
 - **SEVERE** — no incident-relevant high-frequency background job is allowed to run.
 - **DEGRADED** — only the bounded community mobile-push worker and mobile receipt worker may run.
-- **RECOVERY** — keeps those two workers available, permits database-only maintenance, and permits the bounded OCR retry worker. Foreground CHECK_IN already dispatches OCR directly; the retry worker exists only to recover transient provider/network failures. Web-push fan-out remains blocked.
+- **RECOVERY** — staged, reversible recovery mode. It keeps the bounded communications workers, database maintenance, OCR retry, and—only after the final hardening stage—the bounded Web Push dispatcher available. Individual cron jobs can still remain inactive while permitted by the gate.
 - **NORMAL** — the runtime gate permits all configured jobs.
 
 Every allowed job also takes a transaction-scoped advisory lock. If the previous
@@ -31,11 +31,17 @@ invocation is still running, the next cron tick exits successfully with
    **expire-stale-records**.
 9. After those remain stable, permit and activate **entry-plate-ocr-queue** while staying
    in **RECOVERY**. This worker is bounded to three queued items per run and is needed
-   to retry OCR work left PENDING after transient provider failures. Keep
-   **entry-web-push-dispatch** blocked.
-10. Move to **NORMAL** only with observed headroom, then restore
-   **entry-web-push-dispatch** as the final provider-fan-out stage.
-11. If Auth/REST 5xx, cron startup timeouts, or connection pressure returns, set
+   to retry OCR work left PENDING after transient provider failures.
+10. Harden **entry-web-push-dispatch** before the final recovery stage: automatic
+    dispatch requests should claim at most 10 deliveries, application requests are
+    capped at 25, provider sends have an 8 second timeout, and the existing advisory
+    lock prevents overlapping cron ticks.
+11. Permit Web Push in **RECOVERY**, but keep its cron inactive until the hardened
+    application code is deployed. Run one manual gated cycle, verify queue/provider
+    outcomes and system headroom, then activate the cron as the final isolated job.
+12. Keep **RECOVERY** after all jobs are restored until a separate stability decision
+    is made. Moving to **NORMAL** is not required merely to restore service.
+13. If Auth/REST 5xx, cron startup timeouts, or connection pressure returns, set
     runtime mode back to **SEVERE** before investigating. Do not mass-toggle jobs.
 
 ## Rollback principle
