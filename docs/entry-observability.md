@@ -29,6 +29,23 @@ limit)` as a separate superadmin-only read model. It is also bounded to 31 days,
 clamps `limit` to 200 rows, and returns normalized notification events rather
 than raw log rows.
 
+### Console workspace
+
+ENTRY Observability is presented as a workspace instead of one vertically
+unbounded dashboard. The secondary navigation intentionally follows monitor
+families rather than implementation files:
+
+- **Overview** — system status, critical flows, active incidents, and rollout/readiness.
+- **Communications** — push, email, worker, provider, retry, and delivery evidence.
+- **Background** — cron monitors, workers, queues, database pressure, and OCR retry state.
+- **Performance** — latency distributions, real-user metrics, provider usage, and variable cost.
+- **Diagnostics** — incident history, diagnostic snapshots, and administrative audit context.
+
+Community and time-range filters are preserved when moving between sections.
+New telemetry should be placed on the narrowest owning page instead of growing
+Overview indefinitely. Overview remains the fast operational answer to
+"Is ENTRY healthy right now?"
+
 ## Signal Ownership
 
 Use the canonical system for the question being answered:
