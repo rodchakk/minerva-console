@@ -1,14 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useDeferredValue, useState, useTransition } from "react";
+import { useDeferredValue, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   Building2,
   Check,
+  ChevronRight,
   Copy,
   Eye,
   EyeOff,
+  Filter,
   Home,
   KeyRound,
   Mail,
@@ -259,6 +261,7 @@ export function CommunityUsersClient({
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [visibleCount, setVisibleCount] = useState(DEFAULT_VISIBLE_COUNT);
   const [modal, setModal] = useState<ModalState>(null);
   const [manageMode, setManageMode] = useState<ManageMode>("view");
@@ -278,6 +281,7 @@ export function CommunityUsersClient({
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const deferredQuery = useDeferredValue(query);
+  const filterRef = useRef<HTMLDivElement>(null);
 
   const normalizedQuery = deferredQuery.trim().toLowerCase();
   const filteredUsers = users.filter((user) => {
@@ -287,7 +291,11 @@ export function CommunityUsersClient({
       user.email.toLowerCase().includes(normalizedQuery) ||
       user.username.toLowerCase().includes(normalizedQuery) ||
       user.phone.toLowerCase().includes(normalizedQuery) ||
-      user.houseLabel.toLowerCase().includes(normalizedQuery);
+      user.houseLabel.toLowerCase().includes(normalizedQuery) ||
+      user.role.toLowerCase().includes(normalizedQuery) ||
+      getRoleLabel(user.role).toLowerCase().includes(normalizedQuery) ||
+      getIdentityType(user).toLowerCase().includes(normalizedQuery) ||
+      (user.isActive ? "active enabled" : "inactive disabled blocked").includes(normalizedQuery);
 
     if (!matchesQuery) return false;
     if (roleFilter !== "all" && user.role !== roleFilter) return false;
@@ -307,6 +315,39 @@ export function CommunityUsersClient({
   const adminCount = users.filter((user) => user.role === "ADMIN").length;
   const guardCount = users.filter((user) => user.role === "GUARD").length;
   const activeHouses = houses.filter((house) => house.isActive);
+  const privilegedCount = adminCount + guardCount;
+  const activeFilterCount =
+    Number(roleFilter !== "all") + Number(statusFilter !== "all");
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== "Escape") return;
+
+      if (filterOpen) {
+        setFilterOpen(false);
+        return;
+      }
+
+      if (modal) {
+        closeModal();
+      }
+    }
+
+    function onPointerDown(event: MouseEvent) {
+      if (!filterOpen) return;
+      const target = event.target as Node;
+      if (!filterRef.current?.contains(target)) {
+        setFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", onKeyDown);
+    document.addEventListener("mousedown", onPointerDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("mousedown", onPointerDown);
+    };
+  });
 
   function resetFeedback() {
     setError(null);
