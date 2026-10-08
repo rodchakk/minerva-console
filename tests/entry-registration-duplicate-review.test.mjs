@@ -9,17 +9,22 @@ function read(path) {
   return readFileSync(join(root, path), "utf8");
 }
 
-test("Resident Registration opens as a Pending-first operational queue", () => {
+test("Resident Registration opens as a review-first operational workspace", () => {
   const source = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
 
-  assert.match(source, /useState<UnitFilter>\("pending"\)/);
+  assert.match(source, /useState<UnitWorkflowFilter>\("pending"\)/);
+  assert.match(source, /type UnitAttentionFilter/);
+  assert.match(source, /Filter registrations/);
+  assert.match(source, /Ready for Patronato/);
+  assert.match(source, /Patronato approved/);
+  assert.match(source, /Possible duplicates/);
+  assert.match(source, /Missing information/);
   assert.match(
     source,
-    /\["pending", "Pending"\][\s\S]*\["duplicates", "Duplicates"\][\s\S]*\["reviewed", "Patronato"\][\s\S]*\["activation", "Activation"\][\s\S]*\["all", "All"\][\s\S]*\["resolved", "Resolved"\]/,
+    /Search unit, reference, resident, email, phone, status or issue/,
   );
-  assert.match(source, /Search unit, resident, email or phone/);
 });
 
 test("selected unit separates duplicate alert from activation status", () => {
@@ -323,8 +328,8 @@ test("shared contact warnings stay separate from duplicate candidate logic", () 
   );
 
   assert.match(workspace, /sharedContactIssuesByUnitId/);
-  assert.match(workspace, /hasSharedEmail/);
-  assert.match(workspace, /hasSharedPhone/);
+  assert.match(workspace, /Shared email/);
+  assert.match(workspace, /Shared phone/);
   assert.match(duplicateSource, /A shared family email by itself is not enough/);
   assert.match(duplicateSource, /Shared email only; not enough to merge residents/);
 });
