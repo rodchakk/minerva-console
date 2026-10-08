@@ -250,7 +250,7 @@ export default async function EntryObservabilityBackgroundPage(props: {
   return (
     <div className="space-y-4">
       <PageHeader
-        title="ENTRY observability / Background"
+        title="ENTRY monitors / Background"
         description="Cron monitors, workers, queues, database pressure, and OCR recovery."
         actions={
           <ObservabilityFilters
