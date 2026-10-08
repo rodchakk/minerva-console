@@ -245,7 +245,7 @@ export default async function EntryObservabilityDiagnosticsPage(props: {
   const communityId = Array.isArray(searchParams.community) ? searchParams.community[0] : searchParams.community;
 
   const [result, snapshotsResult] = await Promise.all([
-    getEntryObservability({ communityId: communityId ?? null, range }),
+    getEntryObservability({ communityId: communityId ?? null, model: "diagnostics", range }),
     getEntryDiagnosticSnapshots({ communityId: communityId ?? null, limit: 20 }),
   ]);
 
