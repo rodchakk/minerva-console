@@ -108,10 +108,10 @@ test("database-only recovery jobs keep cadence but start on separate minute offs
 
 
 test("recovery permits bounded OCR retry while web push remains blocked", () => {
-  const recovery = ocrRetrySql.match(/elsif v_mode = 'RECOVERY'[\\s\\S]*?elsif v_mode = 'DEGRADED'/);
+  const recovery = ocrRetrySql.match(/elsif v_mode = 'RECOVERY'[\s\S]*?elsif v_mode = 'DEGRADED'/);
   assert.ok(recovery, "RECOVERY branch must exist");
   assert.match(recovery[0], /entry-plate-ocr-queue/);
   assert.doesNotMatch(recovery[0], /entry-web-push-dispatch/);
-  assert.match(ocrRetrySql, /pg_try_advisory_xact_lock\\(v_lock_key\\)/);
-  assert.doesNotMatch(ocrRetrySql, /cron\\.alter_job/);
+  assert.match(ocrRetrySql, /pg_try_advisory_xact_lock\(v_lock_key\)/);
+  assert.doesNotMatch(ocrRetrySql, /cron\.alter_job/);
 });
