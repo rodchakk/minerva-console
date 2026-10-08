@@ -106,17 +106,148 @@ function DetailSection({
   if (rows.length === 0) return null;
 
   return (
+    <section
+      className={cn(
+        "rounded-[10px] border border-[#141119] bg-[#24202B] p-4",
+        className,
+      )}
+    >
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BEB4FF]">
+        {title}
+      </p>
+      <dl className={cn("mt-3 space-y-2.5 text-sm", contentClassName)}>
+        {rows.map((item) => (
+          <div
+            key={item.label}
+            className={cn(
+              "grid grid-cols-[96px_minmax(0,1fr)] gap-3",
+              title === "Context" && item.label === "Created"
+                ? "mt-3 border-t border-white/[0.07] pt-3"
+                : "",
+            )}
+          >
+            <dt className="text-[11px] leading-5 text-[#8F879D]">
+              {item.label}
+            </dt>
+            <dd className="break-words text-[11px] font-semibold leading-5 text-white">
+              {item.value}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
+export default async function EntrySupportTicketPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ ticketId: string }>;
+  searchParams: Promise<{ sent?: string; updated?: string; error?: string }>;
+}) {
+  const { ticketId } = await params;
+  const query = await searchParams;
+  const { ticket, messages, requester, loadError } =
+    await getEntrySupportTicket(ticketId);
+
+  if (!ticket) notFound();
+
+  const status = statusCopy[ticket.status];
+  const category = formatCategory(ticket.category);
+  const source = formatSource(ticket.source);
+  const requesterRole =
+    requester?.role || metadataString(ticket.metadata, ["role"]);
+  const houseLabel =
+    requester?.houseLabel ||
+    metadataString(ticket.metadata, [
+      "house_label",
+      "houseLabel",
+      "unit_label",
+      "unitLabel",
+      "unit",
+      "house",
+    ]);
+
+  const contextRows = compactRows([
+    { label: "Community", value: ticket.communityName },
+    { label: "Source", value: source },
+    { label: "Category", value: category },
+    { label: "Role", value: requesterRole },
+    { label: "House / unit", value: houseLabel },
+    { label: "Created", value: formatDateTime(ticket.createdAt) },
+    { label: "Updated", value: formatDateTime(ticket.updatedAt) },
+  ]);
+
+  const technicalRows = compactRows([
+    {
+      label: "App version",
+      value: metadataString(ticket.metadata, ["app_version", "appVersion"]),
+    },
+    { label: "Build", value: metadataString(ticket.metadata, ["build"]) },
+    {
+      label: "Platform",
+      value: metadataString(ticket.metadata, ["platform"]),
+    },
+    {
+      label: "OS version",
+      value: metadataString(ticket.metadata, ["os_version", "osVersion", "os"]),
+    },
+    {
+      label: "Device model",
+      value: metadataString(ticket.metadata, [
+        "device_model",
+        "deviceModel",
+        "device",
+      ]),
+    },
+    {
+      label: "Surface",
+      value: metadataString(ticket.metadata, ["surface"]),
+    },
+  ]);
+
+  const diagnostics = compactRows([
+    { label: "Ticket", value: ticket.ticketNumber },
+    { label: "Requester", value: ticket.requesterName },
+    { label: "Requester user ID", value: ticket.createdBy },
+    { label: "Community", value: ticket.communityName },
+    { label: "Community ID", value: ticket.communityId ?? "" },
+    { label: "Source", value: source },
+    { label: "Category", value: category },
+    { label: "Status", value: status.label },
+    ...technicalRows,
+    { label: "Role", value: requesterRole },
+    { label: "House / unit", value: houseLabel },
+  ]);
+
+  const residentHref =
+    ticket.communityId && ticket.createdBy
+      ? `/field/entry/communities/${encodeURIComponent(
+          ticket.communityId,
+        )}/people/residents/${encodeURIComponent(ticket.createdBy)}`
+      : null;
+
+  const communityHref = ticket.communityId
+    ? `/products/entry/communities/${encodeURIComponent(ticket.communityId)}`
+    : null;
+
+  const resetDisabledReason = !ticket.communityId
+    ? "Community ID is unavailable."
+    : !ticket.createdBy
+      ? "Requester user ID is unavailable."
+      : undefined;
+
+  return (
     <div className="relative -mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 2xl:-mx-7 2xl:px-7">
       <div className="mx-auto max-w-[1680px] space-y-3">
-        <div>
-          <Link
-            href="/products/entry/tickets"
-            className={entryButtonClass("secondary", "w-fit")}
-          >
-            <ArrowLeft className="size-3.5" aria-hidden />
-            Back to tickets
-          </Link>
-        </div>
+        <Link
+          href="/products/entry/tickets"
+          className={entryButtonClass("secondary", "w-fit")}
+        >
+          <ArrowLeft className="size-3.5" aria-hidden />
+          Back to tickets
+        </Link>
 
         <section className="relative overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]">
           <div className="flex flex-col gap-4 px-5 py-4 xl:flex-row xl:items-center xl:justify-between">
@@ -138,8 +269,8 @@ function DetailSection({
                 {category}
               </h1>
               <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[#A9A3B2]">
-                Support request from {ticket.requesterName}. Review the conversation,
-                context, and account tools from one workspace.
+                Support request from {ticket.requesterName}. Review the
+                conversation, context, and account tools from one workspace.
               </p>
             </div>
 
@@ -183,6 +314,7 @@ function DetailSection({
                 {requesterRole || "ENTRY user"}
               </p>
             </div>
+
             <div className="min-h-[76px] border-t border-white/[0.06] px-4 py-3 sm:border-l sm:border-t-0">
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
                 <Building2 className="size-3.5 text-[#CFC7FF]" aria-hidden />
@@ -195,6 +327,7 @@ function DetailSection({
                 {houseLabel || "No unit available"}
               </p>
             </div>
+
             <div className="min-h-[76px] border-t border-white/[0.06] px-4 py-3 xl:border-l xl:border-t-0">
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
                 <Smartphone className="size-3.5 text-[#CFC7FF]" aria-hidden />
@@ -203,6 +336,7 @@ function DetailSection({
               <p className="mt-2 text-sm font-semibold text-white">{source}</p>
               <p className="mt-1 text-[10px] text-[#8F879D]">{category}</p>
             </div>
+
             <div className="min-h-[76px] border-t border-white/[0.06] px-4 py-3 sm:border-l xl:border-t-0">
               <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#8F879D]">
                 <Clock3 className="size-3.5 text-[#CFC7FF]" aria-hidden />
@@ -223,11 +357,13 @@ function DetailSection({
             Reply sent.
           </div>
         ) : null}
+
         {query.updated === "1" ? (
           <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
             Status updated.
           </div>
         ) : null}
+
         {query.error ? (
           <div className="rounded-lg border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
             We could not complete the action. Try again.
@@ -268,14 +404,13 @@ function DetailSection({
             </section>
 
             <DetailSection
-              className="min-h-0 overflow-hidden !rounded-[10px] !border-[#141119] !bg-[#24202B]"
+              className="min-h-0 overflow-hidden"
               contentClassName="min-h-0 overflow-y-auto pr-1 [scrollbar-gutter:stable]"
               rows={contextRows}
               title="Context"
             />
 
             <DetailSection
-              className="!rounded-[10px] !border-[#141119] !bg-[#24202B]"
               rows={technicalRows}
               title="Technical context"
             />
