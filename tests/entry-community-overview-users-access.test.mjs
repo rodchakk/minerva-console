@@ -20,7 +20,7 @@ test("community overview separates physical directory from user access administr
   assert.match(page, /userAccountCount/);
   assert.match(page, /activeUserAccountCount/);
 
-  assert.match(workspace, /title="Residents & units"/);
+  assert.match(workspace, /title="Community Directory"/);
   assert.match(workspace, /Physical directory and household context/);
   assert.match(workspace, /title="Users & access"/);
   assert.match(workspace, /login identities, roles, credentials/);
