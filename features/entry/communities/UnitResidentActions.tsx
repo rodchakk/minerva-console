@@ -24,6 +24,8 @@ import { setCommunityUserActiveStatusAction } from "@/features/entry/users/actio
 type UnitResidentActionsProps = {
   communityId: string;
   resident: CommunityUnitResident;
+  triggerClassName?: string;
+  triggerLabel?: string;
 };
 
 type ModalState = "move" | "password" | "status" | null;
@@ -31,6 +33,8 @@ type ModalState = "move" | "password" | "status" | null;
 export function UnitResidentActions({
   communityId,
   resident,
+  triggerClassName,
+  triggerLabel,
 }: UnitResidentActionsProps) {
   const router = useRouter();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -184,12 +188,22 @@ export function UnitResidentActions({
         ref={triggerRef}
         type="button"
         onClick={() => setMenuOpen((current) => !current)}
-        className="grid h-8 w-8 place-items-center rounded-md border border-[var(--border)] text-[var(--text-muted)] transition hover:border-violet-400/30 hover:text-white"
+        className={
+          triggerClassName ??
+          "grid h-8 w-8 place-items-center rounded-md border border-[var(--border)] text-[var(--text-muted)] transition hover:border-violet-400/30 hover:text-white"
+        }
         aria-expanded={menuOpen}
         aria-haspopup="menu"
         aria-label={`Open actions for ${resident.fullName}`}
       >
-        <MoreVertical className="h-4 w-4" aria-hidden />
+        {triggerLabel ? (
+          <span className="inline-flex items-center gap-2">
+            {triggerLabel}
+            <MoreVertical className="h-4 w-4" aria-hidden />
+          </span>
+        ) : (
+          <MoreVertical className="h-4 w-4" aria-hidden />
+        )}
       </button>
 
       <FloatingActionMenu

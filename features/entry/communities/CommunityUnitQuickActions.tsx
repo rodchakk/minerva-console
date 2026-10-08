@@ -15,6 +15,7 @@ import {
 
 type CommunityUnitQuickActionsProps = {
   communityId: string;
+  displayMode?: "default" | "menu";
   unit: CommunityUnitPreview;
 };
 
@@ -27,6 +28,7 @@ type UnitLabelDraft = {
 
 export function CommunityUnitQuickActions({
   communityId,
+  displayMode = "default",
   unit,
 }: CommunityUnitQuickActionsProps) {
   const router = useRouter();
@@ -192,11 +194,15 @@ export function CommunityUnitQuickActions({
           </div>
         ) : null}
 
-        <div className="grid gap-2">
+        <div className={displayMode === "menu" ? "grid gap-1" : "grid gap-2"}>
           <button
             type="button"
             onClick={openEditModal}
-            className="rounded-lg border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-violet-300/40 hover:bg-white/8"
+            className={
+              displayMode === "menu"
+                ? "w-full rounded-md px-3 py-2.5 text-left text-xs font-medium text-[#D3CEDA] transition hover:bg-white/[0.04] hover:text-white"
+                : "rounded-lg border border-white/8 bg-white/5 px-4 py-3 text-left text-sm font-semibold text-white transition hover:border-violet-300/40 hover:bg-white/8"
+            }
           >
             Edit unit
           </button>
@@ -208,11 +214,17 @@ export function CommunityUnitQuickActions({
               setErrorMessage(null);
               setModalState("status");
             }}
-            className={`rounded-lg border px-4 py-3 text-left text-sm font-semibold transition ${
-              unit.isActive
-                ? "border-amber-400/20 bg-amber-500/10 text-amber-100 hover:border-amber-300/40"
-                : "border-emerald-400/20 bg-emerald-500/10 text-emerald-100 hover:border-emerald-300/40"
-            }`}
+            className={
+              displayMode === "menu"
+                ? unit.isActive
+                  ? "w-full rounded-md px-3 py-2.5 text-left text-xs font-medium text-[#F2D77B] transition hover:bg-[rgba(243,202,87,0.07)] hover:text-white"
+                  : "w-full rounded-md px-3 py-2.5 text-left text-xs font-medium text-[#91E4BA] transition hover:bg-[rgba(103,215,165,0.07)] hover:text-white"
+                : `rounded-lg border px-4 py-3 text-left text-sm font-semibold transition ${
+                    unit.isActive
+                      ? "border-amber-400/20 bg-amber-500/10 text-amber-100 hover:border-amber-300/40"
+                      : "border-emerald-400/20 bg-emerald-500/10 text-emerald-100 hover:border-emerald-300/40"
+                  }`
+            }
           >
             {unit.isActive ? "Deactivate unit" : "Activate unit"}
           </button>

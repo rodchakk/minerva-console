@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
@@ -13,10 +13,16 @@ export type BulkDeleteUnit = {
 
 export function UnitBulkDeleteManager({
   communityId,
+  triggerClassName,
+  triggerLabel = "Manage / delete units",
   units,
+  wrapperClassName,
 }: {
   communityId: string;
+  triggerClassName?: string;
+  triggerLabel?: string;
   units: BulkDeleteUnit[];
+  wrapperClassName?: string;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -24,6 +30,20 @@ export function UnitBulkDeleteManager({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!open) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+        setMessage(null);
+      }
+    }
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [open]);
 
   const filteredUnits = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("es-GT");
@@ -96,11 +116,22 @@ export function UnitBulkDeleteManager({
   if (units.length === 0) return null;
 
   return (
-    <div className="mb-4 flex justify-end">
-      <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
-        <Trash2 className="mr-2 h-4 w-4" aria-hidden />
-        Manage / delete units
-      </Button>
+    <div className={wrapperClassName ?? "mb-4 flex justify-end"}>
+      {triggerClassName ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={triggerClassName}
+        >
+          <Trash2 className="h-4 w-4" aria-hidden />
+          {triggerLabel}
+        </button>
+      ) : (
+        <Button type="button" variant="secondary" onClick={() => setOpen(true)}>
+          <Trash2 className="mr-2 h-4 w-4" aria-hidden />
+          {triggerLabel}
+        </Button>
+      )}
 
       {open ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
