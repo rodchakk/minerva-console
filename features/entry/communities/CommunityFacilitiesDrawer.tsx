@@ -198,7 +198,7 @@ export function CommunityFacilitiesDrawer({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-9 min-w-[150px] items-center justify-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] transition hover:bg-[#342F3D]"
+        className="inline-flex h-9 w-[156px] items-center justify-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119] transition hover:bg-[#342F3D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
       >
         {triggerLabel} {"->"}
       </button>
