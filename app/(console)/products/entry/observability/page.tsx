@@ -19,7 +19,6 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { DiagnosticBundleControl } from "@/features/entry/observability/DiagnosticBundleControl";
 import { ObservabilityFilters } from "@/features/entry/observability/ObservabilityFilters";
 import {
-  getEntryDiagnosticSnapshots,
   getEntryObservability,
   normalizeEntryObservabilityRange,
   type EntryDiagnosticSnapshotMeta,
@@ -1186,13 +1185,7 @@ function DiagnosticSnapshotsPanel({
   );
 }
 
-function ObservabilityDashboard({
-  data,
-  diagnosticSnapshots,
-}: {
-  data: EntryObservabilityData;
-  diagnosticSnapshots: EntryDiagnosticSnapshotMeta[];
-}) {
+function ObservabilityDashboard({ data }: { data: EntryObservabilityData }) {
   const status = statusCopy[data.summary.systemStatus];
   const hasUsageRecords = data.usage.summary.recordCount > 0;
   const notificationsParams = new URLSearchParams();
@@ -1274,22 +1267,7 @@ function ObservabilityDashboard({
         <Incidents incidents={data.incidents} />
       </section>
 
-      <PerformancePanel data={data} />
-
-      <InfrastructurePanel data={data} />
-
       <ReadinessPanel data={data} />
-
-      <IncidentHistoryPanel data={data} />
-
-      <DiagnosticSnapshotsPanel snapshots={diagnosticSnapshots} />
-
-      <OcrQueue queue={data.ocrQueue} />
-
-      <section className="grid gap-4 2xl:grid-cols-[minmax(0,1.15fr)_minmax(520px,0.85fr)]">
-        <UsageAndCost data={data} />
-        <AuditActivity data={data} />
-      </section>
     </div>
   );
 }
@@ -1305,27 +1283,19 @@ export default async function EntryObservabilityPage(props: {
   const communityId = Array.isArray(searchParams.community)
     ? searchParams.community[0]
     : searchParams.community;
-  const [result, diagnosticSnapshotsResult] = await Promise.all([
-    getEntryObservability({
-      communityId: communityId ?? null,
-      range,
-    }),
-    getEntryDiagnosticSnapshots({
-      communityId: communityId ?? null,
-      limit: 12,
-    }),
-  ]);
+  const result = await getEntryObservability({
+    communityId: communityId ?? null,
+    range,
+  });
 
   const communities = result.state === "ready" ? result.data.communities : [];
-  const diagnosticSnapshots =
-    diagnosticSnapshotsResult.state === "ready" ? diagnosticSnapshotsResult.data : [];
   const selectedCommunity =
     communityId && communities.some((community) => community.id === communityId)
       ? communityId
       : null;
 
   return (
-    <div className={cn(rubik.className, "relative -mx-4 -my-4 min-h-[calc(100vh-4rem)] space-y-4 bg-[#2E2936] px-4 py-5 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7")}>
+    <div className={cn(rubik.className, "space-y-4")}>
       <PageHeader
         title="ENTRY observability"
         description="Operational health, incidents, usage, and cost visibility for ENTRY."
@@ -1370,10 +1340,7 @@ export default async function EntryObservabilityPage(props: {
           </div>
         </Panel>
       ) : (
-        <ObservabilityDashboard
-          data={result.data}
-          diagnosticSnapshots={diagnosticSnapshots}
-        />
+        <ObservabilityDashboard data={result.data} />
       )}
     </div>
   );
