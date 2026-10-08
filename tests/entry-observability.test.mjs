@@ -703,6 +703,10 @@ test("monitors workspace routes, filters, loading state, and primary sidebar nes
   }
   assert.doesNotMatch(observabilityLayout, /grid-cols|ObservabilityWorkspaceNav/);
   assert.match(observabilityLayout, /<main className="min-w-0">/);
+  assert.match(sidebar, /useSearchParams/);
+  assert.match(sidebar, /searchParams\.get\("community"\)/);
+  assert.match(sidebar, /searchParams\.get\("range"\)/);
+  assert.match(sidebar, /withMonitorFilters/);
   assert.match(page, /ENTRY monitors/);
   assert.match(page, /ObservabilityFilters/);
   assert.match(notificationsPage, /basePath="\/products\/entry\/observability\/notifications"/);
