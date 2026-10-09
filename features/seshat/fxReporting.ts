@@ -52,9 +52,13 @@ export function strictTotal(lines: Array<{ label: string; value: number | null }
 }
 
 export function reportingDate(now: Date = new Date()) {
-  return new Intl.DateTimeFormat("en-CA", {
+  // Locale formatting differs between browser/Node ICU builds. Date-only
+  // values must always be ISO YYYY-MM-DD for business day and month grouping.
+  const pieces = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/Tegucigalpa", year: "numeric", month: "2-digit", day: "2-digit",
-  }).format(now);
+  }).formatToParts(now);
+  const get = (type: "year" | "month" | "day") => pieces.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}`;
 }
 
 export function buildFxOverview(input: {
