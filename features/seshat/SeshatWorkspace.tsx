@@ -1353,7 +1353,7 @@ function ClientDetail({
           {clientServices.map((item) => (
             <details key={item.id} className="py-3">
               <summary className="cursor-pointer text-sm font-semibold text-white">
-                {item.name} · {money(item.price * item.quantity)} · {item.frequency}
+                {item.name} · {money(item.price * item.quantity, normalizeCurrency(item.agreed_currency ?? "USD"))} · {item.frequency}
               </summary>
               <ClientServiceForm clientService={item} services={services} onSubmit={(event) => onClientServiceSubmit(event, item.id)} />
             </details>
