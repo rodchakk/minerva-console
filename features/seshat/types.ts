@@ -130,6 +130,7 @@ export type ClientService = {
   auto_invoice_start_date: string | null;
   notes: string | null;
   monthly_revenue: number | null;
+  agreed_currency?: string | null;
   created_at: string;
   updated_at: string;
 };
