@@ -99,7 +99,10 @@ test("invitation handles existing auth users exactly and cleans up only newly in
   assert.match(actions, /findAuthUserByExactEmail/);
   assert.match(actions, /user\.email\?\.toLowerCase\(\) === email/);
   assert.match(actions, /if \(existingAuthUser\)/);
-  assert.match(actions, /inviteUserByEmail/);
+  assert.match(actions, /generateLink/);
+  assert.doesNotMatch(actions, /inviteUserByEmail/);
+  assert.match(actions, /sendConsoleSetupEmail/);
+  assert.match(actions, /resendConsoleInviteAction/);
   assert.match(actions, /let invitedUserId: string \| null = null/);
   assert.match(actions, /if \(invitedUserId\)/);
   assert.match(actions, /deleteUser\(invitedUserId, true\)/);
@@ -155,22 +158,49 @@ test("service-role and auth users stay server-only", () => {
   assert.match(serverData, /createAdminClient/);
 });
 
-test("Console invitation acceptance has its own callback strictly for invite token_hash", () => {
+test("Minerva Console generates and sends its own branded one-time invitation email", () => {
+  const actions = read("features/console-users/actions.ts");
+  const email = read("features/console-users/invitationEmail.ts");
+  const model = read("features/console-users/model.ts");
+  const page = read("app/(console)/users/page.tsx");
+
+  assert.match(actions, /type: "invite"/);
+  assert.match(actions, /type: "recovery"/);
+  assert.match(actions, /properties\.hashed_token/);
+  before(actions, "requireConsoleEmailDelivery();\n  let invitedUserId", "adminSupabase.auth.admin.generateLink");
+  assert.match(email, /from: "Minerva Technologies <no-reply@minervatechs\.com>"/);
+  assert.match(email, /new Resend/);
+  assert.match(email, /buildConsoleSetupUrl/);
+  assert.match(email, /searchParams\.set\("token_hash", tokenHash\)/);
+  assert.match(model, /CONSOLE_INVITE_REDIRECT_PATH = "\/auth\/callback"/);
+  assert.match(page, /resendConsoleInviteAction/);
+  assert.match(page, /Send setup link/);
+});
+
+test("Console invitation callback accepts only Minerva invite and setup recovery tokens", () => {
   const callback = read("app/auth/callback/route.ts");
+  const middleware = read("lib/supabase/middleware.ts");
   const setup = read("app/console-invite/setup/page.tsx");
   const actions = read("features/auth/actions.ts");
+  const form = read("features/auth/ConsolePasswordSetupForm.tsx");
+  const login = read("app/login/page.tsx");
   const bridge = read("app/reset-password/page.tsx");
 
-  assert.match(callback, /type === "invite"/);
+  assert.match(callback, /type === "invite" \|\| type === "recovery"/);
+  assert.match(callback, /token_hash: tokenHash/);
   assert.doesNotMatch(callback, /exchangeCodeForSession/);
-  assert.doesNotMatch(callback, /recovery|email/);
   assert.match(callback, /verifyOtp/);
   assert.match(callback, /\/console-invite\/setup/);
+  assert.match(middleware, /if \(pathname === "\/auth\/callback"\)/);
+  before(middleware, 'if (pathname === "/auth/callback")', "const { url, anonKey }");
   assert.match(setup, /requireConsoleMember/);
   assert.match(actions, /updateConsolePasswordAction/);
   assert.match(actions, /await requireConsoleMember\(\)/);
+  assert.match(actions, /password !== confirmation/);
+  assert.match(form, /name="confirmPassword"/);
+  assert.match(login, /invite === "invalid"/);
   assert.match(bridge, /Opening ENTRY password reset/);
-  assert.doesNotMatch(callback, /reset-password|ENTRY/);
+  assert.doesNotMatch(callback, /new URL\("\/reset-password/);
 });
 
 test("no ENTRY authorization or Brain content/model files are changed by this branch", async () => {
