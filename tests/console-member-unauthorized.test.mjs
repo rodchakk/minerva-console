@@ -16,9 +16,10 @@ test("unauthorized page is role-aware and does not redirect builders/viewers to 
     page,
     /isMember = context\.status === "authorized" && context\.role !== "owner"/,
   );
-  assert.match(page, /if \(isOwner && !isSignOutError\)/);
-  assert.match(page, /redirect\(DEFAULT_POST_LOGIN_DESTINATION\)/);
   assert.match(page, /MEMBER_POST_LOGIN_DESTINATION/);
+  assert.match(page, /This module could not verify your access/);
+  assert.match(page, /Try dashboard again/);
+  assert.doesNotMatch(page, /redirect\\(DEFAULT_POST_LOGIN_DESTINATION\\)/);
   assert.doesNotMatch(
     page,
     /if \(context\.status === "authorized" && !isSignOutError\)/,
