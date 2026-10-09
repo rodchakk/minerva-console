@@ -102,6 +102,17 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.next({ request });
   }
 
+  // Invitation links must reach verifyOtp even when the visitor has no
+  // session or has a stale ENTRY session cookie. The callback validates the
+  // one-time token itself before issuing authenticated cookies.
+  if (pathname === "/auth/callback") {
+    const callbackResponse = NextResponse.next({ request });
+    callbackResponse.headers.set("Cache-Control", "no-store, max-age=0");
+    callbackResponse.headers.set("Referrer-Policy", "no-referrer");
+    callbackResponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return callbackResponse;
+  }
+
   // The automatic ENTRY Web Push dispatcher is machine-authenticated with its
   // own Bearer secret in the route handler. Supabase session middleware must
   // not redirect pg_cron/pg_net requests to /login before that check runs.
@@ -134,6 +145,7 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicRoute =
     pathname === "/login" ||
+    pathname === "/auth/callback" ||
     pathname === "/unauthorized" ||
     pathname === "/temporarily-unavailable" ||
     pathname === "/activate" ||

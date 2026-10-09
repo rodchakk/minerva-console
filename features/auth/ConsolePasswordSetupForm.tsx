@@ -35,6 +35,17 @@ export function ConsolePasswordSetupForm() {
           className="h-10 rounded-md border border-white/[0.12] bg-white/[0.025] px-3 text-white outline-none transition focus:border-[#ff4d4d]/50"
         />
       </label>
+      <label className="grid gap-1.5 text-sm text-slate-300">
+        Confirm password
+        <input
+          name="confirmPassword"
+          type="password"
+          autoComplete="new-password"
+          minLength={8}
+          required
+          className="h-10 rounded-md border border-white/[0.12] bg-white/[0.025] px-3 text-white outline-none transition focus:border-[#ff4d4d]/50"
+        />
+      </label>
       {state.message ? (
         <p className="rounded-md border border-rose-500/25 bg-rose-950/40 px-3 py-2 text-sm text-rose-200">
           {state.message}

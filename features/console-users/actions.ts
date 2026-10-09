@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireConsoleOwner } from "@/features/auth/consoleAccess";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireConsoleEmailDelivery, sendConsoleSetupEmail } from "@/features/console-users/invitationEmail";
 import {
   getConsoleInviteRedirectUrl,
   INVITE_DEFAULT_ROLE,
@@ -186,6 +187,33 @@ export async function inviteConsoleUserAction(formData: FormData) {
   }
 
   if (existingAuthUser) {
+    // An old invitation may already have created the Auth identity without
+    // letting the recipient set a password. Send a new, branded setup link.
+    if (!existingAuthUser.last_sign_in_at) {
+      requireConsoleEmailDelivery();
+      await upsertConsoleMembership({
+        createdBy: currentOwner.user.id,
+        displayName,
+        role,
+        userId: existingAuthUser.id,
+      });
+      const { data, error } = await adminSupabase.auth.admin.generateLink({
+        type: "recovery",
+        email,
+      });
+      if (error || !data.properties.hashed_token) {
+        throw new Error("Could not generate a new Console setup link.");
+      }
+      await sendConsoleSetupEmail({
+        displayName,
+        email,
+        tokenHash: data.properties.hashed_token,
+        type: "recovery",
+      });
+      revalidatePath("/users");
+      redirect("/users?result=resent");
+    }
+
     await upsertConsoleMembership({
       createdBy: currentOwner.user.id,
       displayName,
@@ -196,15 +224,23 @@ export async function inviteConsoleUserAction(formData: FormData) {
     redirect("/users?result=existing");
   }
 
+  // Fail before creating an Auth user if Minerva email delivery is unavailable.
+  requireConsoleEmailDelivery();
   let invitedUserId: string | null = null;
 
   try {
-    const { data, error } = await adminSupabase.auth.admin.inviteUserByEmail(email, {
-      data: displayName ? { display_name: displayName } : undefined,
-      redirectTo: getConsoleInviteRedirectUrl(),
+    // generateLink issues a one-time invite token without sending Supabase's
+    // shared ENTRY-branded email. Only our Resend template is delivered.
+    const { data, error } = await adminSupabase.auth.admin.generateLink({
+      type: "invite",
+      email,
+      options: {
+        data: displayName ? { display_name: displayName } : undefined,
+        redirectTo: getConsoleInviteRedirectUrl(),
+      },
     });
 
-    if (error || !data.user) {
+    if (error || !data.user || !data.properties.hashed_token) {
       throw new Error(error?.message ?? "The invitation could not be created.");
     }
 
@@ -214,6 +250,12 @@ export async function inviteConsoleUserAction(formData: FormData) {
       displayName,
       role,
       userId: data.user.id,
+    });
+    await sendConsoleSetupEmail({
+      displayName,
+      email,
+      tokenHash: data.properties.hashed_token,
+      type: "invite",
     });
   } catch (error) {
     if (invitedUserId) {
@@ -237,6 +279,50 @@ export async function inviteConsoleUserAction(formData: FormData) {
 
   revalidatePath("/users");
   redirect("/users?result=invited");
+}
+
+export async function resendConsoleInviteAction(formData: FormData) {
+  await requireConsoleOwner();
+  const userId = parseUserId(formData.get("userId"));
+  if (!userId) {
+    throw new Error("Invalid Console user.");
+  }
+
+  const member = await getConsoleMember(userId);
+  if (!member || member.status !== "active" || await isCompatibilitySuperadmin(userId)) {
+    throw new Error("Only active Console members can receive a setup link.");
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data: authData, error: lookupError } =
+    await adminSupabase.auth.admin.getUserById(userId);
+  if (lookupError || authData.user?.id !== userId) {
+    throw new Error("Console user could not be verified.");
+  }
+
+  const email = normalizeConsoleEmail(authData.user.email);
+  if (!email) {
+    throw new Error("Console user has no valid email.");
+  }
+
+  requireConsoleEmailDelivery();
+  const { data, error } = await adminSupabase.auth.admin.generateLink({
+    type: "recovery",
+    email,
+  });
+  if (error || !data.properties.hashed_token) {
+    throw new Error("Could not generate a Console setup link.");
+  }
+
+  await sendConsoleSetupEmail({
+    displayName: member.display_name,
+    email,
+    tokenHash: data.properties.hashed_token,
+    type: "recovery",
+  });
+
+  revalidatePath("/users");
+  redirect("/users?result=resent");
 }
 
 export async function updateConsoleMemberRoleAction(formData: FormData) {

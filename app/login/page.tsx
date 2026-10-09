@@ -8,7 +8,7 @@ import {
 import { getConsoleAccessContext } from "@/features/auth/consoleAccess";
 
 type LoginPageProps = {
-  searchParams?: Promise<{ next?: string | string[] }>;
+  searchParams?: Promise<{ next?: string | string[]; invite?: string | string[] }>;
 };
 
 function getSingleParam(value: string | string[] | undefined) {
@@ -70,6 +70,12 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             <p className="mt-2 text-sm leading-6 text-white/48">
               Sign in to continue.
             </p>
+
+            {params?.invite === "invalid" ? (
+              <p role="alert" className="mt-5 rounded-md border border-amber-300/25 bg-amber-400/10 px-3 py-2 text-sm text-amber-100">
+                This invitation link is expired or has already been used. Ask your Minerva Console administrator to send a new setup link.
+              </p>
+            ) : null}
 
             <div className="mt-7">
               <LoginForm next={postLoginDestination} />

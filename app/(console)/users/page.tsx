@@ -3,6 +3,7 @@ import { AlertTriangle, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import {
   inviteConsoleUserAction,
+  resendConsoleInviteAction,
   updateConsoleMemberRoleAction,
   updateConsoleMemberStatusAction,
 } from "@/features/console-users/actions";
@@ -19,15 +20,17 @@ function roleLabel(role: string) {
 }
 
 function ResultBanner({ result }: { result?: string }) {
-  if (result !== "invited" && result !== "existing") {
+  if (result !== "invited" && result !== "existing" && result !== "resent") {
     return null;
   }
 
   return (
     <div className="rounded-lg border border-emerald-300/20 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
       {result === "existing"
-        ? "Existing auth account granted Console access."
-        : "Console invitation sent and membership created."}
+        ? "Existing account granted Console access. They can sign in with their current credentials."
+        : result === "resent"
+          ? "A new Minerva Console setup link has been sent."
+          : "Minerva Console invitation sent and membership created."}
     </div>
   );
 }
@@ -130,6 +133,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                 <th className="px-4 py-3 font-semibold">Account state</th>
                 <th className="px-4 py-3 font-semibold">Source</th>
                 <th className="px-4 py-3 font-semibold">Created</th>
+                <th className="px-4 py-3 font-semibold">Setup access</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/[0.08]">
@@ -197,6 +201,18 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                   <td className="px-4 py-3 text-slate-300">{user.source}</td>
                   <td className="px-4 py-3 text-[var(--console-text-muted)]">
                     {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "Bootstrap"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {user.isEditable && user.status === "active" && user.email ? (
+                      <form action={resendConsoleInviteAction}>
+                        <input type="hidden" name="userId" value={user.userId} />
+                        <Button type="submit" variant="ghost" className="h-9 rounded-md">
+                          {user.accountState === "Invited" ? "Resend invitation" : "Send password link"}
+                        </Button>
+                      </form>
+                    ) : (
+                      <span className="text-[var(--console-text-muted)]">—</span>
+                    )}
                   </td>
                 </tr>
               ))}

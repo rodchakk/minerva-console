@@ -79,6 +79,11 @@ export async function updateConsolePasswordAction(
   formData: FormData,
 ): Promise<AuthActionState> {
   const password = String(formData.get("password") ?? "");
+  const confirmation = String(formData.get("confirmPassword") ?? "");
+
+  if (password !== confirmation) {
+    return { message: "Passwords do not match." };
+  }
 
   if (password.length < 8) {
     return { message: "Use at least 8 characters for your password." };

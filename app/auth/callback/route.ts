@@ -7,17 +7,29 @@ export async function GET(request: NextRequest) {
   const type = requestUrl.searchParams.get("type");
   const supabase = await createClient();
 
-  if (tokenHash && type === "invite") {
+  // These links are issued by Minerva Console itself. Supabase's shared
+  // ENTRY password-recovery route must not be used for Console invitations.
+  if (tokenHash && (type === "invite" || type === "recovery")) {
     const { error } = await supabase.auth.verifyOtp({
       token_hash: tokenHash,
-      type: "invite",
+      type,
     });
 
     if (error) {
-      return NextResponse.redirect(new URL("/unauthorized?reason=authorization_error", request.url));
+      return NextResponse.redirect(new URL("/login?invite=invalid", request.url), {
+        headers: {
+          "Cache-Control": "no-store",
+          "Referrer-Policy": "no-referrer",
+        },
+      });
     }
 
-    return NextResponse.redirect(new URL("/console-invite/setup", request.url));
+    return NextResponse.redirect(new URL("/console-invite/setup", request.url), {
+      headers: {
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      },
+    });
   }
 
   return NextResponse.redirect(new URL("/login", request.url));
