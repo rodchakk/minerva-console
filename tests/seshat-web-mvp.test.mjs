@@ -46,6 +46,19 @@ test("Settings manages reusable owner payment methods without hardcoded bank dat
   assert.doesNotMatch(source, /200011417538|Ficohsa Minerva|Bank:\s*Ficohsa/);
 });
 
+test("Seshat Clients lists company names instead of personal client names", () => {
+  const source = read("features/seshat/SeshatWorkspace.tsx");
+  const clientsStart = source.indexOf("function Clients(");
+  const clientsEnd = source.indexOf("function ClientForm(", clientsStart);
+  const clientList = source.slice(clientsStart, clientsEnd);
+
+  assert.ok(clientsStart >= 0 && clientsEnd > clientsStart);
+  assert.match(clientList, /headers=\{\["Company Name", "Contact", "Status", "Billing"\]\}/);
+  assert.match(clientList, /<strong key="company-name">\{client\.company_name\?\.trim\(\) \|\| "Company not set"\}<\/strong>/);
+  assert.doesNotMatch(clientList, /<strong key="name">\{client\.name\}<\/strong>/);
+  assert.match(clientList, /href: `\/seshat\/clients\/\$\{client\.id\}`/);
+});
+
 test("clients and invoices expose payment method selection at the required points", () => {
   const source = read("features/seshat/SeshatWorkspace.tsx");
 
