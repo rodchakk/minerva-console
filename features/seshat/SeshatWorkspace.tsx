@@ -861,6 +861,31 @@ export function SeshatWorkspace() {
     setNotice("Payment proof attached successfully. The payment amount and date were not changed.");
   }
 
+
+  async function savePaymentFxRate(paymentId: string, rate: number, sourceNote: string) {
+    if (!session || !invoice?.payments.some((p) => p.id === paymentId && normalizeCurrency(p.currency) === "USD")) {
+      throw new Error("You can only attach a bank FX rate to your own USD payment.");
+    }
+    if (!Number.isFinite(rate) || rate < 10 || rate > 100) {
+      throw new Error("Enter a plausible HNL-per-USD rate between 10 and 100.");
+    }
+    const existing = paymentFx.some((p) => p.payment_id === paymentId);
+    const payload = {
+      payment_id: paymentId,
+      owner_id: session.user.id,
+      rate,
+      source_note: sourceNote.trim() || "Bank settlement",
+    };
+    const db = getSeshatDataClient();
+    const response = existing
+      ? await db.from("seshat_payment_fx_rates").update(payload).eq("payment_id", paymentId).eq("owner_id", session.user.id)
+      : await db.from("seshat_payment_fx_rates").insert(payload);
+    if (response.error) throw response.error;
+    setPaymentFx((current) => [
+      ...current.filter((p) => p.payment_id !== paymentId), payload,
+    ]);
+  }
+
   async function savePaymentMethod(event: FormEvent<HTMLFormElement>, paymentMethodId?: string) {
     event.preventDefault();
     const payload = paymentMethodPayload(new FormData(event.currentTarget));
@@ -1061,6 +1086,8 @@ export function SeshatWorkspace() {
           paymentMethods={paymentMethods}
           onPayment={submitPayment}
           onAttachProof={submitExistingPaymentProof}
+          onPaymentFx={savePaymentFxRate}
+          paymentFxRates={paymentFx}
           onPaymentMethod={updateDraftPaymentMethod}
           onStatus={updateInvoiceStatus}
           onDelete={deleteDraftInvoice}
@@ -1086,6 +1113,8 @@ export function SeshatWorkspace() {
         <Settings
           profile={profile}
           paymentMethods={paymentMethods}
+          officialFx={officialFx}
+          fxLoadingError={fxLoadingError}
           onSubmit={saveProfile}
           onPaymentMethodSubmit={savePaymentMethod}
           onPaymentMethodUpdate={updatePaymentMethod}
@@ -1727,12 +1756,48 @@ function ExistingPaymentProofUploader({
   );
 }
 
+function BankSettlementRate({
+  paymentId, rate, onSave,
+}: {
+  paymentId: string;
+  rate: number | null;
+  onSave: (id: string, rate: number, note: string) => Promise<void>;
+}) {
+  const [entered, setEntered] = useState(rate ? String(rate) : "");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  return (
+    <form className="flex flex-wrap items-end gap-2" onSubmit={async (event) => {
+      event.preventDefault();
+      setBusy(true);
+      setMessage(null);
+      try {
+        await onSave(paymentId, Number(entered), "Bank settlement (user-entered)");
+        setMessage("Bank rate saved. Original USD payment unchanged.");
+      } catch (error) {
+        setMessage(seshatErrorMessage(error, "Could not save bank rate."));
+      } finally { setBusy(false); }
+    }}>
+      <label className="flex flex-col gap-1 text-xs text-slate-300">
+        Bank FX (HNL per USD) · optional
+        <input aria-label="Actual bank FX rate" type="number" min="10" max="100" step="0.000001"
+          required value={entered} disabled={busy} onChange={(event) => setEntered(event.target.value)}
+          placeholder="Effective bank rate" className="w-40 rounded-md border border-white/15 bg-[#151b22] px-2 py-1.5 text-white"/>
+      </label>
+      <Button type="submit" variant="secondary" disabled={busy || !entered}>{busy ? "Saving..." : "Save rate"}</Button>
+      {message ? <span role="status" className="text-xs text-amber-200">{message}</span> : null}
+    </form>
+  );
+}
+
 function InvoiceDetail({
   invoice,
   profile,
   paymentMethods,
   onPayment,
   onAttachProof,
+  onPaymentFx,
+  paymentFxRates,
   onPaymentMethod,
   onStatus,
   onDelete,
@@ -1742,6 +1807,8 @@ function InvoiceDetail({
   paymentMethods: PaymentMethod[];
   onPayment: (event: FormEvent<HTMLFormElement>) => void;
   onAttachProof: (file: File, paymentId: string) => Promise<void>;
+  onPaymentFx: (paymentId: string, rate: number, note: string) => Promise<void>;
+  paymentFxRates: PaymentFxRate[];
   onPaymentMethod: (event: FormEvent<HTMLFormElement>) => void;
   onStatus: (id: string, status: InvoiceStatus) => void;
   onDelete: (id: string) => void;
@@ -1850,6 +1917,13 @@ function InvoiceDetail({
             <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
               <span>{dateLabel(payment.payment_date)} · {payment.payment_method ?? "payment"} · {payment.reference ?? "no reference"}</span>
               <span className="font-semibold text-white">{money(payment.amount, payment.currency)}</span>
+              {normalizeCurrency(payment.currency) === "USD" ? (
+                <BankSettlementRate
+                  paymentId={payment.id}
+                  rate={paymentFxRates.find((entry) => entry.payment_id === payment.id)?.rate ?? null}
+                  onSave={onPaymentFx}
+                />
+              ) : null}
               {payment.proof_path ? (
                 <button
                   type="button"
@@ -1954,12 +2028,16 @@ function Billing({
 function Settings({
   profile,
   paymentMethods,
+  officialFx,
+  fxLoadingError,
   onSubmit,
   onPaymentMethodSubmit,
   onPaymentMethodUpdate,
 }: {
   profile: BusinessProfile | null;
   paymentMethods: PaymentMethod[];
+  officialFx: OfficialFxRate[];
+  fxLoadingError: string | null;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onPaymentMethodSubmit: (event: FormEvent<HTMLFormElement>, id?: string) => Promise<void>;
   onPaymentMethodUpdate: (id: string, patch: Partial<PaymentMethod>) => Promise<void>;
@@ -1974,13 +2052,37 @@ function Settings({
           <Field label="Email" name="email" type="email" defaultValue={profile?.email} />
           <Field label="Phone" name="phone" defaultValue={profile?.phone} />
           <Field label="Website" name="website" defaultValue={profile?.website} />
-          <Field label="Default currency" name="default_currency" defaultValue={profile?.default_currency ?? "USD"} />
+          <SelectField label="Base currency" name="default_currency" defaultValue={normalizeCurrency(profile?.default_currency ?? "HNL")}>
+            <option value="HNL">HNL (Honduran lempira)</option>
+            <option value="USD">USD (US dollar)</option>
+          </SelectField>
           <Field label="Invoice prefix" name="invoice_prefix" defaultValue={profile?.invoice_prefix ?? "INV"} />
           <Field label="Default payment terms days" name="default_payment_terms_days" type="number" min={0} step={1} defaultValue={profile?.default_payment_terms_days ?? 15} />
           <Field label="Invoice accent color" name="invoice_accent_color" defaultValue={profile?.invoice_accent_color} />
           <div className="md:col-span-2"><Field label="Invoice footer" name="invoice_footer" as="textarea" defaultValue={profile?.invoice_footer} /></div>
           <div className="md:col-span-2"><Button className="gap-2"><Save className="h-4 w-4" /> Save Settings</Button></div>
         </form>
+      </Card>
+      <Card>
+        <h2 className="text-xl font-semibold text-white">Currencies &amp; Exchange Rates</h2>
+        <p className="mt-2 text-sm text-slate-300">Official reference: Banco Central de Honduras (BCH). Rates are shared and updated once daily by the secure scheduler once the API credentials are activated.</p>
+        {fxLoadingError ? <p className="mt-2 text-sm text-amber-200">{fxLoadingError}</p> : null}
+        {officialFx.length === 0 ? (
+          <p role="status" className="mt-3 text-sm text-amber-200">No verified BCH rates loaded. Cross-currency totals will remain unavailable until the official connection is configured.</p>
+        ) : (
+          <div className="mt-3 space-y-1">
+            <p className="font-semibold text-white">
+              1 USD = HNL {Number(officialFx[0].rate).toFixed(4)}
+            </p>
+            <p className="text-xs text-slate-400">BCH reference · effective date {officialFx[0].effective_date} · source {officialFx[0].source_indicator}</p>
+            <p className="text-xs text-slate-400">If the rate is older than seven days, reports will not treat it as current.</p>
+          </div>
+        )}
+        <a href="https://bchapi-am.developer.azure-api.net/signup" target="_blank" rel="noopener noreferrer"
+          className="mt-3 inline-block text-sm text-violet-200 hover:underline">
+          BCH developer API registration (required to activate daily updates)
+        </a>
+        <p className="mt-2 text-xs text-slate-400">Historical invoice conversion uses its own date; paid invoices never get repriced in their original currency. Save the effective bank rate alongside any USD payment under Invoices.</p>
       </Card>
       <PaymentMethodsSettings
         methods={paymentMethods}
