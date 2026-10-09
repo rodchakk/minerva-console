@@ -38,18 +38,23 @@ test("existing-proof attachment cannot create a second payment or modify amount/
   assert.doesNotMatch(attachment, /recordPayment\(|\.rpc\("record_payment"|\.update\(\{[^}]*amount/);
 });
 
-test("invoice detail shows an attach proof form for already-paid invoices without a proof", () => {
+test("invoice detail uses a direct upload action with inline errors for existing payments", () => {
   const source = read("features/seshat/SeshatWorkspace.tsx");
-  const start = source.indexOf("function InvoiceDetail(");
-  const end = source.indexOf("function Billing(", start);
-  assert.ok(start >= 0 && end > start);
-  const detail = source.slice(start, end);
+  const uploaderStart = source.indexOf("function ExistingPaymentProofUploader(");
+  const detailStart = source.indexOf("function InvoiceDetail(", uploaderStart);
+  const billingStart = source.indexOf("function Billing(", detailStart);
+  assert.ok(uploaderStart >= 0 && detailStart > uploaderStart && billingStart > detailStart);
+  const uploader = source.slice(uploaderStart, detailStart);
+  const detail = source.slice(detailStart, billingStart);
 
-  assert.match(detail, /onAttachProof\(event, payment\.id\)/);
   assert.match(detail, /payment\.proof_path \? \(/);
   assert.match(detail, /Open proof/);
-  assert.match(detail, /Attach proof \(JPG, PNG, WebP, PDF; max 10 MB\)/);
-  assert.match(detail, /uploadingProofPaymentId === payment\.id/);
+  assert.match(detail, /<ExistingPaymentProofUploader paymentId=\{payment\.id\}/);
+  assert.match(uploader, /Attach proof \(JPG, PNG, WebP, PDF; max 10 MB\)/);
+  assert.match(uploader, /onClick=\{upload\}/);
+  assert.match(uploader, /onAttachProof\(selectedFile, paymentId\)/);
+  assert.match(uploader, /role="alert"/);
+  assert.match(uploader, /disabled=\{isUploading \|\| !selectedFile\}/);
   assert.match(source, /await attachPaymentProof\(/);
   assert.match(source, /await loadDetail\(\);\s*setNotice\("Payment proof attached successfully/);
 });
