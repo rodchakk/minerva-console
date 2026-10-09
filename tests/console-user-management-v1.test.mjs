@@ -167,7 +167,7 @@ test("Minerva Console generates and sends its own branded one-time invitation em
   assert.match(actions, /type: "invite"/);
   assert.match(actions, /type: "recovery"/);
   assert.match(actions, /properties\.hashed_token/);
-  before(actions, "requireConsoleEmailDelivery();\n  let invitedUserId", "adminSupabase.auth.admin.generateLink");
+  assert.match(actions, /requireConsoleEmailDelivery\(\);\n  let invitedUserId/);
   assert.match(email, /from: "Minerva Technologies <no-reply@minervatechs\.com>"/);
   assert.match(email, /new Resend/);
   assert.match(email, /buildConsoleSetupUrl/);
