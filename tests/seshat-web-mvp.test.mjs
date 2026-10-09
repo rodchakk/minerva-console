@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -80,6 +81,79 @@ test("automatic billing preview counts backend client, currency and occurrence b
   ]);
 
   assert.equal(expectedAutomaticInvoiceCount(due, currencies, "HNL"), 4);
+});
+
+test("invoice print CSS isolates the client document from Console and Vercel chrome", () => {
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const css = read("app/globals.css");
+
+  assert.match(workspace, /data-seshat-invoice-document/);
+  assert.match(css, /@page seshat-invoice[\s\S]*margin:\s*12mm/);
+  assert.match(css, /@media print/);
+  assert.match(css, /body:has\(\[data-seshat-invoice-document\]\)/);
+  assert.match(css, /:not\(:has\(\[data-seshat-invoice-document\]\)\)[\s\S]*display:\s*none !important/);
+  assert.match(css, /\[data-seshat-invoice-document\][\s\S]*background:\s*#ffffff !important/);
+  assert.match(css, /vercel-live-feedback[\s\S]*display:\s*none !important/);
+});
+
+test("invoice operator controls and Payments stay outside the printable document", () => {
+  const source = read("features/seshat/SeshatWorkspace.tsx");
+  const detailStart = source.indexOf("function InvoiceDetail");
+  const documentStart = source.indexOf("data-seshat-invoice-document", detailStart);
+  const documentEnd = source.indexOf("</section>", documentStart);
+  const printableSource = source.slice(documentStart, documentEnd);
+
+  assert.ok(detailStart >= 0 && documentStart > detailStart && documentEnd > documentStart);
+  assert.doesNotMatch(printableSource, /Print \/ Save PDF|Mark as Sent|Delete Draft|Payments|Invoice language|PREVIEW|Seshat/);
+});
+
+test("invoice presentation defaults to Spanish and retains English structural labels", async () => {
+  const presentation = await import("../features/seshat/invoicePresentation.ts");
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+
+  assert.equal(presentation.DEFAULT_INVOICE_DOCUMENT_LANGUAGE, "es-HN");
+  assert.equal(presentation.invoiceDocumentCopy["es-HN"].invoice, "Factura");
+  assert.equal(presentation.invoiceDocumentCopy["es-HN"].billTo, "Facturar a");
+  assert.equal(presentation.invoiceDocumentCopy["es-HN"].balanceDue, "Saldo pendiente");
+  assert.equal(presentation.invoiceDocumentCopy["es-HN"].statuses.draft, "Borrador");
+  assert.equal(presentation.invoiceDocumentCopy["en-US"].invoice, "Invoice");
+  assert.equal(presentation.invoiceDocumentCopy["en-US"].billTo, "Bill to");
+  assert.equal(presentation.invoiceDocumentCopy["en-US"].balanceDue, "Balance due");
+  assert.match(workspace, /\["es-HN", "Español"\]/);
+  assert.match(workspace, /\["en-US", "English"\]/);
+});
+
+test("invoice locale switching formats presentation without mutating financial data", async () => {
+  const presentation = await import("../features/seshat/invoicePresentation.ts");
+  const invoice = Object.freeze({ invoice_number: "INV-2610-001", currency: "HNL", total: 2917 });
+
+  const spanishMoney = presentation.formatInvoiceDocumentMoney(invoice.total, invoice.currency, "es-HN");
+  const englishMoney = presentation.formatInvoiceDocumentMoney(invoice.total, invoice.currency, "en-US");
+  assert.equal(spanishMoney.replace(/\s/g, " "), "HNL 2,917.00");
+  assert.equal(englishMoney.replace(/\s/g, " "), "HNL 2,917.00");
+  assert.doesNotMatch(spanishMoney, /\$/);
+  assert.match(presentation.formatInvoiceDocumentDate("2026-10-09", "es-HN"), /octubre/i);
+  assert.match(presentation.formatInvoiceDocumentDate("2026-10-09", "en-US"), /October/i);
+  assert.deepEqual(invoice, { invoice_number: "INV-2610-001", currency: "HNL", total: 2917 });
+
+  const presentationSource = read("features/seshat/invoicePresentation.ts");
+  assert.doesNotMatch(presentationSource, /supabase|\.rpc\(|\.from\(|fetch\(|update\(|insert\(/i);
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  assert.match(workspace, /item\.name/);
+  assert.match(workspace, /item\.description/);
+});
+
+test("Seshat web MVP adds no database migration", () => {
+  const branchFiles = execFileSync("git", ["diff", "--name-only", "origin/master...HEAD"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+  const worktreeFiles = execFileSync("git", ["diff", "--name-only"], {
+    cwd: root,
+    encoding: "utf8",
+  });
+
+  assert.doesNotMatch(`${branchFiles}\n${worktreeFiles}`, /^supabase\/migrations\//m);
 });
 
 test("primary Seshat web routes exist", () => {

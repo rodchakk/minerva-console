@@ -22,6 +22,13 @@ import {
   type ClientServiceBillingCurrency,
 } from "./billingPreview";
 import {
+  DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
+  formatInvoiceDocumentDate,
+  formatInvoiceDocumentMoney,
+  invoiceDocumentCopy,
+  type InvoiceDocumentLanguage,
+} from "./invoicePresentation";
+import {
   generateInvoice,
   getDueClientServiceOccurrences,
   getPaymentProofSignedUrl,
@@ -1370,6 +1377,10 @@ function InvoiceDetail({
   onDelete: (id: string) => void;
 }) {
   const balance = invoice.balance_due ?? Math.max(invoice.total - invoice.amount_paid, 0);
+  const [documentLanguage, setDocumentLanguage] = useState<InvoiceDocumentLanguage>(
+    DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
+  );
+  const documentCopy = invoiceDocumentCopy[documentLanguage];
   return (
     <div className="space-y-4">
       <Card className="print:hidden">
@@ -1386,8 +1397,37 @@ function InvoiceDetail({
             {invoice.status !== "paid" && invoice.status !== "cancelled" ? <Button type="button" variant="danger" onClick={() => onStatus(invoice.id, "cancelled")}>Cancel</Button> : null}
           </div>
         </div>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-4">
+          <span className="text-sm font-medium text-slate-300">Invoice language</span>
+          <div role="group" aria-label="Invoice language" className="inline-flex rounded-md border border-white/[0.12] bg-white/[0.03] p-1">
+            {([
+              ["es-HN", "Español"],
+              ["en-US", "English"],
+            ] as const).map(([language, label]) => (
+              <button
+                key={language}
+                type="button"
+                aria-pressed={documentLanguage === language}
+                onClick={() => setDocumentLanguage(language)}
+                className={cn(
+                  "rounded px-3 py-1.5 text-sm font-medium transition-colors",
+                  documentLanguage === language
+                    ? "bg-white/[0.12] text-white"
+                    : "text-slate-400 hover:text-white",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
       </Card>
-      <section className="rounded-lg border border-white/[0.10] bg-white p-8 text-slate-950 print:border-0 print:p-0">
+      <section
+        data-seshat-invoice-document
+        lang={documentLanguage}
+        aria-label={`${documentCopy.invoice} ${invoice.invoice_number}`}
+        className="rounded-lg border border-white/[0.10] bg-white p-8 text-slate-950"
+      >
         <div className="flex justify-between gap-6">
           <div>
             <h2 className="text-2xl font-bold">{profile?.business_name ?? "Minerva Technologies"}</h2>
@@ -1395,31 +1435,31 @@ function InvoiceDetail({
             <p className="text-sm text-slate-600">{profile?.phone ?? ""}</p>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold">Invoice</p>
+            <p className="text-3xl font-bold">{documentCopy.invoice}</p>
             <p className="font-semibold">{invoice.invoice_number}</p>
-            <p className="text-sm capitalize text-slate-600">{invoice.status}</p>
+            <p className="text-sm text-slate-600">{documentCopy.statuses[invoice.status]}</p>
           </div>
         </div>
         <div className="mt-8 grid gap-5 md:grid-cols-2">
           <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Bill to</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{documentCopy.billTo}</p>
             <p className="mt-1 font-semibold">{invoice.clients?.company_name ?? invoice.clients?.name ?? "—"}</p>
             <p className="text-sm text-slate-600">{invoice.clients?.email ?? ""}</p>
           </div>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <span className="text-slate-500">Issue date</span><span className="text-right">{dateLabel(invoice.issue_date)}</span>
-            <span className="text-slate-500">Due date</span><span className="text-right">{dateLabel(invoice.due_date)}</span>
-            <span className="text-slate-500">Currency</span><span className="text-right">{invoice.currency}</span>
-            {invoice.paid_date ? <><span className="text-slate-500">Paid date</span><span className="text-right">{dateLabel(invoice.paid_date)}</span></> : null}
+            <span className="text-slate-500">{documentCopy.issueDate}</span><span className="text-right">{formatInvoiceDocumentDate(invoice.issue_date, documentLanguage)}</span>
+            <span className="text-slate-500">{documentCopy.dueDate}</span><span className="text-right">{formatInvoiceDocumentDate(invoice.due_date, documentLanguage)}</span>
+            <span className="text-slate-500">{documentCopy.currency}</span><span className="text-right">{invoice.currency}</span>
+            {invoice.paid_date ? <><span className="text-slate-500">{documentCopy.paidDate}</span><span className="text-right">{formatInvoiceDocumentDate(invoice.paid_date, documentLanguage)}</span></> : null}
           </div>
         </div>
         <table className="mt-8 w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-slate-300 text-left">
-              <th className="py-2">Item</th>
-              <th className="py-2 text-right">Qty</th>
-              <th className="py-2 text-right">Unit</th>
-              <th className="py-2 text-right">Total</th>
+              <th className="py-2">{documentCopy.item}</th>
+              <th className="py-2 text-right">{documentCopy.quantity}</th>
+              <th className="py-2 text-right">{documentCopy.unitPrice}</th>
+              <th className="py-2 text-right">{documentCopy.total}</th>
             </tr>
           </thead>
           <tbody>
@@ -1430,19 +1470,19 @@ function InvoiceDetail({
                   {item.description ? <p className="text-slate-500">{item.description}</p> : null}
                 </td>
                 <td className="py-3 text-right">{item.quantity}</td>
-                <td className="py-3 text-right">{money(item.unit_price, invoice.currency)}</td>
-                <td className="py-3 text-right">{money(item.line_total, invoice.currency)}</td>
+                <td className="py-3 text-right">{formatInvoiceDocumentMoney(item.unit_price, invoice.currency, documentLanguage)}</td>
+                <td className="py-3 text-right">{formatInvoiceDocumentMoney(item.line_total, invoice.currency, documentLanguage)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div className="ml-auto mt-5 w-full max-w-sm space-y-2 text-sm">
-          <Total label="Subtotal" value={money(invoice.subtotal, invoice.currency)} />
-          {invoice.discount_total > 0 ? <Total label="Discount" value={`-${money(invoice.discount_total, invoice.currency)}`} /> : null}
-          {invoice.tax_total > 0 ? <Total label="Tax" value={money(invoice.tax_total, invoice.currency)} /> : null}
-          <Total label="Total" value={money(invoice.total, invoice.currency)} strong />
-          <Total label="Paid" value={money(invoice.amount_paid, invoice.currency)} />
-          <Total label="Balance due" value={money(balance, invoice.currency)} strong />
+          <Total label={documentCopy.subtotal} value={formatInvoiceDocumentMoney(invoice.subtotal, invoice.currency, documentLanguage)} />
+          {invoice.discount_total > 0 ? <Total label={documentCopy.discount} value={formatInvoiceDocumentMoney(-invoice.discount_total, invoice.currency, documentLanguage)} /> : null}
+          {invoice.tax_total > 0 ? <Total label={documentCopy.tax} value={formatInvoiceDocumentMoney(invoice.tax_total, invoice.currency, documentLanguage)} /> : null}
+          <Total label={documentCopy.total} value={formatInvoiceDocumentMoney(invoice.total, invoice.currency, documentLanguage)} strong />
+          <Total label={documentCopy.paid} value={formatInvoiceDocumentMoney(invoice.amount_paid, invoice.currency, documentLanguage)} />
+          <Total label={documentCopy.balanceDue} value={formatInvoiceDocumentMoney(balance, invoice.currency, documentLanguage)} strong />
         </div>
         {invoice.notes ? <p className="mt-8 whitespace-pre-wrap text-sm text-slate-700">{invoice.notes}</p> : null}
         {profile?.invoice_footer ? <p className="mt-8 text-xs text-slate-500">{profile.invoice_footer}</p> : null}
