@@ -32,10 +32,10 @@ export default async function UnauthorizedPage({
   const isOwner = context.status === "authorized" && context.role === "owner";
   const isMember = context.status === "authorized" && context.role !== "owner";
 
-  if (isOwner && !isSignOutError) {
-    redirect(DEFAULT_POST_LOGIN_DESTINATION);
-  }
-
+  // Never automatically bounce Owners back to the dashboard from a denied
+  // module. Some legacy ENTRY routes still use a separate superadmin gate.
+  // Redirecting an authenticated Console Owner straight back to the rejected
+  // dashboard created an infinite /dashboard <-> /unauthorized loop.
   const isAuthorizationError =
     context.status === "authorization_error" ||
     params?.reason === "authorization_error";
@@ -46,7 +46,9 @@ export default async function UnauthorizedPage({
       ? "We could not verify your access right now."
       : isMember
         ? "This area requires Owner access."
-        : "You are signed in, but not authorized for Minerva Console.";
+        : isOwner
+          ? "This module could not verify your access."
+          : "You are signed in, but not authorized for Minerva Console.";
 
   const message = isSignOutError
     ? "Please try signing out again. If the issue persists, close this browser session and contact your Minerva administrator."
@@ -54,7 +56,9 @@ export default async function UnauthorizedPage({
       ? "Sign out and try again. If the issue persists, contact your Minerva administrator."
       : isMember
         ? "Your Minerva Console account is active, but this area is restricted to Owners."
-        : "This workspace is limited to active Minerva Console members. If you believe you should have access, contact your Minerva administrator to review your account permissions.";
+        : isOwner
+          ? "Your Console Owner account is active, but the requested module denied access. This can happen when an older module still requires separate administrator permissions. Contact your Minerva administrator if it persists."
+          : "This workspace is limited to active Minerva Console members. If you believe you should have access, contact your Minerva administrator to review your account permissions.";
 
   const badgeText =
     isAuthorizationError || isSignOutError
@@ -80,6 +84,11 @@ export default async function UnauthorizedPage({
           {isMember ? (
             <Link href={MEMBER_POST_LOGIN_DESTINATION}>
               <Button variant="primary">Return to workspace</Button>
+            </Link>
+          ) : null}
+          {isOwner && !isSignOutError ? (
+            <Link href={DEFAULT_POST_LOGIN_DESTINATION}>
+              <Button variant="secondary">Try dashboard again</Button>
             </Link>
           ) : null}
           <form action={signOutAction}>
