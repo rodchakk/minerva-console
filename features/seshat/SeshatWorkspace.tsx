@@ -1135,12 +1135,12 @@ function Clients({ clients }: { clients: Client[] }) {
         className="mb-3 w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-sm text-white"
       />
       <Table
-        headers={["Name", "Contact", "Status", "Billing"]}
+        headers={["Company Name", "Contact", "Status", "Billing"]}
         rows={filtered.map((client) => ({
           key: client.id,
           href: `/seshat/clients/${client.id}`,
           cells: [
-            <strong key="name">{client.name}</strong>,
+            <strong key="company-name">{client.company_name?.trim() || "Company not set"}</strong>,
             client.email ?? client.phone ?? "—",
             <Badge key="status">{client.status}</Badge>,
             [client.city, client.country].filter(Boolean).join(", ") || "—",
