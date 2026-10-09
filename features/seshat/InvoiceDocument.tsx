@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { Building2, Globe2, Mail, Phone } from "lucide-react";
+import { Globe2, Landmark, Mail, Phone, WalletCards } from "lucide-react";
 import {
   formatInvoiceDocumentAmount,
   formatInvoiceDocumentDate,
@@ -29,6 +29,9 @@ export function InvoiceDocument({
   const payment = invoice.payment_instruction_snapshot
     ? paymentInstructionPresentation(invoice.payment_instruction_snapshot, language)
     : null;
+  const PaymentIcon = invoice.payment_instruction_snapshot?.method_type === "bank_transfer"
+    ? Landmark
+    : WalletCards;
   const clientName = invoice.clients?.company_name ?? invoice.clients?.name ?? "—";
   const clientDetail = invoice.clients?.company_name && invoice.clients.name !== invoice.clients.company_name
     ? invoice.clients.name
@@ -127,7 +130,7 @@ export function InvoiceDocument({
       {payment ? (
         <section data-seshat-payment-information className="mt-7 grid grid-cols-[3.5rem_minmax(0,1fr)] gap-4 rounded-md bg-slate-100 px-5 py-4">
           <div className="flex items-start justify-center border-r border-slate-300 pr-4 pt-1 text-slate-600">
-            <Building2 aria-hidden="true" className="h-7 w-7" strokeWidth={1.8} />
+            <PaymentIcon aria-hidden="true" className="h-7 w-7" strokeWidth={1.8} />
           </div>
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-slate-900">{payment.heading}</h2>

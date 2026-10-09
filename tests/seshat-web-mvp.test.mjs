@@ -184,6 +184,7 @@ test("invoice document follows the Minerva branded hierarchy and reads payment s
   assert.match(document, /data-invoice-bill-to/);
   assert.match(document, /data-invoice-totals/);
   assert.match(document, /paymentInstructionPresentation\(invoice\.payment_instruction_snapshot, language\)/);
+  assert.match(document, /method_type === "bank_transfer"[\s\S]*Landmark[\s\S]*WalletCards/);
   assert.doesNotMatch(document, /Ficohsa|200011417538/);
 });
 
