@@ -33,6 +33,8 @@ import {
 } from "./invoicePresentation";
 import { InvoiceDocument } from "./InvoiceDocument";
 import { downloadInvoicePdf } from "./invoicePdf";
+import { formatInvoiceDraftTotal, normalizeInvoiceCurrency } from "./invoiceDraft";
+import { localDateDaysOut, localDateValue } from "./localDate";
 import {
   generateInvoice,
   getDueClientServiceOccurrences,
@@ -158,13 +160,11 @@ function parseView(pathname: string): { view: View; id: string | null } {
 }
 
 function today() {
-  return new Date().toISOString().slice(0, 10);
+  return localDateValue();
 }
 
 function daysOut(days: number) {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return localDateDaysOut(days);
 }
 
 function money(value: number | null | undefined, currency = "USD") {
@@ -719,7 +719,11 @@ export function SeshatWorkspace() {
     }
   }
 
-  async function submitInvoice(event: FormEvent<HTMLFormElement>, items: LineItemDraft[]) {
+  async function submitInvoice(
+    event: FormEvent<HTMLFormElement>,
+    items: LineItemDraft[],
+    selectedCurrency: string,
+  ) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setError(null);
@@ -747,7 +751,7 @@ export function SeshatWorkspace() {
         status: form.get("status") === "sent" ? "sent" : "draft",
         issue_date: clean(form.get("issue_date")),
         due_date: clean(form.get("due_date")),
-        currency: String(clean(form.get("currency")) ?? "USD").toUpperCase(),
+        currency: normalizeInvoiceCurrency(selectedCurrency, profile?.default_currency ?? "USD"),
         notes: clean(form.get("notes")),
         internal_notes: clean(form.get("internal_notes")),
         payment_method_selection: paymentChoice.selection,
@@ -1469,12 +1473,15 @@ function InvoiceForm({
   services: Service[];
   profile: BusinessProfile | null;
   paymentMethods: PaymentMethod[];
-  onSubmit: (event: FormEvent<HTMLFormElement>, items: LineItemDraft[]) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>, items: LineItemDraft[], currency: string) => void;
 }) {
   const [items, setItems] = useState<LineItemDraft[]>([
     { tempId: "line-1", service_id: "", name: "", description: "", quantity: "1", unit_price: "0" },
   ]);
   const [clientId, setClientId] = useState("");
+  const [selectedCurrency, setSelectedCurrency] = useState(
+    normalizeInvoiceCurrency(profile?.default_currency, "USD"),
+  );
   const selectedClient = clients.find((client) => client.id === clientId) ?? null;
   const resolvedPaymentMethod = resolveClientPaymentMethod(selectedClient, paymentMethods);
   const total = useMemo(
@@ -1501,7 +1508,7 @@ function InvoiceForm({
     <Card>
       <Back href="/seshat/invoices" />
       <h2 className="mb-4 text-xl font-semibold text-white">New Invoice</h2>
-      <form onSubmit={(event) => onSubmit(event, items)} className="space-y-5">
+      <form onSubmit={(event) => onSubmit(event, items, selectedCurrency)} className="space-y-5">
         <div className="grid gap-4 md:grid-cols-3">
           <SelectField label="Client" name="client_id" value={clientId} onChange={setClientId}>
             <option value="">Select client...</option>
@@ -1511,7 +1518,16 @@ function InvoiceForm({
             <option value="draft">Draft</option>
             <option value="sent">Sent</option>
           </SelectField>
-          <Field label="Currency" name="currency" defaultValue={profile?.default_currency ?? "USD"} />
+          <label className="block space-y-1.5 text-sm">
+            <span className="font-medium text-slate-200">Currency</span>
+            <input
+              name="currency"
+              value={selectedCurrency}
+              onChange={(event) => setSelectedCurrency(event.target.value.toUpperCase())}
+              className="w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-white outline-none focus:border-violet-300/60"
+              required
+            />
+          </label>
           <Field label="Issue date" name="issue_date" type="date" defaultValue={today()} />
           <Field label="Due date" name="due_date" type="date" defaultValue={daysOut(profile?.default_payment_terms_days ?? 15)} />
           <PaymentMethodSelect
@@ -1574,7 +1590,9 @@ function InvoiceForm({
           <Field label="Internal notes" name="internal_notes" as="textarea" />
         </div>
         <div className="flex items-center justify-between border-t border-white/[0.10] pt-4">
-          <p className="text-lg font-semibold text-white">Estimated total: {money(total, profile?.default_currency ?? "USD")}</p>
+          <p className="text-lg font-semibold text-white">
+            Estimated total: {formatInvoiceDraftTotal(total, selectedCurrency)}
+          </p>
           <Button className="gap-2"><FilePlus2 className="h-4 w-4" /> Create Invoice</Button>
         </div>
       </form>

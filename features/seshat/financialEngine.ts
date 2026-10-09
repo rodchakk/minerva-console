@@ -10,6 +10,7 @@ import type {
   Json,
   RecordPaymentResult,
 } from "./types";
+import { localDateValue } from "./localDate";
 
 export type FinancialInvoiceItemInput = {
   service_id?: string | null;
@@ -168,7 +169,7 @@ export async function recordPayment(input: RecordPaymentInput): Promise<RecordPa
 export async function getDueClientServiceOccurrences(asOfDate?: string) {
   const db = getSeshatDataClient();
   const { data, error } = await db.rpc("get_due_client_service_occurrences", {
-    p_as_of_date: asOfDate ?? new Date().toISOString().slice(0, 10),
+    p_as_of_date: asOfDate ?? localDateValue(),
     p_client_id: null,
     p_client_service_ids: null,
   });
@@ -181,7 +182,7 @@ export async function runAutomaticBilling(asOfDate?: string): Promise<AutomaticB
   const db = getSeshatDataClient();
   const { data, error } = await db
     .rpc("run_client_service_billing", {
-      p_as_of_date: asOfDate ?? new Date().toISOString().slice(0, 10),
+      p_as_of_date: asOfDate ?? localDateValue(),
       p_client_id: null,
       p_client_service_ids: null,
     })

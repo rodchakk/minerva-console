@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { test } from "node:test";
 
 const root = process.cwd();
@@ -133,6 +134,41 @@ test("Seshat monetary and quantity inputs accept positive decimals", () => {
   assert.match(source, /item\.unit_price[^>]*type="number" min="0" step="0\.01"/);
 });
 
+test("Seshat local date defaults preserve the operator calendar day near UTC midnight", () => {
+  const helperPath = pathToFileURL(join(root, "features/seshat/localDate.ts")).href;
+  const script = [
+    `import { localDateValue, localDateDaysOut } from ${JSON.stringify(helperPath)};`,
+    `console.log(localDateValue(new Date("2026-10-09T04:30:00.000Z")));`,
+    `console.log(localDateDaysOut(15, new Date("2026-10-09T04:30:00.000Z")));`,
+  ].join("\n");
+  const output = execFileSync(process.execPath, ["--input-type=module", "--eval", script], {
+    encoding: "utf8",
+    env: { ...process.env, TZ: "America/Tegucigalpa" },
+  }).trim().split(/\r?\n/);
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const engine = read("features/seshat/financialEngine.ts");
+  const helper = read("features/seshat/localDate.ts");
+
+  assert.deepEqual(output, ["2026-10-08", "2026-10-23"]);
+  assert.doesNotMatch(helper, /toISOString/);
+  assert.doesNotMatch(workspace, /toISOString\(\)\.slice\(0, 10\)/);
+  assert.doesNotMatch(engine, /toISOString\(\)\.slice\(0, 10\)/);
+});
+
+test("new invoice estimate and payload share the selected currency", async () => {
+  const { formatInvoiceDraftTotal, normalizeInvoiceCurrency } = await import("../features/seshat/invoiceDraft.ts");
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+
+  assert.match(formatInvoiceDraftTotal(2917, "HNL"), /(?:HNL|L)\s*2,917\.00/);
+  assert.match(formatInvoiceDraftTotal(2917, "USD"), /(?:USD|\$)\s*2,917\.00/);
+  assert.equal(normalizeInvoiceCurrency(" hnl "), "HNL");
+  assert.match(workspace, /value=\{selectedCurrency\}/);
+  assert.match(workspace, /setSelectedCurrency\(event\.target\.value\.toUpperCase\(\)\)/);
+  assert.match(workspace, /formatInvoiceDraftTotal\(total, selectedCurrency\)/);
+  assert.match(workspace, /onSubmit\(event, items, selectedCurrency\)/);
+  assert.match(workspace, /currency:\s*normalizeInvoiceCurrency\(selectedCurrency/);
+});
+
 test("automatic billing preview counts backend client, currency and occurrence batches", async () => {
   const { expectedAutomaticInvoiceCount } = await import("../features/seshat/billingPreview.ts");
   const due = [
@@ -205,6 +241,7 @@ test("invoice document follows the Minerva branded hierarchy and reads payment s
   assert.match(document, /brand\.website/);
   assert.match(document, /brand\.logoSrc/);
   assert.match(document, /brand\.footer/);
+  assert.match(document, /text-\[11px\][^>]*>\{brand\.footer\}/);
   assert.match(document, /data-invoice-accent-rule/);
   assert.match(document, /data-invoice-bill-to/);
   assert.match(document, /data-invoice-totals/);

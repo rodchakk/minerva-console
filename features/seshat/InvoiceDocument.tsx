@@ -146,7 +146,7 @@ export function InvoiceDocument({
         <div data-invoice-accent-rule className="h-px bg-red-500" />
         <p className="mt-5 text-xs font-bold text-slate-800">{brand.businessName}</p>
         {brand.footer ? (
-          <p className="mt-1 whitespace-pre-wrap text-[10px] leading-4 text-slate-500">{brand.footer}</p>
+          <p className="mt-1 whitespace-pre-wrap text-[11px] leading-4 text-slate-500">{brand.footer}</p>
         ) : null}
       </footer>
     </section>
