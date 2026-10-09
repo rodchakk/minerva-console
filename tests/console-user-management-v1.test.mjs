@@ -174,7 +174,9 @@ test("Minerva Console generates and sends its own branded one-time invitation em
   assert.match(email, /searchParams\.set\("token_hash", tokenHash\)/);
   assert.match(model, /CONSOLE_INVITE_REDIRECT_PATH = "\/auth\/callback"/);
   assert.match(page, /resendConsoleInviteAction/);
-  assert.match(page, /Send setup link/);
+  assert.match(page, /Resend invitation/);
+  assert.match(page, /Send password link/);
+  assert.match(page, /resendConsoleInviteAction/);
 });
 
 test("Console invitation callback accepts only Minerva invite and setup recovery tokens", () => {
