@@ -1,4 +1,4 @@
-import type { InvoiceStatus } from "./types";
+import type { InvoicePaymentInstructionSnapshot, InvoiceStatus } from "./types";
 
 export type InvoiceDocumentLanguage = "es-HN" | "en-US";
 
@@ -20,6 +20,16 @@ type InvoiceDocumentCopy = {
   total: string;
   paid: string;
   balanceDue: string;
+  paymentInformation: string;
+  bank: string;
+  accountNumber: string;
+  accountHolder: string;
+  accountType: string;
+  paymentCurrency: string;
+  instructions: string;
+  account: string;
+  paymentLink: string;
+  methodTypes: Record<InvoicePaymentInstructionSnapshot["method_type"], string>;
   statuses: Record<InvoiceStatus, string>;
 };
 
@@ -40,6 +50,16 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     total: "Total",
     paid: "Pagado",
     balanceDue: "Saldo pendiente",
+    paymentInformation: "Información de pago",
+    bank: "Banco",
+    accountNumber: "Número de cuenta",
+    accountHolder: "Titular",
+    accountType: "Tipo de cuenta",
+    paymentCurrency: "Moneda",
+    instructions: "Instrucciones",
+    account: "Cuenta",
+    paymentLink: "Enlace de pago",
+    methodTypes: { bank_transfer: "Transferencia bancaria", paypal: "PayPal", cash: "Efectivo", other: "Otro" },
     statuses: {
       draft: "Borrador",
       sent: "Enviada",
@@ -64,6 +84,16 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     total: "Total",
     paid: "Paid",
     balanceDue: "Balance due",
+    paymentInformation: "Payment information",
+    bank: "Bank",
+    accountNumber: "Account number",
+    accountHolder: "Account holder",
+    accountType: "Account type",
+    paymentCurrency: "Currency",
+    instructions: "Instructions",
+    account: "Account",
+    paymentLink: "Payment link",
+    methodTypes: { bank_transfer: "Bank transfer", paypal: "PayPal", cash: "Cash", other: "Other" },
     statuses: {
       draft: "Draft",
       sent: "Sent",
@@ -73,6 +103,41 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     },
   },
 };
+
+export type PaymentInstructionRow = { label: string; value: string; isLink?: boolean };
+
+export function paymentInstructionPresentation(
+  snapshot: InvoicePaymentInstructionSnapshot,
+  language: InvoiceDocumentLanguage,
+) {
+  const copy = invoiceDocumentCopy[language];
+  const rows: PaymentInstructionRow[] = [];
+  const add = (label: string, value?: string, isLink = false) => {
+    if (value?.trim()) rows.push({ label, value: value.trim(), isLink });
+  };
+
+  if (snapshot.method_type === "bank_transfer") {
+    add(copy.bank, snapshot.bank_name);
+    add(copy.accountNumber, snapshot.account_number);
+    add(copy.accountHolder, snapshot.account_holder);
+    add(copy.accountType, snapshot.account_type);
+    add(copy.paymentCurrency, snapshot.currency);
+  } else if (snapshot.method_type === "paypal") {
+    add(copy.account, snapshot.paypal_email);
+    add(copy.paymentLink, snapshot.payment_url, true);
+    add(copy.paymentCurrency, snapshot.currency);
+  } else {
+    add(copy.paymentLink, snapshot.payment_url, true);
+    add(copy.paymentCurrency, snapshot.currency);
+  }
+  add(copy.instructions, snapshot.instructions);
+
+  return {
+    heading: copy.paymentInformation,
+    methodName: snapshot.display_name || copy.methodTypes[snapshot.method_type],
+    rows,
+  };
+}
 
 export function formatInvoiceDocumentDate(
   value: string | null | undefined,

@@ -5,13 +5,18 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  CircleDollarSign,
   CircleGauge,
   CreditCard,
   FilePlus2,
   LogOut,
+  Pencil,
+  Plus,
+  Power,
   Printer,
   RefreshCw,
   Save,
+  Star,
 } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import { Badge } from "@/components/ui/Badge";
@@ -26,6 +31,7 @@ import {
   formatInvoiceDocumentDate,
   formatInvoiceDocumentMoney,
   invoiceDocumentCopy,
+  paymentInstructionPresentation,
   type InvoiceDocumentLanguage,
 } from "./invoicePresentation";
 import {
@@ -34,8 +40,17 @@ import {
   getPaymentProofSignedUrl,
   recordPayment,
   runAutomaticBilling,
+  setInvoicePaymentMethod,
   seshatErrorMessage,
 } from "./financialEngine";
+import {
+  clientPaymentMethodChoice,
+  invoicePaymentMethodChoice,
+  parseClientPaymentMethodChoice,
+  parseInvoicePaymentMethodChoice,
+  paymentMethodLabel,
+  resolveClientPaymentMethod,
+} from "./paymentMethods";
 import { getSeshatConfig, getSeshatDataClient, getSeshatSupabase } from "./supabase";
 import type {
   AutomaticBillingRunResult,
@@ -51,6 +66,8 @@ import type {
   InvoiceStatus,
   InvoiceWithClient,
   MonthlyProfitSummary,
+  PaymentMethod,
+  PaymentMethodType,
   Service,
   ServiceFrequency,
 } from "./types";
@@ -175,6 +192,27 @@ function numberFrom(value: FormDataEntryValue | null, fallback = 0) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function paymentMethodPayload(form: FormData) {
+  const methodType = String(form.get("method_type") ?? "other") as PaymentMethodType;
+  return {
+    name: String(form.get("name") ?? "").trim(),
+    display_name: clean(form.get("display_name")),
+    method_type: methodType,
+    bank_name: methodType === "bank_transfer" ? clean(form.get("bank_name")) : null,
+    account_holder: methodType === "bank_transfer" ? clean(form.get("account_holder")) : null,
+    account_number: methodType === "bank_transfer" ? clean(form.get("account_number")) : null,
+    account_type: methodType === "bank_transfer" ? clean(form.get("account_type")) : null,
+    paypal_email: methodType === "paypal" ? clean(form.get("paypal_email")) : null,
+    payment_url: methodType === "paypal" || methodType === "other" ? clean(form.get("payment_url")) : null,
+    currency: methodType === "bank_transfer" || methodType === "paypal" || methodType === "other"
+      ? clean(form.get("currency"))?.toUpperCase() ?? null
+      : null,
+    instructions: clean(form.get("instructions")),
+    is_active: form.get("is_active") === "on",
+    is_default: form.get("is_default") === "on",
+  };
+}
+
 function rowId(data: unknown) {
   if (data && typeof data === "object" && "id" in data && typeof data.id === "string") {
     return data.id;
@@ -248,23 +286,57 @@ function SelectField({
   name,
   defaultValue,
   children,
+  value,
+  onChange,
 }: {
   label: string;
   name: string;
   defaultValue?: string | null;
   children: React.ReactNode;
+  value?: string;
+  onChange?: (value: string) => void;
 }) {
   return (
     <label className="block space-y-1.5 text-sm">
       <span className="font-medium text-slate-200">{label}</span>
       <select
         name={name}
-        defaultValue={defaultValue ?? ""}
+        {...(value === undefined ? { defaultValue: defaultValue ?? "" } : { value })}
+        onChange={onChange ? (event) => onChange(event.target.value) : undefined}
         className="w-full rounded-md border border-white/[0.12] bg-[#151b22] px-3 py-2 text-white outline-none focus:border-violet-300/60"
       >
         {children}
       </select>
     </label>
+  );
+}
+
+function PaymentMethodSelect({
+  label,
+  name,
+  methods,
+  defaultValue,
+  includeAutomatic,
+  automaticLabel = "Client preference / owner default",
+}: {
+  label: string;
+  name: string;
+  methods: PaymentMethod[];
+  defaultValue: string;
+  includeAutomatic: boolean;
+  automaticLabel?: string;
+}) {
+  return (
+    <SelectField label={label} name={name} defaultValue={defaultValue}>
+      {includeAutomatic ? <option value="auto">{automaticLabel}</option> : null}
+      <option value="default">Owner default</option>
+      <option value="none">None</option>
+      {methods.map((method) => (
+        <option key={method.id} value={`method:${method.id}`}>
+          {paymentMethodLabel(method)}{method.is_default ? " (default)" : ""}
+        </option>
+      ))}
+    </SelectField>
   );
 }
 
@@ -361,6 +433,7 @@ export function SeshatWorkspace() {
   const [notice, setNotice] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [clientServices, setClientServices] = useState<ClientService[]>([]);
   const [invoices, setInvoices] = useState<InvoiceWithClient[]>([]);
@@ -394,6 +467,7 @@ export function SeshatWorkspace() {
         profileRes,
         monthlyRes,
         billingCurrenciesRes,
+        paymentMethodsRes,
       ] = await Promise.all([
         supabase.from("clients").select("*").order("name", { ascending: true }),
         supabase.from("services").select("*").order("name", { ascending: true }),
@@ -403,10 +477,16 @@ export function SeshatWorkspace() {
         supabase.from("business_profiles").select("*").maybeSingle(),
         supabase.from("monthly_profit_summary").select("*").order("month", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("client_services").select("id, agreed_currency"),
+        supabase.from("payment_methods").select("*").order("name", { ascending: true }),
       ]);
 
       for (const result of [clientsRes, servicesRes, invoicesRes, expensesRes, categoriesRes, profileRes, monthlyRes, billingCurrenciesRes]) {
         if (result.error) throw result.error;
+      }
+      if (paymentMethodsRes.error) {
+        const code = paymentMethodsRes.error.code;
+        if (code !== "42P01" && code !== "PGRST205") throw paymentMethodsRes.error;
+        setWarning("Payment Methods will become available after the Seshat backend migration is deployed.");
       }
 
       setClients((clientsRes.data as Client[]) ?? []);
@@ -417,6 +497,7 @@ export function SeshatWorkspace() {
       setProfile((profileRes.data as BusinessProfile | null) ?? null);
       setMonthlySummary((monthlyRes.data as MonthlyProfitSummary | null) ?? null);
       setBillingCurrencies((billingCurrenciesRes.data as ClientServiceBillingCurrency[]) ?? []);
+      setPaymentMethods((paymentMethodsRes.data as PaymentMethod[]) ?? []);
 
       if (view === "billing" || view === "overview") {
         setDueItems(await getDueClientServiceOccurrences());
@@ -487,6 +568,7 @@ export function SeshatWorkspace() {
     const form = new FormData(event.currentTarget);
     setError(null);
     try {
+      const paymentPreference = parseClientPaymentMethodChoice(String(form.get("preferred_payment_method") ?? "default"));
       const payload = {
         name: String(form.get("name") ?? "").trim(),
         company_name: clean(form.get("company_name")),
@@ -503,6 +585,8 @@ export function SeshatWorkspace() {
         country: String(clean(form.get("country")) ?? "Honduras"),
         status: String(form.get("status") ?? "active"),
         notes: clean(form.get("notes")),
+        payment_method_preference: paymentPreference.selection,
+        preferred_payment_method_id: paymentPreference.paymentMethodId,
       };
       if (!payload.name) throw new Error("Client name is required.");
       const supabase = getSeshatDataClient();
@@ -658,6 +742,7 @@ export function SeshatWorkspace() {
         throw new Error("Line items need a name, quantity above zero, and unit price of zero or more.");
       }
 
+      const paymentChoice = parseInvoicePaymentMethodChoice(String(form.get("payment_method") ?? "auto"));
       const result = await generateInvoice({
         client_id: clean(form.get("client_id")),
         status: form.get("status") === "sent" ? "sent" : "draft",
@@ -666,6 +751,8 @@ export function SeshatWorkspace() {
         currency: String(clean(form.get("currency")) ?? "USD").toUpperCase(),
         notes: clean(form.get("notes")),
         internal_notes: clean(form.get("internal_notes")),
+        payment_method_selection: paymentChoice.selection,
+        payment_method_id: paymentChoice.paymentMethodId,
         items: validItems,
       });
       router.push(`/seshat/invoices/${result.invoice_id}`);
@@ -743,6 +830,77 @@ export function SeshatWorkspace() {
     paymentForm.reset();
     await load();
     await loadDetail();
+  }
+
+  async function savePaymentMethod(event: FormEvent<HTMLFormElement>, paymentMethodId?: string) {
+    event.preventDefault();
+    const payload = paymentMethodPayload(new FormData(event.currentTarget));
+    setError(null);
+    try {
+      if (!session) throw new Error("Please reconnect to Seshat.");
+      if (!payload.name) throw new Error("Payment method name is required.");
+      const supabase = getSeshatDataClient();
+      const response = paymentMethodId
+        ? await supabase.from("payment_methods").update(payload).eq("id", paymentMethodId)
+        : await supabase.from("payment_methods").insert({ ...payload, owner_id: session.user.id });
+      if (response.error) throw response.error;
+      setNotice(paymentMethodId ? "Payment method updated." : "Payment method created.");
+      await load();
+    } catch (saveError) {
+      setError(seshatErrorMessage(saveError, "Could not save payment method."));
+    }
+  }
+
+  async function updatePaymentMethod(paymentMethodId: string, patch: Partial<PaymentMethod>) {
+    setError(null);
+    try {
+      const { error: updateError } = await getSeshatDataClient()
+        .from("payment_methods")
+        .update(patch)
+        .eq("id", paymentMethodId);
+      if (updateError) throw updateError;
+      setNotice("Payment method updated.");
+      await load();
+    } catch (updateError) {
+      setError(seshatErrorMessage(updateError, "Could not update payment method."));
+    }
+  }
+
+  async function updateClientPaymentMethod(event: FormEvent<HTMLFormElement>, clientId: string) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    const preference = parseClientPaymentMethodChoice(String(form.get("preferred_payment_method") ?? "default"));
+    setError(null);
+    try {
+      const { error: updateError } = await getSeshatDataClient()
+        .from("clients")
+        .update({
+          payment_method_preference: preference.selection,
+          preferred_payment_method_id: preference.paymentMethodId,
+        })
+        .eq("id", clientId);
+      if (updateError) throw updateError;
+      setNotice("Client payment preference updated.");
+      await load();
+    } catch (updateError) {
+      setError(seshatErrorMessage(updateError, "Could not update client payment preference."));
+    }
+  }
+
+  async function updateDraftPaymentMethod(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!invoice) return;
+    const form = new FormData(event.currentTarget);
+    const choice = parseInvoicePaymentMethodChoice(String(form.get("payment_method") ?? "auto"));
+    setError(null);
+    try {
+      await setInvoicePaymentMethod(invoice.id, choice.selection, choice.paymentMethodId);
+      setNotice("Draft payment instructions refreshed.");
+      await load();
+      await loadDetail();
+    } catch (updateError) {
+      setError(seshatErrorMessage(updateError, "Could not update invoice payment instructions."));
+    }
   }
 
   async function saveProfile(event: FormEvent<HTMLFormElement>) {
@@ -836,8 +994,8 @@ export function SeshatWorkspace() {
         />
       ) : null}
       {view === "clients" ? <Clients clients={clients} /> : null}
-      {view === "client-new" ? <ClientForm onSubmit={submitClient} /> : null}
-      {view === "client-edit" && currentClient ? <ClientForm client={currentClient} onSubmit={(event) => submitClient(event, currentClient.id)} /> : null}
+      {view === "client-new" ? <ClientForm paymentMethods={paymentMethods} onSubmit={submitClient} /> : null}
+      {view === "client-edit" && currentClient ? <ClientForm client={currentClient} paymentMethods={paymentMethods} onSubmit={(event) => submitClient(event, currentClient.id)} /> : null}
       {view === "client-detail" && currentClient ? (
         <ClientDetail
           client={currentClient}
@@ -845,7 +1003,9 @@ export function SeshatWorkspace() {
           services={services}
           invoices={invoices.filter((item) => item.client_id === currentClient.id)}
           profit={clientProfit}
+          paymentMethods={paymentMethods}
           onClientServiceSubmit={submitClientService}
+          onPaymentMethodSubmit={(event) => updateClientPaymentMethod(event, currentClient.id)}
         />
       ) : null}
       {view === "services" ? <Services services={services} /> : null}
@@ -860,13 +1020,15 @@ export function SeshatWorkspace() {
         <Invoices invoices={invoices} filter={invoiceFilter} onFilter={setInvoiceFilter} />
       ) : null}
       {view === "invoice-new" ? (
-        <InvoiceForm clients={clients} services={services} profile={profile} onSubmit={submitInvoice} />
+        <InvoiceForm clients={clients} services={services} profile={profile} paymentMethods={paymentMethods} onSubmit={submitInvoice} />
       ) : null}
       {view === "invoice-detail" && invoice ? (
         <InvoiceDetail
           invoice={invoice}
           profile={profile}
+          paymentMethods={paymentMethods}
           onPayment={submitPayment}
+          onPaymentMethod={updateDraftPaymentMethod}
           onStatus={updateInvoiceStatus}
           onDelete={deleteDraftInvoice}
         />
@@ -887,7 +1049,15 @@ export function SeshatWorkspace() {
           }}
         />
       ) : null}
-      {view === "settings" ? <Settings profile={profile} onSubmit={saveProfile} /> : null}
+      {view === "settings" ? (
+        <Settings
+          profile={profile}
+          paymentMethods={paymentMethods}
+          onSubmit={saveProfile}
+          onPaymentMethodSubmit={savePaymentMethod}
+          onPaymentMethodUpdate={updatePaymentMethod}
+        />
+      ) : null}
     </div>
   );
 }
@@ -979,7 +1149,16 @@ function Clients({ clients }: { clients: Client[] }) {
   );
 }
 
-function ClientForm({ client, onSubmit }: { client?: Client; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function ClientForm({
+  client,
+  paymentMethods,
+  onSubmit,
+}: {
+  client?: Client;
+  paymentMethods: PaymentMethod[];
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const activeMethods = paymentMethods.filter((method) => method.is_active);
   return (
     <Card>
       <Back href={client ? `/seshat/clients/${client.id}` : "/seshat/clients"} />
@@ -995,6 +1174,13 @@ function ClientForm({ client, onSubmit }: { client?: Client; onSubmit: (event: F
         <SelectField label="Status" name="status" defaultValue={client?.status ?? "active"}>
           {clientStatuses.map((status) => <option key={status} value={status}>{status}</option>)}
         </SelectField>
+        <PaymentMethodSelect
+          label="Preferred payment method"
+          name="preferred_payment_method"
+          methods={activeMethods}
+          defaultValue={clientPaymentMethodChoice(client)}
+          includeAutomatic={false}
+        />
         <Field label="Address line 1" name="address_line1" defaultValue={client?.address_line1} />
         <Field label="Address line 2" name="address_line2" defaultValue={client?.address_line2} />
         <Field label="City" name="city" defaultValue={client?.city} />
@@ -1014,15 +1200,21 @@ function ClientDetail({
   services,
   invoices,
   profit,
+  paymentMethods,
   onClientServiceSubmit,
+  onPaymentMethodSubmit,
 }: {
   client: Client;
   clientServices: ClientService[];
   services: Service[];
   invoices: InvoiceWithClient[];
   profit: ClientOperationalProfitSummary | null;
+  paymentMethods: PaymentMethod[];
   onClientServiceSubmit: (event: FormEvent<HTMLFormElement>, id?: string) => void;
+  onPaymentMethodSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const activeMethods = paymentMethods.filter((method) => method.is_active);
+  const resolvedMethod = resolveClientPaymentMethod(client, paymentMethods);
   return (
     <div className="space-y-4">
       <Card>
@@ -1039,6 +1231,21 @@ function ClientDetail({
           <Metric label="Allocated expenses" value={money(profit?.allocated_monthly_expenses ?? 0)} />
           <Metric label="Estimated margin" value={`${(profit?.estimated_margin_percent ?? 0).toFixed(1)}%`} />
         </div>
+        <form onSubmit={onPaymentMethodSubmit} className="mt-4 flex flex-col gap-3 border-t border-white/[0.08] pt-4 sm:flex-row sm:items-end">
+          <div className="min-w-0 flex-1">
+            <PaymentMethodSelect
+              label="Preferred payment method"
+              name="preferred_payment_method"
+              methods={activeMethods}
+              defaultValue={clientPaymentMethodChoice(client)}
+              includeAutomatic={false}
+            />
+            <p className="mt-1 text-xs text-[var(--text-muted)]">
+              Current resolution: {resolvedMethod ? paymentMethodLabel(resolvedMethod) : "None"}
+            </p>
+          </div>
+          <Button variant="secondary" className="gap-2"><Save className="h-4 w-4" /> Save</Button>
+        </form>
       </Card>
       <Card>
         <h3 className="mb-3 font-semibold text-white">Client Services</h3>
@@ -1256,16 +1463,21 @@ function InvoiceForm({
   clients,
   services,
   profile,
+  paymentMethods,
   onSubmit,
 }: {
   clients: Client[];
   services: Service[];
   profile: BusinessProfile | null;
+  paymentMethods: PaymentMethod[];
   onSubmit: (event: FormEvent<HTMLFormElement>, items: LineItemDraft[]) => void;
 }) {
   const [items, setItems] = useState<LineItemDraft[]>([
     { tempId: "line-1", service_id: "", name: "", description: "", quantity: "1", unit_price: "0" },
   ]);
+  const [clientId, setClientId] = useState("");
+  const selectedClient = clients.find((client) => client.id === clientId) ?? null;
+  const resolvedPaymentMethod = resolveClientPaymentMethod(selectedClient, paymentMethods);
   const total = useMemo(
     () => items.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.unit_price) || 0), 0),
     [items],
@@ -1292,7 +1504,7 @@ function InvoiceForm({
       <h2 className="mb-4 text-xl font-semibold text-white">New Invoice</h2>
       <form onSubmit={(event) => onSubmit(event, items)} className="space-y-5">
         <div className="grid gap-4 md:grid-cols-3">
-          <SelectField label="Client" name="client_id">
+          <SelectField label="Client" name="client_id" value={clientId} onChange={setClientId}>
             <option value="">Select client...</option>
             {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
           </SelectField>
@@ -1303,6 +1515,14 @@ function InvoiceForm({
           <Field label="Currency" name="currency" defaultValue={profile?.default_currency ?? "USD"} />
           <Field label="Issue date" name="issue_date" type="date" defaultValue={today()} />
           <Field label="Due date" name="due_date" type="date" defaultValue={daysOut(profile?.default_payment_terms_days ?? 15)} />
+          <PaymentMethodSelect
+            label="Payment method"
+            name="payment_method"
+            methods={paymentMethods.filter((method) => method.is_active)}
+            defaultValue="auto"
+            includeAutomatic
+            automaticLabel={`Automatic — ${resolvedPaymentMethod ? paymentMethodLabel(resolvedPaymentMethod) : "None"}`}
+          />
         </div>
         <div className="space-y-3">
           <h3 className="font-semibold text-white">Line Items</h3>
@@ -1366,13 +1586,17 @@ function InvoiceForm({
 function InvoiceDetail({
   invoice,
   profile,
+  paymentMethods,
   onPayment,
+  onPaymentMethod,
   onStatus,
   onDelete,
 }: {
   invoice: InvoiceDetail;
   profile: BusinessProfile | null;
+  paymentMethods: PaymentMethod[];
   onPayment: (event: FormEvent<HTMLFormElement>) => void;
+  onPaymentMethod: (event: FormEvent<HTMLFormElement>) => void;
   onStatus: (id: string, status: InvoiceStatus) => void;
   onDelete: (id: string) => void;
 }) {
@@ -1381,6 +1605,9 @@ function InvoiceDetail({
     DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
   );
   const documentCopy = invoiceDocumentCopy[documentLanguage];
+  const paymentPresentation = invoice.payment_instruction_snapshot
+    ? paymentInstructionPresentation(invoice.payment_instruction_snapshot, documentLanguage)
+    : null;
   return (
     <div className="space-y-4">
       <Card className="print:hidden">
@@ -1422,6 +1649,27 @@ function InvoiceDetail({
           </div>
         </div>
       </Card>
+      {invoice.status === "draft" ? (
+        <Card className="print:hidden">
+          <form onSubmit={onPaymentMethod} className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="min-w-0 flex-1">
+              <PaymentMethodSelect
+                label="Payment instructions"
+                name="payment_method"
+                methods={paymentMethods.filter((method) => method.is_active)}
+                defaultValue={invoicePaymentMethodChoice(invoice.payment_method_selection, invoice.payment_method_id)}
+                includeAutomatic
+              />
+              <p className="mt-1 text-xs text-[var(--text-muted)]">
+                {invoice.payment_instruction_snapshot
+                  ? `Current snapshot: ${invoice.payment_instruction_snapshot.display_name || invoice.payment_instruction_snapshot.name}`
+                  : "No payment instructions attached."}
+              </p>
+            </div>
+            <Button variant="secondary" className="gap-2"><RefreshCw className="h-4 w-4" /> Assign / Refresh</Button>
+          </form>
+        </Card>
+      ) : null}
       <section
         data-seshat-invoice-document
         lang={documentLanguage}
@@ -1484,6 +1732,24 @@ function InvoiceDetail({
           <Total label={documentCopy.paid} value={formatInvoiceDocumentMoney(invoice.amount_paid, invoice.currency, documentLanguage)} />
           <Total label={documentCopy.balanceDue} value={formatInvoiceDocumentMoney(balance, invoice.currency, documentLanguage)} strong />
         </div>
+        {paymentPresentation ? (
+          <div data-seshat-payment-information className="mt-8 border-t border-slate-300 pt-5">
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{paymentPresentation.heading}</p>
+            <p className="mt-1 font-semibold">{paymentPresentation.methodName}</p>
+            {paymentPresentation.rows.length > 0 ? (
+              <dl className="mt-3 grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
+                {paymentPresentation.rows.map((row) => (
+                  <div key={row.label} className="contents">
+                    <dt className="text-slate-500">{row.label}</dt>
+                    <dd className="min-w-0 break-words">
+                      {row.isLink ? <a href={row.value} className="underline">{row.value}</a> : row.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+          </div>
+        ) : null}
         {invoice.notes ? <p className="mt-8 whitespace-pre-wrap text-sm text-slate-700">{invoice.notes}</p> : null}
         {profile?.invoice_footer ? <p className="mt-8 text-xs text-slate-500">{profile.invoice_footer}</p> : null}
       </section>
@@ -1580,24 +1846,165 @@ function Billing({
   );
 }
 
-function Settings({ profile, onSubmit }: { profile: BusinessProfile | null; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function Settings({
+  profile,
+  paymentMethods,
+  onSubmit,
+  onPaymentMethodSubmit,
+  onPaymentMethodUpdate,
+}: {
+  profile: BusinessProfile | null;
+  paymentMethods: PaymentMethod[];
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onPaymentMethodSubmit: (event: FormEvent<HTMLFormElement>, id?: string) => Promise<void>;
+  onPaymentMethodUpdate: (id: string, patch: Partial<PaymentMethod>) => Promise<void>;
+}) {
+  return (
+    <div className="space-y-4">
+      <Card>
+        <h2 className="mb-4 text-xl font-semibold text-white">Business Profile</h2>
+        <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
+          <Field label="Business name" name="business_name" defaultValue={profile?.business_name} required />
+          <Field label="Owner name" name="owner_name" defaultValue={profile?.owner_name} />
+          <Field label="Email" name="email" type="email" defaultValue={profile?.email} />
+          <Field label="Phone" name="phone" defaultValue={profile?.phone} />
+          <Field label="Website" name="website" defaultValue={profile?.website} />
+          <Field label="Default currency" name="default_currency" defaultValue={profile?.default_currency ?? "USD"} />
+          <Field label="Invoice prefix" name="invoice_prefix" defaultValue={profile?.invoice_prefix ?? "INV"} />
+          <Field label="Default payment terms days" name="default_payment_terms_days" type="number" min={0} step={1} defaultValue={profile?.default_payment_terms_days ?? 15} />
+          <Field label="Invoice accent color" name="invoice_accent_color" defaultValue={profile?.invoice_accent_color} />
+          <div className="md:col-span-2"><Field label="Invoice footer" name="invoice_footer" as="textarea" defaultValue={profile?.invoice_footer} /></div>
+          <div className="md:col-span-2"><Button className="gap-2"><Save className="h-4 w-4" /> Save Settings</Button></div>
+        </form>
+      </Card>
+      <PaymentMethodsSettings
+        methods={paymentMethods}
+        onSubmit={onPaymentMethodSubmit}
+        onUpdate={onPaymentMethodUpdate}
+      />
+    </div>
+  );
+}
+
+function PaymentMethodsSettings({
+  methods,
+  onSubmit,
+  onUpdate,
+}: {
+  methods: PaymentMethod[];
+  onSubmit: (event: FormEvent<HTMLFormElement>, id?: string) => Promise<void>;
+  onUpdate: (id: string, patch: Partial<PaymentMethod>) => Promise<void>;
+}) {
+  const [editingId, setEditingId] = useState<string | "new" | null>(null);
+  const editingMethod = methods.find((method) => method.id === editingId);
   return (
     <Card>
-      <h2 className="mb-4 text-xl font-semibold text-white">Business Profile</h2>
-      <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
-        <Field label="Business name" name="business_name" defaultValue={profile?.business_name} required />
-        <Field label="Owner name" name="owner_name" defaultValue={profile?.owner_name} />
-        <Field label="Email" name="email" type="email" defaultValue={profile?.email} />
-        <Field label="Phone" name="phone" defaultValue={profile?.phone} />
-        <Field label="Website" name="website" defaultValue={profile?.website} />
-        <Field label="Default currency" name="default_currency" defaultValue={profile?.default_currency ?? "USD"} />
-        <Field label="Invoice prefix" name="invoice_prefix" defaultValue={profile?.invoice_prefix ?? "INV"} />
-        <Field label="Default payment terms days" name="default_payment_terms_days" type="number" min={0} step={1} defaultValue={profile?.default_payment_terms_days ?? 15} />
-        <Field label="Invoice accent color" name="invoice_accent_color" defaultValue={profile?.invoice_accent_color} />
-        <div className="md:col-span-2"><Field label="Invoice footer" name="invoice_footer" as="textarea" defaultValue={profile?.invoice_footer} /></div>
-        <div className="md:col-span-2"><Button className="gap-2"><Save className="h-4 w-4" /> Save Settings</Button></div>
-      </form>
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold text-white">Payment Methods</h2>
+          <p className="text-sm text-[var(--text-muted)]">Client-facing instructions used on invoice snapshots.</p>
+        </div>
+        <Button type="button" variant="secondary" onClick={() => setEditingId("new")} className="gap-2">
+          <Plus className="h-4 w-4" /> Add
+        </Button>
+      </div>
+      <div className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
+        {methods.length === 0 ? <p className="py-4 text-sm text-[var(--text-muted)]">No payment methods configured.</p> : null}
+        {methods.map((method) => (
+          <div key={method.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="font-semibold text-white">{method.name}</p>
+              <p className="text-sm text-[var(--text-muted)]">
+                {method.method_type.replace("_", " ")} · {method.display_name || "No display name"} · {method.is_active ? "Active" : "Inactive"}
+                {method.is_default ? " · Default" : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" onClick={() => setEditingId(method.id)} className="gap-2"><Pencil className="h-4 w-4" /> Edit</Button>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => void onUpdate(method.id, { is_active: !method.is_active, is_default: method.is_active ? false : method.is_default })}
+                className="gap-2"
+              >
+                <Power className="h-4 w-4" /> {method.is_active ? "Deactivate" : "Activate"}
+              </Button>
+              {method.is_active && !method.is_default ? (
+                <Button type="button" variant="ghost" onClick={() => void onUpdate(method.id, { is_default: true })} className="gap-2">
+                  <Star className="h-4 w-4" /> Set default
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      {editingId ? (
+        <PaymentMethodForm
+          key={editingId}
+          method={editingMethod}
+          onCancel={() => setEditingId(null)}
+          onSubmit={async (event) => {
+            await onSubmit(event, editingMethod?.id);
+          }}
+        />
+      ) : null}
     </Card>
+  );
+}
+
+function PaymentMethodForm({
+  method,
+  onCancel,
+  onSubmit,
+}: {
+  method?: PaymentMethod;
+  onCancel: () => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  const [methodType, setMethodType] = useState<PaymentMethodType>(method?.method_type ?? "bank_transfer");
+  return (
+    <form onSubmit={onSubmit} className="mt-4 grid gap-4 border-t border-white/[0.08] pt-4 md:grid-cols-2">
+      <Field label="Internal name" name="name" defaultValue={method?.name} required />
+      <Field label="Display name" name="display_name" defaultValue={method?.display_name} />
+      <label className="block space-y-1.5 text-sm">
+        <span className="font-medium text-slate-200">Type</span>
+        <select name="method_type" value={methodType} onChange={(event) => setMethodType(event.target.value as PaymentMethodType)} className="w-full rounded-md border border-white/[0.12] bg-[#151b22] px-3 py-2 text-white">
+          <option value="bank_transfer">Bank transfer</option>
+          <option value="paypal">PayPal</option>
+          <option value="cash">Cash</option>
+          <option value="other">Other</option>
+        </select>
+      </label>
+      {methodType === "bank_transfer" ? (
+        <>
+          <Field label="Bank name" name="bank_name" defaultValue={method?.bank_name} />
+          <Field label="Account holder" name="account_holder" defaultValue={method?.account_holder} />
+          <Field label="Account number" name="account_number" defaultValue={method?.account_number} />
+          <Field label="Account type" name="account_type" defaultValue={method?.account_type} />
+          <Field label="Currency" name="currency" defaultValue={method?.currency} />
+        </>
+      ) : null}
+      {methodType === "paypal" ? (
+        <>
+          <Field label="PayPal email" name="paypal_email" type="email" defaultValue={method?.paypal_email} />
+          <Field label="Payment URL" name="payment_url" defaultValue={method?.payment_url} />
+          <Field label="Currency" name="currency" defaultValue={method?.currency} />
+        </>
+      ) : null}
+      {methodType === "other" ? (
+        <>
+          <Field label="Payment URL" name="payment_url" defaultValue={method?.payment_url} />
+          <Field label="Currency" name="currency" defaultValue={method?.currency} />
+        </>
+      ) : null}
+      <div className="md:col-span-2"><Field label="Additional instructions" name="instructions" as="textarea" defaultValue={method?.instructions} /></div>
+      <label className="flex items-center gap-2 text-sm text-slate-200"><input name="is_active" type="checkbox" defaultChecked={method?.is_active ?? true} /> Active</label>
+      <label className="flex items-center gap-2 text-sm text-slate-200"><input name="is_default" type="checkbox" defaultChecked={method?.is_default ?? false} /> Default</label>
+      <div className="flex gap-2 md:col-span-2">
+        <Button className="gap-2"><CircleDollarSign className="h-4 w-4" /> {method ? "Update Payment Method" : "Create Payment Method"}</Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>
+      </div>
+    </form>
   );
 }
 

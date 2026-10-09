@@ -10,6 +10,45 @@ export type ServiceFrequency =
   | "semiannual"
   | "yearly"
   | "one_time";
+export type PaymentMethodType = "bank_transfer" | "paypal" | "cash" | "other";
+export type ClientPaymentMethodPreference = "default" | "none" | "specific";
+export type InvoicePaymentMethodSelection = "auto" | "default" | "none" | "specific";
+
+export type PaymentMethod = {
+  id: string;
+  owner_id: string;
+  name: string;
+  display_name: string | null;
+  method_type: PaymentMethodType;
+  bank_name: string | null;
+  account_holder: string | null;
+  account_number: string | null;
+  account_type: string | null;
+  paypal_email: string | null;
+  payment_url: string | null;
+  currency: string | null;
+  instructions: string | null;
+  is_active: boolean;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoicePaymentInstructionSnapshot = {
+  version: number;
+  payment_method_id: string;
+  name: string;
+  display_name?: string;
+  method_type: PaymentMethodType;
+  bank_name?: string;
+  account_holder?: string;
+  account_number?: string;
+  account_type?: string;
+  paypal_email?: string;
+  payment_url?: string;
+  currency?: string;
+  instructions?: string;
+};
 
 export type BusinessProfile = {
   id: string;
@@ -55,6 +94,8 @@ export type Client = {
   country: string;
   status: ClientStatus;
   notes: string | null;
+  preferred_payment_method_id: string | null;
+  payment_method_preference: ClientPaymentMethodPreference;
   created_at: string;
   updated_at: string;
 };
@@ -119,6 +160,9 @@ export type Invoice = {
   billing_period_start: string | null;
   billing_period_end: string | null;
   auto_generated: boolean;
+  payment_method_id: string | null;
+  payment_method_selection: InvoicePaymentMethodSelection;
+  payment_instruction_snapshot: InvoicePaymentInstructionSnapshot | null;
   created_at: string;
   updated_at: string;
 };
@@ -272,6 +316,7 @@ export type Database = {
     Tables: {
       business_profiles: { Row: BusinessProfile; Insert: Partial<BusinessProfile>; Update: Partial<BusinessProfile> };
       clients: { Row: Client; Insert: Partial<Client>; Update: Partial<Client> };
+      payment_methods: { Row: PaymentMethod; Insert: Partial<PaymentMethod>; Update: Partial<PaymentMethod> };
       services: { Row: Service; Insert: Partial<Service>; Update: Partial<Service> };
       client_services: { Row: ClientService; Insert: Partial<ClientService>; Update: Partial<ClientService> };
       invoices: { Row: Invoice; Insert: Partial<Invoice>; Update: Partial<Invoice> };
@@ -300,8 +345,18 @@ export type Database = {
           p_notes?: string | null;
           p_internal_notes?: string | null;
           p_items?: Json;
+          p_payment_method_selection?: InvoicePaymentMethodSelection;
+          p_payment_method_id?: string | null;
         };
         Returns: GenerateInvoiceResult[];
+      };
+      set_invoice_payment_method: {
+        Args: {
+          p_invoice_id: string;
+          p_payment_method_selection?: InvoicePaymentMethodSelection;
+          p_payment_method_id?: string | null;
+        };
+        Returns: Json | null;
       };
       record_payment: {
         Args: {

@@ -27,8 +27,77 @@ test("Seshat financial writes go through the existing database RPCs", () => {
   assert.match(source, /\.rpc\("record_payment"/);
   assert.match(source, /\.rpc\("get_due_client_service_occurrences"/);
   assert.match(source, /\.rpc\("run_client_service_billing"/);
+  assert.match(source, /\.rpc\("set_invoice_payment_method"/);
   assert.doesNotMatch(source, /\.from\("invoice_items"\)\.insert/);
   assert.doesNotMatch(source, /\.from\("payments"\)\.insert/);
+});
+
+test("Settings manages reusable owner payment methods without hardcoded bank data", () => {
+  const source = read("features/seshat/SeshatWorkspace.tsx");
+
+  assert.match(source, />Payment Methods</);
+  assert.match(source, /Create Payment Method/);
+  assert.match(source, /Update Payment Method/);
+  assert.match(source, /Deactivate/);
+  assert.match(source, /Set default/);
+  assert.match(source, /methodType === "bank_transfer"/);
+  assert.match(source, /methodType === "paypal"/);
+  assert.doesNotMatch(source, /200011417538|Ficohsa Minerva|Bank:\s*Ficohsa/);
+});
+
+test("clients and invoices expose payment method selection at the required points", () => {
+  const source = read("features/seshat/SeshatWorkspace.tsx");
+
+  assert.match(source, /label="Preferred payment method"/);
+  assert.match(source, /Current resolution:/);
+  assert.match(source, /label="Payment method"/);
+  assert.match(source, /label="Payment instructions"/);
+  assert.match(source, /Assign \/ Refresh/);
+  assert.match(source, /invoice\.status === "draft"/);
+  assert.match(source, /payment_method_selection:/);
+  assert.match(source, /payment_method_id:/);
+});
+
+test("payment instructions render localized bank and PayPal labels while omitting blanks", async () => {
+  const presentation = await import("../features/seshat/invoicePresentation.ts");
+  const bank = presentation.paymentInstructionPresentation({
+    version: 1,
+    payment_method_id: "bank-1",
+    name: "Primary bank",
+    display_name: "Transferencia bancaria",
+    method_type: "bank_transfer",
+    bank_name: "Example Bank",
+    account_number: "1234",
+  }, "es-HN");
+  const paypal = presentation.paymentInstructionPresentation({
+    version: 1,
+    payment_method_id: "paypal-1",
+    name: "PayPal",
+    method_type: "paypal",
+    paypal_email: "billing@example.com",
+    payment_url: "https://example.com/pay",
+  }, "en-US");
+
+  assert.equal(bank.heading, "Información de pago");
+  assert.deepEqual(bank.rows.map((row) => row.label), ["Banco", "Número de cuenta"]);
+  assert.equal(paypal.heading, "Payment information");
+  assert.deepEqual(paypal.rows.map((row) => row.label), ["Account", "Payment link"]);
+  assert.equal(paypal.rows[1].isLink, true);
+});
+
+test("payment method choices are presentation metadata and do not alter invoice amounts", async () => {
+  const helpers = await import("../features/seshat/paymentMethods.ts");
+  const invoice = Object.freeze({ currency: "HNL", total: 2917, amount_paid: 0 });
+
+  assert.deepEqual(helpers.parseInvoicePaymentMethodChoice("method:abc"), {
+    selection: "specific",
+    paymentMethodId: "abc",
+  });
+  assert.deepEqual(helpers.parseInvoicePaymentMethodChoice("none"), {
+    selection: "none",
+    paymentMethodId: null,
+  });
+  assert.deepEqual(invoice, { currency: "HNL", total: 2917, amount_paid: 0 });
 });
 
 test("a recorded payment remains successful when proof attachment fails", () => {

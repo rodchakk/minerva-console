@@ -5,6 +5,7 @@ import type {
   AutomaticBillingRunResult,
   DueClientServiceOccurrence,
   GenerateInvoiceResult,
+  InvoicePaymentMethodSelection,
   InvoiceStatus,
   Json,
   RecordPaymentResult,
@@ -34,6 +35,8 @@ export type GenerateInvoiceInput = {
   auto_generated?: boolean;
   notes?: string | null;
   internal_notes?: string | null;
+  payment_method_selection?: InvoicePaymentMethodSelection;
+  payment_method_id?: string | null;
   items: FinancialInvoiceItemInput[];
 };
 
@@ -116,11 +119,29 @@ export async function generateInvoice(input: GenerateInvoiceInput): Promise<Gene
       p_notes: cleanText(input.notes),
       p_internal_notes: cleanText(input.internal_notes),
       p_items: items as Json,
+      p_payment_method_selection: input.payment_method_selection ?? "auto",
+      p_payment_method_id: input.payment_method_id ?? null,
     })
     .single();
 
   if (error) throw new Error(seshatErrorMessage(error, "Could not generate invoice."));
   return data as GenerateInvoiceResult;
+}
+
+export async function setInvoicePaymentMethod(
+  invoiceId: string,
+  selection: InvoicePaymentMethodSelection,
+  paymentMethodId: string | null,
+) {
+  const db = getSeshatDataClient();
+  const { data, error } = await db.rpc("set_invoice_payment_method", {
+    p_invoice_id: invoiceId,
+    p_payment_method_selection: selection,
+    p_payment_method_id: paymentMethodId,
+  });
+
+  if (error) throw new Error(seshatErrorMessage(error, "Could not update invoice payment instructions."));
+  return data;
 }
 
 export async function recordPayment(input: RecordPaymentInput): Promise<RecordPaymentResult> {
