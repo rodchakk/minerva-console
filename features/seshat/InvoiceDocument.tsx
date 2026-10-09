@@ -3,17 +3,12 @@ import { Globe2, Landmark, Mail, Phone, WalletCards } from "lucide-react";
 import {
   formatInvoiceDocumentAmount,
   formatInvoiceDocumentDate,
+  invoiceBrandPresentation,
   invoiceDocumentCopy,
   paymentInstructionPresentation,
   type InvoiceDocumentLanguage,
 } from "./invoicePresentation";
 import type { BusinessProfile, InvoiceDetail } from "./types";
-
-const MINERVA_CONTACT = {
-  email: "support@minervatechs.com",
-  phone: "+504 3220-9818",
-  website: "www.minervatechs.com",
-};
 
 export function InvoiceDocument({
   invoice,
@@ -25,6 +20,7 @@ export function InvoiceDocument({
   language: InvoiceDocumentLanguage;
 }) {
   const copy = invoiceDocumentCopy[language];
+  const brand = invoiceBrandPresentation(profile, language);
   const balance = invoice.balance_due ?? Math.max(invoice.total - invoice.amount_paid, 0);
   const payment = invoice.payment_instruction_snapshot
     ? paymentInstructionPresentation(invoice.payment_instruction_snapshot, language)
@@ -47,18 +43,11 @@ export function InvoiceDocument({
       className="mx-auto w-full max-w-[820px] overflow-hidden rounded-md border border-slate-200 bg-white px-6 py-7 text-slate-900 shadow-[0_18px_55px_rgba(15,23,42,0.18)] sm:px-10 sm:py-9"
     >
       <header className="grid grid-cols-1 items-center gap-6 sm:grid-cols-[minmax(0,1fr)_auto]">
-        <Image
-          src="/brand/minerva-logo-gray.png"
-          alt={profile?.business_name ?? "Minerva Technologies"}
-          width={260}
-          height={87}
-          className="h-auto w-[220px] max-w-full"
-          priority
-        />
+        <BrandMark businessName={brand.businessName} logoSrc={brand.logoSrc} />
         <address className="not-italic text-[11px] leading-5 text-slate-600 sm:text-xs">
-          <ContactLine icon={Mail} value={MINERVA_CONTACT.email} />
-          <ContactLine icon={Phone} value={MINERVA_CONTACT.phone} />
-          <ContactLine icon={Globe2} value={MINERVA_CONTACT.website} />
+          <ContactLine icon={Mail} value={brand.email} />
+          <ContactLine icon={Phone} value={brand.phone} />
+          <ContactLine icon={Globe2} value={brand.website} />
         </address>
       </header>
 
@@ -155,10 +144,44 @@ export function InvoiceDocument({
 
       <footer className="mt-8">
         <div data-invoice-accent-rule className="h-px bg-red-500" />
-        <p className="mt-5 text-xs font-bold text-slate-800">Minerva Technologies</p>
-        <p className="mt-1 text-[10px] leading-4 text-slate-500">{copy.footerTagline}</p>
+        <p className="mt-5 text-xs font-bold text-slate-800">{brand.businessName}</p>
+        {brand.footer ? (
+          <p className="mt-1 whitespace-pre-wrap text-[10px] leading-4 text-slate-500">{brand.footer}</p>
+        ) : null}
       </footer>
     </section>
+  );
+}
+
+function BrandMark({ businessName, logoSrc }: { businessName: string; logoSrc: string | null }) {
+  if (!logoSrc) {
+    return <p className="text-xl font-bold text-slate-900">{businessName}</p>;
+  }
+
+  if (logoSrc.startsWith("/")) {
+    return (
+      <Image
+        src={logoSrc}
+        alt={businessName}
+        width={260}
+        height={87}
+        className="h-auto w-[220px] max-w-full object-contain object-left"
+        priority
+      />
+    );
+  }
+
+  return (
+    // Owner logo hosts are dynamic, so browser-native loading avoids a global Next image allowlist.
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={logoSrc}
+      alt={businessName}
+      width={260}
+      height={87}
+      className="h-auto max-h-[87px] w-[220px] max-w-full object-contain object-left"
+      referrerPolicy="no-referrer"
+    />
   );
 }
 

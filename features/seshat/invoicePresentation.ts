@@ -1,8 +1,21 @@
-import type { InvoicePaymentInstructionSnapshot, InvoiceStatus } from "./types";
+import type { BusinessProfile, InvoicePaymentInstructionSnapshot, InvoiceStatus } from "./types";
 
 export type InvoiceDocumentLanguage = "es-HN" | "en-US";
 
 export const DEFAULT_INVOICE_DOCUMENT_LANGUAGE: InvoiceDocumentLanguage = "es-HN";
+
+const MINERVA_BRAND_FALLBACK = {
+  businessName: "Minerva Technologies",
+  email: "support@minervatechs.com",
+  phone: "+504 3220-9818",
+  website: "www.minervatechs.com",
+  logoSrc: "/brand/minerva-logo-gray.png",
+};
+
+type InvoiceBrandProfile = Pick<
+  BusinessProfile,
+  "business_name" | "email" | "phone" | "mobile" | "website" | "logo_url" | "invoice_footer"
+>;
 
 type InvoiceDocumentCopy = {
   invoice: string;
@@ -112,6 +125,37 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     },
   },
 };
+
+function safeInvoiceLogoUrl(value: string | null | undefined) {
+  const candidate = value?.trim();
+  if (!candidate) return null;
+  if (candidate.startsWith("/") && !candidate.startsWith("//")) return candidate;
+
+  try {
+    const url = new URL(candidate);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+export function invoiceBrandPresentation(
+  profile: InvoiceBrandProfile | null,
+  language: InvoiceDocumentLanguage,
+) {
+  const businessName = profile?.business_name.trim() || MINERVA_BRAND_FALLBACK.businessName;
+  const isMinerva = !profile || businessName.toLowerCase() === MINERVA_BRAND_FALLBACK.businessName.toLowerCase();
+  const configuredLogo = safeInvoiceLogoUrl(profile?.logo_url);
+
+  return {
+    businessName,
+    email: profile?.email?.trim() || MINERVA_BRAND_FALLBACK.email,
+    phone: profile?.phone?.trim() || profile?.mobile?.trim() || MINERVA_BRAND_FALLBACK.phone,
+    website: profile?.website?.trim() || MINERVA_BRAND_FALLBACK.website,
+    logoSrc: configuredLogo || (isMinerva ? MINERVA_BRAND_FALLBACK.logoSrc : null),
+    footer: profile?.invoice_footer?.trim() || (isMinerva ? invoiceDocumentCopy[language].footerTagline : null),
+  };
+}
 
 export type PaymentInstructionRow = { label: string; value: string; isLink?: boolean };
 

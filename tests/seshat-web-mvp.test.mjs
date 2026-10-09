@@ -176,16 +176,83 @@ test("invoice operator controls and Payments stay outside the printable document
 test("invoice document follows the Minerva branded hierarchy and reads payment snapshots", () => {
   const document = read("features/seshat/InvoiceDocument.tsx");
 
-  assert.match(document, /src="\/brand\/minerva-logo-gray\.png"/);
-  assert.match(document, /support@minervatechs\.com/);
-  assert.match(document, /\+504 3220-9818/);
-  assert.match(document, /www\.minervatechs\.com/);
+  assert.match(document, /invoiceBrandPresentation\(profile, language\)/);
+  assert.match(document, /brand\.businessName/);
+  assert.match(document, /brand\.email/);
+  assert.match(document, /brand\.phone/);
+  assert.match(document, /brand\.website/);
+  assert.match(document, /brand\.logoSrc/);
+  assert.match(document, /brand\.footer/);
   assert.match(document, /data-invoice-accent-rule/);
   assert.match(document, /data-invoice-bill-to/);
   assert.match(document, /data-invoice-totals/);
   assert.match(document, /paymentInstructionPresentation\(invoice\.payment_instruction_snapshot, language\)/);
   assert.match(document, /method_type === "bank_transfer"[\s\S]*Landmark[\s\S]*WalletCards/);
   assert.doesNotMatch(document, /Ficohsa|200011417538/);
+});
+
+test("invoice brand presentation uses owner identity with Minerva fallbacks only", async () => {
+  const presentation = await import("../features/seshat/invoicePresentation.ts");
+  const minerva = presentation.invoiceBrandPresentation({
+    business_name: "Minerva Technologies",
+    email: "billing@minervatechs.com",
+    phone: null,
+    mobile: "+504 9999-0000",
+    website: "https://www.minervatechs.com",
+    logo_url: null,
+    invoice_footer: null,
+  }, "es-HN");
+  const otherOwner = presentation.invoiceBrandPresentation({
+    business_name: "Acme Services",
+    email: "billing@acme.example",
+    phone: "+1 555 0100",
+    mobile: null,
+    website: "https://acme.example",
+    logo_url: "https://assets.acme.example/invoice-logo.png",
+    invoice_footer: "Acme owner-specific footer",
+  }, "en-US");
+  const otherOwnerWithoutOptionalBranding = presentation.invoiceBrandPresentation({
+    business_name: "Plain Owner",
+    email: "owner@example.com",
+    phone: "555-0199",
+    mobile: null,
+    website: "owner.example",
+    logo_url: null,
+    invoice_footer: null,
+  }, "es-HN");
+  const fallback = presentation.invoiceBrandPresentation(null, "es-HN");
+
+  assert.deepEqual(minerva, {
+    businessName: "Minerva Technologies",
+    email: "billing@minervatechs.com",
+    phone: "+504 9999-0000",
+    website: "https://www.minervatechs.com",
+    logoSrc: "/brand/minerva-logo-gray.png",
+    footer: "Soluciones tecnológicas para administración y operación residencial.",
+  });
+  assert.deepEqual(otherOwner, {
+    businessName: "Acme Services",
+    email: "billing@acme.example",
+    phone: "+1 555 0100",
+    website: "https://acme.example",
+    logoSrc: "https://assets.acme.example/invoice-logo.png",
+    footer: "Acme owner-specific footer",
+  });
+  assert.doesNotMatch(JSON.stringify(otherOwner), /Minerva|minervatechs/i);
+  assert.equal(otherOwnerWithoutOptionalBranding.logoSrc, null);
+  assert.equal(otherOwnerWithoutOptionalBranding.footer, null);
+  assert.deepEqual(fallback, {
+    businessName: "Minerva Technologies",
+    email: "support@minervatechs.com",
+    phone: "+504 3220-9818",
+    website: "www.minervatechs.com",
+    logoSrc: "/brand/minerva-logo-gray.png",
+    footer: "Soluciones tecnológicas para administración y operación residencial.",
+  });
+
+  const presentationSource = read("features/seshat/invoicePresentation.ts");
+  assert.match(presentationSource, /MINERVA_BRAND_FALLBACK/);
+  assert.doesNotMatch(read("features/seshat/InvoiceDocument.tsx"), /support@minervatechs|\+504 3220-9818|www\.minervatechs|Minerva Technologies/);
 });
 
 test("invoice presentation defaults to Spanish and retains English structural labels", async () => {
