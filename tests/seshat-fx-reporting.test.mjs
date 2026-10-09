@@ -43,7 +43,7 @@ test("cash uses payment date and actual bank rate over BCH reference", () => {
     payments: [{ id: "p", amount: 110, currency: "USD", payment_date: "2026-08-11" }],
     expenses: [], officialRates: rates,
     paymentRates: [{ payment_id: "p", owner_id: "u", rate: 26.55, source_note: "Bank" }],
-    target: "HNL", asOfDate: "2026-08-20",
+    target: "HNL", asOfDate: "2026-10-09",
   });
   assert.equal(result.collected.value, 0);
   const aug = fx.buildFxOverview({
