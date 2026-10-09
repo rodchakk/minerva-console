@@ -1,5 +1,5 @@
 import { SeshatWorkspace } from "@/features/seshat/SeshatWorkspace";
 
-export default function SeshatPage() {
+export default function SeshatClientDetailPage() {
   return <SeshatWorkspace />;
 }

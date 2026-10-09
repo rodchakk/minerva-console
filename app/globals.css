@@ -110,3 +110,97 @@ select {
 ::selection {
   background: rgba(109, 99, 255, 0.32);
 }
+
+@page seshat-invoice {
+  size: auto;
+  margin: 12mm;
+}
+
+@media print {
+  html:has([data-seshat-invoice-document]),
+  body:has([data-seshat-invoice-document]) {
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  body:has([data-seshat-invoice-document])
+    *:not(:has([data-seshat-invoice-document])):not([data-seshat-invoice-document]):not([data-seshat-invoice-document] *) {
+    display: none !important;
+  }
+
+  body:has([data-seshat-invoice-document]) *:has([data-seshat-invoice-document]) {
+    display: block !important;
+    position: static !important;
+    min-height: 0 !important;
+    height: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  body:has([data-seshat-invoice-document]) *:has([data-seshat-invoice-document])::before,
+  body:has([data-seshat-invoice-document]) *:has([data-seshat-invoice-document])::after {
+    display: none !important;
+    content: none !important;
+  }
+
+  [data-seshat-invoice-document] {
+    display: block !important;
+    page: seshat-invoice;
+    position: static !important;
+    width: 100% !important;
+    max-width: none !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: #ffffff !important;
+    background-image: none !important;
+    color: #0f172a !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  [data-seshat-invoice-document] table {
+    break-inside: auto;
+  }
+
+  [data-seshat-invoice-document] thead {
+    display: table-header-group !important;
+  }
+
+  [data-seshat-invoice-document] tr,
+  [data-seshat-invoice-document] [data-invoice-bill-to],
+  [data-seshat-invoice-document] [data-invoice-totals],
+  [data-seshat-invoice-document] [data-seshat-payment-information],
+  [data-seshat-invoice-document] footer,
+  [data-seshat-invoice-document] h1,
+  [data-seshat-invoice-document] h2,
+  [data-seshat-invoice-document] h3 {
+    break-inside: avoid;
+  }
+
+  [data-seshat-invoice-document] img {
+    print-color-adjust: exact;
+  }
+
+  vercel-live-feedback,
+  [data-vercel-toolbar],
+  #vercel-toolbar {
+    display: none !important;
+  }
+}
