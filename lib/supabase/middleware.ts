@@ -134,6 +134,7 @@ export async function updateSession(request: NextRequest) {
 
   const isPublicRoute =
     pathname === "/login" ||
+    pathname === "/auth/callback" ||
     pathname === "/unauthorized" ||
     pathname === "/temporarily-unavailable" ||
     pathname === "/activate" ||
