@@ -207,7 +207,7 @@ export default async function UsersPage({ searchParams }: UsersPageProps) {
                       <form action={resendConsoleInviteAction}>
                         <input type="hidden" name="userId" value={user.userId} />
                         <Button type="submit" variant="ghost" className="h-9 rounded-md">
-                          Send setup link
+                          {user.accountState === "Invited" ? "Resend invitation" : "Send password link"}
                         </Button>
                       </form>
                     ) : (
