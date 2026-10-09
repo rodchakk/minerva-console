@@ -1324,10 +1324,10 @@ function ClientDetail({
           </div>
           <Link href={`/seshat/clients/${client.id}/edit`}><Button variant="secondary">Edit</Button></Link>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <Metric label="Active monthly revenue" value={money(profit?.active_monthly_revenue ?? 0)} />
-          <Metric label="Allocated expenses" value={money(profit?.allocated_monthly_expenses ?? 0)} />
-          <Metric label="Estimated margin" value={`${(profit?.estimated_margin_percent ?? 0).toFixed(1)}%`} />
+        <div className="mt-4 rounded-md border border-amber-500/20 px-3 py-3 text-sm text-amber-200">
+          Client profitability metrics are temporarily withheld: the legacy client allocation view
+          aggregates service revenue and expenses without currency normalization.
+          The original contracts and expenses remain unchanged while currency-safe client economics are being completed.
         </div>
         <form onSubmit={onPaymentMethodSubmit} className="mt-4 flex flex-col gap-3 border-t border-white/[0.08] pt-4 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1">
@@ -1985,10 +1985,18 @@ function Billing({
   onRun: (asOfDate: string) => void;
 }) {
   const [asOfDate, setAsOfDate] = useState(today());
-  const total = dueItems.reduce((sum, item) => sum + item.amount, 0);
   const currenciesByClientService = new Map(
     billingCurrencies.map((item) => [item.id, item.agreed_currency]),
   );
+  const byCurrency = new Map<string, number>();
+  for (const item of dueItems) {
+    const currency = normalizeCurrency(
+      currenciesByClientService.get(item.client_service_id) || defaultCurrency || "USD"
+    );
+    byCurrency.set(currency, (byCurrency.get(currency) ?? 0) + item.amount);
+  }
+  const dueBreakdown = [...byCurrency.entries()].map(([currency, amount]) =>
+    money(amount, currency)).join(" · ");
   const expectedInvoiceCount = expectedAutomaticInvoiceCount(
     dueItems,
     currenciesByClientService,
@@ -2006,18 +2014,19 @@ function Billing({
         <Button type="button" onClick={() => onRun(asOfDate)}>Generate Invoices</Button>
       </div>
       {result ? (
-        <Alert tone="success" message={`Run complete: ${result.created_count} created, ${result.existing_count} existing, ${money(result.created_total)} created total.`} />
+        <Alert tone="success" message={`Run complete: ${result.created_count} created, ${result.existing_count} existing. Check each invoice currency for totals.`} />
       ) : null}
       <div className="my-4 grid gap-3 md:grid-cols-3">
         <Metric label="Due service items" value={String(dueItems.length)} />
         <Metric label="Expected invoice count" value={String(expectedInvoiceCount)} />
-        <Metric label="Expected total" value={money(total)} />
+        <Metric label="Expected total by original currency" value={dueBreakdown || "—"} />
       </div>
       <Table
         headers={["Client", "Service", "Occurrence", "Frequency", "Amount"]}
         rows={dueItems.map((item) => ({
           key: item.external_reference,
-          cells: [item.client_name, item.service_name, dateLabel(item.occurrence_date), item.frequency, money(item.amount)],
+          cells: [item.client_name, item.service_name, dateLabel(item.occurrence_date), item.frequency,
+            money(item.amount, normalizeCurrency(currenciesByClientService.get(item.client_service_id) || defaultCurrency || "USD"))],
         }))}
         empty="Nothing due."
       />
