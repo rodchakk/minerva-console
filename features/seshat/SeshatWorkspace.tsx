@@ -36,6 +36,10 @@ import { downloadInvoicePdf } from "./invoicePdf";
 import { formatInvoiceDraftTotal, normalizeInvoiceCurrency } from "./invoiceDraft";
 import { localDateDaysOut, localDateValue } from "./localDate";
 import {
+  buildFxOverview, normalizeCurrency, reportingDate,
+  type OfficialFxRate, type PaymentFxRate, type ReportingCurrency,
+} from "./fxReporting";
+import {
   attachPaymentProof,
   generateInvoice,
   getDueClientServiceOccurrences,
@@ -67,7 +71,7 @@ import type {
   InvoiceDetail,
   InvoiceStatus,
   InvoiceWithClient,
-  MonthlyProfitSummary,
+  Payment,
   PaymentMethod,
   PaymentMethodType,
   Service,
@@ -441,7 +445,10 @@ export function SeshatWorkspace() {
   const [expenses, setExpenses] = useState<ExpenseWithCategory[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [profile, setProfile] = useState<BusinessProfile | null>(null);
-  const [monthlySummary, setMonthlySummary] = useState<MonthlyProfitSummary | null>(null);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [officialFx, setOfficialFx] = useState<OfficialFxRate[]>([]);
+  const [paymentFx, setPaymentFx] = useState<PaymentFxRate[]>([]);
+  const [fxLoadingError, setFxLoadingError] = useState<string | null>(null);
   const [clientProfit, setClientProfit] = useState<ClientOperationalProfitSummary | null>(null);
   const [dueItems, setDueItems] = useState<DueClientServiceOccurrence[]>([]);
   const [billingResult, setBillingResult] = useState<AutomaticBillingRunResult | null>(null);
@@ -465,7 +472,9 @@ export function SeshatWorkspace() {
         expensesRes,
         categoriesRes,
         profileRes,
-        monthlyRes,
+        paymentsRes,
+        ratesRes,
+        paymentFxRes,
         billingCurrenciesRes,
         paymentMethodsRes,
       ] = await Promise.all([
@@ -475,12 +484,14 @@ export function SeshatWorkspace() {
         supabase.from("expenses").select("*, expense_categories(name, color)").order("created_at", { ascending: false }).limit(100),
         supabase.from("expense_categories").select("*").order("name", { ascending: true }),
         supabase.from("business_profiles").select("*").maybeSingle(),
-        supabase.from("monthly_profit_summary").select("*").order("month", { ascending: false }).limit(1).maybeSingle(),
+        supabase.from("payments").select("*").limit(5000),
+        supabase.from("seshat_fx_daily_rates").select("effective_date, rate, source, source_indicator, fetched_at").order("effective_date", { ascending: false }).limit(1500),
+        supabase.from("seshat_payment_fx_rates").select("payment_id, owner_id, rate, source_note").limit(5000),
         supabase.from("client_services").select("id, agreed_currency"),
         supabase.from("payment_methods").select("*").order("name", { ascending: true }),
       ]);
 
-      for (const result of [clientsRes, servicesRes, invoicesRes, expensesRes, categoriesRes, profileRes, monthlyRes, billingCurrenciesRes]) {
+      for (const result of [clientsRes, servicesRes, invoicesRes, expensesRes, categoriesRes, profileRes, paymentsRes, billingCurrenciesRes]) {
         if (result.error) throw result.error;
       }
       if (paymentMethodsRes.error) {
@@ -495,7 +506,10 @@ export function SeshatWorkspace() {
       setExpenses((expensesRes.data as ExpenseWithCategory[]) ?? []);
       setCategories((categoriesRes.data as ExpenseCategory[]) ?? []);
       setProfile((profileRes.data as BusinessProfile | null) ?? null);
-      setMonthlySummary((monthlyRes.data as MonthlyProfitSummary | null) ?? null);
+      setPayments((paymentsRes.data as Payment[]) ?? []);
+      setOfficialFx((ratesRes.data as OfficialFxRate[]) ?? []);
+      setPaymentFx((paymentFxRes.data as PaymentFxRate[]) ?? []);
+      setFxLoadingError(ratesRes.error?.message ?? paymentFxRes.error?.message ?? null);
       setBillingCurrencies((billingCurrenciesRes.data as ClientServiceBillingCurrency[]) ?? []);
       setPaymentMethods((paymentMethodsRes.data as PaymentMethod[]) ?? []);
 
@@ -928,7 +942,7 @@ export function SeshatWorkspace() {
         email: clean(form.get("email")),
         phone: clean(form.get("phone")),
         website: clean(form.get("website")),
-        default_currency: String(clean(form.get("default_currency")) ?? "USD").toUpperCase(),
+        default_currency: normalizeCurrency(String(clean(form.get("default_currency")) ?? "USD")),
         default_payment_terms_days: numberFrom(form.get("default_payment_terms_days"), 15),
         invoice_prefix: String(clean(form.get("invoice_prefix")) ?? "INV"),
         invoice_footer: clean(form.get("invoice_footer")),
@@ -1001,7 +1015,10 @@ export function SeshatWorkspace() {
       {view === "overview" ? (
         <Overview
           profile={profile}
-          monthlySummary={monthlySummary}
+          payments={payments}
+          officialFx={officialFx}
+          paymentFx={paymentFx}
+          fxLoadingError={fxLoadingError}
           dueItems={dueItems}
           invoices={invoices}
           clients={clients}
@@ -1079,45 +1096,81 @@ export function SeshatWorkspace() {
 }
 
 function Overview({
-  profile,
-  monthlySummary,
-  dueItems,
-  invoices,
-  clients,
-  expenses,
+  profile, payments, officialFx, paymentFx, fxLoadingError, dueItems, invoices, clients, expenses,
 }: {
   profile: BusinessProfile | null;
-  monthlySummary: MonthlyProfitSummary | null;
+  payments: Payment[];
+  officialFx: OfficialFxRate[];
+  paymentFx: PaymentFxRate[];
+  fxLoadingError: string | null;
   dueItems: DueClientServiceOccurrence[];
   invoices: InvoiceWithClient[];
   clients: Client[];
   expenses: ExpenseWithCategory[];
 }) {
-  const currency = profile?.default_currency ?? "USD";
-  const invoicedThisMonth = monthlySummary?.invoiced_total ?? 0;
-  const paidThisMonth = monthlySummary?.paid_total ?? 0;
-  const costs = monthlySummary?.estimated_expenses ?? expenses.reduce((sum, item) => sum + (item.monthly_amount ?? 0), 0);
-  const profit = monthlySummary?.estimated_profit ?? paidThisMonth - costs;
-  const margin = monthlySummary?.profit_margin_percent ?? (paidThisMonth > 0 ? (profit / paidThisMonth) * 100 : 0);
-  const knownRevenue = invoices.filter((item) => item.status !== "cancelled").reduce((sum, item) => sum + item.total, 0);
-
+  const base = normalizeCurrency(profile?.default_currency ?? "HNL");
+  const [displayCurrency, setDisplayCurrency] = useState<ReportingCurrency>(
+    base === "USD" ? "USD" : "HNL",
+  );
+  const asOfDate = reportingDate();
+  const summary = buildFxOverview({
+    invoices, payments, expenses, paymentRates: paymentFx,
+    officialRates: officialFx, target: displayCurrency, asOfDate,
+  });
+  const currency = displayCurrency;
   return (
     <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-slate-300">Management report · {asOfDate}</p>
+          <p className="text-xs text-slate-400">
+            FX reference: {summary.rate ? `BCH · 1 USD = HNL ${Number(summary.rate.rate).toFixed(4)} · dated ${summary.rate.effective_date}`
+              : "No verified current BCH rate; conversions are not estimated."}
+          </p>
+        </div>
+        <label className="flex items-center gap-2 text-sm text-slate-200">
+          Display values in
+          <select aria-label="Reporting currency" value={displayCurrency}
+            onChange={(event) => setDisplayCurrency(event.target.value as ReportingCurrency)}
+            className="rounded-md border border-white/20 bg-[#151b22] px-3 py-2 text-white">
+            <option value="HNL">HNL (L)</option>
+            <option value="USD">USD ($)</option>
+          </select>
+        </label>
+      </div>
+      {fxLoadingError ? (
+        <p role="alert" className="rounded-md border border-amber-500/30 p-3 text-sm text-amber-200">
+          FX data unavailable: {fxLoadingError}. No unverified currency totals will be displayed.
+        </p>
+      ) : null}
+      {summary.missing.length ? (
+        <div role="alert" className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-sm text-amber-200">
+          <strong>Conversion incomplete:</strong> {summary.missing.length} record(s) lack a verified rate for their relevant dates.
+          The affected totals are hidden rather than mixing USD with HNL.
+          <p className="mt-1 text-xs">{summary.missing.slice(0, 5).join(" · ")}</p>
+        </div>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-4">
-        <Metric label="Known revenue" value={money(knownRevenue, currency)} />
-        <Metric label="Known monthly costs" value={money(costs, currency)} />
-        <Metric label="Known monthly profit" value={money(profit, currency)} />
-        <Metric label="Margin" value={`${margin.toFixed(1)}%`} />
-        <Metric label="Collected this month" value={money(paidThisMonth, currency)} />
-        <Metric label="Invoiced this month" value={money(invoicedThisMonth, currency)} />
+        <Metric label="Issued invoices · all time" value={money(summary.knownRevenue.value, currency)} />
+        <Metric label="Monthly estimated costs" value={money(summary.monthlyCosts.value, currency)} />
+        <Metric label="Cash less monthly cost estimate" value={money(summary.netCashAfterForecastCosts, currency)} />
+        <Metric label="Cash / costs ratio" value={summary.margin === null ? "—" : `${summary.margin.toFixed(1)}%`} />
+        <Metric label="Collected this month (payment dates)" value={money(summary.collected.value, currency)} />
+        <Metric label="Issued this month (no drafts)" value={money(summary.invoiced.value, currency)} />
         <Metric label="Due billing items" value={String(dueItems.length)} />
         <Metric label="Active clients" value={String(clients.filter((client) => client.status === "active").length)} />
       </div>
+      <p className="text-xs text-slate-400">
+        Estimates: monthly recurring costs use the latest dated reference FX rate.
+        Historical invoices use issuance-date FX; received payments use payment-date FX, or your actual bank rate when recorded.
+        Draft invoices are excluded. Cash less estimated costs is not accrual profit.
+      </p>
       <Card>
         <div className="flex flex-wrap gap-2">
           <Link href="/seshat/invoices/new"><Button className="gap-2"><FilePlus2 className="h-4 w-4" /> New Invoice</Button></Link>
           <Link href="/seshat/clients"><Button variant="secondary">Clients</Button></Link>
           <Link href="/seshat/billing"><Button variant="secondary">Automatic Billing</Button></Link>
+          <Link href="/seshat/settings"><Button variant="secondary">Exchange Rates</Button></Link>
         </div>
       </Card>
     </div>
