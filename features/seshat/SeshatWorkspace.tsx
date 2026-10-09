@@ -36,6 +36,7 @@ import { downloadInvoicePdf } from "./invoicePdf";
 import { formatInvoiceDraftTotal, normalizeInvoiceCurrency } from "./invoiceDraft";
 import { localDateDaysOut, localDateValue } from "./localDate";
 import {
+  attachPaymentProof,
   generateInvoice,
   getDueClientServiceOccurrences,
   getPaymentProofSignedUrl,
@@ -431,6 +432,7 @@ export function SeshatWorkspace() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
+  const [uploadingProofPaymentId, setUploadingProofPaymentId] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -812,20 +814,15 @@ export function SeshatWorkspace() {
     const proof = form.get("proof");
     if (proof instanceof File && proof.size > 0) {
       try {
-        const ext = proof.name.split(".").pop()?.toLowerCase() || "bin";
-        const path = `${session?.user.id}/${invoice.id}/${result.payment_id}/proof-${Date.now()}.${ext}`;
-        const { error: uploadError } = await getSeshatSupabase()
-          .storage
-          .from("payment-proofs")
-          .upload(path, proof, { contentType: proof.type || "application/octet-stream", upsert: false });
-        if (uploadError) throw uploadError;
-        const { error: updateProofError } = await getSeshatDataClient()
-          .from("payments")
-          .update({ proof_path: path })
-          .eq("id", result.payment_id);
-        if (updateProofError) throw updateProofError;
-      } catch {
-        setWarning("The payment was recorded, but proof attachment failed. You can retry proof attachment later.");
+        if (!session) throw new Error("Reconnect to Seshat before attaching a payment proof.");
+        await attachPaymentProof({
+          paymentId: result.payment_id,
+          invoiceId: invoice.id,
+          ownerId: session.user.id,
+          file: proof,
+        });
+      } catch (proofError) {
+        setWarning(`Payment recorded, but proof was not attached: ${seshatErrorMessage(proofError, "Try again using Attach proof below.")}`);
       }
     }
 
@@ -833,6 +830,35 @@ export function SeshatWorkspace() {
     paymentForm.reset();
     await load();
     await loadDetail();
+  }
+
+  async function submitExistingPaymentProof(event: FormEvent<HTMLFormElement>, paymentId: string) {
+    event.preventDefault();
+    if (!invoice || !session) return;
+    const file = new FormData(event.currentTarget).get("proof");
+    if (!(file instanceof File)) {
+      setError("Select a JPG, PNG, WebP, or PDF payment proof.");
+      return;
+    }
+
+    setUploadingProofPaymentId(paymentId);
+    setError(null);
+    setNotice(null);
+    setWarning(null);
+    try {
+      await attachPaymentProof({
+        paymentId,
+        invoiceId: invoice.id,
+        ownerId: session.user.id,
+        file,
+      });
+      await loadDetail();
+      setNotice("Payment proof attached successfully. The payment amount and date were not changed.");
+    } catch (proofError) {
+      setError(seshatErrorMessage(proofError, "Could not attach payment proof."));
+    } finally {
+      setUploadingProofPaymentId(null);
+    }
   }
 
   async function savePaymentMethod(event: FormEvent<HTMLFormElement>, paymentMethodId?: string) {
@@ -1031,6 +1057,8 @@ export function SeshatWorkspace() {
           profile={profile}
           paymentMethods={paymentMethods}
           onPayment={submitPayment}
+          onAttachProof={submitExistingPaymentProof}
+          uploadingProofPaymentId={uploadingProofPaymentId}
           onPaymentMethod={updateDraftPaymentMethod}
           onStatus={updateInvoiceStatus}
           onDelete={deleteDraftInvoice}
@@ -1605,6 +1633,8 @@ function InvoiceDetail({
   profile,
   paymentMethods,
   onPayment,
+  onAttachProof,
+  uploadingProofPaymentId,
   onPaymentMethod,
   onStatus,
   onDelete,
@@ -1613,6 +1643,8 @@ function InvoiceDetail({
   profile: BusinessProfile | null;
   paymentMethods: PaymentMethod[];
   onPayment: (event: FormEvent<HTMLFormElement>) => void;
+  onAttachProof: (event: FormEvent<HTMLFormElement>, paymentId: string) => void;
+  uploadingProofPaymentId: string | null;
   onPaymentMethod: (event: FormEvent<HTMLFormElement>) => void;
   onStatus: (id: string, status: InvoiceStatus) => void;
   onDelete: (id: string) => void;
@@ -1721,7 +1753,41 @@ function InvoiceDetail({
             <div key={payment.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
               <span>{dateLabel(payment.payment_date)} · {payment.payment_method ?? "payment"} · {payment.reference ?? "no reference"}</span>
               <span className="font-semibold text-white">{money(payment.amount, payment.currency)}</span>
-              {payment.proof_path ? <button type="button" onClick={async () => window.open(await getPaymentProofSignedUrl(payment.proof_path!), "_blank")} className="text-violet-200">Open proof</button> : null}
+              {payment.proof_path ? (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      window.open(await getPaymentProofSignedUrl(payment.proof_path!), "_blank", "noopener,noreferrer");
+                    } catch {
+                      window.alert("Could not open payment proof. Please try again.");
+                    }
+                  }}
+                  className="text-violet-200 hover:underline"
+                >
+                  Open proof
+                </button>
+              ) : (
+                <form
+                  onSubmit={(event) => onAttachProof(event, payment.id)}
+                  className="flex flex-wrap items-center gap-2"
+                >
+                  <label className="text-xs text-slate-300">
+                    Attach proof (JPG, PNG, WebP, PDF; max 10 MB)
+                    <input
+                      name="proof"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,application/pdf"
+                      required
+                      disabled={uploadingProofPaymentId !== null}
+                      className="mt-1 block max-w-xs text-xs text-slate-200"
+                    />
+                  </label>
+                  <Button type="submit" variant="secondary" disabled={uploadingProofPaymentId !== null}>
+                    {uploadingProofPaymentId === payment.id ? "Uploading..." : "Attach proof"}
+                  </Button>
+                </form>
+              )}
             </div>
           ))}
         </div>
