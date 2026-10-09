@@ -72,3 +72,35 @@ test("HND is normalized to ISO HNL", () => {
   assert.equal(fx.convertMoney(29, "HND", "HNL", "2026-10-09", []), 29);
   assert.equal(fx.convertMoney(27, "HNL", "USD", "2026-10-09", rates), 1);
 });
+
+test("Honduras reporting day uses YYYY-MM-DD across UTC midnight", () => {
+  assert.equal(fx.reportingDate(new Date("2026-10-10T02:30:00.000Z")), "2026-10-09");
+  assert.equal(fx.reportingDate(new Date("2026-10-09T13:00:00.000Z")), "2026-10-09");
+});
+
+test("real Seshat legacy invoice converted with June BCH rate, draft excluded", () => {
+  const officialRates = [
+    { effective_date: "2026-06-05", rate: 26.6690, source: "BCH", source_indicator: "EC-TCR-01" },
+    { effective_date: "2026-08-11", rate: 26.8108, source: "BCH", source_indicator: "EC-TCR-01" },
+    { effective_date: "2026-10-07", rate: 26.8883, source: "BCH", source_indicator: "EC-TCR-01" },
+  ];
+  const overview = fx.buildFxOverview({
+    target: "HNL", asOfDate: "2026-10-09", officialRates, paymentRates: [],
+    invoices: [
+      { id: "v", invoice_number: "INV-2606-577", issue_date: "2026-06-05", currency: "USD", total: 110, status: "paid" },
+      { id: "a", invoice_number: "INV-2610-001", issue_date: "2026-10-08", currency: "HNL", total: 2917, status: "draft" },
+    ],
+    payments: [{ id: "p", amount: 110, currency: "USD", payment_date: "2026-08-11" }],
+    expenses: [],
+  });
+  assert.ok(Math.abs(overview.knownRevenue.value - 2933.59) < 0.00001);
+  assert.equal(overview.invoiced.value, 0);
+  assert.equal(overview.collected.value, 0);
+  assert.equal(overview.rate.effective_date, "2026-10-07");
+  const august = fx.buildFxOverview({
+    target: "HNL", asOfDate: "2026-08-11", officialRates, paymentRates: [],
+    invoices: [], expenses: [],
+    payments: [{ id: "p", amount: 110, currency: "USD", payment_date: "2026-08-11" }],
+  });
+  assert.ok(Math.abs(august.collected.value - 2949.188) < 0.00001);
+});
