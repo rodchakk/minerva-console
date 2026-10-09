@@ -25,10 +25,10 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { limit?: unknown };
-  const requestedLimit = Number(body.limit ?? 50);
+  const requestedLimit = Number(body.limit ?? 10);
   const limit = Number.isFinite(requestedLimit)
-    ? Math.max(1, Math.min(Math.trunc(requestedLimit), 100))
-    : 50;
+    ? Math.max(1, Math.min(Math.trunc(requestedLimit), 25))
+    : 10;
 
   try {
     const summary = await dispatchPendingEntryPushes(limit);

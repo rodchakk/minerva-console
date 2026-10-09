@@ -25,6 +25,10 @@ export default async function UnauthorizedPage({
     redirect("/login");
   }
 
+  if (context.status === "temporarily_unavailable") {
+    redirect("/temporarily-unavailable");
+  }
+
   const isOwner = context.status === "authorized" && context.role === "owner";
   const isMember = context.status === "authorized" && context.role !== "owner";
 

@@ -49,7 +49,7 @@ test("report query reuses the existing registration review RPC and never mutates
   assert.doesNotMatch(action, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
 });
 
-test("registration review exposes stable master-detail selection and report preview", () => {
+test("registration review exposes stable table-first selection and report preview", () => {
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
@@ -63,16 +63,15 @@ test("registration review exposes stable master-detail selection and report prev
   assert.match(workspace, /Missing data/);
   assert.match(workspace, /ConfirmationReportDrawer/);
   assert.match(workspace, /loadCommunityRegistrationConfirmationReport/);
-  assert.match(workspace, /Select all/);
+  assert.match(workspace, /Select all reportable/);
   assert.match(workspace, /sessionStorage/);
   assert.match(workspace, /scroll=\{false\}/);
   assert.match(workspace, /detailPending/);
-  assert.match(workspace, /Search units/);
-  assert.match(workspace, />Open</);
-  assert.match(workspace, /100dvh/);
+  assert.match(workspace, /Household review/);
+  assert.match(workspace, /Filter registrations/);
+  assert.match(workspace, /fixed bottom-5 right-5 top-\[76px\]/);
   assert.match(workspace, /scrollbar-gutter:stable/);
-  assert.equal(workspace.match(/overflow-y-auto overscroll-contain/g)?.length, 2);
-  assert.doesNotMatch(workspace, /xl:min-h-\[620px\]/);
+  assert.match(page, /Resident Registration Review/);
   assert.doesNotMatch(page, /selectedUnit && selectedUnitReference/);
   assert.doesNotMatch(
     workspace,
@@ -122,7 +121,7 @@ test("resident review cards rely on primary resident instead of relationship lab
   assert.doesNotMatch(workspace, /owner reference/);
 });
 
-test("resident registration uses a wider page-specific workspace on desktop", () => {
+test("resident registration uses the approved full-bleed table-first workspace", () => {
   const page = read(
     "app/(console)/products/entry/communities/[communityId]/registration/page.tsx",
   );
@@ -130,10 +129,11 @@ test("resident registration uses a wider page-specific workspace on desktop", ()
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
 
-  assert.match(page, /max-w-\[2200px\]/);
-  assert.match(page, /w-\[calc\(100vw-19rem\)\]/);
-  assert.match(workspace, /minmax\(460px,0\.92fr\)/);
-  assert.match(workspace, /minmax\(0,1\.08fr\)/);
+  assert.match(page, /-mx-4 -my-4/);
+  assert.match(page, /bg-\[#2E2936\]/);
+  assert.match(workspace, /min-w-\[1180px\] table-fixed/);
+  assert.match(workspace, /fixed bottom-5 right-5 top-\[76px\]/);
+  assert.match(workspace, /w-\[560px\]/);
 });
 
 test("activation handoff warns about missing email without disabling complete residents", () => {
@@ -151,7 +151,7 @@ test("activation handoff warns about missing email without disabling complete re
 });
 
 
-test("complete registrations are visibly labeled and prioritized in the unit list", () => {
+test("registration table surfaces completeness and prioritizes actionable records", () => {
   const workspace = read(
     "features/entry/communityRegistration/review/ReviewWorkspace.tsx",
   );
@@ -159,11 +159,9 @@ test("complete registrations are visibly labeled and prioritized in the unit lis
   assert.match(workspace, /const dataCompleteByUnitId = useMemo/);
   assert.match(workspace, /getUnitMissingFields\(\{/);
   assert.match(workspace, /missingFields\.length === 0/);
-  assert.match(workspace, /Information complete/);
-  assert.match(workspace, /Information incomplete/);
-  assert.match(workspace, /border-rose-400\/25/);
-  assert.match(
-    workspace,
-    /Number\(dataCompleteByUnitId\.get\(right\.id\) === true\)[\s\S]*Number\(dataCompleteByUnitId\.get\(left\.id\) === true\)/,
-  );
+  assert.match(workspace, /Complete/);
+  assert.match(workspace, /Incomplete/);
+  assert.match(workspace, /rightPriority !== leftPriority/);
+  assert.match(workspace, /Possible duplicate/);
+  assert.match(workspace, /New information/);
 });

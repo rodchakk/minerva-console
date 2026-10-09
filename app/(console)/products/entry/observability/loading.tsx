@@ -12,7 +12,7 @@ export default function EntryObservabilityLoading() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="ENTRY observability"
+        title="ENTRY monitors"
         description="Operational health, incidents, usage, and cost visibility for ENTRY."
       />
       <section className="grid gap-3 md:grid-cols-2 2xl:grid-cols-6">

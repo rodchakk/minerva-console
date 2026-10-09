@@ -233,17 +233,17 @@ test("upload completion verifies the private Storage object and scoped path", ()
   );
 });
 
-test("Operations restores the original dashboard and keeps Outrider only as a quick entry plus Setup Overview", () => {
-  assert.match(operationsPage, /label="Messages \(24h\)"/);
-  assert.match(operationsPage, /getEntryPublishedMessagesLast24Hours/);
-  assert.match(operationsPage, /Setup priorities across ENTRY/);
-  assert.match(operationsPage, />Onboarding</);
-  assert.match(operationsPage, /Open Activation Queue/);
-  assert.match(operationsPage, /Open Outrider/);
-  assert.match(operationsPage, /Setup Overview/);
-  assert.match(operationsPage, /OperationalActivityFeed/);
-  assert.doesNotMatch(operationsPage, /label="Outrider"/);
-  assert.doesNotMatch(operationsPage, />Outrider<\/th>/);
+test("Operations is an action-focused workspace and no longer duplicates Outrider navigation", () => {
+  assert.match(operationsPage, /label="Pending activations"/);
+  assert.match(operationsPage, /label="Alerts \/ incidents"/);
+  assert.match(operationsPage, /OperationalPrioritiesWorkspace/);
+  assert.match(operationsPage, /Operational activity/);
+  assert.match(operationsPage, /type: "Onboarding"/);
+  assert.match(operationsPage, /type: "Residents"/);
+  assert.match(operationsPage, /getEntryOperationalActivity\(8\)/);
+  assert.doesNotMatch(operationsPage, /Quick Actions/);
+  assert.doesNotMatch(operationsPage, /Operational Summary/);
+  assert.doesNotMatch(operationsPage, /Open Outrider/);
   assert.doesNotMatch(operationsPage, /Recent Outrider activity/i);
   assert.doesNotMatch(operationsPage, /listRecentOutriderActivity/);
 });

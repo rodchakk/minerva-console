@@ -358,12 +358,12 @@ async function checkSubscriptionAuthorization(
   return authorized === true ? "authorized" : "revoked";
 }
 
-export async function dispatchPendingEntryPushes(limit = 50): Promise<EntryPushDispatchSummary> {
+export async function dispatchPendingEntryPushes(limit = 10): Promise<EntryPushDispatchSummary> {
   const vapid = getVapidConfig();
   webpush.setVapidDetails(vapid.subject, vapid.publicKey, vapid.privateKey);
 
   const admin = createAdminClient();
-  const safeLimit = Math.max(1, Math.min(Math.trunc(limit) || 50, 100));
+  const safeLimit = Math.max(1, Math.min(Math.trunc(limit) || 10, 25));
   const { data, error } = await admin.rpc("claim_entry_web_push_deliveries_v1", {
     p_limit: safeLimit,
   });
@@ -428,6 +428,7 @@ export async function dispatchPendingEntryPushes(limit = 50): Promise<EntryPushD
           TTL: 300,
           urgency: "high",
           topic: `entry-${delivery.ticketId}`.slice(0, 32),
+          timeout: 8000,
         },
       );
 

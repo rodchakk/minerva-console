@@ -31,6 +31,7 @@ declare module "web-push" {
     payload?: string | Buffer | null,
     options?: {
       TTL?: number;
+      timeout?: number;
       urgency?: "very-low" | "low" | "normal" | "high";
       topic?: string;
     },

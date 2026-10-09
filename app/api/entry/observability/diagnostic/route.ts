@@ -70,7 +70,66 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  return NextResponse.json(data, {
+  let responseData = data;
+
+  // Enrich activation queue health with follow-up age buckets. Keep this
+  // fail-open so a preview running before the migration can still export the
+  // base diagnostic bundle.
+  try {
+    const { data: followUpSummary, error: followUpError } = await supabase.rpc(
+      "sa_get_activation_follow_up_summary_v1",
+      {
+        p_community_id: communityId,
+      },
+    );
+
+    if (
+      !followUpError &&
+      followUpSummary &&
+      responseData &&
+      typeof responseData === "object" &&
+      !Array.isArray(responseData)
+    ) {
+      const envelope = responseData as Record<string, unknown>;
+      const bundle =
+        envelope.bundle && typeof envelope.bundle === "object" && !Array.isArray(envelope.bundle)
+          ? (envelope.bundle as Record<string, unknown>)
+          : null;
+
+      if (bundle) {
+        const queueHealth =
+          bundle.queue_health &&
+          typeof bundle.queue_health === "object" &&
+          !Array.isArray(bundle.queue_health)
+            ? (bundle.queue_health as Record<string, unknown>)
+            : {};
+        const activation =
+          queueHealth.activation &&
+          typeof queueHealth.activation === "object" &&
+          !Array.isArray(queueHealth.activation)
+            ? (queueHealth.activation as Record<string, unknown>)
+            : {};
+
+        responseData = {
+          ...envelope,
+          bundle: {
+            ...bundle,
+            queue_health: {
+              ...queueHealth,
+              activation: {
+                ...activation,
+                ...(followUpSummary as Record<string, unknown>),
+              },
+            },
+          },
+        };
+      }
+    }
+  } catch {
+    // Diagnostic export must remain available even when enrichment is absent.
+  }
+
+  return NextResponse.json(responseData, {
     headers: {
       "Cache-Control": "no-store",
     },

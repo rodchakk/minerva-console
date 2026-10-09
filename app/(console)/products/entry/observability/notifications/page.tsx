@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowLeft, RefreshCw } from "lucide-react";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { NotificationObservabilityDrilldown } from "@/features/entry/observability/NotificationObservabilityDrilldown";
 import { NotificationWorkerHealthPanel } from "@/features/entry/observability/NotificationWorkerHealthPanel";
@@ -11,27 +11,6 @@ import {
 } from "@/features/entry/observability/queries";
 
 export const dynamic = "force-dynamic";
-
-function observabilityHref({
-  communityId,
-  range,
-}: {
-  communityId: string | null;
-  range: string;
-}) {
-  const params = new URLSearchParams();
-
-  if (range !== "24h") {
-    params.set("range", range);
-  }
-
-  if (communityId) {
-    params.set("community", communityId);
-  }
-
-  const query = params.toString();
-  return query ? `/products/entry/observability?${query}` : "/products/entry/observability";
-}
 
 function UnavailableState({ error }: { error: string }) {
   return (
@@ -90,24 +69,15 @@ export default async function EntryNotificationObservabilityPage(props: {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="ENTRY observability / Communications"
+        title="ENTRY monitors / Communications"
         description="Push, email, worker, provider, and delivery evidence for ENTRY communications."
         actions={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Link
-              href={observabilityHref({ communityId: selectedCommunity, range })}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-[var(--console-border-strong)] bg-white/[0.025] px-3.5 text-sm font-semibold text-slate-100 transition-colors hover:border-white/20 hover:bg-white/[0.05]"
-            >
-              <ArrowLeft className="h-4 w-4 stroke-[1.75]" />
-              Back to observability
-            </Link>
-            <ObservabilityFilters
-              basePath="/products/entry/observability/notifications"
-              communities={communities}
-              communityId={selectedCommunity}
-              range={range}
-            />
-          </div>
+          <ObservabilityFilters
+            basePath="/products/entry/observability/notifications"
+            communities={communities}
+            communityId={selectedCommunity}
+            range={range}
+          />
         }
       />
 

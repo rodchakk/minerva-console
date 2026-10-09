@@ -2,6 +2,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send'
 const EXPO_CHUNK_SIZE = 100
+const EXPO_REQUEST_TIMEOUT_MS = 8_000
+const DEFAULT_QUEUE_LIMIT = 5
+const MAX_QUEUE_LIMIT = 5
 
 type ServiceClient = ReturnType<typeof createClient>
 
@@ -151,6 +154,7 @@ async function sendExpoChunk(messages: ExpoMessage[]): Promise<{
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify(messages),
+      signal: AbortSignal.timeout(EXPO_REQUEST_TIMEOUT_MS),
     })
 
     if (!expoRes.ok) {
@@ -323,11 +327,14 @@ Deno.serve(async (req: Request) => {
     serviceClient = createClient(supabaseUrl, supabaseServiceRoleKey)
 
     const body = await req.json().catch(() => ({}))
-    const limit = Number(body?.limit ?? 20)
+    const requestedLimit = Number(body?.limit ?? DEFAULT_QUEUE_LIMIT)
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.max(1, Math.min(Math.trunc(requestedLimit), MAX_QUEUE_LIMIT))
+      : DEFAULT_QUEUE_LIMIT
 
     const { data: claimedRows, error: claimError } = await serviceClient.rpc(
       'claim_pending_community_message_pushes',
-      { p_limit: Number.isFinite(limit) ? limit : 20 },
+      { p_limit: limit },
     )
 
     if (claimError) {

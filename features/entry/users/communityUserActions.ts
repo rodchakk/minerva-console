@@ -36,6 +36,12 @@ export type SetCommunityUserPasswordInput = {
   userId: string;
 };
 
+export type SetCommunityUserRoleInput = {
+  communityId: string;
+  role: "ADMIN" | "RESIDENT";
+  userId: string;
+};
+
 function revalidateCommunityUserPaths(communityId: string, houseId?: string) {
   revalidatePath(`/products/entry/communities/${communityId}`);
   revalidatePath(`/products/entry/communities/${communityId}/users`);
@@ -332,6 +338,127 @@ export async function createCommunityUserAction(
     },
     success: true,
   };
+}
+
+export async function setCommunityUserRoleAction(
+  input: SetCommunityUserRoleInput,
+): Promise<CommunityUserOperationResult> {
+  const actor = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+  if (previewReadOnlyError) return { error: previewReadOnlyError, success: false };
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  const role = input.role;
+
+  if (!communityId || !userId) {
+    return { error: "Community and user are required.", success: false };
+  }
+
+  if (role !== "ADMIN" && role !== "RESIDENT") {
+    return {
+      error: "Role changes are limited to Resident and Admin accounts.",
+      success: false,
+    };
+  }
+
+  const adminSupabase = createAdminClient();
+
+  const [
+    { data: membership, error: membershipError },
+    { data: profile, error: profileError },
+  ] = await Promise.all([
+    adminSupabase
+      .from("community_members")
+      .select("role,is_active")
+      .eq("community_id", communityId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+    adminSupabase
+      .from("profiles")
+      .select("house_id,role")
+      .eq("community_id", communityId)
+      .eq("user_id", userId)
+      .maybeSingle(),
+  ]);
+
+  if (membershipError) {
+    return { error: membershipError.message, success: false };
+  }
+
+  if (profileError) {
+    return { error: profileError.message, success: false };
+  }
+
+  if (!membership) {
+    return { error: "User not found in this community.", success: false };
+  }
+
+  const currentRole = coerceString(membership.role).trim().toUpperCase();
+
+  if (currentRole !== "ADMIN" && currentRole !== "RESIDENT") {
+    return {
+      error:
+        "Only Resident and Admin accounts can be switched here. Guard accounts keep their dedicated access model.",
+      success: false,
+    };
+  }
+
+  if (!profile?.house_id) {
+    return {
+      error: "Assign this account to a unit before changing it between Resident and Admin.",
+      success: false,
+    };
+  }
+
+  if (currentRole === role) {
+    return { success: true };
+  }
+
+  const { error: updateError } = await adminSupabase
+    .from("community_members")
+    .update({
+      role,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("community_id", communityId)
+    .eq("user_id", userId);
+
+  if (updateError) {
+    return { error: updateError.message, success: false };
+  }
+
+  const details = {
+    from_role: currentRole,
+    to_role: role,
+    target_user_id: userId,
+  };
+
+  await Promise.allSettled([
+    adminSupabase.from("system_event_log").insert({
+      actor_id: actor.user.id,
+      community_id: communityId,
+      details,
+      entity_id: userId,
+      entity_type: "user",
+      event_type: "COMMUNITY_USER_ROLE_CHANGED",
+      message: "Community user role changed by superadmin",
+      module: "superadmin",
+      severity: "INFO",
+      source: "minerva_console",
+      user_id: userId,
+    }),
+    adminSupabase.from("superadmin_audit_log").insert({
+      action: "community_user.role_change",
+      actor_user_id: actor.user.id,
+      metadata: details,
+      target_id: userId,
+      target_type: "user",
+    }),
+  ]);
+
+  revalidateCommunityUserPaths(communityId, coerceString(profile.house_id) || undefined);
+  return { success: true };
 }
 
 export async function setCommunityUserPasswordAction(

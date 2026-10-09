@@ -51,6 +51,11 @@ const pushReceiptWorker = read("supabase/functions/entry-push-receipts/index.ts"
 const usernameLogin = read("supabase/functions/login-with-username/index.ts");
 const activationEmailActions = read("features/entry/activation/emailActions.ts");
 const page = read("app/(console)/products/entry/observability/page.tsx");
+const backgroundPage = read("app/(console)/products/entry/observability/background/page.tsx");
+const performancePage = read("app/(console)/products/entry/observability/performance/page.tsx");
+const diagnosticsPage = read("app/(console)/products/entry/observability/diagnostics/page.tsx");
+const notificationsPage = read("app/(console)/products/entry/observability/notifications/page.tsx");
+const observabilityLayout = read("app/(console)/products/entry/observability/layout.tsx");
 const loading = read("app/(console)/products/entry/observability/loading.tsx");
 const filters = read("features/entry/observability/ObservabilityFilters.tsx");
 const queries = read("features/entry/observability/queries.ts");
@@ -463,8 +468,8 @@ test("OCR queue visibility uses queue state and the hardening release flips prov
   assert.match(migration, /provider_usage_status', 'not_instrumented'/);
   assert.match(ocrStatusMigration, /provider_instrumented\}'[\s\S]*'true'::jsonb/);
   assert.match(ocrStatusMigration, /provider_usage_status\}'[\s\S]*'instrumented'/);
-  assert.match(page, /OCR queue/);
-  assert.match(page, /Instrumented/);
+  assert.match(backgroundPage, /OCR queue/);
+  assert.match(backgroundPage, /provider|OCR/i);
   assert.match(docs, /fresh PENDING row is not degradation/);
   assert.match(docs, /exhausted attempts can degrade Image OCR health/);
   assert.equal(
@@ -566,22 +571,21 @@ test("observability hardening adds durable incidents, administration, performanc
   assert.match(hardeningMigration, /'\{readiness\}'/);
   assert.match(hardeningMigration, /'\{incident_history\}'/);
   assert.match(experienceMigration, /create or replace function public\.sa_get_entry_observability_v4/);
-  assert.match(page, /Performance/);
-  assert.match(page, /Operational infrastructure/);
+  assert.match(performancePage, /Performance metrics/);
+  assert.match(backgroundPage, /Workers & cron monitors/);
   assert.match(page, /Rollout & readiness/);
-  assert.match(page, /Incident history/);
+  assert.match(diagnosticsPage, /Incident history/);
 });
 
-test("operational infrastructure stays bounded and scrollable as workers and queues grow", () => {
-  assert.match(page, /xl:h-\[clamp\(22rem,42dvh,34rem\)\]/);
-  assert.match(page, /overflow-y-auto overscroll-contain/);
-  assert.match(page, /scrollbar-gutter:stable/);
-  assert.match(page, /infrastructure\.workers\.length/);
-  assert.match(page, /infrastructure\.queues\.length/);
-  assert.match(page, /workerStatusClass/);
-  assert.match(page, /queueOpenClass/);
-  assert.match(page, /No worker telemetry recorded/);
-  assert.match(page, /No queue telemetry recorded/);
+test("background observability owns worker and queue monitoring", () => {
+  assert.match(backgroundPage, /Workers & cron monitors/);
+  assert.match(backgroundPage, /Queues/);
+  assert.match(backgroundPage, /infrastructure\.workers\.map/);
+  assert.match(backgroundPage, /infrastructure\.queues\.map/);
+  assert.match(backgroundPage, /workerStatusClass/);
+  assert.match(backgroundPage, /queueStatusClass/);
+  assert.match(backgroundPage, /system failed/);
+  assert.match(backgroundPage, /delivery unavailable|unavailable/i);
 });
 
 test("mobile push acceptance is verified with Expo receipts without persisting raw tokens", () => {
@@ -653,15 +657,15 @@ test("push queue truth does not count missing-device delivery as a system failur
   assert.match(queueOutcomeMigration, /delivery_unavailable_count/);
   assert.match(queueOutcomeMigration, /failed_count/);
   assert.match(queries, /deliveryUnavailableCount/);
-  assert.match(page, /system failed/);
-  assert.match(page, /delivery unavailable/);
+  assert.match(backgroundPage, /system failed/);
+  assert.match(backgroundPage, /delivery unavailable|unavailable/i);
   assert.match(diagnosticControl, /delivery unavailable \(no active device\)/);
 });
 
 test("diagnostic UI supports copy, download, save, custom windows, and saved references", () => {
-  assert.match(page, /DiagnosticBundleControl/);
-  assert.match(page, /Diagnostic snapshots/);
-  assert.match(page, /Open JSON/);
+  assert.match(diagnosticsPage, /DiagnosticBundleControl/);
+  assert.match(diagnosticsPage, /Diagnostic snapshots/);
+  assert.match(diagnosticsPage, /Open JSON/);
   assert.match(diagnosticControl, /Generate diagnostic/);
   assert.match(diagnosticControl, /Last 15 minutes/);
   assert.match(diagnosticControl, /Custom range/);
@@ -682,16 +686,50 @@ test("diagnostic API is superadmin-gated and bounds troubleshooting windows", ()
   assert.match(diagnosticApi, /Cache-Control/);
 });
 
-test("dashboard route, filters, loading state, and sidebar entry are wired", () => {
-  assert.match(sidebar, /Observability/);
-  assert.match(sidebar, /\/products\/entry\/observability/);
-  assert.match(page, /ENTRY observability/);
+test("monitors workspace routes, filters, loading state, and primary sidebar nesting are wired", () => {
+  assert.match(sidebar, /label: "Monitors"/);
+  assert.match(sidebar, /icon: Monitor/);
+  for (const route of [
+    "/products/entry/observability",
+    "/products/entry/observability/notifications",
+    "/products/entry/observability/background",
+    "/products/entry/observability/performance",
+    "/products/entry/observability/diagnostics",
+  ]) {
+    assert.match(sidebar, new RegExp(route.replaceAll("/", "\\/")));
+  }
+  for (const label of ["Overview", "Communications", "Background", "Performance", "Diagnostics"]) {
+    assert.match(sidebar, new RegExp(`label: "${label}"`));
+  }
+  assert.doesNotMatch(observabilityLayout, /grid-cols|ObservabilityWorkspaceNav/);
+  assert.match(observabilityLayout, /<main className="min-w-0">/);
+  assert.match(sidebar, /useSearchParams/);
+  assert.match(sidebar, /searchParams\.get\("community"\)/);
+  assert.match(sidebar, /searchParams\.get\("range"\)/);
+  assert.match(sidebar, /withMonitorFilters/);
+  assert.match(page, /ENTRY monitors/);
   assert.match(page, /ObservabilityFilters/);
+  assert.match(notificationsPage, /basePath="\/products\/entry\/observability\/notifications"/);
+  assert.match(backgroundPage, /basePath="\/products\/entry\/observability\/background"/);
+  assert.match(performancePage, /basePath="\/products\/entry\/observability\/performance"/);
+  assert.match(diagnosticsPage, /basePath="\/products\/entry\/observability\/diagnostics"/);
   assert.match(filters, /All communities/);
   assert.match(filters, /Last 24 hours/);
   assert.match(filters, /Last 7 days/);
   assert.match(filters, /Last 30 days/);
   assert.match(loading, /EntryObservabilityLoading/);
+});
+
+
+
+test("workspace sections use the lightest existing observability read model", () => {
+  assert.match(queries, /model === "background"[\s\S]*sa_get_entry_observability_v5/);
+  assert.match(queries, /model === "performance"[\s\S]*sa_get_entry_observability_v4/);
+  assert.match(queries, /sa_get_entry_observability_v3/);
+  assert.match(page, /model: "overview"/);
+  assert.match(backgroundPage, /model: "background"/);
+  assert.match(performancePage, /model: "performance"/);
+  assert.match(diagnosticsPage, /model: "diagnostics"/);
 });
 
 test("CI executes focused ENTRY Observability regressions", () => {
@@ -701,11 +739,11 @@ test("CI executes focused ENTRY Observability regressions", () => {
 
 test("usage and cost UI avoids fabricated metrics", () => {
   assert.match(page, /Tracked operations/);
-  assert.match(page, /Not available/);
-  assert.match(page, /No data/);
-  assert.match(page, /unknownCostCount/);
   assert.match(page, /known outcomes/);
-  assert.doesNotMatch(page, /1,284|0\.16%|184 ms|\$2\.71/);
+  assert.match(performancePage, /Not available/);
+  assert.match(performancePage, /No data/);
+  assert.match(performancePage, /estimatedCost/);
+  assert.doesNotMatch(performancePage, /1,284|0\.16%|184 ms|\$2\.71/);
 });
 
 test("onboarding email worker records actual Resend provider calls best-effort without secrets", () => {

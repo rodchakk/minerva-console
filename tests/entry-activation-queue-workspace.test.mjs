@@ -15,7 +15,10 @@ test("Activation Queue page loads the full community queue for client-side opera
   assert.match(page, /getActivationQueuePageData\(\{[\s\S]*communityId: selectedCommunityId,[\s\S]*\}\)/);
   assert.doesNotMatch(page, /status: selectedStatus/);
   assert.doesNotMatch(page, /Setup overview/);
-  assert.match(page, /max-w-\[2200px\]/);
+  assert.match(page, /-mx-4 -my-4/);
+  assert.match(page, /lg:-mx-6 lg:-my-5/);
+  assert.match(page, /bg-\[#2E2936\]/);
+  assert.doesNotMatch(page, /max-w-\[2200px\]/);
 });
 
 test("Activation Queue exposes operational queue buckets and stage filters", () => {
@@ -44,24 +47,24 @@ test("Activation Queue keeps pending invite distinct from awaiting activation", 
     source,
     /case "awaiting_activation":[\s\S]*return row\.status === "invited"/,
   );
+  assert.match(source, /case "pending_invite":[\s\S]*return "Pending invite"/);
   assert.match(
     source,
-    /PIN is ready, but the invitation has not been sent yet\./,
-  );
-  assert.match(
-    source,
-    /Invitation sent; waiting for the resident to complete activation\./,
+    /case "awaiting_activation":[\s\S]*return "Awaiting activation"/,
   );
 });
 
-test("Activation Queue keeps the table and resident detail as independent scroll regions", () => {
+test("Activation Queue is table-first and opens resident details in a fixed drawer", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
 
   assert.match(source, /100dvh/);
   assert.match(source, /overflow-auto overscroll-contain/);
   assert.match(source, /overflow-y-auto overscroll-contain/);
   assert.match(source, /scrollbar-gutter:stable/);
-  assert.match(source, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
+  assert.match(source, /useState<string \| null>\(null\)/);
+  assert.match(source, /fixed bottom-5 right-5 top-\[76px\]/);
+  assert.match(source, /w-\[440px\]/);
+  assert.doesNotMatch(source, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
 });
 
 test("Activation Queue preserves the existing activation actions and adds direct resident PIN action", () => {
@@ -83,11 +86,15 @@ test("resident-side actions do not require an unrelated bulk selection", () => {
 
   assert.match(
     source,
-    /runResidentEmail\(activeRow\.id\)[\s\S]*disabled=\{!communityId \|\| phase !== "idle"\}/,
+    /runResidentEmail\(activeRow\.id\)[\s\S]*disabled=\{!activeRowActionable \|\| phase !== "idle"\}/,
   );
   assert.match(
     source,
-    /runResidentPin\(activeRow\.id\)[\s\S]*disabled=\{!communityId \|\| phase !== "idle"\}/,
+    /runResidentPin\(activeRow\.id\)[\s\S]*disabled=\{!activeRowActionable \|\| phase !== "idle"\}/,
+  );
+  assert.doesNotMatch(
+    source,
+    /runResident(?:Email|Pin)\(activeRow\.id\)[\s\S]{0,180}selectedCount === 0/,
   );
 });
 
@@ -98,8 +105,8 @@ test("resident email action preserves an existing multi-selection for batch invi
     source,
     /function runResidentEmail\(rowId: string\) \{[\s\S]*if \(selectedIds\.length > 1\) \{[\s\S]*setPhase\("confirmingEmail"\);[\s\S]*return;[\s\S]*setSelectedIds\(\[rowId\]\)/,
   );
-  assert.match(source, /selectedCount > 1[\s\S]*selectedCount} invites/);
-  assert.match(source, /selectedCount > 1[\s\S]*selectedCount} selected/);
+  assert.match(source, /function runResidentEmail\(rowId: string\)[\s\S]*selectedIds\.length > 1/);
+  assert.match(source, /\{selectedCount\} resident\{selectedCount === 1 \? "" : "s"\} selected/);
 });
 
 test("Activation Queue resident detail shows derived progress and queue blockers without backend changes", () => {
@@ -107,7 +114,7 @@ test("Activation Queue resident detail shows derived progress and queue blockers
 
   assert.match(source, /Activation progress/);
   assert.match(source, /Queue checks/);
-  assert.match(source, /No blockers detected/);
+  assert.match(source, /Queue checks clear/);
   assert.match(source, /getQueueBlockers/);
   assert.match(source, /getActivationStage/);
   assert.doesNotMatch(source, /supabase\.(?:from|rpc|insert|update|upsert)\(/);
@@ -173,19 +180,62 @@ test("Activation Queue supports safe pre-activation phone correction", () => {
   assert.match(migration, /status = 'expired'/);
 });
 
-test("Activation Queue shows last email and PIN timing separately", () => {
+test("Activation Queue shows invitation history, follow-up age and PIN timing separately", () => {
   const table = read("features/entry/activation/ActivationQueueTable.tsx");
   const actions = read("features/entry/activation/actions.ts");
   const migration = read(
-    "supabase/migrations/20260925043000_activation_queue_phone_and_delivery_timestamps.sql",
+    "supabase/migrations/20260927054000_entry_activation_follow_up_buckets.sql",
   );
 
-  assert.match(table, /Last activation/);
-  assert.match(table, /Last email sent/);
+  assert.match(table, /Last action/);
+  assert.match(table, /First invitation sent/);
+  assert.match(table, /Last invitation sent/);
+  assert.match(table, /Invitation attempts/);
   assert.match(table, /Last PIN generated/);
+  assert.match(table, /Needs follow-up/);
+  assert.match(table, /Not invited/);
+  assert.match(table, /Recent/);
+  assert.match(table, /Waiting/);
   assert.match(actions, /lastActivationAt/);
-  assert.match(actions, /invite_sent_at/);
-  assert.match(actions, /last_pin_generated_at/);
-  assert.match(actions, /list_resident_activation_queue_v2/);
+  assert.match(actions, /first_invitation_sent_at/);
+  assert.match(actions, /last_invitation_sent_at/);
+  assert.match(actions, /invitation_attempt_count/);
+  assert.match(actions, /list_resident_activation_queue_v3/);
   assert.match(migration, /max\(p\.created_at\) as last_pin_generated_at/);
+});
+
+
+test("Activation Queue does not treat digits inside an email as a phone query", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.ok(
+    source.includes("const isPhoneLikeQuery = /^[+\\d\\s().-]+$/.test(searchQuery.trim());"),
+  );
+  assert.match(
+    source,
+    /const normalizedDigits = isPhoneLikeQuery\s*\?\s*searchQuery\.replace\(\/\\D\+\/g, ""\)\s*:\s*"";/,
+  );
+});
+
+
+test("Activation Queue filter menu closes with Escape", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(source, /useEffect\(\(\) => \{[\s\S]*filterOpen/);
+  assert.match(source, /event\.key === "Escape"/);
+  assert.match(source, /setFilterOpen\(false\)/);
+  assert.match(source, /document\.addEventListener\("keydown", handleEscape\)/);
+  assert.match(source, /document\.removeEventListener\("keydown", handleEscape\)/);
+});
+
+
+test("Activation Queue filter menu closes when clicking outside", () => {
+  const source = read("features/entry/activation/ActivationQueueTable.tsx");
+
+  assert.match(source, /useRef<HTMLDivElement>\(null\)/);
+  assert.match(source, /handlePointerDown/);
+  assert.match(source, /filterMenuRef\.current\?\.contains\(target\)/);
+  assert.match(source, /document\.addEventListener\("pointerdown", handlePointerDown\)/);
+  assert.match(source, /document\.removeEventListener\("pointerdown", handlePointerDown\)/);
+  assert.match(source, /ref=\{filterMenuRef\}/);
 });

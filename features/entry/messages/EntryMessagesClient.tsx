@@ -115,7 +115,7 @@ function CommunityChecklistRow({
   onToggle: () => void;
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] px-3.5 py-2.5 transition hover:bg-white/[0.035]">
+    <label className="flex cursor-pointer items-center justify-between gap-3 rounded-md border border-[#141119] bg-[#2E2936] px-3.5 py-2.5 transition hover:bg-white/[0.035]">
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <p className="truncate text-xs font-semibold text-white">
@@ -126,7 +126,7 @@ function CommunityChecklistRow({
           </span>
         </div>
         {community.city ? (
-          <p className="mt-0.5 truncate text-[11px] text-[var(--console-text-muted)]">
+          <p className="mt-0.5 truncate text-[11px] text-[#A9A3B2]">
             {community.city}
           </p>
         ) : null}
@@ -135,7 +135,7 @@ function CommunityChecklistRow({
         type="checkbox"
         checked={checked}
         onChange={onToggle}
-        className="h-4 w-4 rounded border-[var(--console-border-strong)] bg-transparent text-[var(--console-accent)] focus:ring-0 focus:ring-offset-0"
+        className="h-4 w-4 rounded border-[#4B4454] bg-transparent text-[#7553FF] focus:ring-0 focus:ring-offset-0"
       />
     </label>
   );
@@ -313,10 +313,10 @@ export function EntryMessagesClient({
             </div>
           ) : null}
 
-          <div className="space-y-6 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-5 lg:p-6">
+          <div className="relative space-y-6 rounded-[10px] border border-[#141119] bg-[#24202B] p-5 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF] lg:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
                   Official ENTRY broadcast
                 </p>
                 <h2 className="mt-1 text-lg font-semibold text-white">
@@ -329,12 +329,12 @@ export function EntryMessagesClient({
             </div>
 
             <div className="space-y-2">
-              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#A9A3B2]">
                 Audience
               </label>
               <nav
                 aria-label="Audience selector"
-                className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-1"
+                className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[#141119] bg-[#2E2936] p-1"
               >
                 {modeOptions.map((option) => {
                   const isActive = mode === option.value;
@@ -345,10 +345,10 @@ export function EntryMessagesClient({
                       type="button"
                       onClick={() => setMode(option.value)}
                       className={cn(
-                        "inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50",
+                        "inline-flex h-8 items-center rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[#7553FF]",
                         isActive
-                          ? "bg-[var(--console-accent-subtle)] text-violet-100 ring-1 ring-inset ring-[var(--console-accent-border)]"
-                          : "text-[var(--console-text-muted)] hover:bg-white/[0.035] hover:text-slate-100",
+                          ? "bg-[rgba(117,83,255,0.10)] text-[#D8D1FF] ring-1 ring-inset ring-[rgba(117,83,255,0.28)]"
+                          : "text-[#A9A3B2] hover:bg-white/[0.035] hover:text-slate-100",
                       )}
                     >
                       {option.label}
@@ -356,20 +356,20 @@ export function EntryMessagesClient({
                   );
                 })}
               </nav>
-              <p className="text-xs text-[var(--console-text-muted)]">
+              <p className="text-xs text-[#A9A3B2]">
                 {modeOptions.find((opt) => opt.value === mode)?.description}
               </p>
             </div>
 
             {mode === "single" ? (
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#A9A3B2]">
                   Community
                 </label>
                 <select
                   value={communityId}
                   onChange={(event) => setCommunityId(event.target.value)}
-                  className="h-9 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] px-3 text-sm text-slate-100 outline-none transition focus:border-[var(--console-accent-border)]"
+                  className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
                 >
                   <option value="">Select community</option>
                   {activeCommunities.map((community) => (
@@ -385,7 +385,7 @@ export function EntryMessagesClient({
               <div className="space-y-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+                    <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#A9A3B2]">
                       Active communities
                     </p>
                     <p className="mt-0.5 text-xs text-slate-300">
@@ -398,14 +398,14 @@ export function EntryMessagesClient({
                       onClick={() =>
                         setSelectedCommunityIds(activeCommunities.map((c) => c.id))
                       }
-                      className="inline-flex h-7 items-center rounded-md border border-[var(--console-border)] bg-white/[0.025] px-2.5 text-xs font-semibold text-slate-200 hover:bg-white/[0.05]"
+                      className="inline-flex h-7 items-center rounded-md border border-[#141119] bg-white/[0.025] px-2.5 text-xs font-semibold text-slate-200 hover:bg-white/[0.05]"
                     >
                       Select all
                     </button>
                     <button
                       type="button"
                       onClick={() => setSelectedCommunityIds([])}
-                      className="inline-flex h-7 items-center rounded-md px-2.5 text-xs font-semibold text-[var(--console-text-muted)] hover:bg-white/[0.04] hover:text-white"
+                      className="inline-flex h-7 items-center rounded-md px-2.5 text-xs font-semibold text-[#A9A3B2] hover:bg-white/[0.04] hover:text-white"
                     >
                       Clear
                     </button>
@@ -413,13 +413,13 @@ export function EntryMessagesClient({
                 </div>
 
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 stroke-[1.75] text-[var(--console-text-soft)]" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 stroke-[1.75] text-[#8F879D]" />
                   <input
                     type="text"
                     value={communitySearch}
                     onChange={(event) => setCommunitySearch(event.target.value)}
                     placeholder="Search active communities"
-                    className="h-8 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] pl-8 pr-3 text-xs text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
+                    className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] pl-9 pr-3 text-xs text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
                   />
                 </div>
 
@@ -434,7 +434,7 @@ export function EntryMessagesClient({
                   ))}
 
                   {filteredActiveCommunities.length === 0 ? (
-                    <div className="rounded-md border border-dashed border-[var(--console-border-strong)] p-4 text-center text-xs text-[var(--console-text-muted)]">
+                    <div className="rounded-md border border-dashed border-[#4B4454] p-4 text-center text-xs text-[#A9A3B2]">
                       No active communities match this search.
                     </div>
                   ) : null}
@@ -451,23 +451,23 @@ export function EntryMessagesClient({
             ) : null}
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+              <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#A9A3B2]">
                 Title
               </label>
               <input
                 value={title}
                 onChange={(event) => setTitle(event.target.value)}
                 placeholder="Official update title"
-                className="h-9 w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] px-3 text-sm text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
+                className="h-9 w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] px-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between gap-3">
-                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[var(--console-text-muted)]">
+                <label className="block text-xs font-semibold uppercase tracking-[0.14em] text-[#A9A3B2]">
                   Message
                 </label>
-                <span className="text-xs text-[var(--console-text-muted)]">
+                <span className="text-xs text-[#A9A3B2]">
                   {body.length} characters
                 </span>
               </div>
@@ -476,16 +476,16 @@ export function EntryMessagesClient({
                 onChange={(event) => setBody(event.target.value)}
                 rows={7}
                 placeholder="Write the official message that will be sent to ENTRY communities."
-                className="w-full rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-3 text-sm text-slate-100 outline-none transition placeholder:text-[var(--console-text-soft)] focus:border-[var(--console-accent-border)]"
+                className="w-full rounded-lg border border-[#141119] bg-[rgba(0,0,32,0.20)] p-3 text-sm text-[#E7E5EA] shadow-[inset_0_1px_0_#141119] outline-none placeholder:text-[#8F879D] focus:shadow-[inset_0_1px_0_#141119,0_0_0_2px_#7553FF]"
               />
             </div>
 
             {mode === "selected" && selectedCommunityNames.length > 0 ? (
-              <div className="rounded-md border border-[var(--console-border)] bg-[var(--console-surface-raised)] px-3.5 py-2.5">
+              <div className="rounded-md border border-[#141119] bg-[#2E2936] px-3.5 py-2.5">
                 <p className="text-xs font-semibold text-slate-200">
                   Selected communities ({selectedCommunityNames.length})
                 </p>
-                <p className="mt-1 text-xs text-[var(--console-text-muted)] line-clamp-2">
+                <p className="mt-1 text-xs text-[#A9A3B2] line-clamp-2">
                   {selectedCommunityNames.join(", ")}
                 </p>
               </div>
@@ -501,21 +501,21 @@ export function EntryMessagesClient({
               <button
                 type="button"
                 onClick={handleOpenConfirmation}
-                className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-[var(--console-accent)] px-4 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--console-accent)]/50"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-xs font-semibold text-white shadow-[0_2px_0_#120539] outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
               >
                 <Send className="h-3.5 w-3.5 stroke-[1.75]" />
                 <span>Publish message</span>
               </button>
-              <p className="text-xs text-[var(--console-text-muted)]">
+              <p className="text-xs text-[#A9A3B2]">
                 Push notifications are queued automatically where available.
               </p>
             </div>
           </div>
         </div>
 
-        <aside className="h-fit space-y-6 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface)] p-5">
+        <aside className="relative h-fit space-y-6 rounded-[10px] border border-[#141119] bg-[#24202B] p-5 before:absolute before:left-0 before:top-0 before:h-px before:w-16 before:bg-[#7553FF]">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--console-text-muted)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#A9A3B2]">
               PUBLISHING CONTEXT
             </p>
             <h3 className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-white">
@@ -523,40 +523,40 @@ export function EntryMessagesClient({
             </h3>
             <ol className="mt-3 space-y-2 text-xs text-slate-300">
               <li className="flex items-start gap-2.5">
-                <span className="font-mono text-[10px] font-semibold text-[var(--console-text-muted)]">
+                <span className="font-mono text-[10px] font-semibold text-[#A9A3B2]">
                   01
                 </span>
                 <span>Send to one community</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="font-mono text-[10px] font-semibold text-[var(--console-text-muted)]">
+                <span className="font-mono text-[10px] font-semibold text-[#A9A3B2]">
                   02
                 </span>
                 <span>Send to selected communities</span>
               </li>
               <li className="flex items-start gap-2.5">
-                <span className="font-mono text-[10px] font-semibold text-[var(--console-text-muted)]">
+                <span className="font-mono text-[10px] font-semibold text-[#A9A3B2]">
                   03
                 </span>
                 <span>Send to all active communities</span>
               </li>
             </ol>
 
-            <div className="my-4 border-t border-[var(--console-border)]" />
+            <div className="my-4 border-t border-[#141119]" />
 
-            <ul className="space-y-2.5 text-xs text-[var(--console-text-muted)]">
+            <ul className="space-y-2.5 text-xs text-[#A9A3B2]">
               <li className="flex items-center gap-2">
                 <Bell className="h-3.5 w-3.5 shrink-0 stroke-[1.75] text-violet-300" />
                 <span>Push notifications queue automatically</span>
               </li>
               <li className="flex items-center gap-2">
-                <Clock3 className="h-3.5 w-3.5 shrink-0 stroke-[1.75] text-[var(--console-text-muted)]" />
+                <Clock3 className="h-3.5 w-3.5 shrink-0 stroke-[1.75] text-[#A9A3B2]" />
                 <span>Messages expire after 90 days</span>
               </li>
             </ul>
           </div>
 
-          <div className="border-t border-[var(--console-border)] pt-5 text-center">
+          <div className="border-t border-[#141119] pt-5 text-center">
             <div className="flex items-center justify-center gap-2">
               <RadioTower className="h-3.5 w-3.5 stroke-[1.75] text-emerald-400" />
               <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-white">
@@ -567,7 +567,7 @@ export function EntryMessagesClient({
               <p className="text-3xl font-semibold tracking-tight text-white">
                 {activeCommunities.length}
               </p>
-              <p className="mt-1 text-xs text-[var(--console-text-muted)]">
+              <p className="mt-1 text-xs text-[#A9A3B2]">
                 Active communities available for publishing
               </p>
             </div>
@@ -585,7 +585,7 @@ export function EntryMessagesClient({
 
       {confirmationOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-xl space-y-5 rounded-lg border border-[var(--console-border)] bg-[var(--console-surface-raised)] p-6 shadow-2xl">
+          <div className="w-full max-w-xl space-y-5 rounded-lg border border-[#141119] bg-[#2E2936] p-6 shadow-2xl">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-violet-200">
@@ -601,15 +601,15 @@ export function EntryMessagesClient({
             </div>
 
             <div className="space-y-3">
-              <div className="rounded-md border border-[var(--console-border)] bg-white/[0.015] p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <div className="rounded-md border border-[#141119] bg-white/[0.015] p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                   Title preview
                 </p>
                 <p className="mt-1 text-sm font-semibold text-white">{title.trim()}</p>
               </div>
 
-              <div className="rounded-md border border-[var(--console-border)] bg-white/[0.015] p-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--console-text-muted)]">
+              <div className="rounded-md border border-[#141119] bg-white/[0.015] p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#A9A3B2]">
                   Message preview
                 </p>
                 <p className="max-h-48 overflow-y-auto mt-1 whitespace-pre-wrap text-xs leading-5 text-slate-200">
@@ -628,7 +628,7 @@ export function EntryMessagesClient({
                 type="button"
                 disabled={isPending}
                 onClick={() => setConfirmationOpen(false)}
-                className="inline-flex h-8 items-center justify-center rounded-md border border-[var(--console-border)] bg-transparent px-3 text-xs font-semibold text-[var(--console-text-muted)] transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
+                className="inline-flex h-8 items-center justify-center rounded-md border border-[#141119] bg-transparent px-3 text-xs font-semibold text-[#A9A3B2] transition-colors hover:bg-white/[0.04] hover:text-white disabled:opacity-50"
               >
                 Cancel
               </button>
@@ -636,7 +636,7 @@ export function EntryMessagesClient({
                 type="button"
                 disabled={isPending}
                 onClick={handleConfirmPublish}
-                className="inline-flex h-8 items-center justify-center gap-2 rounded-md bg-[var(--console-accent)] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[var(--console-accent-hover)] disabled:opacity-50"
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-3.5 text-xs font-semibold text-white shadow-[0_2px_0_#120539] disabled:opacity-50"
               >
                 {isPending ? "Publishing..." : "Confirm publish"}
               </button>
