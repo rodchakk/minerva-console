@@ -226,8 +226,9 @@ export async function attachPaymentProof(input: {
   }
 
   // Check the payment belongs to this invoice and has no existing evidence.
-  const { data: payment, error: lookupError } = await supabase
-    .from("payments")
+  const db = getSeshatDataClient();
+  const { data: payment, error: lookupError } = await db
+    .from<{ id: string; proof_path: string | null }>("payments")
     .select("id, proof_path")
     .eq("id", paymentId)
     .eq("invoice_id", invoiceId)
@@ -246,8 +247,8 @@ export async function attachPaymentProof(input: {
 
   let attached = false;
   try {
-    const { data: updated, error: updateError } = await supabase
-      .from("payments")
+    const { data: updated, error: updateError } = await db
+      .from<{ id: string; proof_path: string | null }>("payments")
       .update({ proof_path: proofPath })
       .eq("id", paymentId)
       .eq("invoice_id", invoiceId)
