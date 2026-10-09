@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   CircleGauge,
   CreditCard,
+  Download,
   FilePlus2,
   LogOut,
   Pencil,
@@ -31,6 +32,7 @@ import {
   type InvoiceDocumentLanguage,
 } from "./invoicePresentation";
 import { InvoiceDocument } from "./InvoiceDocument";
+import { downloadInvoicePdf } from "./invoicePdf";
 import {
   generateInvoice,
   getDueClientServiceOccurrences,
@@ -1601,6 +1603,29 @@ function InvoiceDetail({
   const [documentLanguage, setDocumentLanguage] = useState<InvoiceDocumentLanguage>(
     DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
   );
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
+  async function handleDownloadPdf() {
+    const documentNode = document.querySelector<HTMLElement>("[data-seshat-invoice-document]");
+    if (!documentNode) return;
+
+    setPdfError(null);
+    setIsDownloadingPdf(true);
+    try {
+      await downloadInvoicePdf({
+        node: documentNode,
+        invoiceNumber: invoice.invoice_number,
+        language: documentLanguage,
+      });
+    } catch (error) {
+      console.error("SESHAT_INVOICE_PDF_DOWNLOAD_FAILED", error);
+      setPdfError("Could not generate the invoice PDF. Try again.");
+    } finally {
+      setIsDownloadingPdf(false);
+    }
+  }
+
   return (
     <div className="space-y-4">
       <Card className="print:hidden">
@@ -1611,12 +1636,18 @@ function InvoiceDetail({
             <p className="text-sm text-[var(--text-muted)]">{invoice.clients?.name ?? "No client"}</p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="secondary" onClick={() => window.print()} className="gap-2"><Printer className="h-4 w-4" /> Print / Save PDF</Button>
+            <Button type="button" onClick={handleDownloadPdf} disabled={isDownloadingPdf} className="gap-2">
+              <Download className="h-4 w-4" /> {isDownloadingPdf ? "Generating PDF..." : "Download PDF"}
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => window.print()} className="gap-2" title="Browser print for debugging">
+              <Printer className="h-4 w-4" /> Browser Print
+            </Button>
             {invoice.status === "draft" ? <Button type="button" onClick={() => onStatus(invoice.id, "sent")}>Mark as Sent</Button> : null}
             {invoice.status === "draft" ? <Button type="button" variant="danger" onClick={() => onDelete(invoice.id)}>Delete Draft</Button> : null}
             {invoice.status !== "paid" && invoice.status !== "cancelled" ? <Button type="button" variant="danger" onClick={() => onStatus(invoice.id, "cancelled")}>Cancel</Button> : null}
           </div>
         </div>
+        {pdfError ? <p className="mt-3 text-sm text-rose-300">{pdfError}</p> : null}
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.08] pt-4">
           <span className="text-sm font-medium text-slate-300">Invoice language</span>
           <div role="group" aria-label="Invoice language" className="inline-flex rounded-md border border-white/[0.12] bg-white/[0.03] p-1">

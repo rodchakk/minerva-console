@@ -170,7 +170,29 @@ test("invoice operator controls and Payments stay outside the printable document
   const document = read("features/seshat/InvoiceDocument.tsx");
 
   assert.match(workspace, /<InvoiceDocument invoice=\{invoice\} profile=\{profile\} language=\{documentLanguage\} \/>/);
-  assert.doesNotMatch(document, /Print \/ Save PDF|Mark as Sent|Delete Draft|Payments|Invoice language|PREVIEW|Seshat/);
+  assert.doesNotMatch(document, /Download PDF|Browser Print|Mark as Sent|Delete Draft|Payments|Invoice language|PREVIEW|Seshat/);
+});
+
+test("invoice PDF export creates one A4 document without browser print artifacts", async () => {
+  const pdfSource = read("features/seshat/invoicePdf.ts");
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const { createInvoicePdfBytes, invoicePdfFilename } = await import("../features/seshat/invoicePdf.ts");
+  const { PDFDocument } = await import("pdf-lib");
+  const onePixelPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+3MxZ5wAAAABJRU5ErkJggg==";
+  const bytes = await createInvoicePdfBytes(onePixelPng, 820, 960);
+  const pdf = await PDFDocument.load(bytes);
+  const [page] = pdf.getPages();
+
+  assert.equal(pdf.getPageCount(), 1);
+  assert.equal(Math.round(page.getWidth()), 595);
+  assert.equal(Math.round(page.getHeight()), 842);
+  assert.equal(invoicePdfFilename("INV-2610-001", "es-HN"), "INV-2610-001-es.pdf");
+  assert.match(pdfSource, /html-to-image/);
+  assert.match(pdfSource, /PDFDocument\.create\(\)/);
+  assert.match(pdfSource, /anchor\.download = invoicePdfFilename/);
+  assert.doesNotMatch(pdfSource, /window\.print|document\.title|location\.|window\.location|Minerva Console|1\/1/);
+  assert.match(workspace, /"Download PDF"/);
+  assert.match(workspace, /> Browser Print/);
 });
 
 test("invoice document follows the Minerva branded hierarchy and reads payment snapshots", () => {
@@ -199,8 +221,8 @@ test("invoice brand presentation uses owner identity with Minerva fallbacks only
     phone: null,
     mobile: "+504 9999-0000",
     website: "https://www.minervatechs.com",
-    logo_url: null,
-    invoice_footer: null,
+    logo_url: "https://assets.example.com/new-black-square-logo.png",
+    invoice_footer: "Soluciones tecnológicas para administración y operación residencial.",
   }, "es-HN");
   const otherOwner = presentation.invoiceBrandPresentation({
     business_name: "Acme Services",
@@ -228,7 +250,7 @@ test("invoice brand presentation uses owner identity with Minerva fallbacks only
     phone: "+504 9999-0000",
     website: "https://www.minervatechs.com",
     logoSrc: "/brand/minerva-logo-gray.png",
-    footer: "Soluciones tecnológicas para administración y operación residencial.",
+    footer: "Engineered for Humanity.",
   });
   assert.deepEqual(otherOwner, {
     businessName: "Acme Services",
@@ -247,7 +269,7 @@ test("invoice brand presentation uses owner identity with Minerva fallbacks only
     phone: "+504 3220-9818",
     website: "www.minervatechs.com",
     logoSrc: "/brand/minerva-logo-gray.png",
-    footer: "Soluciones tecnológicas para administración y operación residencial.",
+    footer: "Engineered for Humanity.",
   });
 
   const presentationSource = read("features/seshat/invoicePresentation.ts");

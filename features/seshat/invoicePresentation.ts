@@ -69,7 +69,7 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     paymentInformation: "Información de pago",
     bankInformation: "Información bancaria",
     totalPayable: "Total a pagar",
-    footerTagline: "Soluciones tecnológicas para administración y operación residencial.",
+    footerTagline: "Engineered for Humanity.",
     bank: "Banco",
     accountNumber: "Número de cuenta",
     accountHolder: "Titular",
@@ -106,7 +106,7 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     paymentInformation: "Payment information",
     bankInformation: "Bank information",
     totalPayable: "Total",
-    footerTagline: "Technology solutions for residential administration and operations.",
+    footerTagline: "Engineered for Humanity.",
     bank: "Bank",
     accountNumber: "Account number",
     accountHolder: "Account holder",
@@ -152,8 +152,8 @@ export function invoiceBrandPresentation(
     email: profile?.email?.trim() || MINERVA_BRAND_FALLBACK.email,
     phone: profile?.phone?.trim() || profile?.mobile?.trim() || MINERVA_BRAND_FALLBACK.phone,
     website: profile?.website?.trim() || MINERVA_BRAND_FALLBACK.website,
-    logoSrc: configuredLogo || (isMinerva ? MINERVA_BRAND_FALLBACK.logoSrc : null),
-    footer: profile?.invoice_footer?.trim() || (isMinerva ? invoiceDocumentCopy[language].footerTagline : null),
+    logoSrc: isMinerva ? MINERVA_BRAND_FALLBACK.logoSrc : configuredLogo,
+    footer: isMinerva ? invoiceDocumentCopy[language].footerTagline : profile?.invoice_footer?.trim() || null,
   };
 }
 
