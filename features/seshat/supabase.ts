@@ -21,6 +21,7 @@ export type SeshatQuery<T = unknown> = PromiseLike<SeshatDataResult<T>> & {
   delete(): SeshatQuery<T>;
   eq(column: string, value: unknown): SeshatQuery<T>;
   insert(values: Record<string, unknown> | Array<Record<string, unknown>>): SeshatQuery<T>;
+  is(column: string, value: unknown): SeshatQuery<T>;
   limit(count: number): SeshatQuery<T>;
   maybeSingle(): Promise<SeshatDataResult<T>>;
   order(column: string, options?: { ascending?: boolean }): SeshatQuery<T>;
