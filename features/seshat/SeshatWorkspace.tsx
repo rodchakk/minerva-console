@@ -28,12 +28,9 @@ import {
 } from "./billingPreview";
 import {
   DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
-  formatInvoiceDocumentDate,
-  formatInvoiceDocumentMoney,
-  invoiceDocumentCopy,
-  paymentInstructionPresentation,
   type InvoiceDocumentLanguage,
 } from "./invoicePresentation";
+import { InvoiceDocument } from "./InvoiceDocument";
 import {
   generateInvoice,
   getDueClientServiceOccurrences,
@@ -1604,10 +1601,6 @@ function InvoiceDetail({
   const [documentLanguage, setDocumentLanguage] = useState<InvoiceDocumentLanguage>(
     DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
   );
-  const documentCopy = invoiceDocumentCopy[documentLanguage];
-  const paymentPresentation = invoice.payment_instruction_snapshot
-    ? paymentInstructionPresentation(invoice.payment_instruction_snapshot, documentLanguage)
-    : null;
   return (
     <div className="space-y-4">
       <Card className="print:hidden">
@@ -1670,89 +1663,7 @@ function InvoiceDetail({
           </form>
         </Card>
       ) : null}
-      <section
-        data-seshat-invoice-document
-        lang={documentLanguage}
-        aria-label={`${documentCopy.invoice} ${invoice.invoice_number}`}
-        className="rounded-lg border border-white/[0.10] bg-white p-8 text-slate-950"
-      >
-        <div className="flex justify-between gap-6">
-          <div>
-            <h2 className="text-2xl font-bold">{profile?.business_name ?? "Minerva Technologies"}</h2>
-            <p className="text-sm text-slate-600">{profile?.email ?? ""}</p>
-            <p className="text-sm text-slate-600">{profile?.phone ?? ""}</p>
-          </div>
-          <div className="text-right">
-            <p className="text-3xl font-bold">{documentCopy.invoice}</p>
-            <p className="font-semibold">{invoice.invoice_number}</p>
-            <p className="text-sm text-slate-600">{documentCopy.statuses[invoice.status]}</p>
-          </div>
-        </div>
-        <div className="mt-8 grid gap-5 md:grid-cols-2">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{documentCopy.billTo}</p>
-            <p className="mt-1 font-semibold">{invoice.clients?.company_name ?? invoice.clients?.name ?? "—"}</p>
-            <p className="text-sm text-slate-600">{invoice.clients?.email ?? ""}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <span className="text-slate-500">{documentCopy.issueDate}</span><span className="text-right">{formatInvoiceDocumentDate(invoice.issue_date, documentLanguage)}</span>
-            <span className="text-slate-500">{documentCopy.dueDate}</span><span className="text-right">{formatInvoiceDocumentDate(invoice.due_date, documentLanguage)}</span>
-            <span className="text-slate-500">{documentCopy.currency}</span><span className="text-right">{invoice.currency}</span>
-            {invoice.paid_date ? <><span className="text-slate-500">{documentCopy.paidDate}</span><span className="text-right">{formatInvoiceDocumentDate(invoice.paid_date, documentLanguage)}</span></> : null}
-          </div>
-        </div>
-        <table className="mt-8 w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-300 text-left">
-              <th className="py-2">{documentCopy.item}</th>
-              <th className="py-2 text-right">{documentCopy.quantity}</th>
-              <th className="py-2 text-right">{documentCopy.unitPrice}</th>
-              <th className="py-2 text-right">{documentCopy.total}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.invoice_items.map((item) => (
-              <tr key={item.id} className="border-b border-slate-200">
-                <td className="py-3">
-                  <p className="font-medium">{item.name}</p>
-                  {item.description ? <p className="text-slate-500">{item.description}</p> : null}
-                </td>
-                <td className="py-3 text-right">{item.quantity}</td>
-                <td className="py-3 text-right">{formatInvoiceDocumentMoney(item.unit_price, invoice.currency, documentLanguage)}</td>
-                <td className="py-3 text-right">{formatInvoiceDocumentMoney(item.line_total, invoice.currency, documentLanguage)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div className="ml-auto mt-5 w-full max-w-sm space-y-2 text-sm">
-          <Total label={documentCopy.subtotal} value={formatInvoiceDocumentMoney(invoice.subtotal, invoice.currency, documentLanguage)} />
-          {invoice.discount_total > 0 ? <Total label={documentCopy.discount} value={formatInvoiceDocumentMoney(-invoice.discount_total, invoice.currency, documentLanguage)} /> : null}
-          {invoice.tax_total > 0 ? <Total label={documentCopy.tax} value={formatInvoiceDocumentMoney(invoice.tax_total, invoice.currency, documentLanguage)} /> : null}
-          <Total label={documentCopy.total} value={formatInvoiceDocumentMoney(invoice.total, invoice.currency, documentLanguage)} strong />
-          <Total label={documentCopy.paid} value={formatInvoiceDocumentMoney(invoice.amount_paid, invoice.currency, documentLanguage)} />
-          <Total label={documentCopy.balanceDue} value={formatInvoiceDocumentMoney(balance, invoice.currency, documentLanguage)} strong />
-        </div>
-        {paymentPresentation ? (
-          <div data-seshat-payment-information className="mt-8 border-t border-slate-300 pt-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{paymentPresentation.heading}</p>
-            <p className="mt-1 font-semibold">{paymentPresentation.methodName}</p>
-            {paymentPresentation.rows.length > 0 ? (
-              <dl className="mt-3 grid grid-cols-[minmax(0,10rem)_minmax(0,1fr)] gap-x-4 gap-y-2 text-sm">
-                {paymentPresentation.rows.map((row) => (
-                  <div key={row.label} className="contents">
-                    <dt className="text-slate-500">{row.label}</dt>
-                    <dd className="min-w-0 break-words">
-                      {row.isLink ? <a href={row.value} className="underline">{row.value}</a> : row.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
-          </div>
-        ) : null}
-        {invoice.notes ? <p className="mt-8 whitespace-pre-wrap text-sm text-slate-700">{invoice.notes}</p> : null}
-        {profile?.invoice_footer ? <p className="mt-8 text-xs text-slate-500">{profile.invoice_footer}</p> : null}
-      </section>
+      <InvoiceDocument invoice={invoice} profile={profile} language={documentLanguage} />
       <Card className="print:hidden">
         <h3 className="mb-3 font-semibold text-white">Payments</h3>
         <div className="divide-y divide-white/[0.08]">
@@ -2053,15 +1964,6 @@ function Table({
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-function Total({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div className={cn("flex justify-between gap-4", strong && "border-t border-slate-300 pt-2 text-lg font-bold")}>
-      <span>{label}</span>
-      <span>{value}</span>
     </div>
   );
 }

@@ -184,10 +184,18 @@ select {
   }
 
   [data-seshat-invoice-document] tr,
+  [data-seshat-invoice-document] [data-invoice-bill-to],
+  [data-seshat-invoice-document] [data-invoice-totals],
+  [data-seshat-invoice-document] [data-seshat-payment-information],
+  [data-seshat-invoice-document] footer,
   [data-seshat-invoice-document] h1,
   [data-seshat-invoice-document] h2,
   [data-seshat-invoice-document] h3 {
     break-inside: avoid;
+  }
+
+  [data-seshat-invoice-document] img {
+    print-color-adjust: exact;
   }
 
   vercel-live-feedback,

@@ -78,7 +78,7 @@ test("payment instructions render localized bank and PayPal labels while omittin
     payment_url: "https://example.com/pay",
   }, "en-US");
 
-  assert.equal(bank.heading, "Información de pago");
+  assert.equal(bank.heading, "Información bancaria");
   assert.deepEqual(bank.rows.map((row) => row.label), ["Banco", "Número de cuenta"]);
   assert.equal(paypal.heading, "Payment information");
   assert.deepEqual(paypal.rows.map((row) => row.label), ["Account", "Payment link"]);
@@ -153,10 +153,10 @@ test("automatic billing preview counts backend client, currency and occurrence b
 });
 
 test("invoice print CSS isolates the client document from Console and Vercel chrome", () => {
-  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const document = read("features/seshat/InvoiceDocument.tsx");
   const css = read("app/globals.css");
 
-  assert.match(workspace, /data-seshat-invoice-document/);
+  assert.match(document, /data-seshat-invoice-document/);
   assert.match(css, /@page seshat-invoice[\s\S]*margin:\s*12mm/);
   assert.match(css, /@media print/);
   assert.match(css, /body:has\(\[data-seshat-invoice-document\]\)/);
@@ -166,14 +166,25 @@ test("invoice print CSS isolates the client document from Console and Vercel chr
 });
 
 test("invoice operator controls and Payments stay outside the printable document", () => {
-  const source = read("features/seshat/SeshatWorkspace.tsx");
-  const detailStart = source.indexOf("function InvoiceDetail");
-  const documentStart = source.indexOf("data-seshat-invoice-document", detailStart);
-  const documentEnd = source.indexOf("</section>", documentStart);
-  const printableSource = source.slice(documentStart, documentEnd);
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const document = read("features/seshat/InvoiceDocument.tsx");
 
-  assert.ok(detailStart >= 0 && documentStart > detailStart && documentEnd > documentStart);
-  assert.doesNotMatch(printableSource, /Print \/ Save PDF|Mark as Sent|Delete Draft|Payments|Invoice language|PREVIEW|Seshat/);
+  assert.match(workspace, /<InvoiceDocument invoice=\{invoice\} profile=\{profile\} language=\{documentLanguage\} \/>/);
+  assert.doesNotMatch(document, /Print \/ Save PDF|Mark as Sent|Delete Draft|Payments|Invoice language|PREVIEW|Seshat/);
+});
+
+test("invoice document follows the Minerva branded hierarchy and reads payment snapshots", () => {
+  const document = read("features/seshat/InvoiceDocument.tsx");
+
+  assert.match(document, /src="\/brand\/minerva-logo-gray\.png"/);
+  assert.match(document, /support@minervatechs\.com/);
+  assert.match(document, /\+504 3220-9818/);
+  assert.match(document, /www\.minervatechs\.com/);
+  assert.match(document, /data-invoice-accent-rule/);
+  assert.match(document, /data-invoice-bill-to/);
+  assert.match(document, /data-invoice-totals/);
+  assert.match(document, /paymentInstructionPresentation\(invoice\.payment_instruction_snapshot, language\)/);
+  assert.doesNotMatch(document, /Ficohsa|200011417538/);
 });
 
 test("invoice presentation defaults to Spanish and retains English structural labels", async () => {
@@ -184,6 +195,8 @@ test("invoice presentation defaults to Spanish and retains English structural la
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].invoice, "Factura");
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].billTo, "Facturar a");
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].balanceDue, "Saldo pendiente");
+  assert.equal(presentation.invoiceDocumentCopy["es-HN"].totalPayable, "Total a pagar");
+  assert.equal(presentation.invoiceDocumentCopy["es-HN"].bankInformation, "Información bancaria");
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].statuses.draft, "Borrador");
   assert.equal(presentation.invoiceDocumentCopy["en-US"].invoice, "Invoice");
   assert.equal(presentation.invoiceDocumentCopy["en-US"].billTo, "Bill to");
@@ -198,18 +211,20 @@ test("invoice locale switching formats presentation without mutating financial d
 
   const spanishMoney = presentation.formatInvoiceDocumentMoney(invoice.total, invoice.currency, "es-HN");
   const englishMoney = presentation.formatInvoiceDocumentMoney(invoice.total, invoice.currency, "en-US");
+  const documentAmount = presentation.formatInvoiceDocumentAmount(invoice.total, invoice.currency, "es-HN");
   assert.equal(spanishMoney.replace(/\s/g, " "), "HNL 2,917.00");
   assert.equal(englishMoney.replace(/\s/g, " "), "HNL 2,917.00");
   assert.doesNotMatch(spanishMoney, /\$/);
+  assert.equal(documentAmount.replace(/\s/g, " "), "L 2,917.00");
   assert.match(presentation.formatInvoiceDocumentDate("2026-10-09", "es-HN"), /octubre/i);
   assert.match(presentation.formatInvoiceDocumentDate("2026-10-09", "en-US"), /October/i);
   assert.deepEqual(invoice, { invoice_number: "INV-2610-001", currency: "HNL", total: 2917 });
 
   const presentationSource = read("features/seshat/invoicePresentation.ts");
   assert.doesNotMatch(presentationSource, /supabase|\.rpc\(|\.from\(|fetch\(|update\(|insert\(/i);
-  const workspace = read("features/seshat/SeshatWorkspace.tsx");
-  assert.match(workspace, /item\.name/);
-  assert.match(workspace, /item\.description/);
+  const document = read("features/seshat/InvoiceDocument.tsx");
+  assert.match(document, /item\.name/);
+  assert.match(document, /item\.description/);
 });
 
 test("Seshat web MVP adds no database migration", () => {

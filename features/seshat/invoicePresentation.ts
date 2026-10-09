@@ -21,6 +21,9 @@ type InvoiceDocumentCopy = {
   paid: string;
   balanceDue: string;
   paymentInformation: string;
+  bankInformation: string;
+  totalPayable: string;
+  footerTagline: string;
   bank: string;
   accountNumber: string;
   accountHolder: string;
@@ -51,6 +54,9 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     paid: "Pagado",
     balanceDue: "Saldo pendiente",
     paymentInformation: "Información de pago",
+    bankInformation: "Información bancaria",
+    totalPayable: "Total a pagar",
+    footerTagline: "Soluciones tecnológicas para administración y operación residencial.",
     bank: "Banco",
     accountNumber: "Número de cuenta",
     accountHolder: "Titular",
@@ -85,6 +91,9 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     paid: "Paid",
     balanceDue: "Balance due",
     paymentInformation: "Payment information",
+    bankInformation: "Bank information",
+    totalPayable: "Total",
+    footerTagline: "Technology solutions for residential administration and operations.",
     bank: "Bank",
     accountNumber: "Account number",
     accountHolder: "Account holder",
@@ -133,7 +142,7 @@ export function paymentInstructionPresentation(
   add(copy.instructions, snapshot.instructions);
 
   return {
-    heading: copy.paymentInformation,
+    heading: snapshot.method_type === "bank_transfer" ? copy.bankInformation : copy.paymentInformation,
     methodName: snapshot.display_name || copy.methodTypes[snapshot.method_type],
     rows,
   };
@@ -164,4 +173,19 @@ export function formatInvoiceDocumentMoney(
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(value);
+}
+
+export function formatInvoiceDocumentAmount(
+  value: number | null | undefined,
+  currency: string,
+  language: InvoiceDocumentLanguage,
+) {
+  if (value == null || Number.isNaN(value)) return "—";
+  const amount = new Intl.NumberFormat(language, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(value);
+
+  if (currency.toUpperCase() === "HNL") return `L ${amount}`;
+  return formatInvoiceDocumentMoney(value, currency, language);
 }
