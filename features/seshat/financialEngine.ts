@@ -192,6 +192,81 @@ export async function runAutomaticBilling(asOfDate?: string): Promise<AutomaticB
   return data as AutomaticBillingRunResult;
 }
 
+// Match the private payment-proofs bucket policy (10 MiB; images or PDF).
+const paymentProofExtensions: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "application/pdf": "pdf",
+};
+
+const MAX_PAYMENT_PROOF_BYTES = 10 * 1024 * 1024;
+
+export function validatePaymentProof(file: Pick<File, "size" | "type">): string {
+  const extension = paymentProofExtensions[file.type];
+  if (!extension) throw new Error("Use a JPG, PNG, WebP, or PDF payment proof.");
+  if (file.size === 0) throw new Error("Choose a non-empty payment proof.");
+  if (file.size > MAX_PAYMENT_PROOF_BYTES) throw new Error("Payment proof must be 10 MB or smaller.");
+  return extension;
+}
+
+// Attach evidence to an existing ledger row; never create another payment or alter its amount.
+export async function attachPaymentProof(input: {
+  paymentId: string;
+  invoiceId: string;
+  ownerId: string;
+  file: File;
+}): Promise<string> {
+  const { paymentId, invoiceId, ownerId, file } = input;
+  const extension = validatePaymentProof(file);
+  const supabase = getSeshatSupabase();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || authData.user?.id !== ownerId) {
+    throw new Error("Reconnect to Seshat before attaching a payment proof.");
+  }
+
+  // Check the payment belongs to this invoice and has no existing evidence.
+  const db = getSeshatDataClient();
+  const { data: payment, error: lookupError } = await db
+    .from<{ id: string; proof_path: string | null }>("payments")
+    .select("id, proof_path")
+    .eq("id", paymentId)
+    .eq("invoice_id", invoiceId)
+    .eq("owner_id", ownerId)
+    .single();
+  if (lookupError || !payment) throw new Error("Payment not found for this invoice.");
+  if (payment.proof_path) throw new Error("This payment already has a proof attached.");
+
+  const proofPath = `${ownerId}/${invoiceId}/${paymentId}/proof-${Date.now()}-${crypto.randomUUID()}.${extension}`;
+  const bucket = supabase.storage.from("payment-proofs");
+  const { error: uploadError } = await bucket.upload(proofPath, file, {
+    contentType: file.type,
+    upsert: false,
+  });
+  if (uploadError) throw new Error(seshatErrorMessage(uploadError, "Could not upload payment proof."));
+
+  let attached = false;
+  try {
+    const { data: updated, error: updateError } = await db
+      .from<{ id: string; proof_path: string | null }>("payments")
+      .update({ proof_path: proofPath })
+      .eq("id", paymentId)
+      .eq("invoice_id", invoiceId)
+      .eq("owner_id", ownerId)
+      .is("proof_path", null)
+      .select("id, proof_path")
+      .single();
+    if (updateError || updated?.proof_path !== proofPath) {
+      throw new Error(seshatErrorMessage(updateError, "Could not attach proof to payment."));
+    }
+    attached = true;
+    return proofPath;
+  } finally {
+    // An unlinked upload is not evidence; remove it without touching an existing proof.
+    if (!attached) await bucket.remove([proofPath]);
+  }
+}
+
 export async function getPaymentProofSignedUrl(proofPath: string) {
   const { data, error } = await getSeshatSupabase()
     .storage
