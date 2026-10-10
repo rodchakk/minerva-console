@@ -531,7 +531,7 @@ export async function sendCommunityUserPasswordResetEmailAction(input: {
 
   const email = data.user.email?.trim().toLowerCase() ?? "";
   if (
-    !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
     email.endsWith("@entry.local") ||
     email.endsWith("@entry.internal")
   ) {
