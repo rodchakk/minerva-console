@@ -1,12 +1,14 @@
 "use server";
 
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH } from "@/features/entry/passwordPolicy";
+import { getPasswordResetRedirectTo } from "@/features/entry/passwordResetRedirect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { coerceString } from "@/lib/supabase/utils";
+import { coerceString, getSupabaseEnv } from "@/lib/supabase/utils";
 
 export type CommunityUserRole = "ADMIN" | "RESIDENT" | "GUARD";
 
@@ -494,4 +496,81 @@ export async function setCommunityUserPasswordAction(
 
   revalidateCommunityUserPaths(communityId);
   return { success: true };
+}
+
+
+/**
+ * Request the existing ENTRY self-service password recovery email without
+ * changing the user's password or creating any temporary credentials.
+ */
+export async function sendCommunityUserPasswordResetEmailAction(input: {
+  communityId: string;
+  userId: string;
+}): Promise<CommunityUserOperationResult> {
+  const actor = await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+  if (previewReadOnlyError) return { error: previewReadOnlyError, success: false };
+
+  const communityId = input.communityId.trim();
+  const userId = input.userId.trim();
+  if (!communityId || !userId) {
+    return { error: "Community and user are required.", success: false };
+  }
+
+  // Validate the target against this specific community before using Admin Auth.
+  // Do not accept an email from the browser: it may be stale or tampered with.
+  if (!(await ensureUserInCommunity(communityId, userId))) {
+    return { error: "User not found in this community.", success: false };
+  }
+
+  const adminSupabase = createAdminClient();
+  const { data, error: lookupError } = await adminSupabase.auth.admin.getUserById(userId);
+  if (lookupError || !data.user || data.user.id !== userId) {
+    return { error: "Unable to verify this ENTRY account.", success: false };
+  }
+
+  const email = data.user.email?.trim().toLowerCase() ?? "";
+  if (
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+    email.endsWith("@entry.local") ||
+    email.endsWith("@entry.internal")
+  ) {
+    return {
+      error: "This account has no real email. Use the manual password reset instead.",
+      success: false,
+    };
+  }
+
+  try {
+    const redirectTo = await getPasswordResetRedirectTo();
+    const { url, anonKey } = getSupabaseEnv();
+    const recoveryClient = createSupabaseClient(url, anonKey, {
+      auth: {
+        autoRefreshToken: false,
+        flowType: "implicit",
+        persistSession: false,
+      },
+    });
+    const { error } = await recoveryClient.auth.resetPasswordForEmail(email, { redirectTo });
+
+    if (error) {
+      return { error: error.message, success: false };
+    }
+
+    // Best-effort trace for support, deliberately excluding reset links/tokens.
+    await adminSupabase.from("superadmin_audit_log").insert({
+      action: "community_user.password_reset_email",
+      actor_user_id: actor.user.id,
+      metadata: { community_id: communityId },
+      target_id: userId,
+      target_type: "user",
+    });
+
+    return { success: true };
+  } catch {
+    return {
+      error: "Could not send the recovery email. Try again later.",
+      success: false,
+    };
+  }
 }
