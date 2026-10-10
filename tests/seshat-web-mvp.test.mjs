@@ -389,6 +389,7 @@ test("primary Seshat web routes exist", () => {
     "app/(console)/seshat/expenses/page.tsx",
     "app/(console)/seshat/invoices/page.tsx",
     "app/(console)/seshat/invoices/new/page.tsx",
+    "app/(console)/seshat/cost-intelligence/page.tsx",
     "app/(console)/seshat/billing/page.tsx",
     "app/(console)/seshat/settings/page.tsx",
   ]) {
@@ -403,4 +404,20 @@ test("Control Center opens Seshat at the native route", () => {
   assert.match(source, /href:\s*"\/seshat"/);
   assert.match(source, /adminUrl:\s*"\/seshat"/);
   assert.doesNotMatch(source, /Route", value: "Reserved"/);
+});
+
+test("Cost Intelligence web uses real Seshat economics contracts", () => {
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const source = read("features/seshat/CostIntelligence.tsx");
+
+  assert.match(workspace, /\["Cost Intelligence", "\/seshat\/cost-intelligence"\]/);
+  assert.match(source, /\.rpc<CompanyRealityDashboard\[]>\("company_reality_dashboard_v2", \{ p_as_of_date: asOfDate \}\)/);
+  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_modeled_product_summary_v2_at"/);
+  assert.match(source, /p_as_of_date: asOfDate/);
+  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_actual_product_monthly_summary"/);
+  assert.match(source, /p_period_month: actualPeriod/);
+  assert.match(source, /\.from<ExpenseReconciliation\[]>\("unit_economics_expense_reconciliation"\)/);
+  assert.match(source, /\.from<CompanyAllocationSummary\[]>\("unit_economics_company_cost_allocation_summary"\)/);
+  assert.doesNotMatch(source, /\.from\("company_reality_dashboard_v2"\)/);
+  assert.doesNotMatch(source, /modeled_product_summary_v2_at[\s\S]*current_date/i);
 });
