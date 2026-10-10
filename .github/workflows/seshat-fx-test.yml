@@ -1,0 +1,25 @@
+name: Seshat FX correctness
+on:
+  pull_request:
+    paths:
+      - 'features/seshat/**'
+      - 'tests/seshat-fx-reporting.test.mjs'
+      - '.github/workflows/seshat-fx-test.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'features/seshat/**'
+      - 'tests/seshat-fx-reporting.test.mjs'
+jobs:
+  fx-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --test tests/seshat-fx-reporting.test.mjs
+      - run: npx next typegen
+      - run: npx tsc --noEmit
