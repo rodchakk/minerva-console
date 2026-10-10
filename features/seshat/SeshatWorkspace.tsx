@@ -36,7 +36,7 @@ import { downloadInvoicePdf } from "./invoicePdf";
 import { formatInvoiceDraftTotal, normalizeInvoiceCurrency } from "./invoiceDraft";
 import { localDateDaysOut, localDateValue } from "./localDate";
 import {
-  buildFxOverview, normalizeCurrency, reportingDate,
+  buildFxOverview, normalizeCurrency, reportingDate, simulateDraftPayment,
   type OfficialFxRate, type PaymentFxRate, type ReportingCurrency,
 } from "./fxReporting";
 import {
@@ -1141,11 +1141,37 @@ function Overview({
   const [displayCurrency, setDisplayCurrency] = useState<ReportingCurrency>(
     base === "USD" ? "USD" : "HNL",
   );
+  const [previewEnabled, setPreviewEnabled] = useState(false);
   const asOfDate = reportingDate();
-  const summary = buildFxOverview({
+  // This is the specific existing Andalucía draft, never a new invoice.
+  const andaluciaDraft = invoices.find((item) =>
+    item.invoice_number === "INV-2610-001"
+    && item.status === "draft"
+    && normalizeCurrency(item.currency) === "HNL"
+    && clients.some((client) =>
+      client.id === item.client_id &&
+      client.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes("andalucia"),
+    ),
+  );
+  const preview = andaluciaDraft
+    ? simulateDraftPayment(invoices, payments, andaluciaDraft.id, asOfDate)
+    : null;
+  const activePreview = previewEnabled && preview !== null;
+  const realSummary = buildFxOverview({
     invoices, payments, expenses, paymentRates: paymentFx,
     officialRates: officialFx, target: displayCurrency, asOfDate,
   });
+  const summary = activePreview && preview
+    ? buildFxOverview({
+        invoices: preview.invoices,
+        payments: preview.payments,
+        expenses,
+        paymentRates: paymentFx,
+        officialRates: officialFx,
+        target: displayCurrency,
+        asOfDate,
+      })
+    : realSummary;
   const currency = displayCurrency;
   return (
     <div className="space-y-4">
@@ -1167,6 +1193,51 @@ function Overview({
           </select>
         </label>
       </div>
+      {preview ? (
+        <div className={cn(
+          "rounded-lg border px-4 py-3",
+          activePreview ? "border-amber-400/40 bg-amber-400/[0.07]" : "border-white/[0.12] bg-white/[0.025]",
+        )}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-white">
+                What if Residencial Andalucía paid?
+              </p>
+              <p className="mt-1 text-xs text-slate-300">
+                Preview invoice {andaluciaDraft?.invoice_number}: fully issued and paid {money(preview.amount, andaluciaDraft?.currency ?? "HNL")} on {asOfDate}.
+              </p>
+              <p className="mt-1 text-xs text-slate-400">
+                This preview is read-only. No invoice, payment, balance or status is changed or saved.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setPreviewEnabled((value) => !value)}
+            >
+              {activePreview ? "Return to real numbers" : "Preview Andalucía paid"}
+            </Button>
+          </div>
+          {activePreview ? (
+            <div role="status" aria-live="polite" className="mt-3 space-y-2 border-t border-amber-400/20 pt-3">
+              <p className="text-sm font-semibold text-amber-200">
+                SIMULATION — not real income or a recorded payment
+              </p>
+              <div className="grid gap-2 text-xs sm:grid-cols-3">
+                <p className="text-slate-300">
+                  Collected this month: {money(realSummary.collected.value, currency)} → <strong className="text-white">{money(summary.collected.value, currency)}</strong>
+                </p>
+                <p className="text-slate-300">
+                  Issued invoices (all time): {money(realSummary.knownRevenue.value, currency)} → <strong className="text-white">{money(summary.knownRevenue.value, currency)}</strong>
+                </p>
+                <p className="text-slate-300">
+                  Cash less cost estimate: {money(realSummary.netCashAfterForecastCosts, currency)} → <strong className="text-white">{money(summary.netCashAfterForecastCosts, currency)}</strong>
+                </p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {fxLoadingError ? (
         <p role="alert" className="rounded-md border border-amber-500/30 p-3 text-sm text-amber-200">
           FX data unavailable: {fxLoadingError}. No unverified currency totals will be displayed.
@@ -1179,7 +1250,7 @@ function Overview({
           <p className="mt-1 text-xs">{summary.missing.slice(0, 5).join(" · ")}</p>
         </div>
       ) : null}
-      <div className="grid gap-3 md:grid-cols-4">
+      <div className="grid gap-3 md:grid-cols-4" aria-label={activePreview ? "Simulated financial overview (no changes saved)" : "Actual financial overview"}>
         <Metric label="Issued invoices · all time" value={money(summary.knownRevenue.value, currency)} />
         <Metric label="Monthly estimated costs" value={money(summary.monthlyCosts.value, currency)} />
         <Metric label="Cash less monthly cost estimate" value={money(summary.netCashAfterForecastCosts, currency)} />
