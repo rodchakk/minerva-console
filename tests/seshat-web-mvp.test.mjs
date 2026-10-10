@@ -389,6 +389,7 @@ test("primary Seshat web routes exist", () => {
     "app/(console)/seshat/expenses/page.tsx",
     "app/(console)/seshat/invoices/page.tsx",
     "app/(console)/seshat/invoices/new/page.tsx",
+    "app/(console)/seshat/cost-intelligence/page.tsx",
     "app/(console)/seshat/billing/page.tsx",
     "app/(console)/seshat/settings/page.tsx",
   ]) {
@@ -403,4 +404,44 @@ test("Control Center opens Seshat at the native route", () => {
   assert.match(source, /href:\s*"\/seshat"/);
   assert.match(source, /adminUrl:\s*"\/seshat"/);
   assert.doesNotMatch(source, /Route", value: "Reserved"/);
+});
+
+test("Cost Intelligence web uses real Seshat economics contracts", () => {
+  const workspace = read("features/seshat/SeshatWorkspace.tsx");
+  const source = read("features/seshat/CostIntelligence.tsx");
+  const formatter = read("features/seshat/financialFormat.ts");
+
+  assert.match(workspace, /\["Cost Intelligence", "\/seshat\/cost-intelligence"\]/);
+  for (const table of [
+    "unit_economics_company_costs",
+    "unit_economics_costs",
+    "unit_economics_company_allocations",
+    "unit_economics_actuals",
+    "unit_economics_workers",
+    "unit_economics_labor_rates",
+    "unit_economics_work_logs",
+    "unit_economics_work_log_costed",
+    "unit_economics_expense_reconciliation",
+  ]) {
+    assert.match(source, new RegExp(`\\.from(?:<[^>]+>)?\\("${table}"\\)`));
+  }
+  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_modeled_client_summary_v2_at"/);
+  assert.match(source, /p_as_of_date: asOfDate/);
+  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_actual_client_monthly_summary"/);
+  assert.match(source, /p_period_month: dateMonth\(periodMonth\)/);
+  assert.match(source, /Contracted Revenue/);
+  assert.match(source, /Invoiced Revenue/);
+  assert.match(source, /Collected Cash/);
+  assert.match(source, /source_expense_id/);
+  assert.match(source, /supersedes_company_cost_id/);
+  assert.match(source, /supersedes_cost_id/);
+  assert.match(formatter, /const SUBCENT_PRECISION = 8/);
+  assert.match(formatter, /const CENT_PRECISION = 2/);
+  assert.match(formatter, /exact halfway values round away from zero/);
+  assert.match(formatter, /precision = isSubcent\(parts\) \? SUBCENT_PRECISION : CENT_PRECISION/);
+  assert.match(formatter, /if \(options\.missingFx\) return "FX unavailable"/);
+  assert.doesNotMatch(source, /\.from\("company_reality_dashboard_v2"\)/);
+  assert.doesNotMatch(source, /unit_economics_modeled_product_summary_v2_at/);
+  assert.doesNotMatch(source, /unit_economics_actual_product_monthly_summary/);
+  assert.doesNotMatch(source, /modeled_client_summary_v2_at[\s\S]*current_date/i);
 });
