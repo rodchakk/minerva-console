@@ -16,6 +16,13 @@ import {
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/supabase/utils";
+import {
+  buildActualFormPayload,
+  buildCostFormPayload,
+  cleanFormValue as clean,
+  requiredDecimalInput,
+  requiredPositiveDecimalNumber,
+} from "./costIntelligenceForms";
 import { formatDecimalAmount, formatFinancialAmount } from "./financialFormat";
 import { localDateValue } from "./localDate";
 import { getSeshatDataClient, getSeshatSupabase } from "./supabase";
@@ -236,18 +243,6 @@ const evidenceLevels = ["verified", "quoted", "estimated", "placeholder"];
 const actualTypes = ["vendor_cost", "usage", "direct_operational", "onboarding", "other"];
 const workCategories = ["onboarding", "support", "product_maintenance", "product_development_rnd", "other"];
 const treatments = ["recurring", "one_time", "tracked_only"];
-
-function clean(value: FormDataEntryValue | null) {
-  const text = String(value ?? "").trim();
-  return text ? text : null;
-}
-
-function decimalInput(value: FormDataEntryValue | null, fallback: string | null = null) {
-  const text = clean(value);
-  if (text === null) return fallback;
-  if (!/^-?\d+(\.\d+)?$/.test(text)) throw new Error("Enter decimal values without currency symbols.");
-  return text;
-}
 
 function numeric(value: unknown) {
   const parsed = Number(value);
@@ -557,50 +552,18 @@ export function CostIntelligence() {
     try {
       const form = new FormData(event.currentTarget);
       const owner_id = await ownerPayload();
-      const kind = String(form.get("kind") ?? "company") as CostKind;
-      const costMode = String(form.get("cost_mode") ?? "fixed_amount");
-      const payload = {
-        owner_id,
-        name: String(form.get("name") ?? "").trim(),
-        vendor: clean(form.get("vendor")),
-        layer: String(form.get("layer") ?? "technical"),
-        cost_type: String(form.get("cost_type") ?? "infrastructure"),
-        cost_mode: costMode,
-        currency: String(clean(form.get("currency")) ?? "USD").toUpperCase(),
-        frequency: String(form.get("frequency") ?? "monthly"),
-        amount: costMode === "fixed_amount" ? decimalInput(form.get("amount"), "0") : null,
-        unit_cost: costMode === "usage" ? decimalInput(form.get("unit_cost")) : null,
-        unit_label: costMode === "usage" ? clean(form.get("unit_label")) : null,
-        monthly_quantity: costMode === "usage" ? decimalInput(form.get("monthly_quantity"), "0") : null,
-        evidence_level: String(form.get("evidence_level") ?? "estimated"),
-        evidence_note: clean(form.get("evidence_note")),
-        evidence_date: clean(form.get("evidence_date")),
-        start_date: String(clean(form.get("start_date")) ?? today),
-        end_date: clean(form.get("end_date")),
-        include_in_analysis: form.get("include_in_analysis") === "on",
-        is_active: form.get("is_active") === "on",
-        source_expense_id: clean(form.get("source_expense_id")),
-        notes: clean(form.get("notes")),
-      };
-      if (!payload.name) throw new Error("Cost name is required.");
+      const costForm = buildCostFormPayload(form, { ownerId: owner_id, today });
       const supabase = getSeshatDataClient();
-      if (kind === "company") {
+      if (costForm.kind === "company") {
         const { error: insertError } = await supabase.from("unit_economics_company_costs").insert({
-          ...payload,
-          require_full_allocation: form.get("require_full_allocation") === "on",
-          supersedes_company_cost_id: clean(form.get("supersedes_id")),
+          ...costForm.payload,
+          ...costForm.companyFields,
         });
         if (insertError) throw insertError;
       } else {
-        const scope = String(form.get("scope") ?? "shared_product");
-        const productKey = String(form.get("product_key") ?? "").trim().toUpperCase();
-        if (!productKey) throw new Error("Product key is required for product and client costs.");
         const { error: insertError } = await supabase.from("unit_economics_costs").insert({
-          ...payload,
-          product_key: productKey,
-          scope,
-          client_id: scope === "client_direct" ? clean(form.get("client_id")) : null,
-          supersedes_cost_id: clean(form.get("supersedes_id")),
+          ...costForm.payload,
+          ...costForm.productFields,
         });
         if (insertError) throw insertError;
       }
@@ -650,20 +613,20 @@ export function CostIntelligence() {
     try {
       const form = new FormData(event.currentTarget);
       const companyCostId = String(form.get("company_cost_id") ?? "");
-      const allocationPercent = numeric(form.get("allocation_percent"));
+      const allocationPercent = requiredPositiveDecimalNumber(form.get("allocation_percent"), "Allocation percent");
       if (!companyCostId) throw new Error("Select a company cost.");
-      if (allocationPercent <= 0 || allocationPercent > 100) throw new Error("Allocation percent must be above 0 and at most 100.");
+      if (allocationPercent.value > 100) throw new Error("Allocation percent must be above 0 and at most 100.");
       const existingTotal = state.allocations
         .filter((item) => item.company_cost_id === companyCostId && item.is_active && item.id !== selectedAllocationId)
         .reduce((sum, item) => sum + numeric(item.allocation_percent), 0);
-      if (existingTotal + allocationPercent > 100) throw new Error("Allocation total cannot exceed 100%.");
+      if (existingTotal + allocationPercent.value > 100) throw new Error("Allocation total cannot exceed 100%.");
 
       const payload = {
         owner_id: await ownerPayload(),
         company_cost_id: companyCostId,
         product_key: String(form.get("product_key") ?? "").trim().toUpperCase(),
         allocation_method: "manual_percentage",
-        allocation_percent: decimalInput(form.get("allocation_percent"), "0"),
+        allocation_percent: allocationPercent.text,
         start_date: String(clean(form.get("start_date")) ?? today),
         end_date: clean(form.get("end_date")),
         is_active: form.get("is_active") === "on",
@@ -687,36 +650,11 @@ export function CostIntelligence() {
     setError(null);
     try {
       const form = new FormData(event.currentTarget);
-      const scope = String(form.get("destination_scope") ?? "product");
-      const amountKnown = form.get("amount_known") === "on";
-      const payload = {
-        owner_id: await ownerPayload(),
-        period_month: dateMonth(String(form.get("period_month") ?? periodMonth)),
-        observed_date: String(clean(form.get("observed_date")) ?? today),
-        destination_scope: scope,
-        product_key: scope === "company" ? null : String(form.get("product_key") ?? "").trim().toUpperCase(),
-        client_id: scope === "client" ? clean(form.get("client_id")) : null,
-        company_cost_id: scope === "company" ? clean(form.get("company_cost_id")) : null,
-        name: String(form.get("name") ?? "").trim(),
-        vendor: clean(form.get("vendor")),
-        observation_type: String(form.get("observation_type") ?? "vendor_cost"),
-        layer: String(form.get("layer") ?? "technical"),
-        currency: String(clean(form.get("currency")) ?? "USD").toUpperCase(),
-        amount: amountKnown ? decimalInput(form.get("amount"), "0") : null,
-        amount_known: amountKnown,
-        quantity: decimalInput(form.get("quantity")),
-        unit_label: clean(form.get("unit_label")),
-        evidence_level: String(form.get("evidence_level") ?? "verified"),
-        evidence_note: clean(form.get("evidence_note")),
-        evidence_date: clean(form.get("evidence_date")),
-        include_in_economics: form.get("include_in_economics") === "on",
-        include_in_client_economics: form.get("include_in_client_economics") === "on",
-        economic_treatment: String(form.get("economic_treatment") ?? "recurring"),
-        source_expense_id: clean(form.get("source_expense_id")),
-        notes: clean(form.get("notes")),
-      };
-      if (!payload.name) throw new Error("Observation name is required.");
-      if (scope !== "company" && !payload.product_key) throw new Error("Product key is required for product and client observations.");
+      const payload = buildActualFormPayload(form, {
+        ownerId: await ownerPayload(),
+        today,
+        periodMonth,
+      });
       const response = selectedActualId
         ? await getSeshatDataClient().from("unit_economics_actuals").update(payload).eq("id", selectedActualId)
         : await getSeshatDataClient().from("unit_economics_actuals").insert(payload);
@@ -758,7 +696,7 @@ export function CostIntelligence() {
         owner_id: await ownerPayload(),
         worker_id: String(form.get("worker_id") ?? ""),
         currency: String(clean(form.get("currency")) ?? "USD").toUpperCase(),
-        hourly_rate: decimalInput(form.get("hourly_rate"), "0"),
+        hourly_rate: requiredDecimalInput(form.get("hourly_rate"), "Hourly rate"),
         evidence_level: String(form.get("evidence_level") ?? "estimated"),
         evidence_note: clean(form.get("evidence_note")),
         effective_start_date: String(clean(form.get("effective_start_date")) ?? today),
@@ -780,11 +718,12 @@ export function CostIntelligence() {
     try {
       const form = new FormData(event.currentTarget);
       const scope = String(form.get("destination_scope") ?? "client");
+      const durationHours = requiredPositiveDecimalNumber(form.get("duration_hours"), "Duration");
       const payload = {
         owner_id: await ownerPayload(),
         worker_id: String(form.get("worker_id") ?? ""),
         work_date: String(clean(form.get("work_date")) ?? today),
-        duration_minutes: Math.round(numeric(form.get("duration_hours")) * 60),
+        duration_minutes: Math.round(durationHours.value * 60),
         destination_scope: scope,
         product_key: scope === "company" ? null : String(form.get("product_key") ?? "").trim().toUpperCase(),
         client_id: scope === "client" ? clean(form.get("client_id")) : null,
