@@ -435,7 +435,10 @@ test("Cost Intelligence web uses real Seshat economics contracts", () => {
   assert.match(source, /source_expense_id/);
   assert.match(source, /supersedes_company_cost_id/);
   assert.match(source, /supersedes_cost_id/);
-  assert.match(formatter, /precision = isSubcent\(parts\) \? 8 : 2/);
+  assert.match(formatter, /const SUBCENT_PRECISION = 8/);
+  assert.match(formatter, /const CENT_PRECISION = 2/);
+  assert.match(formatter, /exact halfway values round away from zero/);
+  assert.match(formatter, /precision = isSubcent\(parts\) \? SUBCENT_PRECISION : CENT_PRECISION/);
   assert.match(formatter, /if \(options\.missingFx\) return "FX unavailable"/);
   assert.doesNotMatch(source, /\.from\("company_reality_dashboard_v2"\)/);
   assert.doesNotMatch(source, /unit_economics_modeled_product_summary_v2_at/);
