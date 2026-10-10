@@ -104,3 +104,66 @@ test("real Seshat legacy invoice converted with June BCH rate, draft excluded", 
   });
   assert.ok(Math.abs(august.collected.value - 2949.188) < 0.00001);
 });
+
+test("Andalucía what-if payment changes overview without mutating original invoice or payment data", () => {
+  const rateHistory = [
+    { effective_date: "2026-06-05", rate: 26.6690, source: "BCH", source_indicator: "EC-TCR-01" },
+    { effective_date: "2026-08-11", rate: 26.8108, source: "BCH", source_indicator: "EC-TCR-01" },
+    { effective_date: "2026-10-07", rate: 26.8883, source: "BCH", source_indicator: "EC-TCR-01" },
+  ];
+  const invoices = [
+    { id: "victor", invoice_number: "INV-2606-577", issue_date: "2026-06-05",
+      currency: "USD", total: 110, amount_paid: 110, status: "paid" },
+    { id: "andalucia", invoice_number: "INV-2610-001", issue_date: "2026-10-08",
+      currency: "HNL", total: 2917, amount_paid: 0, status: "draft" },
+  ];
+  const payments = [{ id: "victor-payment", amount: 110, currency: "USD", payment_date: "2026-08-11" }];
+  const originalInvoices = JSON.stringify(invoices);
+  const originalPayments = JSON.stringify(payments);
+  const expenses = [{ id: "cost", name: "Monthly expenses", currency: "USD", amount: 14.57,
+    monthly_amount: 14.57, frequency: "monthly", start_date: "2026-01-01", end_date: null, is_active: true }];
+
+  const report = (ins, pay) => fx.buildFxOverview({
+    invoices: ins, payments: pay, expenses, paymentRates: [], officialRates: rateHistory,
+    target: "HNL", asOfDate: "2026-10-09",
+  });
+  const actual = report(invoices, payments);
+  const scenario = fx.simulateDraftPayment(invoices, payments, "andalucia", "2026-10-09");
+  assert.ok(scenario);
+  const projected = report(scenario.invoices, scenario.payments);
+
+  assert.ok(Math.abs(actual.knownRevenue.value - 2933.59) < 1e-8);
+  assert.equal(actual.collected.value, 0);
+  assert.ok(Math.abs(projected.knownRevenue.value - 5850.59) < 1e-8);
+  assert.equal(projected.invoiced.value, 2917);
+  assert.equal(projected.collected.value, 2917);
+  assert.ok(Math.abs(projected.monthlyCosts.value - 391.762531) < 1e-6);
+  assert.ok(Math.abs(projected.netCashAfterForecastCosts - 2525.237469) < 1e-6);
+  assert.equal(scenario.invoices[1].status, "paid");
+  assert.equal(scenario.payments[1].payment_date, "2026-10-09");
+  assert.equal(scenario.payments[1].amount, 2917);
+  assert.equal(JSON.stringify(invoices), originalInvoices);
+  assert.equal(JSON.stringify(payments), originalPayments);
+});
+
+test("a previously paid, cancelled or missing invoice is not eligible for read-only preview", () => {
+  const base = { id: "a", invoice_number: "INV-2610-001", issue_date: "2026-10-08",
+    currency: "HNL", total: 2917, amount_paid: 0 };
+  for (const status of ["sent", "paid", "cancelled"]) {
+    assert.equal(fx.simulateDraftPayment([{ ...base, status }], [], base.id, "2026-10-09"), null);
+  }
+  assert.equal(fx.simulateDraftPayment([{ ...base, status: "draft" }], [], "missing", "2026-10-09"), null);
+  assert.equal(fx.simulateDraftPayment([{ ...base, status: "draft" }], [], base.id, "2026-10-07"), null);
+});
+
+test("Andalucía preview UI is explicit, reversible and makes no ledger writes", () => {
+  const src = readFileSync(new URL("../features/seshat/SeshatWorkspace.tsx", import.meta.url), "utf8");
+  const first = src.indexOf("function Overview(");
+  const last = src.indexOf("function Metric(", first);
+  const overview = src.slice(first, last);
+  assert.match(overview, /simulateDraftPayment\(invoices, payments, andaluciaDraft\.id, asOfDate\)/);
+  assert.match(overview, /setPreviewEnabled\(\(value\) => !value\)/);
+  assert.match(overview, /Return to real numbers/);
+  assert.match(overview, /SIMULATION — not real income or a recorded payment/);
+  assert.doesNotMatch(overview, /\.insert\(|\.update\(|\.delete\(|\.rpc\(|recordPayment\(/);
+});
