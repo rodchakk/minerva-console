@@ -65,7 +65,7 @@ jobs:
         run: npm ci
 
       - name: Run auth outage recovery regressions
-        run: node --test tests/auth-outage-recovery.test.mjs
+        run: |\n          node --test tests/auth-outage-recovery.test.mjs\n          node --test tests/entry-community-dual-password-reset.test.mjs
 
 
   entry-background-worker-safety-tests:
