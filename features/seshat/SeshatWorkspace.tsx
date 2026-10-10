@@ -1150,7 +1150,7 @@ function Overview({
     && normalizeCurrency(item.currency) === "HNL"
     && clients.some((client) =>
       client.id === item.client_id &&
-      client.name.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().includes("andalucia"),
+      client.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().includes("andalucia"),
     ),
   );
   const preview = andaluciaDraft
