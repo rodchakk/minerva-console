@@ -409,15 +409,36 @@ test("Control Center opens Seshat at the native route", () => {
 test("Cost Intelligence web uses real Seshat economics contracts", () => {
   const workspace = read("features/seshat/SeshatWorkspace.tsx");
   const source = read("features/seshat/CostIntelligence.tsx");
+  const formatter = read("features/seshat/financialFormat.ts");
 
   assert.match(workspace, /\["Cost Intelligence", "\/seshat\/cost-intelligence"\]/);
-  assert.match(source, /\.rpc<CompanyRealityDashboard\[]>\("company_reality_dashboard_v2", \{ p_as_of_date: asOfDate \}\)/);
-  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_modeled_product_summary_v2_at"/);
+  for (const table of [
+    "unit_economics_company_costs",
+    "unit_economics_costs",
+    "unit_economics_company_allocations",
+    "unit_economics_actuals",
+    "unit_economics_workers",
+    "unit_economics_labor_rates",
+    "unit_economics_work_logs",
+    "unit_economics_work_log_costed",
+    "unit_economics_expense_reconciliation",
+  ]) {
+    assert.match(source, new RegExp(`\\.from(?:<[^>]+>)?\\("${table}"\\)`));
+  }
+  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_modeled_client_summary_v2_at"/);
   assert.match(source, /p_as_of_date: asOfDate/);
-  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_actual_product_monthly_summary"/);
-  assert.match(source, /p_period_month: actualPeriod/);
-  assert.match(source, /\.from<ExpenseReconciliation\[]>\("unit_economics_expense_reconciliation"\)/);
-  assert.match(source, /\.from<CompanyAllocationSummary\[]>\("unit_economics_company_cost_allocation_summary"\)/);
+  assert.match(source, /\.rpc<JsonRecord>\("unit_economics_actual_client_monthly_summary"/);
+  assert.match(source, /p_period_month: dateMonth\(periodMonth\)/);
+  assert.match(source, /Contracted Revenue/);
+  assert.match(source, /Invoiced Revenue/);
+  assert.match(source, /Collected Cash/);
+  assert.match(source, /source_expense_id/);
+  assert.match(source, /supersedes_company_cost_id/);
+  assert.match(source, /supersedes_cost_id/);
+  assert.match(formatter, /precision = isSubcent\(parts\) \? 8 : 2/);
+  assert.match(formatter, /if \(options\.missingFx\) return "FX unavailable"/);
   assert.doesNotMatch(source, /\.from\("company_reality_dashboard_v2"\)/);
-  assert.doesNotMatch(source, /modeled_product_summary_v2_at[\s\S]*current_date/i);
+  assert.doesNotMatch(source, /unit_economics_modeled_product_summary_v2_at/);
+  assert.doesNotMatch(source, /unit_economics_actual_product_monthly_summary/);
+  assert.doesNotMatch(source, /modeled_client_summary_v2_at[\s\S]*current_date/i);
 });
