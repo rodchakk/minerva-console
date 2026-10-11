@@ -31,6 +31,7 @@ import {
   DEFAULT_INVOICE_DOCUMENT_LANGUAGE,
   type InvoiceDocumentLanguage,
 } from "./invoicePresentation";
+import { CostIntelligence } from "./CostIntelligence";
 import { InvoiceDocument } from "./InvoiceDocument";
 import { downloadInvoicePdf } from "./invoicePdf";
 import { formatInvoiceDraftTotal, normalizeInvoiceCurrency } from "./invoiceDraft";
@@ -93,6 +94,7 @@ type View =
   | "invoices"
   | "invoice-new"
   | "invoice-detail"
+  | "cost-intelligence"
   | "billing"
   | "settings";
 
@@ -111,6 +113,7 @@ const nav = [
   ["Services", "/seshat/services"],
   ["Expenses", "/seshat/expenses"],
   ["Invoices", "/seshat/invoices"],
+  ["Cost Intelligence", "/seshat/cost-intelligence"],
   ["Automatic Billing", "/seshat/billing"],
   ["Settings", "/seshat/settings"],
 ] as const;
@@ -159,6 +162,7 @@ function parseView(pathname: string): { view: View; id: string | null } {
     if (parts[2]) return { view: "invoice-detail", id: parts[2] };
     return { view: "invoices", id: null };
   }
+  if (parts[1] === "cost-intelligence") return { view: "cost-intelligence", id: null };
   if (parts[1] === "billing") return { view: "billing", id: null };
   if (parts[1] === "settings") return { view: "settings", id: null };
   return { view: "overview", id: null };
@@ -1093,6 +1097,7 @@ export function SeshatWorkspace() {
           onDelete={deleteDraftInvoice}
         />
       ) : null}
+      {view === "cost-intelligence" ? <CostIntelligence /> : null}
       {view === "billing" ? (
         <Billing
           dueItems={dueItems}
