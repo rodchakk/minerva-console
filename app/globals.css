@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./minerva-console.css";
 
 :root {
   /* Visual System v2 Semantic Tokens */
