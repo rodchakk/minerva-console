@@ -40,7 +40,7 @@
   min-height:100vh;
   background:#2E2936;
   color:#E7E5EA;
-  font-family:Rubik,var(--font-geist-sans),sans-serif;
+  font-family:var(--font-rubik),Rubik,var(--font-geist-sans),sans-serif;
 }
 .minerva-core-theme.minerva-collapsed { --minerva-side:65px; }
 .minerva-topbar {
