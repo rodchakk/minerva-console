@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, ArrowUpRight, BrainCircuit, ChevronRight, Plus, Search, X } from "lucide-react";
-import { productModules, type ProductModule, type ProductStatus } from "./productRegistry";
+import { listedProductModules, type ProductModule, type ProductStatus } from "./productRegistry";
 
 function statusTone(status: ProductStatus) {
   if (status === "operational") return "operational";
@@ -96,9 +96,9 @@ export function ProductsWorkspace() {
   const [status, setStatus] = useState("all");
   const [kind, setKind] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const selected = productModules.find((product) => product.id === selectedId) ?? null;
+  const selected = listedProductModules.find((product) => product.id === selectedId) ?? null;
 
-  const filtered = productModules.filter((product) => {
+  const filtered = listedProductModules.filter((product) => {
     const matchesQuery = (product.name + " " + product.description + " " + product.slug)
       .toLowerCase().includes(search.trim().toLowerCase());
     return matchesQuery && (status === "all" || product.status === status)
@@ -182,7 +182,7 @@ export function ProductsWorkspace() {
         ) : null}
       </section>
       <div className="minerva-list-meta">
-        <span>{filtered.length} of {productModules.length} registered products</span>
+        <span>{filtered.length} of {listedProductModules.length} registered products</span>
         <span>Live product registry · No simulated metrics</span>
       </div>
       <section aria-label="Internal tools">
