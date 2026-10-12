@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/AppSidebar";
+import { MinervaShell } from "@/components/layout/MinervaShell";
 import { Topbar } from "@/components/layout/Topbar";
+import { isEntryContext } from "@/components/layout/sidebarRouteState";
 
 type ShellProps = {
   children: React.ReactNode;
@@ -12,6 +15,22 @@ type ShellProps = {
 
 export function Shell({ children, email, previewReadOnly = false }: ShellProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Keep ENTRY's production workspace, navigation and violet theme untouched.
+  if (!isEntryContext(pathname)) {
+    return (
+      <MinervaShell email={email} previewReadOnly={previewReadOnly}>
+        {pathname === "/products" ? (
+          children
+        ) : (
+          <div className="px-4 py-4 lg:px-6 lg:py-5 2xl:px-7">
+            <div className="mx-auto max-w-[1820px]">{children}</div>
+          </div>
+        )}
+      </MinervaShell>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[var(--console-bg)] text-[var(--console-text)]">
