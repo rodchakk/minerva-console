@@ -1,0 +1,217 @@
+/* Minerva Console V3. The ENTRY workspace deliberately keeps its own styling. */
+.minerva-core-theme {
+  --console-bg:#2E2936;
+  --console-sidebar:#24202B;
+  --console-surface:#24202B;
+  --console-surface-raised:#2E2936;
+  --console-surface-hover:#37303F;
+  --console-border:#141119;
+  --console-border-strong:#433A4B;
+  --console-text:#E7E5EA;
+  --console-text-muted:#A9A3B2;
+  --console-text-soft:#8F879D;
+  --console-accent:#B94A58;
+  --console-accent-hover:#C75A69;
+  --console-accent-subtle:rgba(185,74,88,.11);
+  --console-accent-border:rgba(185,74,88,.38);
+  --background:#2E2936;
+  --foreground:#E7E5EA;
+  --app-bg:#2E2936;
+  --surface:#24202B;
+  --surface-muted:#2E2936;
+  --surface-strong:#1F1B26;
+  --surface-elevated:#2E2936;
+  --border:#141119;
+  --border-strong:#433A4B;
+  --sidebar:#24202B;
+  --sidebar-muted:#2E2936;
+  --sidebar-foreground:#E7E5EA;
+  --primary:#B94A58;
+  --primary-strong:#C75A69;
+  --primary-soft:rgba(185,74,88,.11);
+  --text-muted:#A9A3B2;
+  --text-soft:#8F879D;
+  --minerva-red:#B94A58;
+  --minerva-red-base:#3A1118;
+  --minerva-edge:#141119;
+  --minerva-field:#2E2936;
+  --minerva-dark:#24202B;
+  --minerva-side:220px;
+  min-height:100vh;
+  background:#2E2936;
+  color:#E7E5EA;
+  font-family:Rubik,var(--font-geist-sans),sans-serif;
+}
+.minerva-core-theme.minerva-collapsed { --minerva-side:65px; }
+.minerva-topbar {
+  position:sticky;top:0;z-index:50;height:56px;
+  display:flex;align-items:center;
+  background:#24202B;border-bottom:1px solid #141119;
+}
+.minerva-topbar-brand {
+  width:var(--minerva-side);height:100%;display:flex;align-items:center;gap:11px;
+  padding:0 17px;flex:none;overflow:hidden;white-space:nowrap;
+  border-right:1px solid #141119;transition:width .17s ease;
+  font-size:12px;font-weight:700;letter-spacing:.07em;
+}
+.minerva-brand-emblem {
+  flex:none;width:23px;height:23px;display:grid;place-items:center;
+  border:2px solid #B94A58;border-radius:6px;
+  box-shadow:inset 0 0 0 4px rgba(185,74,88,.07);
+}
+.minerva-brand-emblem::before {content:"";width:8px;height:8px;background:#B94A58;border-radius:2px;transform:rotate(45deg);}
+.minerva-collapsed .minerva-brand-name {display:none;}
+.minerva-topbar-org {display:flex;align-items:center;gap:10px;min-width:0;padding-left:24px;font-size:13px;font-weight:500;}
+.minerva-topbar-org small {font-size:12px;color:#8F879D;font-weight:400;}
+.minerva-topbar-right {margin-left:auto;display:flex;align-items:center;gap:15px;padding:0 23px;}
+.minerva-identity {width:28px;height:28px;display:grid;place-items:center;background:#492832;border:1px solid #71404B;border-radius:6px;color:#F8BDC5;font-size:11px;font-weight:700;}
+.minerva-mobile-menu {display:none;color:#E7E5EA;background:transparent;border:1px solid #141119;border-radius:6px;width:34px;height:34px;align-items:center;justify-content:center;}
+.minerva-sidebar {
+  position:fixed;top:56px;bottom:0;left:0;z-index:40;width:var(--minerva-side);
+  display:flex;flex-direction:column;padding:23px 10px 12px;overflow:hidden;
+  background:#24202B;border-right:1px solid #141119;transition:width .17s ease,transform .17s ease;
+}
+.minerva-sidebar-label {padding:0 10px 9px;color:#8F879D;font-size:10px;font-weight:600;letter-spacing:.12em;white-space:nowrap;}
+.minerva-nav {display:grid;gap:3px;}
+.minerva-nav-link {
+  display:flex;align-items:center;gap:11px;height:38px;padding:0 11px;
+  border:0;border-left:2px solid transparent;border-radius:5px;
+  color:#BDB5C7;font-size:12px;font-weight:500;white-space:nowrap;
+  transition:background-color .12s,color .12s;
+}
+.minerva-nav-link:hover {background:rgba(255,255,255,.045);color:#E7E5EA;}
+.minerva-nav-link[aria-current="page"] {background:rgba(185,74,88,.11);border-left-color:#B94A58;color:#fff;}
+.minerva-nav-link[aria-current="page"] svg {color:#DA7886;}
+.minerva-nav-link svg {width:17px;height:17px;flex:none;stroke-width:1.8;}
+.minerva-sidebar-rule {height:1px;background:#3B3442;margin:17px 10px;}
+.minerva-sidebar-bottom {margin-top:auto;padding-top:12px;border-top:1px solid #3B3442;}
+.minerva-sidebar-note {padding:7px 10px;color:#8F879D;font-size:10px;}
+.minerva-collapse {margin:8px 8px 0 auto;display:grid;place-items:center;width:28px;height:28px;background:transparent;border:0;border-radius:5px;color:#8F879D;cursor:pointer;}
+.minerva-collapse:hover {background:#38313F;color:#fff;}
+.minerva-collapsed .minerva-sidebar-label,.minerva-collapsed .minerva-nav-label,.minerva-collapsed .minerva-sidebar-note {display:none;}
+.minerva-collapsed .minerva-nav-link {justify-content:center;padding:0;}
+.minerva-collapsed .minerva-collapse {margin:8px auto 0;}
+.minerva-content-shell {margin-left:var(--minerva-side);min-height:calc(100vh - 56px);transition:margin-left .17s ease;}
+.minerva-content {max-width:1160px;margin:0 auto;padding:47px 52px 90px;}
+.minerva-crumb {display:flex;align-items:center;gap:9px;margin-bottom:18px;color:#8F879D;font-size:11px;}
+.minerva-crumb strong {font-weight:500;color:#DBD5E2;}
+.minerva-heading {margin:0 0 5px;color:#fff;font-size:30px;letter-spacing:-.035em;line-height:1.2;font-weight:600;}
+.minerva-subtitle {margin:0;color:#A9A3B2;font-size:12px;}
+.minerva-toolbar {display:flex;align-items:center;gap:9px;margin:32px 0 16px;}
+.minerva-search-wrap {position:relative;flex:0 1 350px;min-width:0;}
+.minerva-search-wrap svg {position:absolute;left:13px;top:10px;width:16px;height:16px;color:#9B92A8;pointer-events:none;}
+.minerva-input {
+  height:36px;width:100%;padding:0 14px 0 38px;
+  border:1px solid #141119;border-radius:6px;
+  background:rgba(0,0,32,.20);box-shadow:inset 0 1px 0 #141119;
+  color:#E7E5EA;outline:none;font-size:12px;
+}
+.minerva-input::placeholder {color:#857D93;}
+.minerva-input:focus {border-color:#B94A58;box-shadow:inset 0 1px 0 #141119,0 0 0 2px #B94A58;}
+.minerva-select {
+  height:36px;border:1px solid #141119;border-radius:6px;
+  background:rgba(0,0,32,.20);color:#E7E5EA;outline:none;
+  font-size:12px;padding:0 10px;cursor:pointer;
+}
+.minerva-select:focus-visible {outline:2px solid #B94A58;outline-offset:2px;}
+/* Exact two-layer mechanical construction approved in the ENTRY red-theme HTML.
+   Pedestal + raised face; no glow or gradient. */
+.minerva-mechanical {
+  position:relative;isolation:isolate;display:inline-flex;align-items:center;
+  justify-content:center;gap:8px;min-height:38px;padding:9px 14px;
+  background:transparent;border:0;border-radius:7px;color:#fff;
+  font:inherit;font-size:13px;font-weight:600;line-height:20px;
+  text-decoration:none;white-space:nowrap;cursor:pointer;
+}
+.minerva-mechanical::before,.minerva-mechanical::after {
+  content:"";position:absolute;inset:0;border-radius:7px;pointer-events:none;
+  transform:translateY(-2px);
+  transition:transform .10s ease,filter .12s ease;
+}
+.minerva-mechanical::before {z-index:-2;box-shadow:0 2px 0 var(--mechanical-base);}
+.minerva-mechanical::after {z-index:-1;background:var(--mechanical-face);border:1px solid var(--mechanical-base);}
+.minerva-mechanical.primary {--mechanical-face:#B94A58;--mechanical-base:#3A1118;}
+.minerva-mechanical.secondary {--mechanical-face:#2E2936;--mechanical-base:#141119;}
+.minerva-mechanical.danger {--mechanical-face:#2E2025;--mechanical-base:#47242B;color:#F0A5B0;}
+.minerva-mechanical::before {background:var(--mechanical-base);}
+.minerva-mechanical:hover::after {filter:brightness(1.08);}
+.minerva-mechanical:active::after {transform:translateY(0);filter:brightness(.96);}
+.minerva-mechanical:focus-visible,.minerva-nav-link:focus-visible {outline:2px solid #B94A58;outline-offset:3px;}
+.minerva-mechanical[aria-disabled="true"] {opacity:.45;pointer-events:none;}
+.minerva-toolbar-add {margin-left:auto;}
+.minerva-list-frame {
+  position:relative;overflow:hidden;
+  background:#24202B;border:1px solid #141119;border-radius:9px;
+}
+.minerva-list-frame::before {content:"";position:absolute;top:0;left:0;width:76px;height:1px;background:#B94A58;z-index:2;}
+.minerva-list-frame::after {content:"";position:absolute;bottom:0;right:0;width:26px;height:26px;border-right:2px solid rgba(185,74,88,.60);border-bottom:2px solid rgba(185,74,88,.60);z-index:2;pointer-events:none;}
+.minerva-list-scroll {overflow-x:auto;}
+.minerva-product-table {width:100%;border-collapse:collapse;min-width:750px;text-align:left;}
+.minerva-product-table th {height:40px;padding:0 20px;background:#1F1B26;color:#AAA1B6;font-size:10px;font-weight:500;letter-spacing:.03em;}
+.minerva-product-table td {padding:17px 20px;border-top:1px solid #141119;color:#BEB7C8;font-size:12px;vertical-align:middle;}
+.minerva-product-table tbody tr {transition:background-color .12s;}
+.minerva-product-table tbody tr:hover {background:rgba(255,255,255,.025);}
+.minerva-product-table tr.is-selected {background:rgba(185,74,88,.07);}
+.minerva-product-table tr.is-selected td {border-top-color:rgba(185,74,88,.34);border-bottom:1px solid rgba(185,74,88,.34);}
+.minerva-product-icon {width:36px;height:36px;display:grid;place-items:center;flex:none;border-radius:6px;background:#3B2531;border:1px solid #67303C;color:#EF7F8C;}
+.minerva-product-name {display:flex;align-items:center;gap:13px;min-width:0;}
+.minerva-product-name strong {display:block;color:#fff;font-size:12px;font-weight:600;}
+.minerva-product-name small {display:block;margin-top:3px;color:#9D94A9;font-size:11px;max-width:270px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.minerva-product-open {background:transparent;border:0;padding:0;color:inherit;text-align:left;cursor:pointer;}
+.minerva-product-open:focus-visible {outline:2px solid #B94A58;outline-offset:4px;border-radius:2px;}
+.minerva-status {display:inline-flex;align-items:center;gap:7px;padding:4px 8px;background:rgba(255,255,255,.018);border:1px solid #514759;border-radius:4px;color:#B9B1C3;font-size:10px;white-space:nowrap;}
+.minerva-status::before {content:"";width:5px;height:5px;flex:none;border-radius:50%;background:#A99FB6;}
+.minerva-status.operational {color:#8DDFC1;border-color:#326E5B;background:rgba(38,141,103,.07);}
+.minerva-status.operational::before {background:#73D9B0;}
+.minerva-status.development {color:#E2BE83;border-color:#7A5B2F;background:rgba(157,106,27,.05);}
+.minerva-status.development::before {background:#D9AC6A;}
+.minerva-status.error {color:#F0A5B0;border-color:#783943;background:rgba(185,74,88,.08);}
+.minerva-status.error::before {background:#B94A58;}
+.minerva-table-arrow {width:26px;height:26px;display:grid;place-items:center;border:0;border-radius:4px;background:transparent;color:#958A9F;cursor:pointer;}
+.minerva-table-arrow:hover {background:rgba(255,255,255,.055);color:#fff;}
+.minerva-list-meta {display:flex;align-items:center;justify-content:space-between;margin-top:14px;color:#8F879D;font-size:10px;}
+.minerva-tools-title {margin:45px 0 14px;color:#8F879D;font-size:10px;font-weight:600;letter-spacing:.08em;}
+.minerva-tool-link {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid #413748;}
+.minerva-tool-link strong {display:block;color:#fff;font-size:12px;font-weight:500;}
+.minerva-tool-link small {display:block;margin-top:2px;color:#8F879D;font-size:11px;}
+.minerva-tool-link:hover strong {color:#F0A5B0;}
+.minerva-drawer-backdrop {position:fixed;inset:56px 0 0;z-index:60;background:rgba(12,10,17,.25);}
+.minerva-drawer {position:absolute;top:0;right:0;bottom:0;width:min(430px,100%);display:flex;flex-direction:column;background:#2E2936;border-left:1px solid #141119;box-shadow:-18px 0 40px rgba(0,0,0,.28);}
+.minerva-drawer-header {display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:20px 18px;border-bottom:1px solid #141119;}
+.minerva-drawer-close {width:30px;height:30px;display:grid;place-items:center;border-radius:6px;border:1px solid #141119;background:#24202B;color:#A9A3B2;cursor:pointer;}
+.minerva-drawer-close:hover {color:#fff;}
+.minerva-drawer-body {flex:1;overflow-y:auto;padding:0 18px 18px;}
+.minerva-drawer-section {padding:18px 0;border-bottom:1px solid rgba(231,229,234,.08);}
+.minerva-drawer-section h3 {margin:0 0 12px;color:#A9A3B2;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;}
+.minerva-detail-row {display:grid;grid-template-columns:120px 1fr;gap:16px;padding:6px 0;font-size:12px;}
+.minerva-detail-row dt {color:#A9A3B2;}
+.minerva-detail-row dd {margin:0;color:#E7E5EA;overflow-wrap:anywhere;}
+.minerva-drawer-footer {display:flex;gap:9px;padding:14px 18px 16px;border-top:1px solid #141119;background:#2E2936;}
+.minerva-drawer-footer > *:last-child {flex:1;}
+@media(max-width:840px){
+  .minerva-content {padding:30px 24px 75px;}
+  .minerva-topbar-org {padding-left:14px;}
+}
+@media(max-width:740px){
+  .minerva-core-theme {--minerva-side:0px;}
+  .minerva-core-theme.minerva-collapsed {--minerva-side:0px;}
+  .minerva-topbar-brand {width:auto;border-right:0;padding:0 12px;}
+  .minerva-topbar-brand .minerva-brand-name {display:block;}
+  .minerva-mobile-menu {display:inline-flex;margin-left:12px;}
+  .minerva-topbar-org {display:none;}
+  .minerva-topbar-right {padding-right:12px;}
+  .minerva-sidebar {width:220px;transform:translateX(-100%);z-index:70;}
+  .minerva-sidebar.is-mobile-open {transform:translateX(0);}
+  .minerva-mobile-scrim {position:fixed;inset:56px 0 0;z-index:65;background:rgba(12,10,17,.65);border:0;width:100%;cursor:pointer;}
+  .minerva-collapse {display:none;}
+  .minerva-collapsed .minerva-sidebar-label,.minerva-collapsed .minerva-nav-label,.minerva-collapsed .minerva-sidebar-note {display:initial;}
+  .minerva-collapsed .minerva-nav-link {justify-content:flex-start;padding:0 11px;}
+  .minerva-content-shell {margin-left:0;}
+  .minerva-content {padding:31px 20px 75px;}
+  .minerva-toolbar {flex-wrap:wrap;}
+  .minerva-search-wrap {flex:1 1 100%;}
+  .minerva-toolbar-add {margin-left:auto;}
+}
+@media(prefers-reduced-motion:reduce) {
+  .minerva-core-theme *, .minerva-core-theme *::before, .minerva-core-theme *::after {transition-duration:.01ms!important;}
+}
