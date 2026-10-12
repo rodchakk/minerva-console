@@ -34,6 +34,8 @@ export type ProductModule = {
   icon: LucideIcon;
   id: string;
   kind: ProductKind;
+  /** Show this module on the Minerva Console product directory when launch-ready. */
+  listedInConsole: boolean;
   metrics: ProductMetric[];
   name: string;
   owner: string;
@@ -57,6 +59,7 @@ export const productModules: ProductModule[] = [
     icon: Grid2X2,
     id: "entry",
     kind: "native",
+    listedInConsole: true,
     metrics: [
       { label: "Module", value: "Native" },
       { label: "Route", value: "/products/entry" },
@@ -82,6 +85,8 @@ export const productModules: ProductModule[] = [
     icon: CircleGauge,
     id: "seshat",
     kind: "native",
+    // SESHAT is not ready to be offered in the Minerva product directory yet.
+    listedInConsole: false,
     metrics: [
       { label: "Module", value: "Native" },
       { label: "Route", value: "/seshat" },
@@ -94,6 +99,8 @@ export const productModules: ProductModule[] = [
     statusLabel: "Preview ready",
   },
 ];
+
+export const listedProductModules = productModules.filter((product) => product.listedInConsole);
 
 export const restrictedProductStateExample: ProductModule = {
   availability: "restricted",
@@ -109,6 +116,7 @@ export const restrictedProductStateExample: ProductModule = {
   icon: Lock,
   id: "restricted-product-state-example",
   kind: "external",
+  listedInConsole: false,
   metrics: [
     { label: "Access", value: "Restricted" },
     { label: "Mode", value: "Link only" },
