@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ArrowUpRight, Boxes, ChevronLeft, ChevronRight, FileClock, Menu,
+  Boxes, ChevronLeft, ChevronRight, FileClock, Menu,
   Settings2, Users, X, Building2, CircleGauge,
 } from "lucide-react";
 import { EntryPushSessionSync } from "@/features/entry/push/EntryPushSessionSync";
@@ -107,15 +107,6 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
               <span className="minerva-nav-label">{label}</span>
             </Link>
           ))}
-        </nav>
-        <div className="minerva-sidebar-rule" />
-        <nav className="minerva-nav" aria-label="Internal tools">
-          <Link href="/brain" className="minerva-nav-link" title="Minerva Brain"
-            aria-current={pathname.startsWith("/brain") ? "page" : undefined}
-            onClick={() => setMobileOpen(false)}>
-            <ArrowUpRight aria-hidden="true" />
-            <span className="minerva-nav-label">Minerva Brain</span>
-          </Link>
         </nav>
         <div className="minerva-sidebar-bottom">
           <p className="minerva-sidebar-note">Minerva Technologies · Internal workspace</p>
