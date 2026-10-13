@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, BrainCircuit, ChevronRight, Plus, Search, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, Plus, Search, X } from "lucide-react";
 import { listedProductModules, type ProductModule, type ProductStatus } from "./productRegistry";
 
 function statusTone(status: ProductStatus) {
@@ -112,7 +112,7 @@ export function ProductsWorkspace() {
       </div>
       <header>
         <h1 className="minerva-heading">Products</h1>
-        <p className="minerva-subtitle">Manage Minerva products, modules and internal tools.</p>
+        <p className="minerva-subtitle">Manage Minerva products and modules.</p>
       </header>
       <div className="minerva-toolbar">
         <label className="minerva-search-wrap">
@@ -185,20 +185,6 @@ export function ProductsWorkspace() {
         <span>{filtered.length} of {listedProductModules.length} registered products</span>
         <span>Live product registry · No simulated metrics</span>
       </div>
-      <section aria-label="Internal tools">
-        <h2 className="minerva-tools-title">INTERNAL TOOLS</h2>
-        <Link className="minerva-tool-link" href="/brain">
-          <span className="flex items-center gap-3">
-            <span className="minerva-product-icon !h-[31px] !w-[31px]"><BrainCircuit size={16}/></span>
-            <span>
-              <strong>Minerva Core Brain</strong>
-              <small>Internal knowledge and operational context</small>
-            </span>
-          </span>
-          <ArrowRight size={16} className="text-[#958A9F]"/>
-        </Link>
-      </section>
-
       {selected ? <ProductDetails product={selected} onClose={() => setSelectedId(null)} /> : null}
     </div>
   );
