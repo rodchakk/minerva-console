@@ -221,7 +221,7 @@ export function ProductsWorkspace() {
       </section>
 
       <footer className="mothership-footer">
-        <span>MINERVA TECHNOLOGIES <b>×</b> THE UNKNOWN IS ENGINEERED HERE <span className="opacity-60">// 001</span></span>
+        <span>MINERVA TECHNOLOGIES <b>×</b> THE UNKNOWN IS ENGINEERED HERE <span className="opacity-60">{"// 001"}</span></span>
         <button type="button" className="mothership-motion-toggle" aria-pressed={ambientMotion}
           onClick={() => setAmbientMotion((on) => !on)}
           aria-label={ambientMotion ? "Pause ambient animation" : "Resume ambient animation"}>
