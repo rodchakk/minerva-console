@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { EntryPushSessionSync } from "@/features/entry/push/EntryPushSessionSync";
 import { EntryPushSignOutForm } from "@/features/entry/push/EntryPushSignOutForm";
+import { AlienInsignia } from "@/features/control-center/HangarArt";
 
 type Props = {
   children: React.ReactNode;
@@ -40,7 +41,7 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
   const accountInitial = email && !syntheticEmail ? email.charAt(0).toUpperCase() : "M";
 
   return (
-    <div className={"minerva-core-theme" + (collapsed ? " minerva-collapsed" : "")}>
+    <div className={"minerva-core-theme minerva-mothership-shell" + (collapsed ? " minerva-collapsed" : "")}>
       <header className="minerva-topbar">
         <EntryPushSessionSync surface="console" />
         <button
@@ -52,8 +53,8 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
           <Menu size={17} />
         </button>
         <Link href="/products" className="minerva-topbar-brand" aria-label="Minerva Console products">
-          <span className="minerva-brand-emblem" aria-hidden="true" />
-          <span className="minerva-brand-name">MINERVA CONSOLE</span>
+          <span className="minerva-brand-emblem" aria-hidden="true"><AlienInsignia /></span>
+          <span className="minerva-brand-name">MINERVA CONSOLE<small>MOTHERSHIP // 001</small></span>
         </Link>
         <div className="minerva-topbar-org">
           <small>Workspace</small>
@@ -63,6 +64,7 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
           <span className="text-[#DBD5E2]">{currentPage}</span>
         </div>
         <div className="minerva-topbar-right">
+          <span className="mothership-top-status" aria-label="Minerva internal workspace">INTERNAL CHANNEL</span>
           <span className="minerva-identity" aria-label="Signed-in account">{accountInitial}</span>
           <EntryPushSignOutForm />
         </div>
@@ -109,7 +111,11 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
           ))}
         </nav>
         <div className="minerva-sidebar-bottom">
-          <p className="minerva-sidebar-note">Minerva Technologies · Internal workspace</p>
+          <div className="mothership-side-signature">
+            <span className="mothership-side-alien"><AlienInsignia /></span>
+            <div><strong>MINERVA // EARTH</strong><small>INTERNAL OPERATIONS</small></div>
+          </div>
+          <span className="mothership-sidebar-code">MOTHERSHIP / REV. 01</span>
           <button type="button" className="minerva-collapse"
             onClick={() => setCollapsed((value) => !value)}
             aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}

@@ -1,0 +1,211 @@
+/* MINERVA // MOTHERSHIP — approved red Minerva system, alien skin.
+ * Deliberately scoped: ENTRY keeps its existing violet product UI.
+ * Decorative telemetry is fiction, not real system-health monitoring. */
+.minerva-mothership-shell {
+  --mship-code:#DC8291;
+  --mship-ink:#231E2A;
+  --mship-line:#453946;
+  background:#2E2936;
+}
+.minerva-mothership-shell .minerva-topbar {
+  border-bottom:1px solid #18131F;
+  box-shadow:0 1px 0 rgba(226,134,158,.035);
+}
+.minerva-mothership-shell .minerva-topbar-brand {
+  gap:10px;padding-left:15px;
+}
+.minerva-mothership-shell .minerva-brand-emblem {
+  width:29px;height:29px;border:1px solid #78404F;border-radius:7px;
+  background:#392633;box-shadow:inset 0 0 0 2px #2B202E;
+}
+.minerva-mothership-shell .minerva-brand-emblem::before {display:none}
+.minerva-mothership-shell .minerva-brand-emblem svg {width:22px;height:22px}
+.minerva-mothership-shell .minerva-brand-name {
+  display:flex;flex-direction:column;gap:3px;line-height:1.1;font-size:11px;
+}
+.minerva-mothership-shell .minerva-brand-name small {
+  color:#C47C8C;font:9px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;
+  font-weight:400;letter-spacing:.11em;
+}
+.minerva-mothership-shell .mothership-top-status {
+  display:inline-flex;align-items:center;gap:9px;color:#BDA8B7;
+  font:10px ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.075em;white-space:nowrap;
+}
+.minerva-mothership-shell .mothership-top-status::before {
+  content:"";width:5px;height:5px;border-radius:100%;background:#D27A8A;
+  box-shadow:0 0 9px rgba(185,74,88,.35)
+}
+.minerva-mothership-shell .minerva-sidebar {padding-top:24px}
+.minerva-mothership-shell .minerva-sidebar-label {
+  font:600 10px ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.17em;color:#9E8EA0;padding-left:12px;
+}
+.minerva-mothership-shell .minerva-nav-link {height:40px}
+.minerva-mothership-shell .minerva-sidebar-rule {background:#413444}
+.minerva-mothership-shell .mothership-side-signature {
+  display:flex;align-items:center;gap:10px;padding:5px 8px 7px;min-width:0;
+}
+.minerva-mothership-shell .mothership-side-alien {
+  display:grid;place-items:center;flex:none;width:28px;height:28px;
+  border:1px solid #66414F;border-radius:5px;background:#392632;
+}
+.minerva-mothership-shell .mothership-side-alien svg {width:19px;height:19px}
+.minerva-mothership-shell .mothership-side-signature strong {
+  display:block;color:#D5C5D2;font-size:10px;font-weight:500;
+}
+.minerva-mothership-shell .mothership-side-signature small {
+  display:block;margin-top:3px;color:#9F8A9D;font:9px ui-monospace,SFMono-Regular,Consolas,monospace;
+}
+.minerva-mothership-shell .mothership-sidebar-code {
+  display:block;padding:8px 9px 0;color:#8F7C90;
+  font:9px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.055em;
+}
+.minerva-mothership-shell.minerva-collapsed .mothership-side-signature {justify-content:center;padding:8px 0}
+.minerva-mothership-shell.minerva-collapsed .mothership-side-signature div:last-child,
+.minerva-mothership-shell.minerva-collapsed .mothership-sidebar-code,
+.minerva-mothership-shell.minerva-collapsed .minerva-brand-name {display:none}
+
+.minerva-mothership-shell .minerva-content-shell {
+  position:relative;isolation:isolate;
+  background:#2E2936;
+}
+.minerva-mothership-shell .minerva-content-shell::before {
+  content:"";position:absolute;inset:0;pointer-events:none;z-index:-1;opacity:.6;
+  background:
+    radial-gradient(circle at 71% 16%,rgba(138,57,82,.13),transparent 390px),
+    radial-gradient(circle at 18% 73%,rgba(20,14,29,.18),transparent 460px),
+    radial-gradient(#DF98AC66 .7px,transparent 1px),
+    radial-gradient(#A99DB966 .7px,transparent 1px);
+  background-size:auto,auto,183px 157px,277px 233px;
+  background-position:0 0,0 0,44px 62px,91px 121px;
+  -webkit-mask-image:linear-gradient(#0009 0%,#0005 48%,transparent 91%);
+  mask-image:linear-gradient(#0009 0%,#0005 48%,transparent 91%);
+}
+.minerva-mothership-shell .minerva-content {
+  max-width:1328px;padding:40px clamp(22px,4.1vw,64px) 95px;
+}
+/* A single deliberate feature zone, not an analytics dashboard. */
+.mothership-page {position:relative}
+.mothership-mono {font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.mothership-breadcrumb {display:flex;align-items:center;gap:10px;margin-bottom:25px;
+  color:#9F90A3;font-size:11px;letter-spacing:.01em}
+.mothership-breadcrumb strong {color:#E2C6D1;font-weight:500}
+.mothership-overline {display:flex;align-items:center;gap:10px;color:#E38C99;
+  font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.14em}
+.mothership-overline::before{content:"";width:18px;height:1px;background:#DA7A89;flex:none}
+.mothership-hero {display:flex;justify-content:space-between;align-items:center;
+  gap:20px;min-height:283px;position:relative;margin-bottom:11px}
+.mothership-hero-copy {align-self:flex-start;position:relative;z-index:2;padding-top:16px;max-width:620px}
+.mothership-title {font-size:clamp(36px,3.6vw,53px);font-weight:600;line-height:1.11;
+  color:#F7EDF4;letter-spacing:-.052em;margin:18px 0 12px}
+.mothership-title em {font-style:normal;color:#D56979}
+.mothership-lede {font-size:13px;color:#BDB1C3;max-width:500px;line-height:1.75;margin:0 0 21px}
+.mothership-tags {display:flex;align-items:center;flex-wrap:wrap;gap:9px}
+.mothership-tag {display:inline-flex;align-items:center;gap:7px;padding:7px 10px;
+  background:rgba(185,74,88,.08);border:1px solid #614251;border-radius:5px;
+  color:#C9B5C3;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;
+  letter-spacing:.01em;white-space:nowrap}
+.mothership-tag strong {color:#F1CAD1;font-weight:500}
+.mothership-tag.verified {background:rgba(55,127,101,.11);border-color:#3F6759;color:#A6D9C5}
+.mothership-tag .mothership-dot {width:5px;height:5px;border-radius:50%;background:#89DBB8}
+.mothership-art-wrap {position:relative;flex:0 1 436px;width:38%;min-width:330px}
+.mothership-craft {position:relative;width:100%;max-width:480px;margin-left:auto;isolation:isolate}
+.mothership-craft-svg {width:100%;height:auto;display:block;overflow:visible}
+.mothership-art-caption {position:absolute;right:2%;bottom:6%;font:9px ui-monospace,SFMono-Regular,Consolas,monospace;
+  color:#B97B8D;letter-spacing:.085em;white-space:nowrap;opacity:.75}
+.mothership-craft-hit {position:absolute;inset:18% 15% 38% 24%;
+  width:auto;background:transparent;border:0;border-radius:45%;cursor:crosshair}
+.mothership-craft-hit:focus-visible {outline:2px solid #F4A3B5;outline-offset:2px}
+.mothership-orbit {transform-origin:298px 158px;animation:mshipOrbit 50s linear infinite}
+.mothership-ufo {animation:mshipFloat 6s ease-in-out infinite}
+.mothership-visitor {animation:mshipVisitor 5s ease-in-out infinite}
+.mothership-beam {animation:mshipBeam 5s ease-in-out infinite}
+.mothership-porthole {animation:mshipPorthole 4s ease-in-out infinite}
+.mothership-porthole:nth-child(2n) {animation-delay:1.1s}
+.is-still .mothership-orbit,.is-still .mothership-ufo,.is-still .mothership-visitor,
+.is-still .mothership-beam,.is-still .mothership-porthole{animation:none!important}
+.is-contacted .mothership-ufo {filter:drop-shadow(0 0 7px rgba(227,142,167,.35))}
+@keyframes mshipOrbit {to{transform:rotate(360deg)}}
+@keyframes mshipFloat {0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes mshipVisitor {0%,100%{opacity:.86}50%{opacity:1}}
+@keyframes mshipBeam {0%,100%{opacity:.3}50%{opacity:.78}}
+@keyframes mshipPorthole {0%,100%{opacity:.5}50%{opacity:1}}
+.mothership-section-line {display:flex;align-items:center;justify-content:space-between;gap:12px;
+  border-bottom:1px solid #4A3C4D;margin:10px 0 15px;padding-bottom:12px}
+.mothership-section-line strong {display:inline-flex;align-items:center;gap:10px;
+  color:#E1C2CE;font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em;font-weight:500}
+.mothership-section-line strong::before{content:"";width:19px;height:1px;background:#B94A58}
+.mothership-section-line span {color:#95859B;font:10px ui-monospace,SFMono-Regular,Consolas,monospace}
+.mothership-page .minerva-toolbar {margin:0 0 16px;flex-wrap:wrap}
+.mothership-page .minerva-search-wrap {flex-basis:350px;min-width:185px}
+.mothership-page .minerva-input,.mothership-page .minerva-select {height:38px}
+.mothership-page .minerva-search-wrap svg {top:11px}
+.mothership-page .minerva-list-frame {box-shadow:0 12px 29px rgba(9,7,15,.09)}
+.mothership-page .minerva-product-table th {font-size:11px;color:#C0B2C5;letter-spacing:.02em}
+.mothership-page .minerva-product-table td {padding-top:20px;padding-bottom:20px}
+.mothership-page .minerva-product-icon {background:#422A37;border-color:#774353;color:#E68797}
+.mothership-page .minerva-product-name small {max-width:370px}
+.mothership-page .minerva-list-meta {color:#A391A5;
+  font:10px ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.015em}
+.mothership-footer {display:flex;justify-content:space-between;align-items:center;gap:18px;
+  margin-top:52px;border-top:1px solid #4B3C4C;padding-top:20px;
+  font:10px ui-monospace,SFMono-Regular,Consolas,monospace;color:#9F8FA2;letter-spacing:.05em}
+.mothership-footer b {color:#D88797;font-weight:500}
+.mothership-motion-toggle {display:inline-flex;align-items:center;gap:9px;
+  background:transparent;border:0;color:#B7A3B5;padding:5px 0;font-size:10px;letter-spacing:.03em;cursor:pointer}
+.mothership-motion-track {position:relative;width:32px;height:16px;border-radius:12px;
+  border:1px solid #6D4453;background:#513241;transition:background .15s}
+.mothership-motion-track::after {content:"";position:absolute;top:2px;left:17px;width:10px;height:10px;border-radius:50%;
+  background:#F0B0BC;transition:left .15s}
+.mothership-motion-toggle[aria-pressed="false"] .mothership-motion-track {background:#342D38;border-color:#514353}
+.mothership-motion-toggle[aria-pressed="false"] .mothership-motion-track::after {left:3px;background:#9E8DA4}
+.mothership-hint {color:#A4A0AD;font-size:11px;line-height:1.55}
+.mothership-contact {position:fixed;bottom:25px;right:26px;z-index:80;
+  padding:12px 16px;max-width:min(350px,calc(100vw - 32px));
+  border:1px solid #684052;border-left:2px solid #D57B8F;border-radius:6px;
+  background:#24202B;box-shadow:0 12px 30px rgba(0,0,0,.34);
+  color:#F1D4E0;font:12px ui-monospace,SFMono-Regular,Consolas,monospace}
+.mothership-contact button{margin-left:10px;border:0;background:transparent;color:#E6B3C1;cursor:pointer}
+.mothership-page .minerva-drawer-header {background:#28232E}
+.mothership-page .minerva-drawer-section h3 {color:#C78B9A;letter-spacing:.14em}
+.mothership-drawer-craft {margin:14px 0 4px;overflow:hidden;border:1px solid #493341;
+  border-radius:8px;background:radial-gradient(circle at 50% 50%,#442D3E,#28232D 72%)}
+.mothership-drawer-craft .mothership-craft {max-width:245px;margin:0 auto}
+.mothership-drawer-craft .mothership-craft-hit,.mothership-drawer-craft .mothership-art-caption {display:none}
+/* Motion accessibility: explicit user toggle and OS-level reduction. */
+@media (prefers-reduced-motion:reduce) {
+  .mothership-craft * {animation:none!important}
+}
+@media (max-width:1100px) {
+  .mothership-art-wrap {min-width:295px;width:38%}
+  .mothership-hero {min-height:260px}
+  .mothership-art-caption {font-size:8px}
+  .minerva-mothership-shell .mothership-top-status {display:none}
+}
+@media (max-width:860px){
+  .minerva-mothership-shell .minerva-content {padding:30px 24px 70px}
+  .mothership-art-wrap {min-width:260px}
+  .mothership-title {font-size:37px}
+}
+@media (max-width:710px) {
+  .mothership-hero {min-height:0;display:block;padding-top:5px;margin-bottom:25px}
+  .mothership-hero-copy {padding-top:5px}
+  .mothership-title {font-size:39px}
+  .mothership-art-wrap {width:100%;min-width:0;max-width:360px;margin:8px auto -6px}
+  .mothership-section-line {flex-wrap:wrap}
+  .mothership-page .minerva-toolbar {gap:9px}
+  .mothership-page .minerva-toolbar-add {margin-left:auto}
+  .minerva-mothership-shell .mothership-top-status {display:none}
+  .minerva-mothership-shell .mothership-side-signature div:last-child {display:block}
+  .mothership-footer {flex-wrap:wrap;align-items:flex-start}
+}
+@media (max-width:480px){
+  .minerva-mothership-shell .minerva-content {padding:26px 18px 60px}
+  .mothership-title {font-size:36px}
+  .mothership-lede {font-size:12px}
+  .mothership-page .minerva-search-wrap {flex-basis:100%;min-width:0}
+  .mothership-section-line span {font-size:9px}
+  .mothership-footer {font-size:9px}
+  .mothership-page .minerva-list-meta {gap:8px;flex-direction:column;align-items:flex-start}
+}
