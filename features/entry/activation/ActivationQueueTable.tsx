@@ -2326,7 +2326,7 @@ export function ActivationQueueTable({
               {activeRow.followUpStatus === "needs_follow_up" ||
               shouldOfferWhatsAppFollowUp(activeRow) ? (
                 <section className="mt-3 rounded-lg border border-[rgba(243,202,87,0.20)] bg-[rgba(243,202,87,0.055)] p-3">
-                  <p className="text-xs font-semibold text-[#F2D77B]">Follow-up guidance</p>
+                  <p className="text-xs font-semibold text-[#F2D77B]">{shouldOfferWhatsAppFollowUp(activeRow) ? "5+ invitations — direct contact recommended" : "Follow-up guidance"}</p>
                   <p className="mt-1.5 text-[11px] leading-5 text-[#D8CFAD]">
                     {shouldOfferWhatsAppFollowUp(activeRow)
                       ? normalizeWhatsAppPhone(activeRow.phone)
