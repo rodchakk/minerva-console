@@ -7,6 +7,7 @@ import {
   Filter,
   KeyRound,
   Mail,
+  MessageCircle,
   Pencil,
   Search,
   Send,
@@ -42,6 +43,11 @@ import { updateActivationEmail } from "@/features/entry/activation/emailEditActi
 import type { UpdateActivationEmailResult } from "@/features/entry/activation/emailEditActions";
 import { updateActivationPhone } from "@/features/entry/activation/phoneEditActions";
 import type { UpdateActivationPhoneResult } from "@/features/entry/activation/phoneEditActions";
+import {
+  buildWhatsAppFollowUpUrl,
+  normalizeWhatsAppPhone,
+  shouldOfferWhatsAppFollowUp,
+} from "@/features/entry/activation/whatsappFollowUp";
 
 type ActivationQueueTableProps = {
   communityId: string;
@@ -1057,7 +1063,7 @@ function getQueueBlockers(row: ActivationQueueRow) {
 const ACTIVATION_QUEUE_PAGE_SIZE = 50;
 
 type ResidentRecommendation = {
-  action: "create" | "email" | "none" | "pin";
+  action: "create" | "edit_phone" | "email" | "none" | "pin" | "whatsapp";
   description: string;
   label: string;
 };
@@ -1086,6 +1092,24 @@ function getResidentRecommendation(row: ActivationQueueRow): ResidentRecommendat
       description: hasValue(row.lastError)
         ? row.lastError
         : "Resolve the queue error before attempting another activation action.",
+    };
+  }
+
+  if (shouldOfferWhatsAppFollowUp(row)) {
+    if (normalizeWhatsAppPhone(row.phone)) {
+      return {
+        action: "whatsapp",
+        label: "Contact via WhatsApp",
+        description:
+          "Email follow-up has already been repeated. Open a WhatsApp draft to offer activation help; no message is sent automatically.",
+      };
+    }
+
+    return {
+      action: "edit_phone",
+      label: "Correct phone for WhatsApp",
+      description:
+        "Five or more invitations were sent, but the phone cannot be used for a WhatsApp link. Correct it first (international numbers need a country code).",
     };
   }
 
@@ -1251,7 +1275,7 @@ export function ActivationQueueTable({
       high_attempts: rows.filter(
         (row) =>
           !["activated", "skipped"].includes(row.status) &&
-          row.invitationAttemptCount >= 5,
+          shouldOfferWhatsAppFollowUp(row),
       ).length,
     }),
     [rows],
@@ -1472,11 +1496,20 @@ export function ActivationQueueTable({
   const activeRecommendation = activeRow
     ? getResidentRecommendation(activeRow)
     : null;
+  const activeWhatsAppUrl =
+    activeRow && activeRecommendation?.action === "whatsapp"
+      ? buildWhatsAppFollowUpUrl(activeRow.phone, communityName)
+      : null;
   const activeRowActionable =
     !!activeRow && !["activated", "skipped"].includes(activeRow.status);
 
   function runRecommendedAction() {
     if (!activeRow || !activeRecommendation) return;
+
+    if (activeRecommendation.action === "edit_phone") {
+      setPhoneEditorRowId(activeRow.id);
+      return;
+    }
 
     if (activeRecommendation.action === "email") {
       runResidentEmail(activeRow.id);
@@ -2291,12 +2324,14 @@ export function ActivationQueueTable({
               </section>
 
               {activeRow.followUpStatus === "needs_follow_up" ||
-              activeRow.invitationAttemptCount >= 5 ? (
+              shouldOfferWhatsAppFollowUp(activeRow) ? (
                 <section className="mt-3 rounded-lg border border-[rgba(243,202,87,0.20)] bg-[rgba(243,202,87,0.055)] p-3">
                   <p className="text-xs font-semibold text-[#F2D77B]">Follow-up guidance</p>
                   <p className="mt-1.5 text-[11px] leading-5 text-[#D8CFAD]">
-                    {activeRow.invitationAttemptCount >= 5
-                      ? "Several invitations have already been sent. Confirm the resident contact information before sending another reminder."
+                    {shouldOfferWhatsAppFollowUp(activeRow)
+                      ? normalizeWhatsAppPhone(activeRow.phone)
+                        ? "Five or more invitations were sent: contact the resident by WhatsApp before sending another reminder. Opening the draft does not send a message or mark the resident as contacted."
+                        : "Five or more invitations were sent, but the phone is missing or invalid for WhatsApp. Use Edit phone to correct it before trying to contact this resident."
                       : `The last invitation was sent ${activeRow.daysSinceLastInvitation ?? 8} days ago. This resident is ready for follow-up.`}
                   </p>
                 </section>
@@ -2335,18 +2370,32 @@ export function ActivationQueueTable({
                 </div>
               ) : null}
 
-              <button
-                type="button"
-                onClick={runRecommendedAction}
-                disabled={
-                  !activeRecommendation ||
-                  activeRecommendation.action === "none" ||
-                  phase !== "idle"
-                }
-                className="inline-flex h-9 w-full items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {activeRecommendation?.label ?? "No recommended action"}
-              </button>
+              {activeWhatsAppUrl && phase === "idle" ? (
+                <a
+                  href={activeWhatsAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BEB4FF]"
+                  aria-label="Contact via WhatsApp (opens a draft in a new tab; does not send)"
+                >
+                  <MessageCircle className="size-4" aria-hidden />
+                  Contact via WhatsApp
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={runRecommendedAction}
+                  disabled={
+                    !activeRecommendation ||
+                    activeRecommendation.action === "none" ||
+                    activeRecommendation.action === "whatsapp" ||
+                    phase !== "idle"
+                  }
+                  className="inline-flex h-9 w-full items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] disabled:cursor-not-allowed disabled:opacity-45"
+                >
+                  {activeRecommendation?.label ?? "No recommended action"}
+                </button>
+              )}
 
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <button
