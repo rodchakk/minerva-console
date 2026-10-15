@@ -54,14 +54,14 @@ test("server read model derives the approved follow-up buckets from last invitat
   assert.match(actions, /deriveFollowUpStatus/);
 });
 
-test("Activation Queue exposes follow-up summary, quick filters and repeated-invite guidance", () => {
-  assert.match(table, /Follow-up snapshot/);
-  assert.match(table, /Activation follow-up filters/);
+test("Activation Queue exposes follow-up filters and repeated-invite WhatsApp guidance", () => {
+  assert.match(table, /Needs follow-up/);
+  assert.match(table, /aria-label="Activation queue filters"/);
   assert.match(table, /needs_follow_up/);
   assert.match(table, /not_invited/);
   assert.match(table, /recent/);
   assert.match(table, /waiting/);
-  assert.match(table, /14\+ days/);
+  assert.match(table, /fourteen_plus/);
   assert.match(table, /5\+ invitations/);
   assert.match(table, /contact the resident by WhatsApp before sending another reminder/);
 });
