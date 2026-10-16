@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, MapPinned, ShieldCheck } from "lucide-react";
 import { FIELD_MODULES } from "@/features/field/modules";
 
 export default function FieldHomePage() {
@@ -24,11 +24,20 @@ export default function FieldHomePage() {
             <div className="flex items-start justify-between gap-3">
               <div className="flex min-w-0 gap-3">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--console-accent-border)] bg-[var(--console-accent-subtle)] text-[var(--console-accent)]">
-                  <ShieldCheck aria-hidden="true" className="h-5 w-5" />
+                  {module.id === "indoor" ? (
+                    <MapPinned aria-hidden="true" className="h-5 w-5" />
+                  ) : (
+                    <ShieldCheck aria-hidden="true" className="h-5 w-5" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-lg font-semibold text-[var(--console-text)]">
                     {module.label}
+                    {module.id === "indoor" ? (
+                      <span className="ml-2 inline-block align-middle rounded border border-[var(--console-accent-border)] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[var(--console-accent)]">
+                        Pilot
+                      </span>
+                    ) : null}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-[var(--console-text-muted)]">
                     {module.summary}
