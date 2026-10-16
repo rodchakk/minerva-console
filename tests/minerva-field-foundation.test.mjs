@@ -38,7 +38,7 @@ test("Field uses its own route group and superadmin guard", () => {
   assert.doesNotMatch(layout, /Topbar|AppSidebar/);
 });
 
-test("Field exposes ENTRY as the only visible product module", () => {
+test("Field exposes ENTRY and INDOOR as separate visible product modules", () => {
   const modules = read("features/field/modules.ts");
   const moduleData = modules.slice(modules.indexOf("export const FIELD_MODULES"));
   const appFiles = filesUnder("app/(field)/field")
@@ -47,7 +47,9 @@ test("Field exposes ENTRY as the only visible product module", () => {
 
   assert.match(modules, /id: "entry"/);
   assert.match(modules, /href: "\/field\/entry"/);
-  assert.equal((moduleData.match(/id: "/g) ?? []).length, 1);
+  assert.match(modules, /id: "indoor"/);
+  assert.match(modules, /href: "\\/field\\/indoor"/);
+  assert.equal((moduleData.match(/id: "/g) ?? []).length, 2);
 
   for (const file of appFiles) {
     assert.doesNotMatch(read(file), /Seshat/i, `${file} must not mention Seshat`);
@@ -82,4 +84,20 @@ test("Field login-return limitation is documented as resolved by 001C", () => {
 
   assert.match(recon, /MINERVA-FIELD-001C resolved the 001B login-return limitation/);
   assert.match(recon, /safe `\/field` and `\/field\/\*` post-login destinations/);
+});
+
+test("INDOOR pilot is an isolated Field module with a pinned external test build", () => {
+  const modules = read("features/field/modules.ts");
+  const home = read("app/(field)/field/page.tsx");
+  const indoor = read("app/(field)/field/indoor/page.tsx");
+  const shell = read("components/field/FieldShell.tsx");
+
+  assert.match(modules, /href: "\/field\/indoor"/);
+  assert.match(home, /MapPinned/);
+  assert.match(indoor, /minerva-indoor-field-test-k7948at6h-rudychacon01-9213s-projects\.vercel\.app/);
+  assert.match(indoor, /target="_blank"/);
+  assert.match(indoor, /rel="noopener noreferrer"/);
+  assert.match(indoor, /Pilot only/);
+  assert.doesNotMatch(indoor, /<iframe|iframe|supabase|serviceWorker/);
+  assert.match(shell, /EntryPushSessionSync/);
 });
