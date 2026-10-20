@@ -2830,7 +2830,10 @@ export function ReviewWorkspace({
           campaignUnitId={selectedUnitId}
           communityId={communityId}
           contactOnly={selectedStatus === "confirmed"}
-          onClose={() => setEditingResident(null)}
+          onClose={() => {
+            setEditingResident(null);
+            router.refresh();
+          }}
           resident={editingResident}
           submissionId={quickEditData.submissionId}
         />
