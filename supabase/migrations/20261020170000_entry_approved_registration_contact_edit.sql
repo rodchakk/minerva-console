@@ -73,7 +73,7 @@ begin
    where id = v_campaign_id
    for update;
 
-  if not found or v_campaign.status not in ('open', 'review', 'confirmed') then
+  if not found then
     perform public._cr_raise_v1('ENTRY_CR_INVALID_REVIEW_STATE', 'P0409');
   end if;
 
@@ -84,6 +84,12 @@ begin
    for update;
 
   if not found or v_unit.status not in ('submitted', 'confirmed') then
+    perform public._cr_raise_v1('ENTRY_CR_INVALID_REVIEW_STATE', 'P0409');
+  end if;
+
+  -- Preserve legacy Submitted editing (including paused campaigns), while
+  -- approved contact edits require a campaign that can still hand off to activation.
+  if v_unit.status = 'confirmed' and v_campaign.status not in ('open', 'review', 'confirmed') then
     perform public._cr_raise_v1('ENTRY_CR_INVALID_REVIEW_STATE', 'P0409');
   end if;
 
