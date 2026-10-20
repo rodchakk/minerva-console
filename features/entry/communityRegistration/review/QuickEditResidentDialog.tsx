@@ -13,6 +13,7 @@ import type { CommunityRegistrationQuickEditResident } from "@/features/entry/co
 type QuickEditResidentDialogProps = {
   campaignUnitId: string;
   communityId: string;
+  contactOnly: boolean;
   onClose: () => void;
   resident: CommunityRegistrationQuickEditResident;
   submissionId: string;
@@ -23,6 +24,7 @@ const initialState: RegistrationQuickEditActionResult | null = null;
 export function QuickEditResidentDialog({
   campaignUnitId,
   communityId,
+  contactOnly,
   onClose,
   resident,
   submissionId,
@@ -54,7 +56,9 @@ export function QuickEditResidentDialog({
         </p>
         <h3 className="mt-2 text-xl font-semibold text-white">{resident.fullName}</h3>
         <p className="mt-2 text-sm leading-6 text-[var(--text-muted)]">
-          Correct a small detail without changing the household review status.
+          {contactOnly
+            ? "Update email or phone without changing Patronato approval. The approved name is locked."
+            : "Correct a small detail without changing the household review status."}
         </p>
 
         <input type="hidden" name="community_id" value={communityId} />
@@ -68,6 +72,7 @@ export function QuickEditResidentDialog({
             <input
               name="full_name"
               defaultValue={resident.fullName}
+              readOnly={contactOnly}
               required
               maxLength={160}
               autoFocus
@@ -97,6 +102,7 @@ export function QuickEditResidentDialog({
           </label>
         </div>
 
+        {!contactOnly ? (
         <div className="mt-6 rounded-xl border border-rose-400/20 bg-rose-500/[0.06] p-4">
           <div className="flex items-start gap-3">
             <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-rose-500/10 text-rose-200">
@@ -174,6 +180,7 @@ export function QuickEditResidentDialog({
             </div>
           </div>
         </div>
+        ) : null}
 
         {state && !state.success ? (
           <p className="mt-4 rounded-xl border border-rose-400/20 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">

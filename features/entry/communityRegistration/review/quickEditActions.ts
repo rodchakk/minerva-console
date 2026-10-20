@@ -57,6 +57,18 @@ export async function quickEditCommunityRegistrationResident(
 
   if (error) {
     const message = error.message ?? "";
+    if (/ENTRY_CR_APPROVED_IDENTITY_LOCKED/.test(message)) {
+      return {
+        success: false,
+        error: "Only email and phone can be changed after Patronato approval.",
+      };
+    }
+    if (/ENTRY_CR_RESIDENT_ACTIVATION_LINKED/.test(message)) {
+      return {
+        success: false,
+        error: "This resident already belongs to Activation Queue. Edit their contact details there.",
+      };
+    }
     if (/ENTRY_CR_INVALID_REVIEW_STATE/.test(message)) {
       return {
         success: false,

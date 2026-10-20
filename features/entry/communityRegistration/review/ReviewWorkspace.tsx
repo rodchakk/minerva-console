@@ -787,7 +787,7 @@ export function ReviewWorkspace({
     reviewCapable && selectedStatus === "needs_correction";
   const canReplaceCorrectionLink =
     reviewCapable && selectedStatus === "edit_enabled";
-  const canQuickEdit = selectedStatus === "submitted" && Boolean(quickEditData);
+  const canQuickEdit = ["submitted", "confirmed"].includes(selectedStatus) && Boolean(quickEditData);
   const canQuickEditUnit =
     selectedStatus === "submitted" &&
     campaign.registrationMode === "resident_provided_units";
@@ -2829,7 +2829,11 @@ export function ReviewWorkspace({
         <QuickEditResidentDialog
           campaignUnitId={selectedUnitId}
           communityId={communityId}
-          onClose={() => setEditingResident(null)}
+          contactOnly={selectedStatus === "confirmed"}
+          onClose={() => {
+            setEditingResident(null);
+            router.refresh();
+          }}
           resident={editingResident}
           submissionId={quickEditData.submissionId}
         />

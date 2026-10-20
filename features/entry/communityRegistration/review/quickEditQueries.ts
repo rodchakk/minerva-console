@@ -34,7 +34,7 @@ export async function getCommunityRegistrationQuickEditData(
     .eq("id", campaignUnitId)
     .maybeSingle();
 
-  if (unitError || !unit || unit.status !== "submitted") return null;
+  if (unitError || !unit || !["submitted", "confirmed"].includes(unit.status)) return null;
 
   const { data: submission, error: submissionError } = await supabase
     .from("community_registration_submissions")
@@ -45,7 +45,7 @@ export async function getCommunityRegistrationQuickEditData(
     .limit(1)
     .maybeSingle();
 
-  if (submissionError || !submission || submission.status !== "submitted") return null;
+  if (submissionError || !submission || submission.status !== unit.status) return null;
 
   const { data: residents, error: residentsError } = await supabase
     .from("community_registration_residents")
