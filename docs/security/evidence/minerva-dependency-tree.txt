@@ -24,4 +24,3 @@ minerva-console@0.1.0 D:\Dev\minerva-security-001
 ├── typescript@5.9.3
 ├── web-push@3.6.7
 └── xlsx@0.20.3
-

@@ -39,4 +39,3 @@ D:\Dev\minerva-security-001\tests\minerva-field-foundation.test.mjs
   51:40  error  Parsing error: Invalid character
 
 ✖ 17 problems (2 errors, 15 warnings)
-

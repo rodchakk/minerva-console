@@ -1,0 +1,13 @@
+
+> minerva-console@0.1.0 brain:guardrails
+> node scripts/brain-guardrails.mjs
+
+
+[1mBrain guardrails[0m — 30 source file(s) scanned, 6 registry file(s) validated, 24 required file(s) checked
+
+[31m[1mFailures (1):[0m
+  [31m✖[0m  [CHECK 10] LOOP_STATE.md is missing or stale relative to source files:
+  Error: LOOP_STATE.md differs from current expected output. Run "npm run brain:loop-state" to update it.
+  Please run: npm run brain:loop-state
+
+Brain guardrails FAILED.
