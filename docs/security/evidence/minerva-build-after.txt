@@ -1,0 +1,193 @@
+
+> minerva-console@0.1.0 prebuild
+> node --version
+
+v24.22.1
+
+> minerva-console@0.1.0 build
+> next build
+
+▲ Next.js 16.4.1 (Turbopack)
+✓ Running next.config.ts took 1530ms
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 10.5s
+  Running TypeScript ...
+  Finished TypeScript in 14.6s ...
+  Collecting page data using 11 workers ...
+  Generating static pages using 11 workers (0/69) ...
+  Generating static pages using 11 workers (17/69) 
+  Generating static pages using 11 workers (34/69) 
+  Generating static pages using 11 workers (51/69) 
+✓ Generating static pages using 11 workers (69/69) in 375ms
+  Finalizing page optimization ...
+Turbopack build encountered 1 warning:
+./features/brain/lib/markdown.ts:21:20
+Warning: Dynamic filesystem access causes tracing of the whole project
+  19 |   relativePath: string,
+  20 | ): MarkdownDocument | null {
+> 21 |   const resolved = resolve(BRAIN_ROOT, "..", "..", relativePath);
+     |                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  22 |
+  23 |   if (!isSafeBrainPath(resolved)) {
+  24 |     return null;
+
+Static analysis determined that this filesystem access causes the whole project to be traced and included in the output.
+This is usually unintentional and leads to all source files (including the public folder) to be deployed as part of the server code.
+This can slow down deployments or lead to failures when size limits are exceeded.
+To resolve this, you can
+- make sure the path is statically scoped to some subfolder, for example path.join(process.cwd(), 'data', bar), or
+- only use them in development, or
+- opt out by adding an ignore comment to the highlighted call: path.resolve(/*turbopackIgnore: true*/ ...), or
+- remove them.
+
+Import trace:
+  Server Component:
+    ./features/brain/lib/markdown.ts
+    ./features/brain/lib/search.ts
+    ./app/(console)/brain/tags/page.tsx
+
+
+
+Route (app)
+┌ ƒ /
+├ ○ /_not-found
+├ ○ /activate
+├ ƒ /activate/complete
+├ ƒ /activate/validate
+├ ƒ /api/entry/observability/diagnostic
+├ ƒ /api/entry/operational-activity
+├ ƒ /api/entry/push/dispatch
+├ ƒ /api/entry/push/public-key
+├ ƒ /api/entry/push/subscriptions
+├ ƒ /auth/callback
+├ ƒ /brain
+├ ƒ /brain/[kind]/[id]
+├ ƒ /brain/agents
+├ ƒ /brain/decisions
+├ ƒ /brain/inbox
+├ ƒ /brain/missions
+├ ƒ /brain/projects
+├ ƒ /brain/prompts
+├ ƒ /brain/relations
+├ ƒ /brain/search
+├ ƒ /brain/tags
+├ ƒ /clients
+├ ƒ /console-invite/setup
+├ ƒ /customers
+├ ƒ /customers/[customerId]
+├ ƒ /customers/[customerId]/edit
+├ ƒ /customers/new
+├ ƒ /dashboard
+├ ƒ /entry/outrider/[token]
+├ ƒ /entry/outrider/[token]/available-information/complete
+├ ƒ /entry/outrider/[token]/save
+├ ƒ /entry/outrider/[token]/submit
+├ ƒ /entry/outrider/[token]/upload/complete
+├ ƒ /entry/outrider/[token]/upload/delete
+├ ƒ /entry/outrider/[token]/upload/start
+├ ƒ /entry/patronato/[token]
+├ ƒ /entry/register/[slug]
+├ ƒ /entry/register/[slug]/access
+├ ƒ /entry/register/[slug]/correct
+├ ƒ /entry/register/[slug]/correct/access
+├ ƒ /entry/register/[slug]/correct/submit
+├ ƒ /entry/register/[slug]/submit
+├ ƒ /entry/register/[slug]/unit
+├ ƒ /field
+├ ƒ /field/account
+├ ƒ /field/entry
+├ ƒ /field/entry/access
+├ ƒ /field/entry/access/guards/new
+├ ƒ /field/entry/access/roles/[communityId]/[userId]
+├ ƒ /field/entry/communities
+├ ƒ /field/entry/communities/[communityId]
+├ ƒ /field/entry/communities/[communityId]/people
+├ ƒ /field/entry/communities/[communityId]/people/activation
+├ ƒ /field/entry/communities/[communityId]/people/activation/[queueId]
+├ ƒ /field/entry/communities/[communityId]/people/new
+├ ƒ /field/entry/communities/[communityId]/people/residents/[userId]
+├ ƒ /field/entry/communities/[communityId]/people/units/[unitId]
+├ ƒ /field/entry/communities/[communityId]/people/units/[unitId]/residents/new
+├ ƒ /field/entry/communities/[communityId]/registration
+├ ƒ /field/entry/communities/[communityId]/registration/start
+├ ƒ /field/entry/health
+├ ƒ /field/entry/people
+├ ƒ /field/entry/people/new
+├ ƒ /field/entry/qr
+├ ƒ /field/entry/tickets
+├ ƒ /field/entry/tickets/[ticketId]
+├ ƒ /field/entry/work-timer
+├ ƒ /field/indoor
+├ ○ /field/manifest.webmanifest
+├ ƒ /finance
+├ ƒ /invoices
+├ ƒ /login
+├ ƒ /logs
+├ ƒ /products
+├ ƒ /products/add
+├ ƒ /products/entry
+├ ƒ /products/entry/activation
+├ ƒ /products/entry/communities
+├ ƒ /products/entry/communities/[communityId]
+├ ƒ /products/entry/communities/[communityId]/registration
+├ ƒ /products/entry/communities/[communityId]/staff
+├ ƒ /products/entry/communities/[communityId]/units
+├ ƒ /products/entry/communities/[communityId]/units/[unitId]
+├ ƒ /products/entry/communities/[communityId]/units/new
+├ ƒ /products/entry/communities/[communityId]/users
+├ ƒ /products/entry/communities/new
+├ ƒ /products/entry/customers
+├ ƒ /products/entry/customers/[customerId]
+├ ƒ /products/entry/customers/[customerId]/edit
+├ ƒ /products/entry/customers/new
+├ ƒ /products/entry/messages
+├ ƒ /products/entry/observability
+├ ƒ /products/entry/observability/background
+├ ƒ /products/entry/observability/diagnostics
+├ ƒ /products/entry/observability/notifications
+├ ƒ /products/entry/observability/performance
+├ ƒ /products/entry/onboarding
+├ ƒ /products/entry/outrider
+├ ƒ /products/entry/outrider/[outriderId]
+├ ƒ /products/entry/outrider/[outriderId]/export/json
+├ ƒ /products/entry/outrider/[outriderId]/export/package
+├ ƒ /products/entry/outrider/[outriderId]/files/[fileId]
+├ ƒ /products/entry/outrider/[outriderId]/setup-reports/[reportId]/pdf
+├ ƒ /products/entry/outrider/setup-workbook/template
+├ ƒ /products/entry/settings
+├ ƒ /products/entry/tickets
+├ ƒ /products/entry/tickets/[ticketId]
+├ ƒ /products/entry/users
+├ ƒ /reminders
+├ ƒ /reports
+├ ○ /reset-password
+├ ƒ /seshat
+├ ƒ /seshat/billing
+├ ƒ /seshat/clients
+├ ƒ /seshat/clients/[id]
+├ ƒ /seshat/clients/[id]/edit
+├ ƒ /seshat/clients/new
+├ ƒ /seshat/cost-intelligence
+├ ƒ /seshat/expenses
+├ ƒ /seshat/expenses/[id]
+├ ƒ /seshat/expenses/new
+├ ƒ /seshat/invoices
+├ ƒ /seshat/invoices/[id]
+├ ƒ /seshat/invoices/new
+├ ƒ /seshat/services
+├ ƒ /seshat/services/[id]
+├ ƒ /seshat/services/new
+├ ƒ /seshat/settings
+├ ƒ /settings
+├ ○ /temporarily-unavailable
+├ ƒ /unauthorized
+├ ƒ /users
+└ ƒ /workspace
+
+
+ƒ Proxy (Middleware)
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
