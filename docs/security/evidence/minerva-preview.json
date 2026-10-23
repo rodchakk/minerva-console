@@ -1,0 +1,114 @@
+{
+  "assessmentDate": "2026-10-22",
+  "timezone": "America/Guatemala",
+  "projectId": "prj_ZwNKT2HIloAH6Ukinx6DnmlgEpn4",
+  "deploymentId": "dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5",
+  "commit": "541b1beb26edded3f3b07038335d8edf053cab8c",
+  "previewState": "READY",
+  "builderNode": "24.22.1",
+  "observedProxyRuntimeNode": "24.21.0",
+  "runtimeScope": "Direct observation of Preview Proxy invocations in iad1; Production and other functions/regions not attested.",
+  "runtimeRemediation": "Vercel-managed Node 24 rollout to 24.22.1+; track separately from dependency hotfix.",
+  "probeRemoved": true,
+  "noEndpointCreated": true,
+  "noCredentialsLogged": true,
+  "smokeChecks": [
+    {
+      "path": "/login",
+      "status": 200,
+      "matchedPath": "/login",
+      "contentType": "text/html; charset=utf-8",
+      "emailInput": true,
+      "passwordInput": true,
+      "diagnosticExposed": false
+    },
+    {
+      "path": "/products",
+      "status": 200,
+      "matchedPath": "/login",
+      "contentType": "text/html; charset=utf-8",
+      "emailInput": true,
+      "passwordInput": true,
+      "diagnosticExposed": false
+    },
+    {
+      "path": "/products/entry/communities",
+      "status": 200,
+      "matchedPath": "/login",
+      "contentType": "text/html; charset=utf-8",
+      "emailInput": true,
+      "passwordInput": true,
+      "diagnosticExposed": false
+    }
+  ],
+  "supabaseBindings": [
+    {
+      "key": "NEXT_PUBLIC_SESHAT_SUPABASE_ANON_KEY",
+      "target": [
+        "production"
+      ],
+      "gitBranch": null,
+      "type": "encrypted"
+    },
+    {
+      "key": "NEXT_PUBLIC_SESHAT_SUPABASE_URL",
+      "target": [
+        "production"
+      ],
+      "gitBranch": null,
+      "type": "plain"
+    },
+    {
+      "key": "NEXT_PUBLIC_SESHAT_SUPABASE_URL",
+      "target": [
+        "preview"
+      ],
+      "gitBranch": "feat/seshat-web-mvp",
+      "type": "plain"
+    },
+    {
+      "key": "NEXT_PUBLIC_SESHAT_SUPABASE_ANON_KEY",
+      "target": [
+        "preview"
+      ],
+      "gitBranch": "feat/seshat-web-mvp",
+      "type": "sensitive"
+    },
+    {
+      "key": "NEXT_PUBLIC_SUPABASE_URL",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "gitBranch": null,
+      "type": "sensitive"
+    },
+    {
+      "key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "gitBranch": null,
+      "type": "sensitive"
+    },
+    {
+      "key": "SUPABASE_SERVICE_ROLE_KEY",
+      "target": [
+        "production",
+        "preview"
+      ],
+      "gitBranch": null,
+      "type": "sensitive"
+    }
+  ],
+  "authenticatedTests": "Not run: shared production bindings",
+  "initialCI": {
+    "runId": 39906879559,
+    "successfulJobs": 16,
+    "failedInformationalJobs": [
+      "Lint (full — informational)"
+    ],
+    "otherFailedJobs": []
+  }
+}

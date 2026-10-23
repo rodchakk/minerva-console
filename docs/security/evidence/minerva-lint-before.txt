@@ -1,0 +1,35 @@
+
+> minerva-console@0.1.0 lint
+> eslint
+
+
+D:\Dev\minerva-security-001\app\(console)\products\entry\observability\page.tsx
+   439:10  warning  'UsageAndCost' is defined but never used              @typescript-eslint/no-unused-vars
+   569:10  warning  'OcrQueue' is defined but never used                  @typescript-eslint/no-unused-vars
+   623:10  warning  'AuditActivity' is defined but never used             @typescript-eslint/no-unused-vars
+   684:10  warning  'PerformancePanel' is defined but never used          @typescript-eslint/no-unused-vars
+   803:10  warning  'InfrastructurePanel' is defined but never used       @typescript-eslint/no-unused-vars
+  1034:10  warning  'IncidentHistoryPanel' is defined but never used      @typescript-eslint/no-unused-vars
+  1093:10  warning  'DiagnosticSnapshotsPanel' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Dev\minerva-security-001\app\(field)\field\indoor\page.tsx
+  61:23  error  `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+D:\Dev\minerva-security-001\features\entry\communities\CommunityUnitsWorkspace.tsx
+  5:3  warning  'ChevronDown' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Dev\minerva-security-001\features\entry\communityRegistration\patronato\PatronatoReviewControls.tsx
+  4:10  warning  'Badge' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Dev\minerva-security-001\features\entry\communityRegistration\review\ReviewWorkspace.tsx
+  10:3  warning  'ClipboardList' is defined but never used  @typescript-eslint/no-unused-vars
+  11:3  warning  'Clock3' is defined but never used         @typescript-eslint/no-unused-vars
+  24:3  warning  'Users' is defined but never used          @typescript-eslint/no-unused-vars
+
+D:\Dev\minerva-security-001\features\seshat\SeshatWorkspace.tsx
+  1305:3  warning  'profit' is defined but never used  @typescript-eslint/no-unused-vars
+
+D:\Dev\minerva-security-001\tests\minerva-field-foundation.test.mjs
+  51:40  error  Parsing error: Invalid character
+
+✖ 15 problems (2 errors, 13 warnings)

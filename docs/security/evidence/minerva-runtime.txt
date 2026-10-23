@@ -1,0 +1,25 @@
+## Runtime Logs
+
+**Project:** prj_ZwNKT2HIloAH6Ukinx6DnmlgEpn4
+**Deployment:** dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5
+**Time range:** 2026-10-23T05:34:58.421Z → 2026-10-23T05:39:58.421Z
+
+### 2026-10-23T05:39:39.282Z GET /login [info/function]
+dep=dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5 branch=codex/minerva-security-001 request=pqkp7-1792733979252-c895ea7d4ee7 domain=minerva-console-6cqf3wcs0-rudychacon01-9213s-projects.vercel.app environment=preview region=iad1 runtime=nodejs24.x stream=stdout
+    MINERVA-SECURITY-001 runtime-proxy v24.21.0
+
+### 2026-10-23T05:39:39.244Z GET /products/entry/communities [info/function]
+dep=dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5 branch=codex/minerva-security-001 request=zf7fv-1792733979186-103844f93729 domain=minerva-console-6cqf3wcs0-rudychacon01-9213s-projects.vercel.app environment=preview region=iad1 runtime=nodejs24.x stream=stdout
+    MINERVA-SECURITY-001 runtime-proxy v24.21.0
+
+### 2026-10-23T05:39:37.209Z GET /login [info/function]
+dep=dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5 branch=codex/minerva-security-001 request=nwvqd-1792733977178-bd1a8b0fab4e domain=minerva-console-6cqf3wcs0-rudychacon01-9213s-projects.vercel.app environment=preview region=iad1 runtime=nodejs24.x stream=stdout
+    MINERVA-SECURITY-001 runtime-proxy v24.21.0
+
+### 2026-10-23T05:39:37.168Z GET /products [info/function]
+dep=dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5 branch=codex/minerva-security-001 request=8gxb7-1792733977116-1eac8f45de97 domain=minerva-console-6cqf3wcs0-rudychacon01-9213s-projects.vercel.app environment=preview region=iad1 runtime=nodejs24.x stream=stdout
+    MINERVA-SECURITY-001 runtime-proxy v24.21.0
+
+### 2026-10-23T05:39:34.990Z GET /login [info/function]
+dep=dpl_EsK6u68b5xDUkVSkG8PnDV2YfTj5 branch=codex/minerva-security-001 request=gxqw8-1792733974751-b2b58188fe27 domain=minerva-console-6cqf3wcs0-rudychacon01-9213s-projects.vercel.app environment=preview region=iad1 runtime=nodejs24.x stream=stdout
+    MINERVA-SECURITY-001 runtime-proxy v24.21.0

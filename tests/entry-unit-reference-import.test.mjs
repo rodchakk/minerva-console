@@ -42,6 +42,24 @@ function loadUnitsImportModule() {
 
 const unitsImport = loadUnitsImportModule();
 
+test("uploaded XLSX bytes preserve unit references and resident fields after parser security update", async () => {
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet([
+    [...unitsImport.TEMPLATE_HEADERS],
+    ["A101", "Avenida José, casa 1", "Ana Perez", "9999-9999", "ana@example.test", "Yes"],
+    ["A102", "Calle 2, casa 02", "", "", "", ""],
+  ]), "Units");
+  const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const result = await unitsImport.parseAdvancedUnitsFile(new File([bytes], "fixture.xlsx"));
+
+  assert.equal(result.errors.length, 0);
+  assert.equal(result.parsedResidentRows, 1);
+  assert.equal(result.uniqueUnits.length, 2);
+  assert.equal(result.uniqueUnits[0].reference, "Avenida José, casa 1");
+  assert.equal(result.rows[0].email, "ana@example.test");
+  assert.equal(result.rows[1].residentStatus, "Unit only");
+});
+
 function plain(value) {
   return JSON.parse(JSON.stringify(value));
 }

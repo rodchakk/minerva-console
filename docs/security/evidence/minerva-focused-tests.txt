@@ -1,0 +1,43 @@
+✔ setup_workbook is internal-only while public uploads remain community_data (0.9131ms)
+✔ workbook contract is deterministic XLSX v1 with safety limits (0.2922ms)
+✔ XLSX parser accepts minimal valid workbook with optional columns omitted (18.348ms)
+✔ XLSX parser treats Residents, Destinations, and Admins as optional sheets (4.4729ms)
+✔ XLSX validation catches duplicate normalized units without label semantics (4.6184ms)
+✔ XLSX validation catches resident references to unknown units (4.0714ms)
+✔ XLSX validation catches invalid resident email (2.8092ms)
+✔ XLSX validation flags wrong schema version and malformed workbooks (2.5333ms)
+✔ XLSX validation reports partial coverage and community-name mismatch (3.3061ms)
+✔ validation separates blocking errors from warnings without guessing values (0.3571ms)
+✔ report snapshots and approval use stable fingerprints and immutable records (0.2017ms)
+✔ report PDF route downloads finalized history by exact report id (0.3613ms)
+✔ setup report approval and final Outrider approval remain separate gates (0.3838ms)
+✔ final approval locks setup mutations after Outrider approval (0.1448ms)
+✔ generation reservations are recoverable without reusing versions (0.2054ms)
+✔ PDF output is Spanish, preliminary, and omits resident PII roster (0.3457ms)
+✔ database mutation stays service-role-only and does not create operational ENTRY data (0.8378ms)
+✔ ENTRY Outrider CI includes setup report regressions (0.1165ms)
+✔ uploaded XLSX bytes preserve unit references and resident fields after parser security update (18.458ms)
+✔ structured import template includes optional Reference after Unit Label (0.6705ms)
+✔ legacy structured imports without Reference remain valid (2.6288ms)
+✔ unit-only rows with references are valid and not counted as resident rows (0.6483ms)
+✔ duplicate units allow identical or blank plus populated references (0.6269ms)
+✔ duplicate units with conflicting references are blocking errors (0.6252ms)
+✔ references preserve commas, spaces, and accents (0.2748ms)
+✔ approved 100-unit Andalucia import can be parsed without resident data (2.4865ms)
+✔ unit reference migration establishes canonical and snapshot fields (0.8598ms)
+✔ manual units remain on create_houses_bulk_v2 while structured import uses reference-aware RPC (0.69ms)
+[auth] Console access check failed { userId: 'fixture-user', code: 'FIXTURE_OUTAGE' }
+✔ security: signed-out protected requests redirect to login and clear invalid cookies (35.4593ms)
+✔ security: transient auth failures preserve refreshed cookies and fail closed (12.31ms)
+✔ security: public registration retains no-store and no-referrer headers (7.5677ms)
+✔ security: active Superadmin maps to Console owner and viewer cannot pass owner guard (18.9733ms)
+✔ security: disabled and unknown Console roles fail closed (15.2775ms)
+✔ security: access RPC outage cannot grant Console membership (10.1999ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 539.7254
