@@ -97,6 +97,13 @@ export async function POST(request: NextRequest) {
           : null;
 
       if (bundle) {
+        // Follow-up counts include pin_generated; the infrastructure queue does not.
+        // Preserve both counts rather than overwriting queue_health.activation.open_count.
+        const {
+          open_count: followUpOpenCount,
+          oldest_open_at: followUpOldestOpenAt,
+          ...followUpRest
+        } = followUpSummary as Record<string, unknown>;
         const queueHealth =
           bundle.queue_health &&
           typeof bundle.queue_health === "object" &&
@@ -118,7 +125,9 @@ export async function POST(request: NextRequest) {
               ...queueHealth,
               activation: {
                 ...activation,
-                ...(followUpSummary as Record<string, unknown>),
+                ...followUpRest,
+                follow_up_open_count: followUpOpenCount,
+                follow_up_oldest_open_at: followUpOldestOpenAt,
               },
             },
           },

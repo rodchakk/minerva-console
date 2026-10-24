@@ -95,7 +95,7 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
     "ENTRY Diagnostic",
     `Community: ${String(community.name || "All communities")}`,
     `Window: ${String(range.starts_at || "?")} → ${String(range.ends_at || "?")}`,
-    `Current system: ${currentStatus}`,
+    `Current health (latest): ${currentStatus}`,
   ];
 
   if (windowStatus !== currentStatus) {
@@ -149,9 +149,17 @@ function diagnosticSummary(bundle: Record<string, unknown>) {
 
   if (Object.keys(activation).length > 0) {
     lines.push(
-      `- Activation queue: ${String(activation.open_count ?? 0)} open / ${String(
+      `- Infrastructure activation queue (pending/invited): ${String(activation.open_count ?? 0)} open / ${String(
         activation.system_failed_count ?? 0,
       )} system failed`,
+    );
+  }
+
+  if (activation.follow_up_open_count !== undefined) {
+    lines.push(
+      `- Activation follow-up (pending/invited/PIN-generated): ${String(
+        activation.follow_up_open_count ?? 0,
+      )} not yet activated`,
     );
   }
 
