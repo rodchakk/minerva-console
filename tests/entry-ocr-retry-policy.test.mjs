@@ -70,7 +70,7 @@ test("invalid output is recorded as a failed provider call then handled terminal
 });
 
 test("valid plate and NO_PLATE both persist and complete, without reopening DONE", () => {
-  assert.match(edge, /normalizedText === "NO_PLATE"/);
+  assert.match(edge, /\["NO_PLATE", "NOPLATE", "NO PLATE"\]\.includes\(sentinel\)/);
   assert.match(edge, /\^\[A-Z\]\{2,4\}-\?\[0-9\]\{3,5\}\$/);
   assert.match(edge, /resultKind: plateText \? "plate" : "no_plate"/);
   assert.match(edge, /\.update\(\{ vehicle_plate_text: plateText \}\)/);
