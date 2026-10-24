@@ -43,7 +43,10 @@ const corsHeaders = {
 
 const PLATE_PROMPT = `You are a license plate OCR system for Honduras (Central America).
 
-This image shows a vehicle. Find the license plate and read it.
+The image may show a vehicle with a visible plate, a vehicle without a plate,
+or a general vehicle photograph taken only as a reference. Read a plate only
+when its characters are recognizable. Never invent a plate from other text,
+vehicle branding, or the examples below.
 
 The Honduras license plate is a small rectangular metal plate on the bumper:
 - Blue stripe at top: "HONDURAS"
@@ -57,7 +60,7 @@ Examples: HAB8580 HCM5024 BAA0001 GHA1234 BEG2548
 OUTPUT RULES:
 1. Output ONLY the plate characters, uppercase, NO spaces
 2. Example correct outputs: HAB8580 or BAA0001 or HCM5024
-3. If truly cannot read: output NO_PLATE
+3. If no plate is visible or its characters cannot be recognized: output exactly NO_PLATE
 4. Nothing else - no explanation, no punctuation`;
 
 function json(body: unknown, status = 200): Response {
@@ -82,6 +85,10 @@ function extractText(data: unknown): string {
     }>;
   };
   const parts = payload?.candidates?.[0]?.content?.parts ?? [];
+  if (!Array.isArray(parts) || parts.some((part) =>
+    !part || typeof part !== "object" ||
+    (part.text !== undefined && typeof part.text !== "string")
+  )) return "";
   const visibleText = parts.filter((part) => part.text && !part.thought);
   // Never fall back to a "thought" part. It is not a recognized plate.
   return visibleText.length > 0
@@ -260,6 +267,33 @@ Deno.serve(async (req: Request) => {
     await markQueueFailure("OCR_REQUEST_IMAGE_MISMATCH");
     return json({ error: "OCR image does not match entry log" }, 400);
   }
+
+  // Do not bill a terminal job again or apply a response that arrived after
+  // another invocation completed/terminated it. Fail closed on a missing row.
+  async function terminalQueueResponse(): Promise<Response | null> {
+    try {
+      const { data: queue, error } = await serviceClient
+        .from("plate_ocr_queue")
+        .select("status")
+        .eq("entry_log_id", entryLogId)
+        .maybeSingle();
+      if (error || !queue) {
+        return json({ ok: false, error: "OCR queue lookup failed" }, 503);
+      }
+      if (queue.status === "DONE" || queue.status === "FAILED") {
+        return json({ ok: true, skipped: true, reason: "OCR job already terminal" });
+      }
+      if (queue.status !== "PENDING" && queue.status !== "PROCESSING") {
+        return json({ ok: false, error: "OCR queue state invalid" }, 503);
+      }
+      return null;
+    } catch {
+      return json({ ok: false, error: "OCR queue lookup failed" }, 503);
+    }
+  }
+
+  const terminalBeforeProvider = await terminalQueueResponse();
+  if (terminalBeforeProvider) return terminalBeforeProvider;
 
   const requestId = crypto.randomUUID();
   const correlationId = entryLogId;
@@ -443,8 +477,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const rawText = extractText(geminiData);
+  // Only these explicit sentinels mean "no recognized plate". Do not remove
+  // arbitrary separators or treat prose/empty/malformed responses as absence.
+  const sentinel = rawText.trim().toUpperCase().replace(/\s+/g, " ");
+  const isNoPlate = ["NO_PLATE", "NOPLATE", "NO PLATE"].includes(sentinel);
   const normalizedText = rawText.toUpperCase().replace(/\s+/g, "");
-  const isNoPlate = normalizedText === "NO_PLATE";
   // Do not turn prose, OCR prompts, or Gemini thoughts into plate numbers.
   const plateText = /^[A-Z]{2,4}-?[0-9]{3,5}$/.test(normalizedText)
     ? normalizedText.replace("-", "")
@@ -475,13 +512,22 @@ Deno.serve(async (req: Request) => {
     resultKind: plateText ? "plate" : "no_plate",
   });
 
+  const terminalAfterProvider = await terminalQueueResponse();
+  if (terminalAfterProvider) return terminalAfterProvider;
+
   try {
-    const { error: persistenceError } = await serviceClient
+    const { data: persistedEntry, error: persistenceError } = await serviceClient
       .from("entry_logs")
       .update({ vehicle_plate_text: plateText })
-      .eq("id", entryLogId);
+      .eq("id", entryLogId)
+      .eq("vehicle_photo_path", imagePath)
+      .is("vehicle_plate_text", null)
+      .select("id, vehicle_plate_text")
+      .maybeSingle();
 
-    if (persistenceError) {
+    // An UPDATE affecting zero rows is not a successful persistence. The null
+    // predicate also prevents a late no-plate response erasing a real plate.
+    if (persistenceError || !persistedEntry || persistedEntry.vehicle_plate_text !== plateText) {
       await markQueueFailure("OCR_PERSIST_FAILED");
       await emitPersistenceFailure();
       return json({ ok: false, error: "OCR result persistence failed" }, 500);
@@ -500,7 +546,8 @@ Deno.serve(async (req: Request) => {
         completed_at: new Date().toISOString(),
         last_error: null,
       })
-      .eq("entry_log_id", entryLogId);
+      .eq("entry_log_id", entryLogId)
+      .in("status", ["PENDING", "PROCESSING"]);
 
     if (queueDoneError) {
       console.warn("[extract-plate-text] queue completion update failed", {
@@ -511,6 +558,25 @@ Deno.serve(async (req: Request) => {
     // A successful provider call must not become a provider retry because only
     // the terminal queue write failed. The cron worker reconciles this state.
     console.warn("[extract-plate-text] queue completion transport failed");
+  }
+
+  // The existing DB trigger normally completed the queue in the persistence
+  // transaction. Verify that boundary; a concurrent terminal failure must not
+  // be reported as completed or be promoted by the best-effort update above.
+  try {
+    const { data: completedQueue, error } = await serviceClient
+      .from("plate_ocr_queue")
+      .select("status")
+      .eq("entry_log_id", entryLogId)
+      .maybeSingle();
+    if (!error && completedQueue?.status === "FAILED") {
+      return json({ ok: true, skipped: true, reason: "OCR job already terminal" });
+    }
+    if (error || completedQueue?.status !== "DONE") {
+      return json({ ok: false, error: "OCR queue completion unconfirmed" }, 503);
+    }
+  } catch {
+    return json({ ok: false, error: "OCR queue completion unconfirmed" }, 503);
   }
 
   return json({
