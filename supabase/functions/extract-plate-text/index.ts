@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { shouldRetryOcrError, storageErrorStatus } from "./retry-policy.mjs";
 
 type JsonObject = Record<string, unknown>;
 
@@ -82,13 +83,10 @@ function extractText(data: unknown): string {
   };
   const parts = payload?.candidates?.[0]?.content?.parts ?? [];
   const visibleText = parts.filter((part) => part.text && !part.thought);
-  if (visibleText.length > 0) {
-    return visibleText[visibleText.length - 1].text?.trim() ?? "";
-  }
-  for (const part of parts) {
-    if (part.text?.trim()) return part.text.trim();
-  }
-  return "";
+  // Never fall back to a "thought" part. It is not a recognized plate.
+  return visibleText.length > 0
+    ? visibleText[visibleText.length - 1].text?.trim() ?? ""
+    : "";
 }
 
 function getUsageMetadata(data: unknown): UsageMetadata {
@@ -189,9 +187,54 @@ Deno.serve(async (req: Request) => {
   const imagePath = body.image_path?.trim() ?? "";
   const requestedBucket = body.bucket?.trim() || OCR_BUCKET;
 
+  // Failure handling is a bounded queue state transition, not a provider retry loop.
+  // Guard the write so late responses cannot reopen DONE or FAILED jobs.
+  async function markQueueFailure(errorCode: string) {
+    if (!entryLogId) return;
+    try {
+      const { data: queue, error: lookupError } = await serviceClient
+        .from("plate_ocr_queue")
+        .select("id, attempts, max_attempts")
+        .eq("entry_log_id", entryLogId)
+        .maybeSingle();
+
+      if (lookupError || !queue) return;
+      const exhausted = Number(queue.max_attempts ?? 0) > 0 &&
+        Number(queue.attempts ?? 0) >= Number(queue.max_attempts ?? 0);
+      const terminal = exhausted || !shouldRetryOcrError(errorCode);
+      const updatePayload: JsonObject = {
+        status: terminal ? "FAILED" : "PENDING",
+        last_error: errorCode,
+      };
+      if (!terminal) {
+        updatePayload.scheduled_at = new Date(Date.now() + 2 * 60 * 1000).toISOString();
+      }
+
+      const { error: updateError } = await serviceClient
+        .from("plate_ocr_queue")
+        .update(updatePayload)
+        .eq("id", queue.id)
+        .in("status", ["PENDING", "PROCESSING"]);
+      if (updateError) {
+        console.warn("[extract-plate-text] queue failure state update failed", {
+          code: updateError.code ?? null,
+        });
+      }
+    } catch {
+      // Reconciliation remains available; do not turn queue bookkeeping into gate failure.
+      console.warn("[extract-plate-text] queue failure state update failed");
+    }
+  }
+
   if (!entryLogId) return json({ error: "entry_log_id required" }, 400);
-  if (!imagePath) return json({ error: "image_path required" }, 400);
-  if (requestedBucket !== OCR_BUCKET) return json({ error: "Unsupported OCR bucket" }, 400);
+  if (!imagePath) {
+    await markQueueFailure("OCR_REQUEST_IMAGE_PATH_REQUIRED");
+    return json({ error: "image_path required" }, 400);
+  }
+  if (requestedBucket !== OCR_BUCKET) {
+    await markQueueFailure("OCR_REQUEST_UNSUPPORTED_BUCKET");
+    return json({ error: "Unsupported OCR bucket" }, 400);
+  }
 
   const { data: entryLogData, error: entryLogError } = await serviceClient
     .from("entry_logs")
@@ -199,13 +242,22 @@ Deno.serve(async (req: Request) => {
     .eq("id", entryLogId)
     .maybeSingle();
 
-  if (entryLogError || !entryLogData) {
+  if (entryLogError) {
+    await markQueueFailure("OCR_ENTRY_LOG_LOOKUP_FAILED");
+    return json({ error: "Entry log lookup failed" }, 503);
+  }
+  if (!entryLogData) {
+    await markQueueFailure("OCR_REQUEST_ENTRY_LOG_NOT_FOUND");
     return json({ error: "Entry log not found" }, 404);
   }
 
   const entryLog = entryLogData as EntryLogContext;
-  if (!entryLog.community_id) return json({ error: "Entry log community missing" }, 409);
+  if (!entryLog.community_id) {
+    await markQueueFailure("OCR_REQUEST_COMMUNITY_MISSING");
+    return json({ error: "Entry log community missing" }, 409);
+  }
   if (!entryLog.vehicle_photo_path || entryLog.vehicle_photo_path !== imagePath) {
+    await markQueueFailure("OCR_REQUEST_IMAGE_MISMATCH");
     return json({ error: "OCR image does not match entry log" }, 400);
   }
 
@@ -268,34 +320,6 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  async function markQueueFailure(errorCode: string) {
-    try {
-      const { data: queue } = await serviceClient
-        .from("plate_ocr_queue")
-        .select("id, attempts, max_attempts")
-        .eq("entry_log_id", entryLogId)
-        .maybeSingle();
-
-      if (!queue) return;
-      const exhausted = Number(queue.max_attempts ?? 0) > 0 &&
-        Number(queue.attempts ?? 0) >= Number(queue.max_attempts ?? 0);
-      const nextRetry = new Date(Date.now() + 2 * 60 * 1000).toISOString();
-      const updatePayload: JsonObject = {
-        status: exhausted ? "FAILED" : "PENDING",
-        last_error: errorCode,
-      };
-      if (!exhausted) updatePayload.scheduled_at = nextRetry;
-
-      await serviceClient
-        .from("plate_ocr_queue")
-        .update(updatePayload)
-        .eq("id", queue.id);
-    } catch {
-      // The durable queue is already present. Scheduler reconciliation can retry.
-      console.warn("[extract-plate-text] queue failure state update failed");
-    }
-  }
-
   async function emitPersistenceFailure() {
     try {
       await serviceClient.rpc("log_system_event", {
@@ -321,7 +345,13 @@ Deno.serve(async (req: Request) => {
   try {
     const result = await serviceClient.storage.from(OCR_BUCKET).download(imagePath);
     if (result.error || !result.data) {
-      await markQueueFailure("OCR_IMAGE_DOWNLOAD_FAILED");
+      const status = storageErrorStatus(result.error);
+      const errorCode = status === 404
+        ? "OCR_IMAGE_NOT_FOUND"
+        : status === 400 || status === 401 || status === 403
+        ? "OCR_IMAGE_STORAGE_REJECTED"
+        : "OCR_IMAGE_DOWNLOAD_FAILED";
+      await markQueueFailure(errorCode);
       return json({ ok: false, error: "OCR image download failed" }, 500);
     }
     fileData = result.data;
@@ -355,7 +385,11 @@ Deno.serve(async (req: Request) => {
             { text: PLATE_PROMPT },
           ],
         }],
-        generationConfig: { temperature: 0, maxOutputTokens: 200 },
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 200,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
       }),
       signal: AbortSignal.timeout(GEMINI_REQUEST_TIMEOUT_MS),
     });
@@ -409,10 +443,28 @@ Deno.serve(async (req: Request) => {
   }
 
   const rawText = extractText(geminiData);
-  let plateText: string | null = null;
-  if (rawText && rawText !== "NO_PLATE") {
-    const normalized = rawText.toUpperCase().replace(/[^A-Z0-9-]/g, "").trim();
-    plateText = normalized.length >= 4 ? normalized : null;
+  const normalizedText = rawText.toUpperCase().replace(/\s+/g, "");
+  const isNoPlate = normalizedText === "NO_PLATE";
+  // Do not turn prose, OCR prompts, or Gemini thoughts into plate numbers.
+  const plateText = /^[A-Z]{2,4}-?[0-9]{3,5}$/.test(normalizedText)
+    ? normalizedText.replace("-", "")
+    : null;
+
+  if (!isNoPlate && !plateText) {
+    await recordProviderUsage({
+      status: "failed",
+      durationMs,
+      response: geminiResponse,
+      usageMetadata,
+      errorCode: "OCR_INVALID_OUTPUT",
+      resultKind: "unknown",
+    });
+    await markQueueFailure("OCR_INVALID_OUTPUT");
+    console.warn("[extract-plate-text] rejected invalid OCR output", {
+      entryLogId,
+      responseLength: rawText.length,
+    });
+    return json({ ok: false, error: "OCR output did not contain a valid plate" }, 502);
   }
 
   await recordProviderUsage({
