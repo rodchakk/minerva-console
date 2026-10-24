@@ -19,7 +19,7 @@ This mission makes OCR a repository-owned, observable production subsystem witho
 7. Every actual or potentially billable Gemini invocation records one best-effort `entry_usage_ledger` row with community, model, image count, measured tokens when returned, duration, outcome, request/correlation IDs, pricing version, and an estimated standard-list cost when token counts are available.
 8. A successful provider response persists the OCR result to `entry_logs`. A database trigger closes the matching queue row as `DONE` in that same database transaction, including a valid `NO_PLATE`/null result.
 9. `DONE` is terminal for the autonomous worker. A late transport error or failure in the Edge Function's redundant queue update cannot reopen completed work and accidentally bill a duplicate Gemini retry.
-10. Failed calls remain retryable until `max_attempts`. `process_plate_ocr_queue()` is scheduled once per minute, while `scheduled_at` provides a two-minute per-row backoff. Legacy rows with an already persisted plate are reconciled before retry dispatch.
+10. Only transient failures (provider/network, 408, 429, 5xx and temporary storage/DB failures) remain retryable until `max_attempts`. Deterministic contract errors and `OCR_INVALID_OUTPUT` terminate the queue row as `FAILED` on their first occurrence. `process_plate_ocr_queue()` is scheduled once per minute, while `scheduled_at` provides a two-minute per-row backoff. Legacy rows with an already persisted plate are reconciled before retry dispatch.
 
 ## Cost semantics
 
@@ -78,3 +78,48 @@ A controlled test is accepted only when all of the following are true:
 - estimated cost is populated only from the stored pricing snapshot;
 - Observability reports provider usage as instrumented and shows Image OCR evidence from the new run;
 - no raw image, raw OCR response, bearer token, API key, or service-role key is written to operational telemetry.
+
+## October 23 hardening — deterministic error containment (release candidate)
+
+This update intentionally **does not** treat a malformed Gemini response as a recognized
+`NO_PLATE`. `NO_PLATE` remains a valid model answer that persists a null plate and
+commits the job as `DONE`; `OCR_INVALID_OUTPUT` remains an observable failed
+provider response, but is no longer sent through repeated identical Gemini calls.
+
+Error policy:
+- Retry with the existing two-minute queue backoff and five-attempt limit:
+  network/timeouts (`GEMINI_NETWORK_ERROR`), HTTP 408/429/5xx,
+  malformed provider transport (`GEMINI_INVALID_RESPONSE`), transient
+  storage download, and transient database/lookup/persistence failures.
+- Terminal `FAILED` immediately: `OCR_INVALID_OUTPUT`; HTTP 4xx other
+  than 408/429; missing storage object or permanent storage authorization/input
+  failure; image path/bucket/entry-log relationship errors.
+- Unknown internal error codes stay bounded by `max_attempts` rather than
+  being silently discarded.
+- Queue failure updates are restricted to `PENDING`/`PROCESSING`. Both
+  `DONE` and `FAILED` are protected against late failed responses;
+  existing DB `DONE` protection remains the authoritative success boundary.
+- Provider calls continue to be recorded individually in the existing usage
+  ledger, regardless of whether the queue retries or terminates.
+- No raw Gemini text, image bytes, plates, or credentials are added to telemetry.
+
+The deployed v37 Edge Function has strict plate validation, ignores Gemini thought
+parts and disables Gemini thinking. These production protections are synced back
+into the repository source as part of this release candidate. The current DB
+dispatcher has a production-only dispatch limit/timeout drift; this release does
+not alter its scheduling, timeout, concurrency controls, or production SQL.
+
+**Alternatives evaluated.** A special corrective retry with a different prompt
+adds a second billable provider call and creates a separate recovery path for a
+single observed problem image. Structured Gemini response schemas are supported,
+but changing the provider request contract without controlled provider validation
+is unnecessarily risky for this incident. Both approaches can be reconsidered if
+a significant recurring invalid-output rate is measured. No prompt or schema
+change is part of this patch.
+
+**Deployment:** after explicit merge/release approval, deploy the new Edge
+source *with its local retry-policy.mjs module* and `verify_jwt=true`; no DB
+migration, cron change, mobile release or OTP/OTA update is required. Verify
+actual deployed source/version, ledger behavior, security configuration and
+`DONE`/terminal semantics using safe non-production test fixtures. Rollback
+requires the exact pre-change deployed v37 source, not the older master file.
