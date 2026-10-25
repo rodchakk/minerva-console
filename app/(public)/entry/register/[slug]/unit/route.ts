@@ -17,10 +17,7 @@ import {
   hasSameOriginBoundary,
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
-import {
-  buildCommunityUnitLookupLabel,
-  hasCommunityUnitPrefix,
-} from "@/features/entry/communityRegistration/public/unitLabelPrefix";
+import { buildCommunityUnitLookupLabel } from "@/features/entry/communityRegistration/public/unitLabelPrefix";
 
 export const dynamic = "force-dynamic";
 
@@ -65,11 +62,15 @@ function buildUnitLookupCandidates(input: string, unitLabelPrefix: string) {
   if (!raw) return [];
 
   const candidates = new Set<string>();
+  const canonical = buildCommunityUnitLookupLabel(unitLabelPrefix, raw);
 
-  if (!hasCommunityUnitPrefix(raw, unitLabelPrefix)) {
-    candidates.add(buildCommunityUnitLookupLabel(unitLabelPrefix, raw));
+  if (canonical) {
+    candidates.add(canonical);
   }
 
+  // Keep the raw label as a legacy fallback only after the canonical identity.
+  // If the canonical label is already registered, the lookup loop stops before
+  // reaching this fallback so "Casa 2008" and "2008" cannot become duplicates.
   candidates.add(raw);
 
   return Array.from(candidates).filter(
@@ -134,7 +135,7 @@ export async function POST(
       unitLabel: candidate,
     });
 
-    if (lookup.available) {
+    if (lookup.available || lookup.reason === "already_registered") {
       break;
     }
   }
