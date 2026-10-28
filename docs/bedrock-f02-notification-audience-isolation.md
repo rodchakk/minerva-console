@@ -152,7 +152,7 @@ The intended PR is limited to:
 
 - one forward database migration for the audience contract, compatibility bridge, state machine, sweeper, and welcome recovery;
 - the `smart-service` worker upgrade to v2;
-- focused defensive regression tests and one historical test allowlist entry for the explicitly authorized F02 migration; and
+- focused defensive regression tests, CI wiring, and one historical test allowlist entry for the explicitly authorized F02 migration; and
 - this deployment/recovery runbook.
 
 It must not contain F01 changes, unrelated UI fixes, production configuration changes, scheduler changes, secrets, real tokens, or generated build output.
