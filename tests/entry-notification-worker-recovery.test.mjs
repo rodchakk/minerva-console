@@ -72,8 +72,8 @@ test("worker health read model is superadmin-only and detects stale heartbeats",
 test("smart-service source is repository-controlled and records every successful claim loop", () => {
   assert.match(smartService, /recordWorkerCycle/);
   assert.match(smartService, /record_entry_notification_worker_cycle_v1/);
-  assert.match(smartService, /if \(!rows\.length\) \{[\s\S]*success: true/);
-  assert.match(smartService, /success: true,[\s\S]*claimed: rows\.length,[\s\S]*processed: summary\.length/);
+  assert.match(smartService, /if \(!validRows\.length\) \{[\s\S]*success: true/);
+  assert.match(smartService, /success: true,[\s\S]*claimed: validRows\.length,[\s\S]*processed: summary\.length/);
   assert.match(smartService, /PUSH_CLAIM_RPC_ERROR[\s\S]*success: false/);
   assert.match(smartService, /PUSH_WORKER_FATAL_ERROR/);
 });
@@ -85,11 +85,11 @@ test("worker telemetry remains fail-open and does not redefine delivery success"
   assert.doesNotMatch(smartService, /PUSH_WORKER_CYCLE_OK/);
 });
 
-test("malformed claim-row logging no longer exposes the raw queue row", () => {
-  assert.match(smartService, /PUSH_CLAIM_ROW_MISSING_ID/);
-  assert.doesNotMatch(smartService, /PUSH_CLAIM_ROW_MISSING_ID[\s\S]{0,220}\{ raw \}/);
-  assert.match(smartService, /has_message_id: Boolean\(raw\.message_id\)/);
-  assert.match(smartService, /has_community_id: Boolean\(raw\.community_id\)/);
+test("malformed v2 claims fail closed without logging the raw queue row", () => {
+  assert.match(smartService, /PUSH_CLAIM_ROW_INVALID_V2/);
+  assert.doesNotMatch(smartService, /PUSH_CLAIM_ROW_INVALID_V2[\s\S]{0,260}\{ raw \}/);
+  assert.match(smartService, /invalid_rows: invalidCount/);
+  assert.match(smartService, /return json\(\{ ok: false, error: 'Invalid push claim contract' \}, 500\)/);
 });
 
 test("console fetches and renders worker recovery separately from notification event counts", () => {
