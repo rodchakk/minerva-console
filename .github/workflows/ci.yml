@@ -88,7 +88,12 @@ jobs:
         run: npm ci
 
       - name: Run background worker safety regressions
-        run: node --test tests/entry-background-worker-safety.test.mjs
+        run: |
+          node --test \
+            tests/entry-background-worker-safety.test.mjs \
+            tests/entry-notification-audience-isolation.test.mjs \
+            tests/entry-notification-worker-recovery.test.mjs \
+            tests/entry-welcome-push-recovery.test.mjs
 
 
   entry-manual-checkin-idempotency-tests:
