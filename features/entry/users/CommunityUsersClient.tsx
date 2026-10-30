@@ -36,6 +36,7 @@ import {
 } from "@/features/entry/activation/ResidentAccessModePicker";
 import {
   setCommunityUserActiveStatusAction,
+  setCommunityUserUnitAction,
   updateCommunityUserAction,
 } from "@/features/entry/users/actions";
 import {
@@ -511,6 +512,30 @@ export function CommunityUsersClient({
     }
 
     startTransition(async () => {
+      if (selectedUser.role === "UNASSIGNED") {
+        const result = await setCommunityUserUnitAction({
+          communityId: community.id,
+          userId: selectedUser.userId,
+          houseId: draft.houseId,
+        });
+        if (!result.success) {
+          setError(result.error ?? "Could not assign the resident to a unit.");
+          return;
+        }
+        const house = houses.find((item) => item.id === draft.houseId);
+        syncUser({
+          ...selectedUser,
+          role: "RESIDENT",
+          houseId: draft.houseId,
+          houseLabel: house?.label ?? result.houseLabel ?? "Assigned unit",
+          isActive: false,
+        });
+        setMessage("Unit assigned. Account remains inactive until you reactivate it.");
+        setManageMode("view");
+        router.refresh();
+        return;
+      }
+
       const result = await updateCommunityUserAction({
         communityId: community.id,
         fullName: draft.fullName,
@@ -1500,22 +1525,26 @@ export function CommunityUsersClient({
 
                 {manageMode === "edit" && draft ? (
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <label>
-                      <FieldLabel>Full name *</FieldLabel>
-                      <input
-                        value={draft.fullName}
-                        onChange={(event) => setDraft((current) => current ? { ...current, fullName: event.target.value } : current)}
-                        className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-                      />
-                    </label>
-                    <label>
-                      <FieldLabel>Phone</FieldLabel>
-                      <input
-                        value={draft.phone}
-                        onChange={(event) => setDraft((current) => current ? { ...current, phone: event.target.value } : current)}
-                        className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-                      />
-                    </label>
+                    {selectedUser.role !== "UNASSIGNED" ? (
+                      <label>
+                        <FieldLabel>Full name *</FieldLabel>
+                        <input
+                          value={draft.fullName}
+                          onChange={(event) => setDraft((current) => current ? { ...current, fullName: event.target.value } : current)}
+                          className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                        />
+                      </label>
+                    ) : null}
+                    {selectedUser.role !== "UNASSIGNED" ? (
+                      <label>
+                        <FieldLabel>Phone</FieldLabel>
+                        <input
+                          value={draft.phone}
+                          onChange={(event) => setDraft((current) => current ? { ...current, phone: event.target.value } : current)}
+                          className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                        />
+                      </label>
+                    ) : null}
                     {(selectedUser.role === "RESIDENT" || selectedUser.role === "ADMIN" || selectedUser.role === "UNASSIGNED") ? (
                       <label>
                         <FieldLabel>Unit *</FieldLabel>
@@ -1531,17 +1560,23 @@ export function CommunityUsersClient({
                         </select>
                       </label>
                     ) : null}
-                    <label>
-                      <FieldLabel>Status</FieldLabel>
-                      <select
-                        value={draft.isActive ? "active" : "inactive"}
-                        onChange={(event) => setDraft((current) => current ? { ...current, isActive: event.target.value === "active" } : current)}
-                        className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
-                      >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
-                      </select>
-                    </label>
+                    {selectedUser.role !== "UNASSIGNED" ? (
+                      <label>
+                        <FieldLabel>Status</FieldLabel>
+                        <select
+                          value={draft.isActive ? "active" : "inactive"}
+                          onChange={(event) => setDraft((current) => current ? { ...current, isActive: event.target.value === "active" } : current)}
+                          className="h-10 w-full rounded-md border border-white/10 bg-[var(--surface-strong)] px-3 text-sm text-white outline-none focus:border-violet-400/50"
+                        >
+                          <option value="active">Active</option>
+                          <option value="inactive">Inactive</option>
+                        </select>
+                      </label>
+                    ) : (
+                      <p className="self-end text-xs leading-5 text-amber-100">
+                        Reassigning restores the Resident role, but account access stays disabled until you reactivate it.
+                      </p>
+                    )}
                     <div className="sm:col-span-2 flex justify-end gap-2 border-t border-white/8 pt-4">
                       <Button
                         variant="secondary"
@@ -1556,7 +1591,7 @@ export function CommunityUsersClient({
                         onClick={submitEdit}
                         disabled={isPending}
                       >
-                        {isPending ? "Saving..." : "Save changes"}
+                        {isPending ? "Saving..." : selectedUser.role === "UNASSIGNED" ? "Assign unit" : "Save changes"}
                       </Button>
                     </div>
                   </div>
