@@ -327,6 +327,7 @@ export function CommunityDirectoryWorkspace({
 
             <ResidentQuickCreate
               communityId={communityId}
+              communityName={communityName}
               houses={houses}
               triggerClassName="inline-flex h-10 items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#120539] outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
             />
@@ -737,6 +738,7 @@ export function CommunityDirectoryWorkspace({
 
               <ResidentQuickCreate
                 communityId={communityId}
+                communityName={communityName}
                 houses={houses}
                 fixedUnitId={selectedUnit.id}
                 triggerClassName="inline-flex h-9 w-full items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539]"
