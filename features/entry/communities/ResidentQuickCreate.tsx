@@ -22,6 +22,7 @@ import { ENTRY_ADMIN_TEMP_PASSWORD_HELPER } from "@/features/entry/passwordPolic
 
 type ResidentQuickCreateProps = {
   communityId: string;
+  communityName: string;
   fixedUnitId?: string;
   houses: CommunityUnitHouseOption[];
   triggerClassName?: string;
@@ -34,6 +35,7 @@ type FlowResult =
 
 export function ResidentQuickCreate({
   communityId,
+  communityName,
   fixedUnitId,
   houses,
   triggerClassName,
