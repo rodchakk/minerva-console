@@ -12,7 +12,7 @@ const actionSource = read("features/entry/communities/singleUnitActions.ts");
 function makeAction(options = {}) {
   const calls = { inserted: [], audited: [], revalidated: [], authChecked: 0, queried: [] };
   const existing = options.existing ?? [];
-  const module = { exports: {} };
+  const testModule = { exports: {} };
   const admin = {
     from(table) {
       if (table === "communities") {
@@ -71,8 +71,8 @@ function makeAction(options = {}) {
   }).outputText;
 
   vm.runInNewContext(compiled, {
-    module,
-    exports: module.exports,
+    module: testModule,
+    exports: testModule.exports,
     console,
     require(specifier) {
       if (specifier === "next/cache") {
@@ -94,7 +94,7 @@ function makeAction(options = {}) {
     },
   });
 
-  return { create: module.exports.createSingleCommunityUnitAction, calls };
+  return { create: testModule.exports.createSingleCommunityUnitAction, calls };
 }
 
 const COMMUNITY_ID = "0a4f8bc1-a0a7-4000-a9ac-846a4d7a519a";
