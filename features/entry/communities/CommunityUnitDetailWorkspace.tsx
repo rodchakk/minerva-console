@@ -323,6 +323,7 @@ export function CommunityUnitDetailWorkspace({
 
             <ResidentQuickCreate
               communityId={communityId}
+              communityName={communityName}
               fixedUnitId={unit.id}
               houses={houses}
               triggerClassName="inline-flex h-10 items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#120539]"
