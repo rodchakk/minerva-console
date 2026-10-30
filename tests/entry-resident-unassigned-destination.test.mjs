@@ -17,6 +17,7 @@ test("Unassigned is a virtual destination, not a physical house", () => {
   assert.match(action, /targetHouseId: string \| null/);
   assert.match(action, /sa_unassign_community_resident_unit_v1/);
   assert.match(action, /p_target_user_id: userId/);
+  assert.match(action, /p_expected_house_id: sourceHouseId/);
   assert.match(action, /getEntryPreviewReadOnlyError/);
   assert.doesNotMatch(action, /create_houses_bulk|insert\(\{.*house_label/);
 });
@@ -28,6 +29,7 @@ test("Atomic unassignment retains identity and audit but revokes every active ho
   assert.match(migration, /p_target_user_id = v_actor_id/);
   assert.match(migration, /Cannot unassign an active superadmin/);
   assert.match(migration, /Only resident accounts can be unassigned/);
+  assert.match(migration, /v_old_house_id <> p_expected_house_id/);
   assert.match(migration, /from public\.profiles p[\s\S]*for update/);
   assert.match(migration, /update public\.house_residents hr[\s\S]*is_active = false,[\s\S]*is_primary = false,[\s\S]*is_primary_contact = false/);
   assert.match(migration, /set house_id = null,[\s\S]*role = 'UNASSIGNED'/);
