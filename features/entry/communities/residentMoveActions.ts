@@ -119,6 +119,7 @@ export async function moveResidentToUnitAction(
     : await supabase.rpc("sa_unassign_community_resident_unit_v1", {
         p_community_id: communityId,
         p_target_user_id: userId,
+        p_expected_house_id: sourceHouseId,
       });
 
   if (error) {
