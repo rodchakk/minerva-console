@@ -20,6 +20,10 @@ Commercial positioning:
 
 > ENTRY helps communities move from manual visitor/access processes to connected digital management. The resident authorizes, security validates, the entrance is recorded, and patronato/administration can consult the information when needed.
 
+## Current commercial status — 2026-10-26
+
+**Operator-provided:** Residencial Andalucía is ENTRY's **first paying customer** and is operational commercially. The active goal is to obtain the **second paying client** without new features or up-front spend. Current lead priority is **Las Mercedes (qualification)** and **La Florida (formal proposal delivery)**. **El Limonar is paused**, because the patronato is occupied closing parts of its community; **El Carmen is removed from active pursuit**, including because an internal public bus route makes the operating model a poor fit for ENTRY as sold today. The older August commercial follow-up text in this document is historical and **must not drive new outreach**. See [entry-sales-and-leads.md](entry-sales-and-leads.md) and [entry-next-missions.md](entry-next-missions.md) for the dated decision and next actions.
+
 ## Knowledge pack
 
 - [entry-product-foundation.md](entry-product-foundation.md) — what ENTRY is, users, problem, value, modules.
@@ -93,6 +97,8 @@ A confirmed severe vulnerability, active exposure, destructive permission proble
 Run an evidence-backed ENTRY diagnostic before selecting the next implementation mission. Use the result to confirm bugs and current branch/backend state, then follow [entry-next-missions.md](entry-next-missions.md).
 
 ### Commercial
+
+> **Historical snapshot (August 2026): superseded by the 2026-10-26 current commercial status above.** In particular, do not pursue El Carmen or actively follow up El Limonar based on the entries below.
 
 - **Andalucía:** do not add immediate pressure after the 2026-08-20 executive-proposal handoff. Wait for Eugenio/patronato reaction; if they engage, move toward a short patronato demo. Before a formal economic proposal, calculate ENTRY Unit Economics v1 for approximately 98 homes and the promised onboarding/support scope.
 - **El Carmen:** complete/record the planned Aug 19–20 follow-up when it occurs; objective remains direct patronato reaction/contact and scope clarification.

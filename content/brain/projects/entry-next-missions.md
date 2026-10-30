@@ -153,6 +153,23 @@ Future scope may include separate development/production databases, environment-
 
 No provider decision should be made before measuring ENTRY's dependency on Supabase Auth, Storage, Realtime, Edge Functions, and database-specific behavior. Kubernetes is not justified for ENTRY's current scale.
 
+## Commercial update — 2026-10-26 (current; supersedes August instructions)
+
+**ENTRY now has its first paying commercial customer, Residencial Andalucía.** The active commercial mission is to secure a **second paying customer** with minimum spend. No speculative features or client-specific development before a validated buying opportunity. The engineering roadmap below is an archival 2026-07-28 decision, not a statement that ENTRY still has zero clients.
+
+- **Las Mercedes — ACTIVE DISCOVERY:** operator-recalled 2026-09-18 hypothesis of no visible digital access system remains **unconfirmed**. Field-qualify control method, community operating model and patronato/administrative channel. Seek a short meeting if a fit exists.
+- **La Florida — OPEN:** formal patronato proposal already prepared; in-person delivery through the administrative channel still planned, receipt/response not confirmed.
+- **El Limonar — PAUSED:** last reported patronato priority was closing parts of the community; operator considers them occupied with other matters. **Stop active follow-up**, resume only upon new buyer interest or a meaningful change in their priorities.
+- **El Carmen — DISCARDED FROM ACTIVE PIPELINE:** package and follow-up already sufficiently attempted. A public bus route enters the sector; operator judges operational fit poor for ENTRY as-is. **No more follow-ups, visits, or product expansion for this lead.**
+- **Andalucía — CUSTOMER, NOT A LEAD:** consider permission-based introductions to other patronatos, with no disclosure of residents' private information.
+- **Other communities:** assess prospects with easy access to a real decision-maker, a current problem and an existing-product fit. Do not equate documents delivered, gate contacts or preliminary system observations with buyer intent.
+
+**2026-10-26 to 2026-11-01 working intent:** validate Las Mercedes, deliver La Florida, seek credible references from Andalucía, and measure direct conversations/meetings and requested proposals rather than number of residences visited. Do not spend on advertisements, new materials or custom development. Commercial detail and attribution live in [entry-sales-and-leads.md](entry-sales-and-leads.md).
+
+**All commercial notes dated August 2026 below are preserved as history only. They no longer authorize pursuing El Carmen or proactively following up with El Limonar.**
+
+---
+
 ## Commercial track
 
 FIRST DOOR / Patronato Package v1 continues in parallel and does not reorder the engineering priorities.
