@@ -54,7 +54,7 @@ test("Previously unassigned resident can be assigned without silently reactivati
   assert.match(users, /normalizedRole === "UNASSIGNED"/);
   assert.match(users, /sa_reassign_unassigned_community_resident_v1/);
   assert.match(users, /Assign this resident to a unit before reactivating/);
-  assert.match(communityUsers, /roleFilter === "UNASSIGNED"/);
+  assert.match(communityUsers, /\["UNASSIGNED", "Unassigned"/);
   assert.match(communityUsers, /setCommunityUserUnitAction/);
   assert.match(communityUsers, /Account remains inactive until you reactivate it/);
   assert.match(globalUsers, /wasUnassigned/);
