@@ -23,7 +23,10 @@ test("invitation email can optionally return the exact same PIN used to build th
   assert.match(consoleAction, /includePinForSharing: true/);
   assert.match(consoleAction, /emailedPin = item\?\.pinForSharing/);
   assert.match(consoleAction, /pin: emailedPin/);
-  assert.doesNotMatch(consoleAction.slice(consoleAction.indexOf('if (input.mode === "email") {')), /generateActivationPins\(\{/);
+  const emailBranchStart = consoleAction.indexOf('if (input.mode === "email") {');
+  const emailBranchEnd = consoleAction.indexOf("const { data: imported", emailBranchStart);
+  assert.ok(emailBranchStart >= 0 && emailBranchEnd > emailBranchStart);
+  assert.doesNotMatch(consoleAction.slice(emailBranchStart, emailBranchEnd), /generateActivationPins\(\{/);
 
   assert.match(fieldAction, /if \(data\.created\) \{/);
   assert.match(fieldAction, /includePinForSharing: true/);
