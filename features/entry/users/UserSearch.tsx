@@ -395,12 +395,18 @@ export function UserSearch() {
         return;
       }
 
+      const wasUnassigned = selectedUser.role === "UNASSIGNED";
       syncUser(selectedUser, {
         houseId: unitDraft,
         houseLabel: result.houseLabel ?? selectedHouse.label,
         isPrimary: result.isPrimary ?? false,
+        ...(wasUnassigned ? { role: "RESIDENT", isActive: false } : {}),
       });
-      setMessage(`Unit changed to ${result.houseLabel ?? selectedHouse.label}.`);
+      setMessage(
+        wasUnassigned
+          ? "Resident assigned to a unit. Reactivate the account separately when authorized."
+          : `Unit changed to ${result.houseLabel ?? selectedHouse.label}.`,
+      );
       setManageMode("view");
       router.refresh();
     });
