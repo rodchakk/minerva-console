@@ -346,31 +346,31 @@ export function UnitResidentActions({
                 </div>
                 {passwordResetMode === "quick" ? (
                   <div className="grid gap-4">
-                    <p className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-sm leading-5 text-violet-100">
-                      Set a new password for {resident.fullName}. The previous password will stop working immediately.
-                    </p>
-                <label>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    New password
-                  </span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
-                  />
-                </label>
-                <label>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    Confirm password
-                  </span>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
-                  />
-                </label>
+                        <p className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-sm leading-5 text-violet-100">
+                          Set a new password for {resident.fullName}. The previous password will stop working immediately.
+                        </p>
+                    <label>
+                      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        New password
+                      </span>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
+                      />
+                    </label>
+                    <label>
+                      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        Confirm password
+                      </span>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
+                      />
+                    </label>
                   </div>
                 ) : (
                   <div className="grid gap-4">
@@ -383,7 +383,8 @@ export function UnitResidentActions({
                     </div>
                   </div>
                 )}
-              </div>            ) : modal === "move" ? (
+              </div>
+            ) : modal === "move" ? (
               <div className="mt-5 grid gap-4">
                 <div className="rounded-lg border border-white/8 bg-white/[0.025] px-4 py-3 text-sm">
                   <p className="text-[var(--text-muted)]">Current unit</p>
