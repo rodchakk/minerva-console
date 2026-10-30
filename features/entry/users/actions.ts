@@ -917,6 +917,22 @@ export async function setCommunityUserActiveStatusAction(
   }
 
   const supabase = await createClient();
+  if (input.isActive) {
+    // An unassigned identity must be reassigned before access can be enabled.
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role,house_id")
+      .eq("community_id", input.communityId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+    if (profileError || !profile) {
+      return { error: "Could not verify this resident's assignment.", success: false };
+    }
+    if (coerceString(profile.role).toUpperCase() === "UNASSIGNED" || !profile.house_id && coerceString(profile.role).toUpperCase() === "RESIDENT") {
+      return { error: "Assign this resident to a unit before reactivating the account.", success: false };
+    }
+  }
+
   const { error } = await supabase.rpc("sa_set_community_user_active_status", {
     p_community_id: input.communityId,
     p_is_active: input.isActive,
