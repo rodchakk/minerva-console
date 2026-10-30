@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
+import { CreateSingleUnitDialog } from "@/features/entry/communities/CreateSingleUnitDialog";
 import { UnitResidentActions } from "@/features/entry/communities/UnitResidentActions";
 import { UnitBulkDeleteManager, type BulkDeleteUnit } from "@/features/entry/communities/UnitBulkDeleteManager";
 import type {
@@ -164,6 +166,9 @@ export function CommunityDirectoryWorkspace({
   summary,
   units,
 }: Props) {
+  const router = useRouter();
+  const [createUnitOpen, setCreateUnitOpen] = useState(false);
+  const [createdUnitMessage, setCreatedUnitMessage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<DirectoryFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -264,6 +269,22 @@ export function CommunityDirectoryWorkspace({
     setFilterOpen(false);
   }
 
+  function openCreateUnit() {
+    setMoreOpen(false);
+    setFilterOpen(false);
+    setCreatedUnitMessage(null);
+    setCreateUnitOpen(true);
+  }
+
+  function handleUnitCreated(label: string) {
+    setCreateUnitOpen(false);
+    setQuery("");
+    setFilter("all");
+    setSelectedId(null);
+    setCreatedUnitMessage(`Unit "${label}" created successfully.`);
+    router.refresh();
+  }
+
   return (
     <div
       ref={pageRef}
@@ -295,6 +316,15 @@ export function CommunityDirectoryWorkspace({
               Back to community
             </DimensionalLink>
 
+            <button
+              type="button"
+              onClick={openCreateUnit}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#120539] transition hover:bg-[#6845F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BEB4FF]"
+            >
+              <Plus className="size-4" aria-hidden />
+              Create unit
+            </button>
+
             <ResidentQuickCreate
               communityId={communityId}
               houses={houses}
@@ -324,12 +354,19 @@ export function CommunityDirectoryWorkspace({
                   >
                     Activation queue
                   </Link>
+                  <button
+                    type="button"
+                    onClick={openCreateUnit}
+                    className="block w-full rounded-md px-3 py-2.5 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+                  >
+                    Add unit
+                  </button>
                   <Link
                     href={`/products/entry/communities/${communityId}/units/new`}
                     onClick={() => setMoreOpen(false)}
                     className="block rounded-md px-3 py-2.5 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
                   >
-                    Add unit
+                    Import units (bulk)
                   </Link>
                   <div onClick={() => setMoreOpen(false)}>
                     <UnitBulkDeleteManager
@@ -345,6 +382,15 @@ export function CommunityDirectoryWorkspace({
             </div>
           </div>
         </header>
+
+        {createdUnitMessage ? (
+          <div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3 text-xs font-semibold text-emerald-100">
+            <span>{createdUnitMessage}</span>
+            <button type="button" onClick={() => setCreatedUnitMessage(null)} className="text-emerald-200 hover:text-white" aria-label="Dismiss confirmation">
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+        ) : null}
 
         <section className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:grid-cols-4">
           <SummaryMetric
@@ -714,6 +760,14 @@ export function CommunityDirectoryWorkspace({
           </aside>
         ) : null}
       </div>
+
+      <CreateSingleUnitDialog
+        communityId={communityId}
+        communityName={communityName}
+        open={createUnitOpen}
+        onClose={() => setCreateUnitOpen(false)}
+        onCreated={handleUnitCreated}
+      />
     </div>
   );
 }
