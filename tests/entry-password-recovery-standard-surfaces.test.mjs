@@ -59,3 +59,12 @@ test("all password recovery surfaces reuse the same authorized server action", (
   assert.match(actions, /resetPasswordForEmail\(email, \{ redirectTo \}\)/);
   assert.match(actions, /community_user\.password_reset_email/);
 });
+
+test("Community Directory offers direct resident management without navigating away", () => {
+  const directory = read("features/entry/communities/CommunityDirectoryWorkspace.tsx");
+  const unitDetail = read("features/entry/communities/CommunityUnitDetailWorkspace.tsx");
+  assert.match(directory, /UnitResidentActions/);
+  assert.match(directory, /resident=\{resident\}/);
+  assert.match(directory, /communityId=\{communityId\}/);
+  assert.match(unitDetail, /UnitResidentActions/);
+});
