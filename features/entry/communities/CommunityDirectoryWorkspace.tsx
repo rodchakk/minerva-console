@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
+import { UnitResidentActions } from "@/features/entry/communities/UnitResidentActions";
 import { UnitBulkDeleteManager, type BulkDeleteUnit } from "@/features/entry/communities/UnitBulkDeleteManager";
 import type {
   CommunityUnitHouseOption,
@@ -630,9 +631,16 @@ export function CommunityDirectoryWorkspace({
                                 {resident.email || resident.phone || resident.account}
                               </p>
                             </div>
-                            <Tag tone={isPrimaryResident ? "success" : "default"}>
-                              {isPrimaryResident ? "Primary resident" : "Resident"}
-                            </Tag>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <Tag tone={isPrimaryResident ? "success" : "default"}>
+                                {isPrimaryResident ? "Primary resident" : "Resident"}
+                              </Tag>
+                              <UnitResidentActions
+                                communityId={communityId}
+                                resident={resident}
+                                triggerClassName="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.025] text-[#BEB4FF] transition hover:border-violet-400/40 hover:text-white"
+                              />
+                            </div>
                           </div>
                         </div>
                       );
