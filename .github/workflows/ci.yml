@@ -68,6 +68,7 @@ jobs:
         run: |
           node --test tests/auth-outage-recovery.test.mjs
           node --test tests/entry-community-dual-password-reset.test.mjs
+          node --test tests/entry-original-pin-whatsapp-handoff.test.mjs
           node --test tests/entry-directory-single-unit-create.test.mjs
           node --test tests/security-auth-runtime.test.mjs tests/entry-unit-reference-import.test.mjs
 

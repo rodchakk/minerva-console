@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Eye, EyeOff, Plus, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { buildActivationWhatsAppMessage } from "@/features/entry/activation/activationWhatsAppMessage";
 import {
   prepareConsoleResidentAccess,
   type PrepareConsoleResidentAccessResult,
@@ -21,6 +22,7 @@ import { ENTRY_ADMIN_TEMP_PASSWORD_HELPER } from "@/features/entry/passwordPolic
 
 type ResidentQuickCreateProps = {
   communityId: string;
+  communityName: string;
   fixedUnitId?: string;
   houses: CommunityUnitHouseOption[];
   triggerClassName?: string;
@@ -33,6 +35,7 @@ type FlowResult =
 
 export function ResidentQuickCreate({
   communityId,
+  communityName,
   fixedUnitId,
   houses,
   triggerClassName,
@@ -48,6 +51,7 @@ export function ResidentQuickCreate({
   const [unitId, setUnitId] = useState(fixedUnitId ?? "");
   const [result, setResult] = useState<FlowResult | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState<string | null>(null);
   const [copiedPassword, setCopiedPassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -72,6 +76,7 @@ export function ResidentQuickCreate({
     setUnitId(fixedUnitId ?? "");
     setResult(null);
     setCopied(false);
+    setCopyError(null);
     setCopiedPassword(false);
     setShowPassword(false);
   }
@@ -160,30 +165,36 @@ export function ResidentQuickCreate({
 
   async function copySuccessDetails() {
     if (!result?.value.success) return;
+    setCopyError(null);
 
-    if (result.kind === "quick" && result.value.credentials) {
-      await navigator.clipboard.writeText(
-        [
-          `Resident: ${result.value.credentials.residentName}`,
-          `Unit: ${result.value.credentials.unitLabel}`,
-          `Login: ${result.value.credentials.login}`,
-          `Password: ${result.value.credentials.password}`,
-        ].join("\n"),
-      );
-      setCopied(true);
-      return;
-    }
+    try {
+      if (result.kind === "quick" && result.value.credentials) {
+        await navigator.clipboard.writeText(
+          [
+            `Resident: ${result.value.credentials.residentName}`,
+            `Unit: ${result.value.credentials.unitLabel}`,
+            `Login: ${result.value.credentials.login}`,
+            `Password: ${result.value.credentials.password}`,
+          ].join("\n"),
+        );
+        setCopied(true);
+        return;
+      }
 
-    if (result.kind === "prepared" && result.value.mode === "pin" && result.value.pin) {
-      await navigator.clipboard.writeText(
-        [
-          `Resident: ${result.value.residentName ?? fullName}`,
-          `Unit: ${result.value.unitLabel ?? selectedUnit?.label ?? ""}`,
-          `ENTRY activation PIN: ${result.value.pin}`,
-          'Open ENTRY and choose "Activate account".',
-        ].join("\n"),
-      );
-      setCopied(true);
+      // Use the PIN from the original email-generation call. Never regenerate.
+      if (result.kind === "prepared" && result.value.pin) {
+        await navigator.clipboard.writeText(
+          buildActivationWhatsAppMessage({
+            communityName,
+            residentName: result.value.residentName ?? fullName,
+            unitLabel: result.value.unitLabel ?? selectedUnit?.label ?? "",
+            pin: result.value.pin,
+          }),
+        );
+        setCopied(true);
+      }
+    } catch {
+      setCopyError("Could not copy the invitation. Try again.");
     }
   }
 
@@ -292,16 +303,16 @@ export function ResidentQuickCreate({
                   </div>
                 ) : null}
 
-                {result.kind === "prepared" && result.value.mode === "pin" ? (
+                {result.kind === "prepared" && result.value.pin ? (
                   <div className="mt-4 rounded-lg border border-violet-400/20 bg-black/18 p-4 text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-                      Activation PIN
+                      {result.value.mode === "email" ? "Same PIN used in the email invitation" : "Activation PIN"}
                     </p>
                     <p className="mt-2 font-mono text-3xl font-bold tracking-[0.28em] text-violet-100">
                       {result.value.pin}
                     </p>
-                    <p className="mt-2 text-xs text-[var(--text-muted)]">
-                      Share this PIN with the resident. It expires in 7 days.
+                    <p className="mt-2 text-xs leading-5 text-[var(--text-muted)]">
+                      Copy it for WhatsApp now. It expires in 7 days. Only share it with the intended resident or authorized contact.
                     </p>
                   </div>
                 ) : null}
@@ -312,12 +323,15 @@ export function ResidentQuickCreate({
                   </div>
                 ) : null}
 
+                {copyError ? (
+                  <p role="alert" className="mt-3 text-sm text-rose-200">{copyError}</p>
+                ) : null}
                 <div className="mt-4 flex flex-wrap justify-end gap-3">
                   {(result.kind === "quick" && result.value.credentials) ||
-                  (result.kind === "prepared" && result.value.mode === "pin" && result.value.pin) ? (
+                  (result.kind === "prepared" && result.value.pin) ? (
                     <Button type="button" variant="secondary" onClick={copySuccessDetails}>
                       <Copy className="mr-2 h-4 w-4" aria-hidden />
-                      {copied ? "Copied" : "Copy details"}
+                      {copied ? "Copied" : result.kind === "quick" ? "Copy details" : "Copy for WhatsApp"}
                     </Button>
                   ) : null}
                   <Button type="button" onClick={resetForm}>

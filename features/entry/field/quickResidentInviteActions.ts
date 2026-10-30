@@ -11,6 +11,7 @@ export type FieldResidentInviteResult = {
   error?: string;
   queueId?: string;
   emailSent?: boolean;
+  pin?: string;
   email?: string;
   residentName?: string;
   unitLabel?: string;
@@ -71,6 +72,7 @@ export async function inviteFieldQuickResident(input: {
   }
 
   let emailSent = false;
+  let pin: string | undefined;
   let warning: string | undefined;
   if (data.created) {
     try {
@@ -78,11 +80,14 @@ export async function inviteFieldQuickResident(input: {
         communityId,
         communityName: data.community_name,
         queueIds: [data.queue_id],
+        includePinForSharing: true,
       });
       const item = delivery.data?.items.find(
         (candidate) => candidate.queue_id === data.queue_id,
       );
       emailSent = delivery.success && item?.status === "sent";
+      // This is the PIN included in the original email (not a second PIN).
+      pin = item?.pinForSharing;
       warning = emailSent
         ? delivery.data?.warning || item?.message
         : "Resident prepared for activation, but the email could not be sent. Retry from Activation Queue.";
@@ -115,6 +120,7 @@ export async function inviteFieldQuickResident(input: {
     success: true,
     queueId: data.queue_id,
     emailSent,
+    pin,
     email: data.email,
     residentName: data.resident_name,
     unitLabel: data.unit_label,
