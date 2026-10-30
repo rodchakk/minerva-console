@@ -2,7 +2,8 @@
 -- No pseudo-house and no deletion of profile/auth/historical household rows.
 create or replace function public.sa_unassign_community_resident_unit_v1(
   p_community_id uuid,
-  p_target_user_id uuid
+  p_target_user_id uuid,
+  p_expected_house_id uuid
 )
 returns jsonb
 language plpgsql
@@ -22,7 +23,8 @@ begin
   if v_actor_id is null or not public.is_superadmin(v_actor_id) then
     raise exception 'Superadmin access required' using errcode = '42501';
   end if;
-  if p_target_user_id is null or p_community_id is null or p_target_user_id = v_actor_id then
+  if p_target_user_id is null or p_community_id is null or p_expected_house_id is null
+     or p_target_user_id = v_actor_id then
     raise exception 'Invalid resident or community' using errcode = '22023';
   end if;
   if exists (
@@ -51,6 +53,9 @@ begin
   v_old_house_id := v_profile.house_id;
   if v_old_house_id is null then
     raise exception 'Resident already has no assigned unit' using errcode = '22023';
+  end if;
+  if v_old_house_id <> p_expected_house_id then
+    raise exception 'Resident assignment changed. Refresh and try again.' using errcode = 'P0409';
   end if;
 
   select coalesce(bool_or(hr.is_primary_contact), false)
@@ -228,12 +233,12 @@ begin
 end;
 $$;
 
-revoke all on function public.sa_unassign_community_resident_unit_v1(uuid, uuid) from public, anon;
-grant execute on function public.sa_unassign_community_resident_unit_v1(uuid, uuid) to authenticated, service_role;
+revoke all on function public.sa_unassign_community_resident_unit_v1(uuid, uuid, uuid) from public, anon;
+grant execute on function public.sa_unassign_community_resident_unit_v1(uuid, uuid, uuid) to authenticated, service_role;
 revoke all on function public.sa_reassign_unassigned_community_resident_v1(uuid, uuid, uuid) from public, anon;
 grant execute on function public.sa_reassign_unassigned_community_resident_v1(uuid, uuid, uuid) to authenticated, service_role;
 
-comment on function public.sa_unassign_community_resident_unit_v1(uuid, uuid) is
+comment on function public.sa_unassign_community_resident_unit_v1(uuid, uuid, uuid) is
 'Superadmin-only: remove resident from all active households, disable access and move to UNASSIGNED, retaining account and history.';
 comment on function public.sa_reassign_unassigned_community_resident_v1(uuid, uuid, uuid) is
 'Superadmin-only: restore UNASSIGNED resident to one active unit without reactivating account.';
