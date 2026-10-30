@@ -27,6 +27,7 @@ import {
   inviteFieldQuickResident,
   type FieldResidentInviteResult,
 } from "@/features/entry/field/quickResidentInviteActions";
+import { buildActivationWhatsAppMessage } from "@/features/entry/activation/activationWhatsAppMessage";
 
 type FieldQuickResidentFormProps = {
   communityId: string;
@@ -115,6 +116,16 @@ export function FieldQuickResidentForm({
         ? /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())
         : password.length >= ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH && (username.trim() || email.trim())),
   );
+
+  const activationWhatsAppMessage = useMemo(() => {
+    if (!inviteResult?.success || !inviteResult.pin) return "";
+    return buildActivationWhatsAppMessage({
+      communityName,
+      residentName: inviteResult.residentName ?? fullName,
+      unitLabel: inviteResult.unitLabel ?? unitLabel,
+      pin: inviteResult.pin,
+    });
+  }, [communityName, fullName, inviteResult, unitLabel]);
 
   const credentialsMessage = useMemo(() => {
     if (!result?.success || !result.loginIdentity || !result.residentName) {
@@ -222,6 +233,29 @@ export function FieldQuickResidentForm({
     });
   }
 
+  async function handleCopyActivationInvitation() {
+    if (!activationWhatsAppMessage) return;
+    try {
+      await navigator.clipboard.writeText(activationWhatsAppMessage);
+      setCopied(true);
+    } catch {
+      setMessage("Could not copy the activation PIN for WhatsApp.");
+    }
+  }
+
+  async function handleShareActivationInvitation() {
+    if (!activationWhatsAppMessage || !canShare) return;
+    try {
+      await navigator.share({
+        title: "ENTRY activation",
+        text: activationWhatsAppMessage,
+      });
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") return;
+      setMessage("Could not share the activation message.");
+    }
+  }
+
   async function handleCopy() {
     if (!credentialsMessage) return;
 
@@ -278,11 +312,45 @@ export function FieldQuickResidentForm({
             The resident will create their own password using the ENTRY
             activation email.
           </p>
+          {inviteResult.pin ? (
+            <div className="space-y-3 rounded-lg border border-violet-400/25 bg-violet-500/[0.08] p-4">
+              <p className="text-sm font-semibold text-white">
+                Same activation PIN used for the email
+              </p>
+              <p className="font-mono text-2xl font-bold tracking-[0.2em] text-violet-100">
+                {inviteResult.pin}
+              </p>
+              <p className="text-xs leading-5 text-[var(--console-text-muted)]">
+                Copy this once for WhatsApp. It expires in 7 days. Share only with the resident or an authorized contact.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyActivationInvitation}
+                  className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-violet-400/30 bg-violet-500/15 px-4 text-sm font-semibold text-white"
+                >
+                  <Copy className="size-4" aria-hidden />
+                  {copied ? "Copied" : "Copy for WhatsApp"}
+                </button>
+                {canShare ? (
+                  <button
+                    type="button"
+                    onClick={handleShareActivationInvitation}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--console-border)] px-4 text-sm font-semibold"
+                  >
+                    <Share2 className="size-4" aria-hidden />
+                    Share message
+                  </button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           {inviteResult.warning ? (
             <p role="status" className="text-sm leading-6 text-amber-100">
               {inviteResult.warning}
             </p>
           ) : null}
+          {message ? <p role="alert" className="text-sm text-rose-200">{message}</p> : null}
         </section>
         <Link
           href={`/field/entry/communities/${encodeURIComponent(communityId)}/people/activation/${encodeURIComponent(inviteResult.queueId || "")}`}
