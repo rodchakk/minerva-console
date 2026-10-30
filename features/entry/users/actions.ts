@@ -561,6 +561,24 @@ export async function setCommunityUserUnitAction(
     };
   }
 
+  if (normalizedRole === "UNASSIGNED") {
+    // Atomically restore the resident's role and household, but deliberately
+    // keep account access disabled until the admin reactivates it separately.
+    const client = await createClient();
+    const { error: restoreError } = await client.rpc("sa_reassign_unassigned_community_resident_v1", {
+      p_community_id: communityId,
+      p_target_user_id: userId,
+      p_target_house_id: houseId,
+    });
+    if (restoreError) return { error: restoreError.message, success: false };
+    revalidateCommunityUserPaths(communityId, houseId);
+    return {
+      success: true,
+      houseLabel: coerceString(targetHouse.house_label, "Unnamed unit"),
+      isPrimary: false,
+    };
+  }
+
   if (coerceString(profile.house_id) === houseId) {
     const currentAssignment = (Array.isArray(activeAssignments) ? activeAssignments : []).find(
       (assignment) => coerceString(assignment.house_id) === houseId,
