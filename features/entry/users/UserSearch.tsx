@@ -1141,71 +1141,71 @@ export function UserSearch() {
                   </div>
                   {passwordResetMode === "quick" ? (
                     <div className="space-y-4">
-                  <div className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-xs leading-5 text-violet-100">
-                    Set a new password for {selectedUser.fullName}. The previous password will stop working immediately.
-                  </div>
+                      <div className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-xs leading-5 text-violet-100">
+                        Set a new password for {selectedUser.fullName}. The previous password will stop working immediately.
+                      </div>
 
-                  <label>
-                    <FieldLabel>New password *</FieldLabel>
-                    <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
-                      <input
-                        autoComplete="new-password"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
-                        className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((current) => !current)}
-                        className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </label>
+                      <label>
+                        <FieldLabel>New password *</FieldLabel>
+                        <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
+                          <input
+                            autoComplete="new-password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
+                            className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((current) => !current)}
+                            className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                          </button>
+                        </div>
+                      </label>
 
-                  <label>
-                    <FieldLabel>Confirm password *</FieldLabel>
-                    <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
-                      <input
-                        autoComplete="new-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword((current) => !current)}
-                        className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                      >
-                        {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </label>
+                      <label>
+                        <FieldLabel>Confirm password *</FieldLabel>
+                        <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
+                          <input
+                            autoComplete="new-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(event) => setConfirmPassword(event.target.value)}
+                            className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((current) => !current)}
+                            className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
+                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                          >
+                            {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                          </button>
+                        </div>
+                      </label>
 
-                  <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
-                    <button
-                      type="button"
-                      className={entryButtonClass("secondary")}
-                      onClick={() => setManageMode("view")}
-                      disabled={isPending}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      className={entryButtonClass("primary")}
-                      onClick={submitPassword}
-                      disabled={isPending}
-                    >
-                      {isPending ? "Updating..." : "Reset password"}
-                    </button>
-                  </div>
+                      <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
+                        <button
+                          type="button"
+                          className={entryButtonClass("secondary")}
+                          onClick={() => setManageMode("view")}
+                          disabled={isPending}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className={entryButtonClass("primary")}
+                          onClick={submitPassword}
+                          disabled={isPending}
+                        >
+                          {isPending ? "Updating..." : "Reset password"}
+                        </button>
+                      </div>
                     </div>
                   ) : (
                     <div className="space-y-4">
