@@ -21,7 +21,7 @@ export type ResidentMoveUnitOptionsResult = {
 export type MoveResidentToUnitInput = {
   communityId: string;
   sourceHouseId: string;
-  targetHouseId: string;
+  targetHouseId: string | null;
   userId: string;
 };
 
@@ -33,18 +33,19 @@ export type MoveResidentToUnitResult = {
 function revalidateMovePaths(
   communityId: string,
   sourceHouseId: string,
-  targetHouseId: string,
+  targetHouseId: string | null,
 ) {
   revalidatePath(`/products/entry/communities/${communityId}`);
   revalidatePath(`/products/entry/communities/${communityId}/users`);
+  revalidatePath("/products/entry/activation");
   revalidatePath(`/products/entry/communities/${communityId}/units`);
   revalidatePath(`/products/entry/communities/${communityId}/units/${sourceHouseId}`);
-  revalidatePath(`/products/entry/communities/${communityId}/units/${targetHouseId}`);
+  if (targetHouseId) revalidatePath(`/products/entry/communities/${communityId}/units/${targetHouseId}`);
   revalidatePath("/products/entry/users");
   revalidatePath(`/field/entry/communities/${communityId}`);
   revalidatePath(`/field/entry/communities/${communityId}/people`);
   revalidatePath(`/field/entry/communities/${communityId}/people/units/${sourceHouseId}`);
-  revalidatePath(`/field/entry/communities/${communityId}/people/units/${targetHouseId}`);
+  if (targetHouseId) revalidatePath(`/field/entry/communities/${communityId}/people/units/${targetHouseId}`);
 }
 
 export async function listResidentMoveUnitOptionsAction(input: {
@@ -94,12 +95,12 @@ export async function moveResidentToUnitAction(
 
   const communityId = input.communityId.trim();
   const sourceHouseId = input.sourceHouseId.trim();
-  const targetHouseId = input.targetHouseId.trim();
+  const targetHouseId = input.targetHouseId?.trim() || null;
   const userId = input.userId.trim();
 
-  if (!communityId || !userId || !targetHouseId) {
+  if (!communityId || !userId) {
     return {
-      error: "Community, resident, and target unit are required.",
+      error: "Community and resident are required.",
       success: false,
     };
   }
@@ -109,11 +110,16 @@ export async function moveResidentToUnitAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.rpc("sa_move_community_resident_unit", {
-    p_community_id: communityId,
-    p_target_house_id: targetHouseId,
-    p_target_user_id: userId,
-  });
+  const { error } = targetHouseId
+    ? await supabase.rpc("sa_move_community_resident_unit", {
+        p_community_id: communityId,
+        p_target_house_id: targetHouseId,
+        p_target_user_id: userId,
+      })
+    : await supabase.rpc("sa_unassign_community_resident_unit_v1", {
+        p_community_id: communityId,
+        p_target_user_id: userId,
+      });
 
   if (error) {
     return { error: error.message, success: false };
