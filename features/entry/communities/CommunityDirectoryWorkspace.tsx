@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
+import { matchesDirectorySearch } from "@/features/entry/communities/directorySearch";
 import { CreateSingleUnitDialog } from "@/features/entry/communities/CreateSingleUnitDialog";
 import { UnitResidentActions } from "@/features/entry/communities/UnitResidentActions";
 import { UnitBulkDeleteManager, type BulkDeleteUnit } from "@/features/entry/communities/UnitBulkDeleteManager";
@@ -183,8 +184,6 @@ export function CommunityDirectoryWorkspace({
   const moreRef = useRef<HTMLDivElement>(null);
 
   const visibleUnits = useMemo(() => {
-    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-
     return units.filter((unit) => {
       const searchable = [
         unit.label,
@@ -200,14 +199,9 @@ export function CommunityDirectoryWorkspace({
           resident.phone,
           resident.username,
         ]),
-      ]
-        .join(" ")
-        .toLowerCase();
+      ];
 
-      return (
-        terms.every((term) => searchable.includes(term)) &&
-        matchesFilter(unit, filter)
-      );
+      return matchesDirectorySearch(query, searchable) && matchesFilter(unit, filter);
     });
   }, [filter, query, units]);
 
