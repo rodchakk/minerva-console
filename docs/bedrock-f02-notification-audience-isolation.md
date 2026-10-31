@@ -154,9 +154,9 @@ F02-specific validation is green, but the mandatory repository-wide gates are no
 - Edge Function typecheck (`deno check`): passed.
 - Next.js production build: passed.
 - TypeScript check after Next generated route types: passed.
-- Full test suite before current-master integration: 710 total, 665 passed, 45 failed.
+- Full test suite after current-master integration: 737 total, 690 passed, 47 failed.
 - Full test suite on untouched current `origin/master` (`b17d9a3`): 725 total, 681 passed, 44 failed.
-- Exactly 42 failures are shared. Three branch-only failures are stale scope/meta-tests that reject any ENTRY migration or migration-bearing branch; two master-only failures come from newer master tests. No F02 behavioral test regressed.
+- All 44 current-master failures are reproduced on the branch. Three branch-only failures are stale scope/meta-tests that reject any ENTRY migration or migration-bearing branch. The original 42-failure inherited baseline therefore remains, with two additional failures already present on current master. No F02 behavioral test regressed.
 - Full lint on this branch and untouched `origin/master`: the same 2 errors and 15 warnings.
 - Supabase CLI is not installed globally. Migration parsing and behavior were validated directly with `psql -v ON_ERROR_STOP=1`, and current Supabase function-security guidance was applied.
 
