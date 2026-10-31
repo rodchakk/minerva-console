@@ -75,7 +75,11 @@ test("WhatsApp message uses the given PIN verbatim and contains no PIN-bearing U
   assert.match(text, /Casa 12/);
   assert.match(text, /001234/);
   assert.match(text, /7 días/);
-  assert.doesNotMatch(text, /https?:|wa\.me|\?pin=/);
+  assert.match(text, /Descarga ENTRY para iOS o Android:/);
+  const urls = text.match(/https?:\/\/\S+/g) ?? [];
+  assert.deepEqual(urls, ["https://www.minervatechs.com/entry"]);
+  assert.ok(urls.every((url) => !url.includes("001234")));
+  assert.doesNotMatch(text, /wa\.me|[?&]pin=/i);
 });
 
 test("bulk email action callers cannot reveal PINs without explicit single creation opt-in", () => {
