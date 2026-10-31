@@ -151,14 +151,17 @@ test("Activation Queue exposes safe pre-activation email correction", () => {
 
 test("Console PIN generation serializes with activation email edits", () => {
   const source = read("features/entry/activation/pinActions.ts");
-  const migration = read(
+  const lockMigration = read(
     "supabase/migrations/20260925021500_update_resident_activation_email_v1.sql",
   );
+  const v2Migration = read(
+    "supabase/migrations/20261031010000_bedrock_f03_activation_credential_v2.sql",
+  );
 
-  assert.match(source, /generate_resident_activation_pins_locked_v1/);
-  assert.match(migration, /generate_resident_activation_pins_locked_v1/);
+  assert.match(source, /generate_resident_activation_pins_locked_v2/);
+  assert.match(v2Migration, /generate_resident_activation_pins_locked_v1/);
   assert.match(
-    migration,
+    lockMigration,
     /resident_activation_pins[\s\S]*for update[\s\S]*resident_activation_queue[\s\S]*for update/,
   );
 });

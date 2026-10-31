@@ -111,7 +111,7 @@ export async function createActivatedUsers(input: {
   let failed_count = 0;
 
   for (const item of pinResult.data.items) {
-    if (item.status !== "pin_generated" || !item.pin) {
+    if (item.status !== "pin_generated" || !item.pin || !item.activation_id) {
       const isFailure = item.status === "failed";
 
       if (isFailure) {
@@ -141,8 +141,9 @@ export async function createActivatedUsers(input: {
 
     try {
       const { data, error } = await supabase.rpc(
-        "complete_resident_activation_pin_v1",
+        "complete_resident_activation_pin_v2",
         {
+          p_activation_id: item.activation_id,
           p_password: temporaryPassword,
           p_pin: item.pin,
           p_username: item.suggested_username,
