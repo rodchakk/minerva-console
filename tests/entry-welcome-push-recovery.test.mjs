@@ -10,6 +10,9 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "u
 const migration = read(
   "supabase/migrations/20260925052000_fix_entry_welcome_push_recovery.sql",
 );
+const f02Migration = read(
+  "supabase/migrations/20261028032025_bedrock_f02_notification_audience_isolation.sql",
+);
 
 test("late push-token registration can replay an old targeted welcome without reopening the general 24h window", () => {
   assert.match(
@@ -59,5 +62,17 @@ test("migration narrowly recovers already-stranded welcome rows with active toke
   assert.match(
     migration,
     /exists \([\s\S]*from public\.user_push_tokens upt[\s\S]*upt\.community_id = m\.community_id[\s\S]*upt\.is_active = true/,
+  );
+});
+
+test("F02 welcome recovery reopens only pre-provider no-token failures", () => {
+  assert.match(f02Migration, /v_failure_code = 'NO_ACTIVE_TOKENS'/);
+  assert.match(f02Migration, /v_delivery_stage = 'FAILED'/);
+  assert.match(f02Migration, /v_provider_attempted_at is null/);
+  assert.match(f02Migration, /v_provider_response is null/);
+  assert.match(f02Migration, /v_action := 'blocked_unsafe_retry'/);
+  assert.doesNotMatch(
+    f02Migration,
+    /v_delivery_stage = 'UNKNOWN_OUTCOME'[\s\S]{0,300}status = 'pending'/,
   );
 });
