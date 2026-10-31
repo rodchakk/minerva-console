@@ -95,6 +95,27 @@ jobs:
             tests/entry-notification-worker-recovery.test.mjs \
             tests/entry-welcome-push-recovery.test.mjs
 
+  bedrock-f02-postgres-tests:
+    name: BEDROCK F02 PostgreSQL protocol isolation
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Run staged migrations and behavioral security tests
+        run: bash supabase/tests/run-bedrock-f02-r2.sh
+
 
   entry-manual-checkin-idempotency-tests:
     name: ENTRY manual check-in idempotency

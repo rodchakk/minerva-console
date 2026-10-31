@@ -48,7 +48,9 @@ An old pending welcome created by the recovery flow may also be refreshed only w
 ## Compatibility
 
 - The existing `claim_pending_community_message_pushes` signature is retained for worker v25, but it can claim only public messages after this migration.
-- Existing v25 `complete_community_message_push` and `fail_community_message_push` calls remain available and update the new terminal stages.
+- Existing v25 `complete_community_message_push` and `fail_community_message_push` calls remain available, but migration 1 already restricts them to public, no-token processing rows. This closes the transaction boundary before migration 2 commits.
+- Migration 2 adds durable `claim_protocol` provenance. `LEGACY_V25` can be minted only by the legacy public claim RPC; every v2 processing transition requires `claim_protocol = 'V2'` and the current lease token.
+- A safe v2 pre-provider retry retains `V2` provenance while its lease is released. A rolled-back v25 worker therefore cannot reinterpret a public v2 retry as new legacy work.
 - Worker v26 uses only `claim_pending_community_message_pushes_v2`; it has no legacy fallback. Deploying v26 before the migration therefore fails closed with no provider call.
 - During the migration-to-worker gap, public notifications can continue through v25; private notifications remain pending. This is an intentional safe degradation.
 - Rolling the worker back to v25 is safe only while the F02 migration remains installed. Private delivery pauses; it must not regain legacy claim eligibility.
@@ -116,7 +118,21 @@ The repository tests cover:
 - state-machine/sweeper invariants; and
 - safe versus blocked welcome recovery.
 
-The migration was also executed against an isolated PostgreSQL 17 cluster with synthetic tables and data. Behavioral SQL checks covered tenant-FK rejection, public-only legacy claim, private v2 claim, forbidden post-contact retry, invalid private audience quarantine, safe pre-provider sweep recovery, and unknown-outcome quarantine.
+Both migrations were also executed in order against isolated PostgreSQL 17.6 databases with synthetic historical rows. Behavioral checks cover:
+
+- the migration-1 commit window before migration 2;
+- composite tenant-FK rejection and protocol-shape constraints;
+- legacy public claim/complete/fail compatibility;
+- private and public v2 lease isolation from legacy terminals;
+- wrong, released, replaced, and replayed lease rejection;
+- invalid cross-community private audience quarantine;
+- safe pre-provider retry and non-replayable post-provider failure;
+- legacy, v2, and ambiguous stale sweeper behavior;
+- rollback to v25 with a pending public v2 retry;
+- function ACLs and empty pinned `SECURITY DEFINER` search paths; and
+- two independent PostgreSQL sessions racing for one row, producing exactly one lease and one attempt.
+
+The same staged sequence is wired into CI through `supabase/tests/run-bedrock-f02-r2.sh` and a disposable PostgreSQL 17 service.
 
 ## Residual risks
 
@@ -129,28 +145,28 @@ The migration was also executed against an isolated PostgreSQL 17 cluster with s
 
 ## Merge gate
 
-Current decision: `NO-GO` for merge.
+Current decision: `READY FOR SECURITY REVIEW`; this is not merge or deployment approval.
 
 F02-specific validation is green, but the mandatory repository-wide gates are not:
 
-- F02/compatibility regression command: 37 passed, 0 failed.
-- New F02 tests: 12 passed, 0 failed.
+- F02 worker/welcome regression command: 28 passed, 0 failed.
+- Staged PostgreSQL 17.6 migration/protocol/concurrency rehearsal: passed.
 - Edge Function typecheck (`deno check`): passed.
-- Isolated PostgreSQL 17 migration and behavioral rehearsal: passed.
 - Next.js production build: passed.
 - TypeScript check after Next generated route types: passed.
-- Full test suite on this branch: 710 total, 668 passed, 42 failed.
-- Full test suite on untouched `origin/master`: 698 total, 656 passed, the same 42 failed.
+- Full test suite before current-master integration: 710 total, 665 passed, 45 failed.
+- Full test suite on untouched current `origin/master` (`b17d9a3`): 725 total, 681 passed, 44 failed.
+- Exactly 42 failures are shared. Three branch-only failures are stale scope/meta-tests that reject any ENTRY migration or migration-bearing branch; two master-only failures come from newer master tests. No F02 behavioral test regressed.
 - Full lint on this branch and untouched `origin/master`: the same 2 errors and 15 warnings.
-- Supabase CLI database lint could not run on the temporary plain PostgreSQL cluster because `plpgsql_check` was unavailable; migration parsing and behavior were validated directly with `ON_ERROR_STOP` instead.
+- Supabase CLI is not installed globally. Migration parsing and behavior were validated directly with `psql -v ON_ERROR_STOP=1`, and current Supabase function-security guidance was applied.
 
-The branch therefore introduces no additional full-suite or lint failures, but a clean mandatory gate cannot be claimed. A future merge authorization requires either a green baseline or a documented repository-owner waiver for those exact pre-existing failures, plus green PR CI. Production migration and Edge deployment always require a separate explicit authorization and the runbook above.
+The branch does not introduce an F02 functional, build, typecheck, Deno, or lint regression. The three branch-only global-suite failures are test-contract debt and require a repository-owner waiver or later test redesign; this report does not approve that waiver. Green PR CI is still required after the Round 2 push. Production migration and Edge deployment always require separate explicit authorization and the runbook above.
 
 ## PR scope
 
 The intended PR is limited to:
 
-- one forward database migration for the audience contract, compatibility bridge, state machine, sweeper, and welcome recovery;
+- two ordered forward database migrations: the audience/state-machine foundation and the durable legacy/v2 protocol isolation layer;
 - the `smart-service` worker upgrade to v2;
 - focused defensive regression tests, CI wiring, and one historical test allowlist entry for the explicitly authorized F02 migration; and
 - this deployment/recovery runbook.

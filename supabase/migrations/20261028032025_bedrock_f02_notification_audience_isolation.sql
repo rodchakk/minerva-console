@@ -148,7 +148,7 @@ returns table(
 )
 language plpgsql
 security definer
-set search_path to 'public'
+set search_path = ''
 as $function$
 begin
   return query
@@ -218,7 +218,7 @@ returns table(
 )
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 declare
   v_limit integer := least(greatest(coalesce(p_limit, 5), 1), 5);
@@ -351,7 +351,7 @@ create or replace function public.mark_community_message_push_provider_contacted
 returns jsonb
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 begin
   update public.community_message_push_queue
@@ -381,7 +381,7 @@ create or replace function public.retry_community_message_push_pre_provider_v2(
 returns jsonb
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 declare
   v_attempts integer;
@@ -476,7 +476,7 @@ create or replace function public.complete_community_message_push_v2(
 returns jsonb
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 begin
   update public.community_message_push_queue
@@ -514,7 +514,7 @@ create or replace function public.fail_community_message_push_v2(
 returns jsonb
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 begin
   update public.community_message_push_queue
@@ -551,7 +551,7 @@ create or replace function public.complete_community_message_push(p_queue_id uui
 returns table(success boolean)
 language plpgsql
 security definer
-set search_path to 'public'
+set search_path = ''
 as $function$
 begin
   update public.community_message_push_queue
@@ -564,7 +564,10 @@ begin
          last_error = null,
          updated_at = now()
    where id = p_queue_id
-     and status = 'processing';
+     and status = 'processing'
+     and audience_type = 'PUBLIC'
+     and audience_target_user_id is null
+     and claim_token is null;
 
   if not found then
     raise exception 'Queue item not found or not in processing state (queue_id=%)', p_queue_id
@@ -579,7 +582,7 @@ create or replace function public.fail_community_message_push(p_queue_id uuid, p
 returns table(success boolean)
 language plpgsql
 security definer
-set search_path to 'public'
+set search_path = ''
 as $function$
 begin
   update public.community_message_push_queue
@@ -592,7 +595,10 @@ begin
          next_attempt_at = null,
          updated_at = now()
    where id = p_queue_id
-     and status = 'processing';
+     and status = 'processing'
+     and audience_type = 'PUBLIC'
+     and audience_target_user_id is null
+     and claim_token is null;
 
   if not found then
     raise exception 'Queue item not found or not in processing state (queue_id=%)', p_queue_id
@@ -607,7 +613,7 @@ create or replace function public.sweep_stale_community_message_pushes()
 returns jsonb
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 declare
   v_pre_provider_requeued integer := 0;
@@ -778,7 +784,7 @@ create or replace function public.ensure_welcome_push_after_token(p_community_id
 returns jsonb
 language plpgsql
 security definer
-set search_path to 'public', 'pg_temp'
+set search_path = ''
 as $function$
 declare
   v_user_id uuid := auth.uid();
@@ -935,12 +941,21 @@ revoke all on function public.complete_community_message_push_v2(uuid, uuid, jso
   from public, anon, authenticated;
 revoke all on function public.fail_community_message_push_v2(uuid, uuid, text, text, jsonb, boolean)
   from public, anon, authenticated;
+revoke all on function public.claim_pending_community_message_pushes(integer)
+  from public, anon, authenticated;
+revoke all on function public.complete_community_message_push(uuid)
+  from public, anon, authenticated;
+revoke all on function public.fail_community_message_push(uuid, text)
+  from public, anon, authenticated;
 
 grant execute on function public.claim_pending_community_message_pushes_v2(integer) to service_role;
 grant execute on function public.mark_community_message_push_provider_contacted_v2(uuid, uuid) to service_role;
 grant execute on function public.retry_community_message_push_pre_provider_v2(uuid, uuid, text, text) to service_role;
 grant execute on function public.complete_community_message_push_v2(uuid, uuid, jsonb) to service_role;
 grant execute on function public.fail_community_message_push_v2(uuid, uuid, text, text, jsonb, boolean) to service_role;
+grant execute on function public.claim_pending_community_message_pushes(integer) to service_role;
+grant execute on function public.complete_community_message_push(uuid) to service_role;
+grant execute on function public.fail_community_message_push(uuid, text) to service_role;
 
 comment on function public.claim_pending_community_message_pushes_v2(integer) is
   'F02 v2 atomic claim: snapshots explicit PUBLIC/PRIVATE audience and tenant-bound target with a lease token.';
