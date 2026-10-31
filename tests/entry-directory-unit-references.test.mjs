@@ -25,9 +25,11 @@ test("community directory searches across unit label and reference, ignoring acc
 
 test("directory preview reads real saved public references, without modifying unit labels", () => {
   const source = read("features/entry/communities/detailQueries.ts");
-  assert.match(source, /\.select\("id,house_label,is_active,public_reference"\)/);
+  assert.match(source, /\.select\("id,house_label,is_active,public_reference,unit_reference"\)/);
   assert.match(source, /publicReference: coerceString\(item\.public_reference\)/);
+  assert.match(source, /unitReference: coerceString\(item\.unit_reference\)/);
   assert.match(source, /publicReference: referenceByHouseId\.get\(unit\.id\)/);
+  assert.match(source, /unitReference: unitReferenceByHouseId\.get\(unit\.id\)/);
   assert.match(source, /enrichUnits\(units\.items, residents, pendingActivations, passes, houses\)/);
   assert.match(source, /matchesDirectorySearch\(query,/);
 });
@@ -35,10 +37,13 @@ test("directory preview reads real saved public references, without modifying un
 test("directory displays references, searches them and identifies missing ones", () => {
   const directory = read("features/entry/communities/CommunityDirectoryWorkspace.tsx");
   const detail = read("features/entry/communities/CommunityUnitDetailWorkspace.tsx");
+  assert.match(directory, /unit\.unitReference,/);
   assert.match(directory, /unit\.publicReference,/);
   assert.match(directory, /matchesDirectorySearch\(query, searchable\)/);
   assert.match(directory, /Missing reference/);
   assert.match(directory, /No reference registered/);
-  assert.match(directory, /\["Reference", selectedUnit\.publicReference \|\| "Not registered"\]/);
-  assert.match(detail, /unit\.publicReference \|\| "Not registered"/);
+  assert.match(directory, /\["Location reference", selectedUnit\.unitReference \|\| "Not registered"\]/);
+  assert.match(directory, /\["Resident-facing reference", selectedUnit\.publicReference \|\| "Not registered"\]/);
+  assert.match(detail, /unit\.unitReference \|\| "Not registered"/);
+  assert.match(detail, /unit\.publicReference/);
 });
