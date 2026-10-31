@@ -54,6 +54,7 @@ export type CommunityUnitPreview = {
   lastAccess: string;
   ownerName: string;
   publicReference: string;
+  unitReference: string;
   pendingActivations: number;
   primaryResidentId: string;
   primaryResidentName: string;
@@ -97,6 +98,7 @@ export type CommunityUnitHouseOption = {
   isActive: boolean;
   label: string;
   publicReference: string;
+  unitReference: string;
 };
 
 export type CommunityUnitResident = {
@@ -755,6 +757,7 @@ async function loadUnitsPreview(
           ),
           ownerName,
           publicReference: "",
+          unitReference: "",
           pendingActivations: 0,
           primaryResidentId: "",
           primaryResidentName: ownerName === "No owner linked" ? "" : ownerName,
@@ -788,7 +791,7 @@ async function loadHouseOptions(
 ): Promise<CommunityUnitHouseOption[]> {
   const { data, error } = await supabase
     .from("houses")
-    .select("id,house_label,is_active,public_reference")
+    .select("id,house_label,is_active,public_reference,unit_reference")
     .eq("community_id", communityId)
     .order("house_label", { ascending: true });
 
@@ -806,6 +809,7 @@ async function loadHouseOptions(
         isActive: item.is_active === undefined ? true : coerceBoolean(item.is_active),
         label: coerceString(item.house_label, "Unnamed unit"),
         publicReference: coerceString(item.public_reference),
+        unitReference: coerceString(item.unit_reference),
       };
     })
     .filter((item): item is CommunityUnitHouseOption => item !== null);
@@ -990,6 +994,7 @@ function enrichUnits(
   houses: CommunityUnitHouseOption[],
 ) {
   const referenceByHouseId = new Map(houses.map((house) => [house.id, house.publicReference]));
+  const unitReferenceByHouseId = new Map(houses.map((house) => [house.id, house.unitReference]));
   const residentsByHouseId = residents.reduce((map, resident) => {
     const current = map.get(resident.houseId) ?? [];
     current.push(resident);
@@ -1032,6 +1037,7 @@ function enrichUnits(
       activeResidents: activeResidents.length,
       ownerName: primaryResident?.fullName || "No residents",
       publicReference: referenceByHouseId.get(unit.id) ?? "",
+      unitReference: unitReferenceByHouseId.get(unit.id) ?? "",
       pendingActivations: pendingActivationItems.length,
       primaryResidentId: primaryResident?.userId || "",
       primaryResidentName: primaryResident?.fullName || "",
@@ -1110,6 +1116,7 @@ function filterCommunityUnits(
       item.label,
       item.ownerName,
       item.publicReference,
+      item.unitReference,
       ...item.residents.flatMap((resident) => [
         resident.fullName,
         resident.account,
