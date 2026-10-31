@@ -148,6 +148,45 @@ jobs:
       - name: Run Activation Queue regressions
         run: node --test tests/entry-activation-queue-workspace.test.mjs
 
+  bedrock-f03-activation-credential-v2:
+    name: BEDROCK F03 activation credential v2
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: postgres
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run F03 PostgreSQL behavior suite
+        run: |
+          psql -X -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/fixtures/bedrock-f03-activation-v2-schema.sql
+          psql -X -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/migrations/20261031010000_bedrock_f03_activation_credential_v2.sql
+          psql -X -h 127.0.0.1 -U postgres -v ON_ERROR_STOP=1 \
+            -f supabase/tests/bedrock-f03-activation-v2.sql
+
+      - name: Run F03 concurrent completion test
+        shell: pwsh
+        run: >-
+          ./supabase/tests/run-bedrock-f03-concurrency.ps1
+          -Database postgres -Port 5432
+
+      - name: Run F03 source contract tests
+        run: node --test tests/bedrock-f03-activation-v2.test.mjs
+
   entry-registration-report-tests:
     name: ENTRY registration confirmation reports
     runs-on: ubuntu-latest
