@@ -52,3 +52,20 @@ Approved sequencing: Voice (reuses existing infra, near-zero backend change) shi
 
 - Confirm PR/branch status of `feature/entry-voice-mvp` and the two other branches.
 - Proceed to ENTRY-I001-QA (see [entry-next-missions.md](entry-next-missions.md)).
+
+## Production-readiness update — 2026-09-07
+
+**Operator-provided / verified during Minerva Console release work.**
+
+- Minerva Console PR **#149** (`Clean ENTRY setup queue and Minerva Console link branding`) is **already merged** into `master` at merge commit `a412e2c474fec39e7e48878dd5d0ca483de16a1e`.
+- The PR removes completed communities from `Setup priorities across ENTRY`, removes the old default Vercel favicon, and adds explicit Minerva/ENTRY social-preview metadata for both **ENTRY Outrider** public links and **ENTRY Campaign Registration** links used by residents to register in their units.
+- The remaining blocker is **not another merge**. The production Vercel deployment for the merge commit was rejected by Vercel with `build-rate-limit` / **"Deployment rate limited — retry in 24 hours."** The code is in `master`, but production has not yet received this branding change.
+- **Do not close this readiness item until production deploy succeeds.** After deployment, generate two fresh URLs (to avoid WhatsApp preview cache):
+  1. a new ENTRY Outrider link;
+  2. a new ENTRY Campaign Registration link.
+- Send both fresh URLs through WhatsApp and verify that the preview uses **Minerva/ENTRY branding** rather than the Vercel triangle/icon.
+- Existing previously-shared URLs/messages may continue to show cached Vercel previews and are not sufficient validation of the fix.
+
+### Pending release task
+
+**Retry/confirm Vercel production deployment of `master` after the build-rate-limit window clears, then complete the two fresh-link WhatsApp preview checks above.**
