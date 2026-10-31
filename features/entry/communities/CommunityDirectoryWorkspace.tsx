@@ -49,7 +49,7 @@ function matchesFilter(unit: CommunityUnitPreview, filter: DirectoryFilter) {
   if (filter === "inactive") return !unit.isActive;
   if (filter === "occupied") return unit.residentCount > 0;
   if (filter === "no_residents") return unit.residentCount === 0;
-  if (filter === "no_reference") return !unit.publicReference.trim();
+  if (filter === "no_reference") return !unit.unitReference.trim() && !unit.publicReference.trim();
   if (filter === "pending_activation") return unit.pendingActivations > 0;
   return true;
 }
@@ -187,6 +187,7 @@ export function CommunityDirectoryWorkspace({
     return units.filter((unit) => {
       const searchable = [
         unit.label,
+        unit.unitReference,
         unit.publicReference,
         unit.ownerName,
         unit.primaryResidentName,
@@ -571,8 +572,12 @@ export function CommunityDirectoryWorkspace({
                       >
                         <td className="px-3 py-2.5 align-top">
                           <p className="truncate font-semibold text-white" title={unit.label}>{unit.label}</p>
-                          <p className="mt-1 truncate text-[10px] text-[#A9A3B2]" title={unit.publicReference || "No reference registered"}>
-                            {unit.publicReference ? `Ref: ${unit.publicReference}` : "No reference registered"}
+                          <p className="mt-1 truncate text-[10px] text-[#A9A3B2]" title={unit.unitReference || unit.publicReference || "No reference registered"}>
+                            {unit.unitReference
+                              ? `Location: ${unit.unitReference}`
+                              : unit.publicReference
+                                ? `Public ref: ${unit.publicReference}`
+                                : "No reference registered"}
                           </p>
                         </td>
                         <td className="px-3 py-2.5 align-top">
@@ -601,7 +606,7 @@ export function CommunityDirectoryWorkspace({
 
           <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#141119] bg-[#1F1B26] px-4 py-2 text-[10px] text-[#8F879D]">
             <span>Showing {visibleUnits.length} matching unit{visibleUnits.length === 1 ? "" : "s"} of {units.length}</span>
-            <span>Search names and references · {units.filter((unit) => !unit.publicReference.trim()).length} without reference</span>
+            <span>Search names and references · {units.filter((unit) => !unit.unitReference.trim() && !unit.publicReference.trim()).length} without reference</span>
           </div>
         </section>
 
@@ -640,7 +645,8 @@ export function CommunityDirectoryWorkspace({
               <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
                 <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Unit overview</p></div>
                 {[
-                  ["Reference", selectedUnit.publicReference || "Not registered"],
+                  ["Location reference", selectedUnit.unitReference || "Not registered"],
+                  ["Resident-facing reference", selectedUnit.publicReference || "Not registered"],
                   ["Residents", String(selectedUnit.residentCount)],
                   ["Pending activation", String(selectedUnit.pendingActivations)],
                   ["Active passes", String(selectedUnit.activePasses)],
