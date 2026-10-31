@@ -1,5 +1,7 @@
 import "server-only";
 
+import { matchesDirectorySearch } from "@/features/entry/communities/directorySearch";
+
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import {
   getCommunityWithProgress,
@@ -1103,29 +1105,20 @@ function filterCommunityUnits(
   query: string,
   status: CommunityUnitsStatusFilter,
 ) {
-  const normalizedQuery = query.trim().toLowerCase();
-
   return items.filter((item) => {
-    const matchesQuery =
-      !normalizedQuery ||
-      item.label.toLowerCase().includes(normalizedQuery) ||
-      item.ownerName.toLowerCase().includes(normalizedQuery) ||
-      item.publicReference.toLowerCase().includes(normalizedQuery) ||
-      item.residents.some((resident) =>
-        [
-          resident.fullName,
-          resident.account,
-          resident.email,
-          resident.username,
-          resident.phone,
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(normalizedQuery),
-      ) ||
-      item.pendingActivationItems.some((activation) =>
-        activation.residentName.toLowerCase().includes(normalizedQuery),
-      );
+    const matchesQuery = matchesDirectorySearch(query, [
+      item.label,
+      item.ownerName,
+      item.publicReference,
+      ...item.residents.flatMap((resident) => [
+        resident.fullName,
+        resident.account,
+        resident.email,
+        resident.username,
+        resident.phone,
+      ]),
+      ...item.pendingActivationItems.map((activation) => activation.residentName),
+    ]);
 
     if (!matchesQuery) {
       return false;
