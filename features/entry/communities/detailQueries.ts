@@ -51,6 +51,7 @@ export type CommunityUnitPreview = {
   label: string;
   lastAccess: string;
   ownerName: string;
+  publicReference: string;
   pendingActivations: number;
   primaryResidentId: string;
   primaryResidentName: string;
@@ -93,6 +94,7 @@ export type CommunityUnitHouseOption = {
   id: string;
   isActive: boolean;
   label: string;
+  publicReference: string;
 };
 
 export type CommunityUnitResident = {
@@ -750,6 +752,7 @@ async function loadUnitsPreview(
               coerceString(record.last_access),
           ),
           ownerName,
+          publicReference: "",
           pendingActivations: 0,
           primaryResidentId: "",
           primaryResidentName: ownerName === "No owner linked" ? "" : ownerName,
@@ -783,7 +786,7 @@ async function loadHouseOptions(
 ): Promise<CommunityUnitHouseOption[]> {
   const { data, error } = await supabase
     .from("houses")
-    .select("id,house_label,is_active")
+    .select("id,house_label,is_active,public_reference")
     .eq("community_id", communityId)
     .order("house_label", { ascending: true });
 
@@ -800,6 +803,7 @@ async function loadHouseOptions(
         id,
         isActive: item.is_active === undefined ? true : coerceBoolean(item.is_active),
         label: coerceString(item.house_label, "Unnamed unit"),
+        publicReference: coerceString(item.public_reference),
       };
     })
     .filter((item): item is CommunityUnitHouseOption => item !== null);
@@ -981,7 +985,9 @@ function enrichUnits(
   residents: CommunityUnitResident[],
   pendingActivations: CommunityUnitPendingActivation[],
   passes: CommunityUnitPass[],
+  houses: CommunityUnitHouseOption[],
 ) {
+  const referenceByHouseId = new Map(houses.map((house) => [house.id, house.publicReference]));
   const residentsByHouseId = residents.reduce((map, resident) => {
     const current = map.get(resident.houseId) ?? [];
     current.push(resident);
@@ -1023,6 +1029,7 @@ function enrichUnits(
       activePasses: Math.max(unit.activePasses, activePassItems.length),
       activeResidents: activeResidents.length,
       ownerName: primaryResident?.fullName || "No residents",
+      publicReference: referenceByHouseId.get(unit.id) ?? "",
       pendingActivations: pendingActivationItems.length,
       primaryResidentId: primaryResident?.userId || "",
       primaryResidentName: primaryResident?.fullName || "",
@@ -1103,6 +1110,7 @@ function filterCommunityUnits(
       !normalizedQuery ||
       item.label.toLowerCase().includes(normalizedQuery) ||
       item.ownerName.toLowerCase().includes(normalizedQuery) ||
+      item.publicReference.toLowerCase().includes(normalizedQuery) ||
       item.residents.some((resident) =>
         [
           resident.fullName,
@@ -1435,7 +1443,7 @@ export async function getCommunityUnitsPageData(input: {
   ]);
   const items =
     units.state === "live"
-      ? enrichUnits(units.items, residents, pendingActivations, passes)
+      ? enrichUnits(units.items, residents, pendingActivations, passes, houses)
       : [];
   const filteredItems = filterCommunityUnits(items, query, status);
 
