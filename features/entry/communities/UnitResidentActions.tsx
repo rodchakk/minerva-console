@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRightLeft,
   KeyRound,
+  Mail,
   MoreVertical,
   Power,
   RotateCcw,
@@ -19,6 +20,7 @@ import {
   type ResidentMoveUnitOption,
 } from "@/features/entry/communities/residentMoveActions";
 import { setResidentPasswordAction } from "@/features/entry/communities/unitActions";
+import { sendCommunityUserPasswordResetEmailAction } from "@/features/entry/users/communityUserActions";
 import { setCommunityUserActiveStatusAction } from "@/features/entry/users/actions";
 
 type UnitResidentActionsProps = {
@@ -29,6 +31,13 @@ type UnitResidentActionsProps = {
 };
 
 type ModalState = "move" | "password" | "status" | null;
+type PasswordResetMode = "quick" | "email";
+const UNASSIGNED_DESTINATION = "__unassigned__";
+
+function isSyntheticEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return !normalized || normalized.endsWith("@entry.local") || normalized.endsWith("@entry.internal");
+}
 
 export function UnitResidentActions({
   communityId,
@@ -42,6 +51,7 @@ export function UnitResidentActions({
   const [modal, setModal] = useState<ModalState>(null);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordResetMode, setPasswordResetMode] = useState<PasswordResetMode>("quick");
   const [moveOptions, setMoveOptions] = useState<ResidentMoveUnitOption[]>([]);
   const [targetHouseId, setTargetHouseId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -58,6 +68,7 @@ export function UnitResidentActions({
     setModal(null);
     setPassword("");
     setConfirmPassword("");
+    setPasswordResetMode("quick");
     resetMoveState();
     setError(null);
   }
@@ -67,6 +78,9 @@ export function UnitResidentActions({
     setMessage(null);
     setError(null);
     resetMoveState();
+    setPassword("");
+    setConfirmPassword("");
+    setPasswordResetMode("quick");
     setModal(nextModal);
   }
 
@@ -118,6 +132,30 @@ export function UnitResidentActions({
     });
   }
 
+  function submitPasswordResetEmail() {
+    setError(null);
+
+    if (isSyntheticEmail(resident.email)) {
+      setError("This resident has no real email. Use quick password change instead.");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await sendCommunityUserPasswordResetEmailAction({
+        communityId,
+        userId: resident.userId,
+      });
+
+      if (!result.success) {
+        setError(result.error ?? "Could not send the password recovery email.");
+        return;
+      }
+
+      setMessage("Password reset email requested. The current password remains valid until recovery is completed.");
+      setModal(null);
+    });
+  }
+
   function submitStatus() {
     setError(null);
     startTransition(async () => {
@@ -144,6 +182,7 @@ export function UnitResidentActions({
       return;
     }
 
+    const toUnassigned = targetHouseId === UNASSIGNED_DESTINATION;
     const destination = moveOptions.find((option) => option.id === targetHouseId);
     setError(null);
 
@@ -151,7 +190,7 @@ export function UnitResidentActions({
       const result = await moveResidentToUnitAction({
         communityId,
         sourceHouseId: resident.houseId,
-        targetHouseId,
+        targetHouseId: toUnassigned ? null : targetHouseId,
         userId: resident.userId,
       });
 
@@ -161,9 +200,11 @@ export function UnitResidentActions({
       }
 
       setMessage(
-        destination?.label
-          ? `Moved to ${destination.label}.`
-          : "Resident moved to the selected unit.",
+        toUnassigned
+          ? "Resident unassigned and account deactivated."
+          : destination?.label
+            ? `Moved to ${destination.label}.`
+            : "Resident moved to the selected unit.",
       );
       setModal(null);
       resetMoveState();
@@ -275,28 +316,77 @@ export function UnitResidentActions({
 
             {modal === "password" ? (
               <div className="mt-5 grid gap-4">
-                <label>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    New password
-                  </span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
-                  />
-                </label>
-                <label>
-                  <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
-                    Confirm password
-                  </span>
-                  <input
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(event) => setConfirmPassword(event.target.value)}
-                    className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
-                  />
-                </label>
+                <div className="grid grid-cols-2 gap-2" role="group" aria-label="Password reset method">
+                  <button
+                    type="button"
+                    aria-pressed={passwordResetMode === "quick"}
+                    disabled={isPending}
+                    onClick={() => {
+                      setPasswordResetMode("quick");
+                      setPassword("");
+                      setConfirmPassword("");
+                      setError(null);
+                    }}
+                    className={`min-h-16 rounded-md border px-3 py-3 text-left transition ${passwordResetMode === "quick" ? "border-[#7553FF] bg-[#7553FF]/10 text-white" : "border-[var(--border)] bg-white/[0.02] text-[var(--text-muted)] hover:text-white"}`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="size-4" aria-hidden /> Quick change</span>
+                    <span className="mt-1 block text-xs">Set a password now</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={passwordResetMode === "email"}
+                    disabled={isPending || isSyntheticEmail(resident.email)}
+                    onClick={() => {
+                      setPasswordResetMode("email");
+                      setPassword("");
+                      setConfirmPassword("");
+                      setError(null);
+                    }}
+                    className={`min-h-16 rounded-md border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${passwordResetMode === "email" ? "border-[#7553FF] bg-[#7553FF]/10 text-white" : "border-[var(--border)] bg-white/[0.02] text-[var(--text-muted)] hover:text-white"}`}
+                  >
+                    <span className="flex items-center gap-2 text-sm font-semibold"><Mail className="size-4" aria-hidden /> Send email</span>
+                    <span className="mt-1 block text-xs">User resets their password</span>
+                  </button>
+                </div>
+                {passwordResetMode === "quick" ? (
+                  <div className="grid gap-4">
+                        <p className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-sm leading-5 text-violet-100">
+                          Set a new password for {resident.fullName}. The previous password will stop working immediately.
+                        </p>
+                    <label>
+                      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        New password
+                      </span>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
+                      />
+                    </label>
+                    <label>
+                      <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">
+                        Confirm password
+                      </span>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) => setConfirmPassword(event.target.value)}
+                        className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50"
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    <p className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-sm leading-5 text-violet-100">
+                      Send a secure password recovery email to {resident.fullName}. Their existing password remains valid until they complete the reset in the ENTRY app.
+                    </p>
+                    <div className="rounded-md border border-[var(--border)] bg-white/[0.025] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.12em] text-[var(--text-muted)]">Account email</p>
+                      <p className="mt-1 break-all text-sm font-semibold text-white">{resident.email}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : modal === "move" ? (
               <div className="mt-5 grid gap-4">
@@ -314,7 +404,7 @@ export function UnitResidentActions({
                   <select
                     value={targetHouseId}
                     onChange={(event) => setTargetHouseId(event.target.value)}
-                    disabled={isPending || moveOptions.length === 0}
+                    disabled={isPending}
                     className="h-11 w-full rounded-md border border-[var(--border)] bg-[var(--surface-strong)] px-3 text-sm text-white outline-none transition focus:border-violet-400/50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <option value="">
@@ -324,6 +414,11 @@ export function UnitResidentActions({
                           ? "No other active units available"
                           : "Select destination unit"}
                     </option>
+                    {resident.role === "RESIDENT" ? (
+                      <option value={UNASSIGNED_DESTINATION}>
+                        Unassigned — No unit
+                      </option>
+                    ) : null}
                     {moveOptions.map((option) => (
                       <option key={option.id} value={option.id}>
                         {option.label}
@@ -332,10 +427,19 @@ export function UnitResidentActions({
                   </select>
                 </label>
 
-                <div className="rounded-lg border border-violet-400/20 bg-violet-500/10 p-4 text-sm leading-6 text-violet-100">
-                  This changes the resident&apos;s linked unit. Their login, role,
-                  account status, and audit history stay unchanged.
-                </div>
+                {targetHouseId === UNASSIGNED_DESTINATION ? (
+                  <div className="rounded-lg border border-amber-400/25 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
+                    <strong>Remove this resident from their unit?</strong> Their account will be deactivated,
+                    their household links will be disabled, and their role will become Unassigned.
+                    Their identity and audit history remain intact. Reassignment and reactivation
+                    must be performed separately.
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-violet-400/20 bg-violet-500/10 p-4 text-sm leading-6 text-violet-100">
+                    This changes the resident&apos;s linked unit. Their login, role,
+                    account status, and audit history stay unchanged.
+                  </div>
+                )}
               </div>
             ) : (
               <div className="mt-5 rounded-lg border border-amber-400/20 bg-amber-500/10 p-4 text-sm leading-6 text-amber-100">
@@ -360,19 +464,25 @@ export function UnitResidentActions({
                 variant={modal === "status" && resident.isActive ? "danger" : "primary"}
                 onClick={
                   modal === "password"
-                    ? submitPassword
+                    ? passwordResetMode === "email"
+                      ? submitPasswordResetEmail
+                      : submitPassword
                     : modal === "move"
                       ? submitMove
                       : submitStatus
                 }
-                disabled={isPending || (modal === "move" && !targetHouseId)}
+                disabled={isPending || (modal === "move" && !targetHouseId) || (modal === "password" && passwordResetMode === "email" && isSyntheticEmail(resident.email))}
               >
                 {isPending
                   ? "Working..."
                   : modal === "password"
-                    ? "Set password"
+                    ? passwordResetMode === "email"
+                      ? "Send reset email"
+                      : "Reset password"
                     : modal === "move"
-                      ? "Move resident"
+                      ? targetHouseId === UNASSIGNED_DESTINATION
+                        ? "Unassign resident"
+                        : "Move resident"
                       : resident.isActive
                         ? "Deactivate account"
                         : "Reactivate account"}

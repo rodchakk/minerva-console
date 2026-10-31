@@ -561,6 +561,24 @@ export async function setCommunityUserUnitAction(
     };
   }
 
+  if (normalizedRole === "UNASSIGNED") {
+    // Atomically restore the resident's role and household, but deliberately
+    // keep account access disabled until the admin reactivates it separately.
+    const client = await createClient();
+    const { error: restoreError } = await client.rpc("sa_reassign_unassigned_community_resident_v1", {
+      p_community_id: communityId,
+      p_target_user_id: userId,
+      p_target_house_id: houseId,
+    });
+    if (restoreError) return { error: restoreError.message, success: false };
+    revalidateCommunityUserPaths(communityId, houseId);
+    return {
+      success: true,
+      houseLabel: coerceString(targetHouse.house_label, "Unnamed unit"),
+      isPrimary: false,
+    };
+  }
+
   if (coerceString(profile.house_id) === houseId) {
     const currentAssignment = (Array.isArray(activeAssignments) ? activeAssignments : []).find(
       (assignment) => coerceString(assignment.house_id) === houseId,
@@ -899,6 +917,23 @@ export async function setCommunityUserActiveStatusAction(
   }
 
   const supabase = await createClient();
+  if (input.isActive) {
+    // An unassigned identity must be reassigned before access can be enabled.
+    const { data: profile, error: profileError } = await createAdminClient()
+      .from("profiles")
+      .select("role,house_id")
+      .eq("community_id", input.communityId)
+      .eq("user_id", input.userId)
+      .maybeSingle();
+    if (profileError || !profile) {
+      return { error: "Could not verify this resident's assignment.", success: false };
+    }
+    const role = coerceString(profile.role).toUpperCase();
+    if (role === "UNASSIGNED" || (role === "RESIDENT" && !profile.house_id)) {
+      return { error: "Assign this resident to a unit before reactivating the account.", success: false };
+    }
+  }
+
   const { error } = await supabase.rpc("sa_set_community_user_active_status", {
     p_community_id: input.communityId,
     p_is_active: input.isActive,

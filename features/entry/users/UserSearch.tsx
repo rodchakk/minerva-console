@@ -39,6 +39,7 @@ import {
   type UserSearchItem,
 } from "@/features/entry/users/actions";
 import {
+  sendCommunityUserPasswordResetEmailAction,
   setCommunityUserPasswordAction,
   setCommunityUserRoleAction,
 } from "@/features/entry/users/communityUserActions";
@@ -50,6 +51,7 @@ import {
 type ResultFilter = "all" | "RESIDENT" | "ADMIN" | "GUARD" | "inactive";
 type ManageMode = "view" | "edit" | "role" | "unit" | "password" | "status";
 type EditableCommunityRole = "ADMIN" | "RESIDENT";
+type PasswordResetMode = "quick" | "email";
 
 type UserDraft = {
   fullName: string;
@@ -183,6 +185,7 @@ export function UserSearch() {
   const [contextLoading, setContextLoading] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordResetMode, setPasswordResetMode] = useState<PasswordResetMode>("quick");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -269,6 +272,7 @@ export function UserSearch() {
     setUnitDraft(user.houseId);
     setPassword("");
     setConfirmPassword("");
+    setPasswordResetMode("quick");
     setShowPassword(false);
     setShowConfirmPassword(false);
     setMessage(null);
@@ -391,12 +395,18 @@ export function UserSearch() {
         return;
       }
 
+      const wasUnassigned = selectedUser.role === "UNASSIGNED";
       syncUser(selectedUser, {
         houseId: unitDraft,
         houseLabel: result.houseLabel ?? selectedHouse.label,
         isPrimary: result.isPrimary ?? false,
+        ...(wasUnassigned ? { role: "RESIDENT", isActive: false } : {}),
       });
-      setMessage(`Unit changed to ${result.houseLabel ?? selectedHouse.label}.`);
+      setMessage(
+        wasUnassigned
+          ? "Resident assigned to a unit. Reactivate the account separately when authorized."
+          : `Unit changed to ${result.houseLabel ?? selectedHouse.label}.`,
+      );
       setManageMode("view");
       router.refresh();
     });
@@ -432,6 +442,32 @@ export function UserSearch() {
       setPassword("");
       setConfirmPassword("");
       setMessage("Password reset successfully.");
+      setManageMode("view");
+    });
+  }
+
+  function submitPasswordResetEmail() {
+    if (!selectedUser) return;
+    setError(null);
+    setMessage(null);
+
+    if (isSyntheticEmail(selectedUser.email)) {
+      setError("This user has no real email. Use quick password change instead.");
+      return;
+    }
+
+    startTransition(async () => {
+      const result = await sendCommunityUserPasswordResetEmailAction({
+        communityId: selectedUser.communityId,
+        userId: selectedUser.id,
+      });
+
+      if (!result.success) {
+        setError(result.error ?? "Could not send the password recovery email.");
+        return;
+      }
+
+      setMessage("Password reset email requested. The current password stays valid until the user completes recovery.");
       setManageMode("view");
     });
   }
@@ -822,6 +858,7 @@ export function UserSearch() {
                         onClick={() => {
                           setPassword("");
                           setConfirmPassword("");
+                          setPasswordResetMode("quick");
                           setShowPassword(false);
                           setShowConfirmPassword(false);
                           setManageMode("password");
@@ -1076,71 +1113,130 @@ export function UserSearch() {
 
               {manageMode === "password" ? (
                 <div className="space-y-4">
-                  <div className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-xs leading-5 text-violet-100">
-                    Set a new password for {selectedUser.fullName}. The previous password will stop working immediately.
-                  </div>
-
-                  <label>
-                    <FieldLabel>New password *</FieldLabel>
-                    <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
-                      <input
-                        autoComplete="new-password"
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
-                        className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((current) => !current)}
-                        className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                      >
-                        {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </label>
-
-                  <label>
-                    <FieldLabel>Confirm password *</FieldLabel>
-                    <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
-                      <input
-                        autoComplete="new-password"
-                        type={showConfirmPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(event) => setConfirmPassword(event.target.value)}
-                        className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword((current) => !current)}
-                        className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
-                        aria-label={showConfirmPassword ? "Hide password" : "Show password"}
-                      >
-                        {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
-                      </button>
-                    </div>
-                  </label>
-
-                  <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
+                  <div className="grid grid-cols-2 gap-2" role="group" aria-label="Password reset method">
                     <button
                       type="button"
-                      className={entryButtonClass("secondary")}
-                      onClick={() => setManageMode("view")}
+                      aria-pressed={passwordResetMode === "quick"}
                       disabled={isPending}
+                      onClick={() => {
+                        setPasswordResetMode("quick");
+                        setPassword("");
+                        setConfirmPassword("");
+                        setError(null);
+                      }}
+                      className={`min-h-16 rounded-md border px-3 py-3 text-left transition ${passwordResetMode === "quick" ? "border-[#7553FF] bg-[#7553FF]/10 text-white" : "border-[#141119] bg-white/[0.02] text-[#A9A3B2] hover:text-white"}`}
                     >
-                      Cancel
+                      <span className="flex items-center gap-2 text-sm font-semibold"><KeyRound className="size-4" aria-hidden /> Quick change</span>
+                      <span className="mt-1 block text-xs">Set a password now</span>
                     </button>
                     <button
                       type="button"
-                      className={entryButtonClass("primary")}
-                      onClick={submitPassword}
-                      disabled={isPending}
+                      aria-pressed={passwordResetMode === "email"}
+                      disabled={isPending || isSyntheticEmail(selectedUser.email)}
+                      onClick={() => {
+                        setPasswordResetMode("email");
+                        setPassword("");
+                        setConfirmPassword("");
+                        setError(null);
+                      }}
+                      className={`min-h-16 rounded-md border px-3 py-3 text-left transition disabled:cursor-not-allowed disabled:opacity-50 ${passwordResetMode === "email" ? "border-[#7553FF] bg-[#7553FF]/10 text-white" : "border-[#141119] bg-white/[0.02] text-[#A9A3B2] hover:text-white"}`}
                     >
-                      {isPending ? "Updating..." : "Reset password"}
+                      <span className="flex items-center gap-2 text-sm font-semibold"><Mail className="size-4" aria-hidden /> Send email</span>
+                      <span className="mt-1 block text-xs">User resets their password</span>
                     </button>
                   </div>
+                  {passwordResetMode === "quick" ? (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-xs leading-5 text-violet-100">
+                        Set a new password for {selectedUser.fullName}. The previous password will stop working immediately.
+                      </div>
+
+                      <label>
+                        <FieldLabel>New password *</FieldLabel>
+                        <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
+                          <input
+                            autoComplete="new-password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                            placeholder={ENTRY_ADMIN_TEMP_PASSWORD_HELPER}
+                            className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword((current) => !current)}
+                            className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
+                            aria-label={showPassword ? "Hide password" : "Show password"}
+                          >
+                            {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                          </button>
+                        </div>
+                      </label>
+
+                      <label>
+                        <FieldLabel>Confirm password *</FieldLabel>
+                        <div className="flex overflow-hidden rounded-md border border-[#141119] bg-[rgba(0,0,32,0.20)] focus-within:ring-2 focus-within:ring-[#7553FF]">
+                          <input
+                            autoComplete="new-password"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={confirmPassword}
+                            onChange={(event) => setConfirmPassword(event.target.value)}
+                            className="h-10 min-w-0 flex-1 bg-transparent px-3 text-sm text-white outline-none"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((current) => !current)}
+                            className="grid size-10 place-items-center border-l border-[#141119] text-[#8F879D] hover:text-white"
+                            aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                          >
+                            {showConfirmPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                          </button>
+                        </div>
+                      </label>
+
+                      <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
+                        <button
+                          type="button"
+                          className={entryButtonClass("secondary")}
+                          onClick={() => setManageMode("view")}
+                          disabled={isPending}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className={entryButtonClass("primary")}
+                          onClick={submitPassword}
+                          disabled={isPending}
+                        >
+                          {isPending ? "Updating..." : "Reset password"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="rounded-lg border border-violet-400/15 bg-violet-500/[0.06] p-3 text-xs leading-5 text-violet-100">
+                        Send a secure password recovery email to {selectedUser.fullName}. Their existing password remains valid until they complete the reset in the ENTRY app.
+                      </div>
+                      <div className="rounded-md border border-[#141119] bg-white/[0.025] p-3">
+                        <p className="text-[11px] uppercase tracking-[0.12em] text-[#A9A3B2]">Account email</p>
+                        <p className="mt-1 break-all text-sm font-semibold text-white">{selectedUser.email}</p>
+                      </div>
+                      <div className="flex justify-end gap-2 border-t border-[#141119] pt-4">
+                        <button type="button" className={entryButtonClass("secondary")} onClick={() => setManageMode("view")} disabled={isPending}>
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className={entryButtonClass("primary")}
+                          onClick={submitPasswordResetEmail}
+                          disabled={isPending || isSyntheticEmail(selectedUser.email)}
+                        >
+                          {isPending ? "Sending..." : "Send reset email"}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : null}
 

@@ -85,6 +85,9 @@ export type SendEmailInviteResult = {
       email: string;
       status: "sent" | "failed" | "skipped";
       message?: string;
+      // Only populated on explicitly requested single-resident creation results.
+      // Never persisted or logged; this is the exact PIN used for the invitation.
+      pinForSharing?: string;
     }>;
   };
 };
@@ -110,6 +113,9 @@ export async function sendActivationEmails(input: {
   communityId: string;
   communityName: string;
   queueIds: string[];
+  // Restrict one-time PIN disclosure to the create-resident success screen.
+  // Bulk send/resend callers must not receive PINs in their result.
+  includePinForSharing?: boolean;
 }): Promise<SendEmailInviteResult> {
   const { user } = await requireSuperadmin();
   const previewReadOnlyError = getEntryPreviewReadOnlyError();
@@ -119,6 +125,10 @@ export async function sendActivationEmails(input: {
   }
 
   const { communityId, communityName, queueIds } = input;
+  const sharePinForQueue =
+    input.includePinForSharing === true && queueIds.length === 1
+      ? queueIds[0]
+      : null;
 
   if (!communityId) {
     return { success: false, error: "No community selected." };
@@ -231,6 +241,20 @@ export async function sendActivationEmails(input: {
       continue;
     }
 
+    // Never send an invitation with a missing PIN.
+    if (item.status !== "pin_generated" || !item.pin) {
+      failed_count++;
+      emailResults.push({
+        queue_id: item.queue_id,
+        email: item.email,
+        status: "failed",
+        message: item.message || "Activation PIN was not generated.",
+      });
+      continue;
+    }
+
+    const sharePin =
+      sharePinForQueue === item.queue_id ? item.pin : undefined;
     const activationLink = baseUrl
       ? `${baseUrl}/activate?pin=${item.pin}`
       : `entry://activate?pin=${item.pin}`;
@@ -269,6 +293,7 @@ export async function sendActivationEmails(input: {
         queue_id: item.queue_id,
         email: item.email,
         status: "sent",
+        pinForSharing: sharePin,
       });
     } catch (err) {
       await recordActivationEmailTelemetry({
@@ -283,6 +308,8 @@ export async function sendActivationEmails(input: {
         email: item.email,
         status: "failed",
         message: err instanceof Error ? err.message : "Unknown email error",
+        // Email failed, but the generated PIN remains usable for manual sharing.
+        pinForSharing: sharePin,
       });
     }
   }

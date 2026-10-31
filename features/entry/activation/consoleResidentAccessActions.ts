@@ -156,6 +156,7 @@ export async function prepareConsoleResidentAccess(input: {
     const communityName = getString(prepared.community_name);
 
     let emailSent = false;
+    let emailedPin: string | undefined;
     let warning: string | undefined;
 
     try {
@@ -163,8 +164,12 @@ export async function prepareConsoleResidentAccess(input: {
         communityId,
         communityName,
         queueIds: [queueId],
+        includePinForSharing: true,
       });
       const item = delivery.data?.items.find((candidate) => candidate.queue_id === queueId);
+      // Captured from the same PIN-generation call used to compose the email.
+      // Do NOT call generateActivationPins again: doing so invalidates that PIN.
+      emailedPin = item?.pinForSharing;
       emailSent = delivery.success && item?.status === "sent";
 
       if (!delivery.success) {
@@ -191,6 +196,7 @@ export async function prepareConsoleResidentAccess(input: {
       unitLabel: getString(prepared.unit_label) || unitLabel,
       email: getString(prepared.email) || email,
       emailSent,
+      pin: emailedPin,
       warning,
     };
   }

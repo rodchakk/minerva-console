@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
+import { matchesDirectorySearch } from "@/features/entry/communities/directorySearch";
+import { CreateSingleUnitDialog } from "@/features/entry/communities/CreateSingleUnitDialog";
+import { UnitResidentActions } from "@/features/entry/communities/UnitResidentActions";
 import { UnitBulkDeleteManager, type BulkDeleteUnit } from "@/features/entry/communities/UnitBulkDeleteManager";
 import type {
   CommunityUnitHouseOption,
@@ -16,6 +20,7 @@ type DirectoryFilter =
   | "active"
   | "all"
   | "inactive"
+  | "no_reference"
   | "no_residents"
   | "occupied"
   | "pending_activation";
@@ -35,6 +40,7 @@ const filters: Array<{ label: string; value: DirectoryFilter }> = [
   { label: "Inactive", value: "inactive" },
   { label: "Occupied", value: "occupied" },
   { label: "No residents", value: "no_residents" },
+  { label: "Missing reference", value: "no_reference" },
   { label: "Pending activation", value: "pending_activation" },
 ];
 
@@ -43,6 +49,7 @@ function matchesFilter(unit: CommunityUnitPreview, filter: DirectoryFilter) {
   if (filter === "inactive") return !unit.isActive;
   if (filter === "occupied") return unit.residentCount > 0;
   if (filter === "no_residents") return unit.residentCount === 0;
+  if (filter === "no_reference") return !unit.unitReference.trim() && !unit.publicReference.trim();
   if (filter === "pending_activation") return unit.pendingActivations > 0;
   return true;
 }
@@ -163,6 +170,9 @@ export function CommunityDirectoryWorkspace({
   summary,
   units,
 }: Props) {
+  const router = useRouter();
+  const [createUnitOpen, setCreateUnitOpen] = useState(false);
+  const [createdUnitMessage, setCreatedUnitMessage] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<DirectoryFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
@@ -174,11 +184,11 @@ export function CommunityDirectoryWorkspace({
   const moreRef = useRef<HTMLDivElement>(null);
 
   const visibleUnits = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-
     return units.filter((unit) => {
       const searchable = [
         unit.label,
+        unit.unitReference,
+        unit.publicReference,
         unit.ownerName,
         unit.primaryResidentName,
         String(unit.residentCount),
@@ -190,14 +200,9 @@ export function CommunityDirectoryWorkspace({
           resident.phone,
           resident.username,
         ]),
-      ]
-        .join(" ")
-        .toLowerCase();
+      ];
 
-      return (
-        (!normalized || searchable.includes(normalized)) &&
-        matchesFilter(unit, filter)
-      );
+      return matchesDirectorySearch(query, searchable) && matchesFilter(unit, filter);
     });
   }, [filter, query, units]);
 
@@ -263,6 +268,22 @@ export function CommunityDirectoryWorkspace({
     setFilterOpen(false);
   }
 
+  function openCreateUnit() {
+    setMoreOpen(false);
+    setFilterOpen(false);
+    setCreatedUnitMessage(null);
+    setCreateUnitOpen(true);
+  }
+
+  function handleUnitCreated(label: string) {
+    setCreateUnitOpen(false);
+    setQuery("");
+    setFilter("all");
+    setSelectedId(null);
+    setCreatedUnitMessage(`Unit "${label}" created successfully.`);
+    router.refresh();
+  }
+
   return (
     <div
       ref={pageRef}
@@ -294,8 +315,18 @@ export function CommunityDirectoryWorkspace({
               Back to community
             </DimensionalLink>
 
+            <button
+              type="button"
+              onClick={openCreateUnit}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#120539] transition hover:bg-[#6845F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#BEB4FF]"
+            >
+              <Plus className="size-4" aria-hidden />
+              Create unit
+            </button>
+
             <ResidentQuickCreate
               communityId={communityId}
+              communityName={communityName}
               houses={houses}
               triggerClassName="inline-flex h-10 items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#120539] outline-none focus-visible:ring-2 focus-visible:ring-[#7553FF]"
             />
@@ -323,12 +354,19 @@ export function CommunityDirectoryWorkspace({
                   >
                     Activation queue
                   </Link>
+                  <button
+                    type="button"
+                    onClick={openCreateUnit}
+                    className="block w-full rounded-md px-3 py-2.5 text-left text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
+                  >
+                    Add unit
+                  </button>
                   <Link
                     href={`/products/entry/communities/${communityId}/units/new`}
                     onClick={() => setMoreOpen(false)}
                     className="block rounded-md px-3 py-2.5 text-xs font-medium text-[#D3CEDA] hover:bg-white/[0.04] hover:text-white"
                   >
-                    Add unit
+                    Import units (bulk)
                   </Link>
                   <div onClick={() => setMoreOpen(false)}>
                     <UnitBulkDeleteManager
@@ -344,6 +382,15 @@ export function CommunityDirectoryWorkspace({
             </div>
           </div>
         </header>
+
+        {createdUnitMessage ? (
+          <div role="status" className="flex items-center justify-between gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3 text-xs font-semibold text-emerald-100">
+            <span>{createdUnitMessage}</span>
+            <button type="button" onClick={() => setCreatedUnitMessage(null)} className="text-emerald-200 hover:text-white" aria-label="Dismiss confirmation">
+              <X className="size-4" aria-hidden />
+            </button>
+          </div>
+        ) : null}
 
         <section className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:grid-cols-4">
           <SummaryMetric
@@ -525,7 +572,13 @@ export function CommunityDirectoryWorkspace({
                       >
                         <td className="px-3 py-2.5 align-top">
                           <p className="truncate font-semibold text-white" title={unit.label}>{unit.label}</p>
-                          <p className="mt-1 text-[10px] text-[#8F879D]">{unit.isActive ? "Active unit" : "Inactive unit"}</p>
+                          <p className="mt-1 truncate text-[10px] text-[#A9A3B2]" title={unit.unitReference || unit.publicReference || "No reference registered"}>
+                            {unit.unitReference
+                              ? `Location: ${unit.unitReference}`
+                              : unit.publicReference
+                                ? `Public ref: ${unit.publicReference}`
+                                : "No reference registered"}
+                          </p>
                         </td>
                         <td className="px-3 py-2.5 align-top">
                           <p className="truncate font-semibold text-white" title={unit.primaryResidentName || unit.ownerName || "No residents"}>
@@ -553,7 +606,7 @@ export function CommunityDirectoryWorkspace({
 
           <div className="flex shrink-0 items-center justify-between gap-3 border-t border-[#141119] bg-[#1F1B26] px-4 py-2 text-[10px] text-[#8F879D]">
             <span>Showing {visibleUnits.length} matching unit{visibleUnits.length === 1 ? "" : "s"} of {units.length}</span>
-            <span>Directory searches units and resident context without opening each record</span>
+            <span>Search names and references · {units.filter((unit) => !unit.unitReference.trim() && !unit.publicReference.trim()).length} without reference</span>
           </div>
         </section>
 
@@ -592,6 +645,8 @@ export function CommunityDirectoryWorkspace({
               <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
                 <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Unit overview</p></div>
                 {[
+                  ["Location reference", selectedUnit.unitReference || "Not registered"],
+                  ["Resident-facing reference", selectedUnit.publicReference || "Not registered"],
                   ["Residents", String(selectedUnit.residentCount)],
                   ["Pending activation", String(selectedUnit.pendingActivations)],
                   ["Active passes", String(selectedUnit.activePasses)],
@@ -630,9 +685,16 @@ export function CommunityDirectoryWorkspace({
                                 {resident.email || resident.phone || resident.account}
                               </p>
                             </div>
-                            <Tag tone={isPrimaryResident ? "success" : "default"}>
-                              {isPrimaryResident ? "Primary resident" : "Resident"}
-                            </Tag>
+                            <div className="flex shrink-0 items-center gap-1.5">
+                              <Tag tone={isPrimaryResident ? "success" : "default"}>
+                                {isPrimaryResident ? "Primary resident" : "Resident"}
+                              </Tag>
+                              <UnitResidentActions
+                                communityId={communityId}
+                                resident={resident}
+                                triggerClassName="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.025] text-[#BEB4FF] transition hover:border-violet-400/40 hover:text-white"
+                              />
+                            </div>
                           </div>
                         </div>
                       );
@@ -683,6 +745,7 @@ export function CommunityDirectoryWorkspace({
 
               <ResidentQuickCreate
                 communityId={communityId}
+                communityName={communityName}
                 houses={houses}
                 fixedUnitId={selectedUnit.id}
                 triggerClassName="inline-flex h-9 w-full items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539]"
@@ -706,6 +769,14 @@ export function CommunityDirectoryWorkspace({
           </aside>
         ) : null}
       </div>
+
+      <CreateSingleUnitDialog
+        communityId={communityId}
+        communityName={communityName}
+        open={createUnitOpen}
+        onClose={() => setCreateUnitOpen(false)}
+        onCreated={handleUnitCreated}
+      />
     </div>
   );
 }
