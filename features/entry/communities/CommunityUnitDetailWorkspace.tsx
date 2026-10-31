@@ -308,8 +308,13 @@ export function CommunityUnitDetailWorkspace({
               {unitDisplayLabel} · {communityName}
             </p>
             <p className="mt-1 text-xs text-[#A9A3B2]">
-              Reference: <span className="break-words text-[#D6D0DC]">{unit.publicReference || "Not registered"}</span>
+              Location reference: <span className="break-words text-[#D6D0DC]">{unit.unitReference || "Not registered"}</span>
             </p>
+            {unit.publicReference ? (
+              <p className="mt-1 text-xs text-[#A9A3B2]">
+                Resident-facing reference: <span className="break-words text-[#D6D0DC]">{unit.publicReference}</span>
+              </p>
+            ) : null}
             <p className="mt-1.5 max-w-3xl text-sm leading-6 text-[#A9A3B2]">
               Manage household members, resident accounts, access activity, and passes for this unit.
             </p>
