@@ -65,6 +65,9 @@ export function seshatErrorMessage(error: unknown, fallback: string) {
   const details = String(candidate?.details ?? "");
   const combined = `${message} ${details}`.toLowerCase();
 
+  if (combined.includes("expense category already exists")) {
+    return "That expense category already exists.";
+  }
   if (candidate?.code === "23505") return "This financial operation was already recorded.";
   if (combined.includes("exceed the invoice balance")) return "Payment would exceed the invoice balance.";
   if (combined.includes("cancelled invoice")) return "Payments cannot be recorded against a cancelled invoice.";

@@ -329,6 +329,14 @@ export type Database = {
       client_operational_profit_summary: { Row: ClientOperationalProfitSummary; Insert: never; Update: never };
     };
     Functions: {
+      create_expense_category: {
+        Args: {
+          p_name: string;
+          p_description?: string | null;
+          p_color?: string | null;
+        };
+        Returns: ExpenseCategory[];
+      };
       generate_invoice: {
         Args: {
           p_client_id?: string | null;
