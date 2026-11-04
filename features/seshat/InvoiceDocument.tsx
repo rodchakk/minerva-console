@@ -60,9 +60,6 @@ export function InvoiceDocument({
           </h1>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <p className="text-lg font-bold text-slate-800">{invoice.invoice_number}</p>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600">
-              {copy.statuses[invoice.status]}
-            </span>
           </div>
         </div>
         <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 gap-y-2 border-l border-slate-200 pl-5 text-xs sm:text-sm">

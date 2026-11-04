@@ -1,7 +1,7 @@
 export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
 
 export type ClientStatus = "lead" | "active" | "paused" | "inactive" | "archived";
-export type InvoiceStatus = "draft" | "sent" | "paid" | "overdue" | "cancelled";
+export type InvoiceStatus = "draft" | "issued" | "sent" | "paid" | "overdue" | "cancelled";
 export type ExpenseFrequency = "weekly" | "monthly" | "quarterly" | "yearly" | "one_time";
 export type ServiceFrequency =
   | "weekly"
@@ -332,7 +332,7 @@ export type Database = {
       generate_invoice: {
         Args: {
           p_client_id?: string | null;
-          p_status?: "draft" | "sent";
+          p_status?: "draft" | "issued" | "sent";
           p_issue_date?: string | null;
           p_due_date?: string | null;
           p_currency?: string | null;
@@ -358,6 +358,10 @@ export type Database = {
           p_payment_method_id?: string | null;
         };
         Returns: Json | null;
+      };
+      set_invoice_status: {
+        Args: { p_invoice_id: string; p_status: "issued" | "sent" | "cancelled" };
+        Returns: InvoiceStatus;
       };
       record_payment: {
         Args: {

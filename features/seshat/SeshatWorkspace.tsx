@@ -48,6 +48,7 @@ import {
   recordPayment,
   runAutomaticBilling,
   setInvoicePaymentMethod,
+  setInvoiceStatus,
   seshatErrorMessage,
 } from "./financialEngine";
 import {
@@ -121,6 +122,7 @@ const nav = [
 const statusFilters: Array<InvoiceStatus | "all"> = [
   "all",
   "draft",
+  "issued",
   "sent",
   "paid",
   "overdue",
@@ -234,6 +236,19 @@ function statusTone(status: InvoiceStatus) {
   if (status === "sent") return "warning";
   if (status === "cancelled") return "default";
   return "info";
+}
+
+const invoiceStatusLabels: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  issued: "Issued",
+  sent: "Sent",
+  paid: "Paid",
+  overdue: "Overdue",
+  cancelled: "Cancelled",
+};
+
+function invoiceStatusLabel(status: InvoiceStatus | "all") {
+  return status === "all" ? "All" : invoiceStatusLabels[status];
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -767,7 +782,7 @@ export function SeshatWorkspace() {
       const paymentChoice = parseInvoicePaymentMethodChoice(String(form.get("payment_method") ?? "auto"));
       const result = await generateInvoice({
         client_id: clean(form.get("client_id")),
-        status: form.get("status") === "sent" ? "sent" : "draft",
+        status: form.get("status") === "issued" ? "issued" : "draft",
         issue_date: clean(form.get("issue_date")),
         due_date: clean(form.get("due_date")),
         currency: normalizeInvoiceCurrency(selectedCurrency, profile?.default_currency ?? "USD"),
@@ -783,10 +798,12 @@ export function SeshatWorkspace() {
     }
   }
 
-  async function updateInvoiceStatus(invoiceId: string, status: InvoiceStatus) {
+  async function updateInvoiceStatus(
+    invoiceId: string,
+    status: Extract<InvoiceStatus, "issued" | "sent" | "cancelled">,
+  ) {
     try {
-      const { error: updateError } = await getSeshatDataClient().from("invoices").update({ status }).eq("id", invoiceId);
-      if (updateError) throw updateError;
+      await setInvoiceStatus(invoiceId, status);
       await load();
       await loadDetail();
     } catch (updateError) {
@@ -1528,7 +1545,7 @@ function Invoices({
             onClick={() => onFilter(status)}
             className={cn("rounded-md px-3 py-1.5 text-sm", filter === status ? "bg-white/[0.12] text-white" : "text-slate-300 hover:bg-white/[0.06]")}
           >
-            {status}
+            {invoiceStatusLabel(status)}
           </button>
         ))}
       </div>
@@ -1549,7 +1566,7 @@ function InvoiceTable({ invoices }: { invoices: InvoiceWithClient[] }) {
           invoice.clients?.name ?? "—",
           dateLabel(invoice.issue_date),
           dateLabel(invoice.due_date),
-          <Badge key="status" tone={statusTone(invoice.status)}>{invoice.status}</Badge>,
+          <Badge key="status" tone={statusTone(invoice.status)}>{invoiceStatusLabel(invoice.status)}</Badge>,
           invoice.currency,
           money(invoice.total, invoice.currency),
           money(invoice.amount_paid, invoice.currency),
@@ -1616,7 +1633,7 @@ function InvoiceForm({
           </SelectField>
           <SelectField label="Status" name="status" defaultValue="draft">
             <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
+            <option value="issued">Issued</option>
           </SelectField>
           <label className="block space-y-1.5 text-sm">
             <span className="font-medium text-slate-200">Currency</span>
@@ -1815,7 +1832,7 @@ function InvoiceDetail({
   onPaymentFx: (paymentId: string, rate: number, note: string) => Promise<void>;
   paymentFxRates: PaymentFxRate[];
   onPaymentMethod: (event: FormEvent<HTMLFormElement>) => void;
-  onStatus: (id: string, status: InvoiceStatus) => void;
+  onStatus: (id: string, status: Extract<InvoiceStatus, "issued" | "sent" | "cancelled">) => void;
   onDelete: (id: string) => void;
 }) {
   const balance = invoice.balance_due ?? Math.max(invoice.total - invoice.amount_paid, 0);
@@ -1853,6 +1870,7 @@ function InvoiceDetail({
           <div>
             <h2 className="text-2xl font-semibold text-white">{invoice.invoice_number}</h2>
             <p className="text-sm text-[var(--text-muted)]">{invoice.clients?.name ?? "No client"}</p>
+            <div className="mt-2"><Badge tone={statusTone(invoice.status)}>{invoiceStatusLabel(invoice.status)}</Badge></div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={handleDownloadPdf} disabled={isDownloadingPdf} className="gap-2">
@@ -1861,7 +1879,8 @@ function InvoiceDetail({
             <Button type="button" variant="secondary" onClick={() => window.print()} className="gap-2" title="Browser print for debugging">
               <Printer className="h-4 w-4" /> Browser Print
             </Button>
-            {invoice.status === "draft" ? <Button type="button" onClick={() => onStatus(invoice.id, "sent")}>Mark as Sent</Button> : null}
+            {invoice.status === "draft" ? <Button type="button" onClick={() => onStatus(invoice.id, "issued")}>Issue Invoice</Button> : null}
+            {invoice.status === "issued" ? <Button type="button" onClick={() => onStatus(invoice.id, "sent")}>Mark as Sent</Button> : null}
             {invoice.status === "draft" ? <Button type="button" variant="danger" onClick={() => onDelete(invoice.id)}>Delete Draft</Button> : null}
             {invoice.status !== "paid" && invoice.status !== "cancelled" ? <Button type="button" variant="danger" onClick={() => onStatus(invoice.id, "cancelled")}>Cancel</Button> : null}
           </div>
@@ -1949,7 +1968,7 @@ function InvoiceDetail({
             </div>
           ))}
         </div>
-        {(invoice.status === "sent" || invoice.status === "overdue") && balance > 0 ? (
+        {(invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue") && balance > 0 ? (
           <form onSubmit={onPayment} className="mt-5 grid gap-3 border-t border-white/[0.10] pt-4 md:grid-cols-3">
             <Field label="Amount" name="amount" type="number" min="0.01" step="0.01" defaultValue={balance} required />
             <Field label="Payment date" name="payment_date" type="date" defaultValue={today()} required />

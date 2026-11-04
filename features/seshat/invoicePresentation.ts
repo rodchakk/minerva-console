@@ -1,4 +1,4 @@
-import type { BusinessProfile, InvoicePaymentInstructionSnapshot, InvoiceStatus } from "./types";
+import type { BusinessProfile, InvoicePaymentInstructionSnapshot } from "./types";
 
 export type InvoiceDocumentLanguage = "es-HN" | "en-US";
 
@@ -46,7 +46,6 @@ type InvoiceDocumentCopy = {
   account: string;
   paymentLink: string;
   methodTypes: Record<InvoicePaymentInstructionSnapshot["method_type"], string>;
-  statuses: Record<InvoiceStatus, string>;
 };
 
 export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumentCopy> = {
@@ -79,13 +78,6 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     account: "Cuenta",
     paymentLink: "Enlace de pago",
     methodTypes: { bank_transfer: "Transferencia bancaria", paypal: "PayPal", cash: "Efectivo", other: "Otro" },
-    statuses: {
-      draft: "Borrador",
-      sent: "Enviada",
-      paid: "Pagada",
-      overdue: "Vencida",
-      cancelled: "Cancelada",
-    },
   },
   "en-US": {
     invoice: "Invoice",
@@ -116,13 +108,6 @@ export const invoiceDocumentCopy: Record<InvoiceDocumentLanguage, InvoiceDocumen
     account: "Account",
     paymentLink: "Payment link",
     methodTypes: { bank_transfer: "Bank transfer", paypal: "PayPal", cash: "Cash", other: "Other" },
-    statuses: {
-      draft: "Draft",
-      sent: "Sent",
-      paid: "Paid",
-      overdue: "Overdue",
-      cancelled: "Cancelled",
-    },
   },
 };
 
