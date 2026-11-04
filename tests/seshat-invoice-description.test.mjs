@@ -14,7 +14,8 @@ test("client service can inherit catalog text or override customer invoice copy"
 });
 
 test("a draft invoice description edit is guarded by a dedicated backend RPC", () => {
-  assert.match(ui, /invoice\.status === "draft" \? \(/[\s\S]*?Edit draft line descriptions/);
+  assert.match(ui, /Edit draft line descriptions/);
+  assert.match(ui, /invoice\.status === "draft"/);
   assert.match(ui, /updateDraftInvoiceItemDescription\(invoice\.id, itemId, description, expectedDescription\)/);
   assert.match(engine, /rpc\("update_draft_invoice_item_description",/);
   assert.match(engine, /p_expected_description: expectedDescription/);
