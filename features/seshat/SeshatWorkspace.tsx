@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -48,6 +48,7 @@ import {
   recordPayment,
   runAutomaticBilling,
   setInvoicePaymentMethod,
+  setInvoiceStatus,
   seshatErrorMessage,
 } from "./financialEngine";
 import {
@@ -121,6 +122,7 @@ const nav = [
 const statusFilters: Array<InvoiceStatus | "all"> = [
   "all",
   "draft",
+  "issued",
   "sent",
   "paid",
   "overdue",
@@ -137,6 +139,7 @@ const serviceFrequencies: ServiceFrequency[] = [
   "one_time",
 ];
 const expenseFrequencies: ExpenseFrequency[] = ["weekly", "monthly", "quarterly", "yearly", "one_time"];
+const expenseSavedFlashKey = "seshat:expense-saved:v1";
 
 function parseView(pathname: string): { view: View; id: string | null } {
   const parts = pathname.split("/").filter(Boolean);
@@ -234,6 +237,19 @@ function statusTone(status: InvoiceStatus) {
   if (status === "sent") return "warning";
   if (status === "cancelled") return "default";
   return "info";
+}
+
+const invoiceStatusLabels: Record<InvoiceStatus, string> = {
+  draft: "Draft",
+  issued: "Issued",
+  sent: "Sent",
+  paid: "Paid",
+  overdue: "Overdue",
+  cancelled: "Cancelled",
+};
+
+function invoiceStatusLabel(status: InvoiceStatus | "all") {
+  return status === "all" ? "All" : invoiceStatusLabels[status];
 }
 
 function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -576,6 +592,15 @@ export function SeshatWorkspace() {
     return () => window.clearTimeout(handle);
   }, [loadDetail, session]);
 
+  useEffect(() => {
+    if (view !== "expenses") return;
+    const expenseName = window.sessionStorage.getItem(expenseSavedFlashKey);
+    if (!expenseName) return;
+    window.sessionStorage.removeItem(expenseSavedFlashKey);
+    const handle = window.setTimeout(() => setNotice(`Expense “${expenseName}” saved.`), 0);
+    return () => window.clearTimeout(handle);
+  }, [view]);
+
   async function disconnect() {
     await getSeshatSupabase().auth.signOut();
     setSession(null);
@@ -664,10 +689,30 @@ export function SeshatWorkspace() {
     }
   }
 
-  async function submitExpense(event: FormEvent<HTMLFormElement>, expenseId?: string) {
+  async function createExpenseCategory(name: string) {
+    const supabase = getSeshatDataClient();
+    const { data, error: categoryError } = await supabase
+      .rpc<ExpenseCategory>("create_expense_category", {
+        p_name: name,
+        p_description: null,
+        p_color: null,
+      })
+      .single();
+    if (categoryError) throw categoryError;
+    if (!data) throw new Error("The category was created but could not be loaded.");
+
+    setCategories((current) =>
+      [...current.filter((category) => category.id !== data.id), data]
+        .sort((left, right) => left.name.localeCompare(right.name)),
+    );
+    return data;
+  }
+
+  async function submitExpense(event: FormEvent<HTMLFormElement>, expenseId?: string): Promise<boolean> {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     setError(null);
+    setNotice(null);
     try {
       const payload = {
         category_id: clean(form.get("category_id")),
@@ -688,27 +733,34 @@ export function SeshatWorkspace() {
       if (expenseId) {
         const { error: updateError } = await supabase.from("expenses").update(payload).eq("id", expenseId);
         if (updateError) throw updateError;
-        setNotice("Expense updated.");
+        await load();
+        setNotice(`Expense “${payload.name}” updated.`);
       } else {
         const { data: userData } = await getSeshatSupabase().auth.getUser();
-        const { data, error: insertError } = await supabase
+        const { error: insertError } = await supabase
           .from("expenses")
-          .insert({ ...payload, owner_id: userData.user?.id })
-          .select("id")
-          .single();
+          .insert({ ...payload, owner_id: userData.user?.id });
         if (insertError) throw insertError;
-        router.push(`/seshat/expenses/${rowId(data)}`);
+        await load();
+        window.sessionStorage.setItem(expenseSavedFlashKey, payload.name);
+        router.push("/seshat/expenses");
       }
-      await load();
+      return true;
     } catch (submitError) {
       setError(seshatErrorMessage(submitError, "Could not save expense."));
+      return false;
     }
   }
 
-  async function submitClientService(event: FormEvent<HTMLFormElement>, clientServiceId?: string) {
+  async function submitClientService(
+    event: FormEvent<HTMLFormElement>,
+    clientServiceId?: string,
+  ): Promise<string | null> {
     event.preventDefault();
-    if (!id) return;
+    if (!id) return null;
     const form = new FormData(event.currentTarget);
+    setError(null);
+    setNotice(null);
     try {
       const payload = {
         client_id: id,
@@ -731,10 +783,13 @@ export function SeshatWorkspace() {
         ? await supabase.from("client_services").update(payload).eq("id", clientServiceId)
         : await supabase.from("client_services").insert(payload);
       if (response.error) throw response.error;
-      setNotice(clientServiceId ? "Client service updated." : "Client service added.");
       await loadDetail();
+      const message = `Service schedule “${payload.name}” ${clientServiceId ? "updated" : "added"}.`;
+      setNotice(message);
+      return message;
     } catch (submitError) {
       setError(seshatErrorMessage(submitError, "Could not save client service."));
+      return null;
     }
   }
 
@@ -767,7 +822,7 @@ export function SeshatWorkspace() {
       const paymentChoice = parseInvoicePaymentMethodChoice(String(form.get("payment_method") ?? "auto"));
       const result = await generateInvoice({
         client_id: clean(form.get("client_id")),
-        status: form.get("status") === "sent" ? "sent" : "draft",
+        status: form.get("status") === "issued" ? "issued" : "draft",
         issue_date: clean(form.get("issue_date")),
         due_date: clean(form.get("due_date")),
         currency: normalizeInvoiceCurrency(selectedCurrency, profile?.default_currency ?? "USD"),
@@ -783,10 +838,12 @@ export function SeshatWorkspace() {
     }
   }
 
-  async function updateInvoiceStatus(invoiceId: string, status: InvoiceStatus) {
+  async function updateInvoiceStatus(
+    invoiceId: string,
+    status: Extract<InvoiceStatus, "issued" | "sent" | "cancelled">,
+  ) {
     try {
-      const { error: updateError } = await getSeshatDataClient().from("invoices").update({ status }).eq("id", invoiceId);
-      if (updateError) throw updateError;
+      await setInvoiceStatus(invoiceId, status);
       await load();
       await loadDetail();
     } catch (updateError) {
@@ -1073,9 +1130,22 @@ export function SeshatWorkspace() {
       {view === "service-new" ? <ServiceForm onSubmit={submitService} /> : null}
       {view === "service-detail" && currentService ? <ServiceForm service={currentService} onSubmit={(event) => submitService(event, currentService.id)} /> : null}
       {view === "expenses" ? <Expenses expenses={expenses} /> : null}
-      {view === "expense-new" ? <ExpenseForm clients={clients} categories={categories} onSubmit={submitExpense} /> : null}
+      {view === "expense-new" ? (
+        <ExpenseForm
+          clients={clients}
+          categories={categories}
+          onCreateCategory={createExpenseCategory}
+          onSubmit={submitExpense}
+        />
+      ) : null}
       {view === "expense-detail" && currentExpense ? (
-        <ExpenseForm expense={currentExpense} clients={clients} categories={categories} onSubmit={(event) => submitExpense(event, currentExpense.id)} />
+        <ExpenseForm
+          expense={currentExpense}
+          clients={clients}
+          categories={categories}
+          onCreateCategory={createExpenseCategory}
+          onSubmit={(event) => submitExpense(event, currentExpense.id)}
+        />
       ) : null}
       {view === "invoices" ? (
         <Invoices invoices={invoices} filter={invoiceFilter} onFilter={setInvoiceFilter} />
@@ -1313,11 +1383,21 @@ function ClientDetail({
   invoices: InvoiceWithClient[];
   profit: ClientOperationalProfitSummary | null;
   paymentMethods: PaymentMethod[];
-  onClientServiceSubmit: (event: FormEvent<HTMLFormElement>, id?: string) => void;
+  onClientServiceSubmit: (event: FormEvent<HTMLFormElement>, id?: string) => Promise<string | null>;
   onPaymentMethodSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
+  const [creatingService, setCreatingService] = useState(false);
+  const [serviceNotice, setServiceNotice] = useState<string | null>(null);
   const activeMethods = paymentMethods.filter((method) => method.is_active);
   const resolvedMethod = resolveClientPaymentMethod(client, paymentMethods);
+
+  async function saveClientService(event: FormEvent<HTMLFormElement>, clientServiceId?: string) {
+    const message = await onClientServiceSubmit(event, clientServiceId);
+    if (!message) return;
+    setServiceNotice(message);
+    if (!clientServiceId) setCreatingService(false);
+  }
+
   return (
     <div className="space-y-4">
       <Card>
@@ -1351,8 +1431,26 @@ function ClientDetail({
         </form>
       </Card>
       <Card>
-        <h3 className="mb-3 font-semibold text-white">Client Services</h3>
-        <ClientServiceForm services={services} onSubmit={(event) => onClientServiceSubmit(event)} />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-semibold text-white">Client Services</h3>
+          <Button
+            type="button"
+            variant="secondary"
+            className="gap-2"
+            onClick={() => {
+              setServiceNotice(null);
+              setCreatingService((current) => !current);
+            }}
+          >
+            <Plus className="h-4 w-4" /> {creatingService ? "Cancel" : "Add service schedule"}
+          </Button>
+        </div>
+        <div className="mt-3" aria-live="polite">
+          <Alert message={serviceNotice} tone="success" />
+        </div>
+        {creatingService ? (
+          <ClientServiceForm services={services} onSubmit={(event) => saveClientService(event)} />
+        ) : null}
         <div className="mt-4 divide-y divide-white/[0.08]">
           {clientServices.length === 0 ? <p className="text-sm text-[var(--text-muted)]">No client services yet.</p> : null}
           {clientServices.map((item) => (
@@ -1360,7 +1458,11 @@ function ClientDetail({
               <summary className="cursor-pointer text-sm font-semibold text-white">
                 {item.name} · {money(item.price * item.quantity, normalizeCurrency(item.agreed_currency ?? "USD"))} · {item.frequency}
               </summary>
-              <ClientServiceForm clientService={item} services={services} onSubmit={(event) => onClientServiceSubmit(event, item.id)} />
+              <ClientServiceForm
+                clientService={item}
+                services={services}
+                onSubmit={(event) => saveClientService(event, item.id)}
+              />
             </details>
           ))}
         </div>
@@ -1380,10 +1482,26 @@ function ClientServiceForm({
 }: {
   clientService?: ClientService;
   services: Service[];
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<void>;
 }) {
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await onSubmit(event);
+    } finally {
+      submittingRef.current = false;
+      setSubmitting(false);
+    }
+  }
+
   return (
-    <form onSubmit={onSubmit} className="mt-3 grid gap-3 rounded-md border border-white/[0.08] bg-white/[0.025] p-3 md:grid-cols-4">
+    <form onSubmit={handleSubmit} className="mt-3 grid gap-3 rounded-md border border-white/[0.08] bg-white/[0.025] p-3 md:grid-cols-4">
       <SelectField label="Catalog service" name="service_id" defaultValue={clientService?.service_id}>
         <option value="">Manual</option>
         {services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
@@ -1401,7 +1519,11 @@ function ClientServiceForm({
       <div className="md:col-span-2"><Field label="Notes" name="notes" defaultValue={clientService?.notes} /></div>
       <label className="flex items-center gap-2 text-sm text-slate-200"><input name="is_active" type="checkbox" defaultChecked={clientService?.is_active ?? true} /> Active</label>
       <label className="flex items-center gap-2 text-sm text-slate-200"><input name="auto_invoice" type="checkbox" defaultChecked={clientService?.auto_invoice ?? false} /> Auto Invoice</label>
-      <div className="md:col-span-2"><Button variant="secondary">{clientService ? "Update Service Schedule" : "Add Service Schedule"}</Button></div>
+      <div className="md:col-span-2">
+        <Button type="submit" variant="secondary" disabled={submitting}>
+          {submitting ? "Saving..." : clientService ? "Update Service Schedule" : "Add Service Schedule"}
+        </Button>
+      </div>
     </form>
   );
 }
@@ -1469,18 +1591,64 @@ function ExpenseForm({
   expense,
   clients,
   categories,
+  onCreateCategory,
   onSubmit,
 }: {
   expense?: ExpenseWithCategory;
   clients: Client[];
   categories: ExpenseCategory[];
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onCreateCategory: (name: string) => Promise<ExpenseCategory>;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => Promise<boolean>;
 }) {
+  const expenseSubmittingRef = useRef(false);
+  const categorySubmittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [categoryNotice, setCategoryNotice] = useState<string | null>(null);
+  const [categorySubmitting, setCategorySubmitting] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(expense?.category_id ?? "");
+
+  async function handleExpenseSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (expenseSubmittingRef.current) return;
+    expenseSubmittingRef.current = true;
+    setSubmitting(true);
+    try {
+      await onSubmit(event);
+    } finally {
+      expenseSubmittingRef.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCategorySubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (categorySubmittingRef.current) return;
+    categorySubmittingRef.current = true;
+    setCategorySubmitting(true);
+    setCategoryError(null);
+    setCategoryNotice(null);
+    try {
+      const category = await onCreateCategory(categoryName);
+      setSelectedCategoryId(category.id);
+      setCategoryName("");
+      setCategoryOpen(false);
+      setCategoryNotice(`Category “${category.name}” created and selected.`);
+    } catch (createError) {
+      setCategoryError(seshatErrorMessage(createError, "Could not create expense category."));
+    } finally {
+      categorySubmittingRef.current = false;
+      setCategorySubmitting(false);
+    }
+  }
+
   return (
     <Card>
       <Back href="/seshat/expenses" />
       <h2 className="mb-4 text-xl font-semibold text-white">{expense ? "Edit Expense" : "New Expense"}</h2>
-      <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
+      <form onSubmit={handleExpenseSubmit} className="grid gap-4 md:grid-cols-2">
         <Field label="Name" name="name" defaultValue={expense?.name} required />
         <Field label="Vendor" name="vendor" defaultValue={expense?.vendor} />
         <Field label="Amount" name="amount" type="number" min={0} step="0.01" defaultValue={expense?.amount ?? 0} />
@@ -1488,10 +1656,34 @@ function ExpenseForm({
         <SelectField label="Frequency" name="frequency" defaultValue={expense?.frequency ?? "monthly"}>
           {expenseFrequencies.map((frequency) => <option key={frequency} value={frequency}>{frequency}</option>)}
         </SelectField>
-        <SelectField label="Category" name="category_id" defaultValue={expense?.category_id}>
-          <option value="">None</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
-        </SelectField>
+        <label className="block space-y-1.5 text-sm">
+          <span className="flex items-center justify-between gap-2 font-medium text-slate-200">
+            <span>Category</span>
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryError(null);
+                setCategoryOpen(true);
+              }}
+              className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-semibold text-violet-200 hover:bg-violet-400/10"
+            >
+              <Plus className="h-3.5 w-3.5" /> New category
+            </button>
+          </span>
+          <select
+            name="category_id"
+            value={selectedCategoryId}
+            onChange={(event) => {
+              setSelectedCategoryId(event.target.value);
+              setCategoryNotice(null);
+            }}
+            className="w-full rounded-md border border-white/[0.12] bg-[#151b22] px-3 py-2 text-white outline-none focus:border-violet-300/60"
+          >
+            <option value="">None</option>
+            {categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}
+          </select>
+          {categoryNotice ? <span className="block text-xs text-emerald-300" aria-live="polite">{categoryNotice}</span> : null}
+        </label>
         <SelectField label="Client allocation" name="client_id" defaultValue={expense?.client_id}>
           <option value="">None</option>
           {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
@@ -1501,8 +1693,45 @@ function ExpenseForm({
         <Field label="Receipt URL" name="receipt_url" defaultValue={expense?.receipt_url} />
         <div className="md:col-span-2"><Field label="Notes" name="notes" as="textarea" defaultValue={expense?.notes} /></div>
         <label className="flex items-center gap-2 text-sm text-slate-200"><input name="is_active" type="checkbox" defaultChecked={expense?.is_active ?? true} /> Active</label>
-        <div className="md:col-span-2"><Button className="gap-2"><Save className="h-4 w-4" /> Save Expense</Button></div>
+        <div className="md:col-span-2">
+          <Button type="submit" disabled={submitting} className="gap-2">
+            <Save className="h-4 w-4" /> {submitting ? "Saving..." : "Save Expense"}
+          </Button>
+        </div>
       </form>
+      {categoryOpen ? (
+        <form
+          onSubmit={handleCategorySubmit}
+          className="mt-4 rounded-md border border-violet-300/20 bg-violet-400/[0.06] p-3"
+          aria-label="Create expense category"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <label className="block min-w-0 flex-1 space-y-1.5 text-sm">
+              <span className="font-medium text-slate-200">New category name</span>
+              <input
+                name="new_category_name"
+                value={categoryName}
+                onChange={(event) => setCategoryName(event.target.value)}
+                placeholder="Infrastructure / Cloud"
+                required
+                autoFocus
+                className="w-full rounded-md border border-white/[0.12] bg-[#151b22] px-3 py-2 text-white outline-none focus:border-violet-300/60"
+              />
+            </label>
+            <div className="flex gap-2">
+              <Button type="submit" variant="secondary" disabled={categorySubmitting}>
+                {categorySubmitting ? "Creating..." : "Create category"}
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setCategoryOpen(false)} disabled={categorySubmitting}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+          <div className="mt-2" aria-live="assertive">
+            <Alert message={categoryError} />
+          </div>
+        </form>
+      ) : null}
     </Card>
   );
 }
@@ -1528,7 +1757,7 @@ function Invoices({
             onClick={() => onFilter(status)}
             className={cn("rounded-md px-3 py-1.5 text-sm", filter === status ? "bg-white/[0.12] text-white" : "text-slate-300 hover:bg-white/[0.06]")}
           >
-            {status}
+            {invoiceStatusLabel(status)}
           </button>
         ))}
       </div>
@@ -1549,7 +1778,7 @@ function InvoiceTable({ invoices }: { invoices: InvoiceWithClient[] }) {
           invoice.clients?.name ?? "—",
           dateLabel(invoice.issue_date),
           dateLabel(invoice.due_date),
-          <Badge key="status" tone={statusTone(invoice.status)}>{invoice.status}</Badge>,
+          <Badge key="status" tone={statusTone(invoice.status)}>{invoiceStatusLabel(invoice.status)}</Badge>,
           invoice.currency,
           money(invoice.total, invoice.currency),
           money(invoice.amount_paid, invoice.currency),
@@ -1616,7 +1845,7 @@ function InvoiceForm({
           </SelectField>
           <SelectField label="Status" name="status" defaultValue="draft">
             <option value="draft">Draft</option>
-            <option value="sent">Sent</option>
+            <option value="issued">Issued</option>
           </SelectField>
           <label className="block space-y-1.5 text-sm">
             <span className="font-medium text-slate-200">Currency</span>
@@ -1815,7 +2044,7 @@ function InvoiceDetail({
   onPaymentFx: (paymentId: string, rate: number, note: string) => Promise<void>;
   paymentFxRates: PaymentFxRate[];
   onPaymentMethod: (event: FormEvent<HTMLFormElement>) => void;
-  onStatus: (id: string, status: InvoiceStatus) => void;
+  onStatus: (id: string, status: Extract<InvoiceStatus, "issued" | "sent" | "cancelled">) => void;
   onDelete: (id: string) => void;
 }) {
   const balance = invoice.balance_due ?? Math.max(invoice.total - invoice.amount_paid, 0);
@@ -1853,6 +2082,7 @@ function InvoiceDetail({
           <div>
             <h2 className="text-2xl font-semibold text-white">{invoice.invoice_number}</h2>
             <p className="text-sm text-[var(--text-muted)]">{invoice.clients?.name ?? "No client"}</p>
+            <div className="mt-2"><Badge tone={statusTone(invoice.status)}>{invoiceStatusLabel(invoice.status)}</Badge></div>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" onClick={handleDownloadPdf} disabled={isDownloadingPdf} className="gap-2">
@@ -1861,7 +2091,8 @@ function InvoiceDetail({
             <Button type="button" variant="secondary" onClick={() => window.print()} className="gap-2" title="Browser print for debugging">
               <Printer className="h-4 w-4" /> Browser Print
             </Button>
-            {invoice.status === "draft" ? <Button type="button" onClick={() => onStatus(invoice.id, "sent")}>Mark as Sent</Button> : null}
+            {invoice.status === "draft" ? <Button type="button" onClick={() => onStatus(invoice.id, "issued")}>Issue Invoice</Button> : null}
+            {invoice.status === "issued" ? <Button type="button" onClick={() => onStatus(invoice.id, "sent")}>Mark as Sent</Button> : null}
             {invoice.status === "draft" ? <Button type="button" variant="danger" onClick={() => onDelete(invoice.id)}>Delete Draft</Button> : null}
             {invoice.status !== "paid" && invoice.status !== "cancelled" ? <Button type="button" variant="danger" onClick={() => onStatus(invoice.id, "cancelled")}>Cancel</Button> : null}
           </div>
@@ -1949,7 +2180,7 @@ function InvoiceDetail({
             </div>
           ))}
         </div>
-        {(invoice.status === "sent" || invoice.status === "overdue") && balance > 0 ? (
+        {(invoice.status === "issued" || invoice.status === "sent" || invoice.status === "overdue") && balance > 0 ? (
           <form onSubmit={onPayment} className="mt-5 grid gap-3 border-t border-white/[0.10] pt-4 md:grid-cols-3">
             <Field label="Amount" name="amount" type="number" min="0.01" step="0.01" defaultValue={balance} required />
             <Field label="Payment date" name="payment_date" type="date" defaultValue={today()} required />

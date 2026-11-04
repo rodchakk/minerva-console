@@ -23,7 +23,7 @@ export type FinancialInvoiceItemInput = {
 
 export type GenerateInvoiceInput = {
   client_id?: string | null;
-  status?: Extract<InvoiceStatus, "draft" | "sent">;
+  status?: Extract<InvoiceStatus, "draft" | "issued" | "sent">;
   issue_date?: string | null;
   due_date?: string | null;
   currency?: string | null;
@@ -65,11 +65,17 @@ export function seshatErrorMessage(error: unknown, fallback: string) {
   const details = String(candidate?.details ?? "");
   const combined = `${message} ${details}`.toLowerCase();
 
+  if (combined.includes("expense category already exists")) {
+    return "That expense category already exists.";
+  }
   if (candidate?.code === "23505") return "This financial operation was already recorded.";
   if (combined.includes("exceed the invoice balance")) return "Payment would exceed the invoice balance.";
   if (combined.includes("cancelled invoice")) return "Payments cannot be recorded against a cancelled invoice.";
   if (combined.includes("only draft invoices can be permanently deleted")) {
     return "Only draft invoices can be permanently deleted.";
+  }
+  if (combined.includes("automatically generated invoices cannot be permanently deleted")) {
+    return "Automatically generated invoices are permanent financial records.";
   }
   if (combined.includes("invoices with recorded payments cannot be cancelled")) {
     return "Invoices with recorded payments cannot be cancelled until payment reversals are supported.";
@@ -143,6 +149,20 @@ export async function setInvoicePaymentMethod(
 
   if (error) throw new Error(seshatErrorMessage(error, "Could not update invoice payment instructions."));
   return data;
+}
+
+export async function setInvoiceStatus(
+  invoiceId: string,
+  status: Extract<InvoiceStatus, "issued" | "sent" | "cancelled">,
+) {
+  const db = getSeshatDataClient();
+  const { data, error } = await db.rpc("set_invoice_status", {
+    p_invoice_id: invoiceId,
+    p_status: status,
+  });
+
+  if (error) throw new Error(seshatErrorMessage(error, "Could not update invoice status."));
+  return data as InvoiceStatus;
 }
 
 export async function recordPayment(input: RecordPaymentInput): Promise<RecordPaymentResult> {

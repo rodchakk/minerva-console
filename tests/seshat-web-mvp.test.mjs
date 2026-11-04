@@ -337,10 +337,11 @@ test("invoice presentation defaults to Spanish and retains English structural la
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].balanceDue, "Saldo pendiente");
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].totalPayable, "Total a pagar");
   assert.equal(presentation.invoiceDocumentCopy["es-HN"].bankInformation, "Información bancaria");
-  assert.equal(presentation.invoiceDocumentCopy["es-HN"].statuses.draft, "Borrador");
   assert.equal(presentation.invoiceDocumentCopy["en-US"].invoice, "Invoice");
   assert.equal(presentation.invoiceDocumentCopy["en-US"].billTo, "Bill to");
   assert.equal(presentation.invoiceDocumentCopy["en-US"].balanceDue, "Balance due");
+  assert.equal("statuses" in presentation.invoiceDocumentCopy["es-HN"], false);
+  assert.equal("statuses" in presentation.invoiceDocumentCopy["en-US"], false);
   assert.match(workspace, /\["es-HN", "Español"\]/);
   assert.match(workspace, /\["en-US", "English"\]/);
 });
