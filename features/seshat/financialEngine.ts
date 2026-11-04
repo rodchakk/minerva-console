@@ -135,6 +135,23 @@ export async function generateInvoice(input: GenerateInvoiceInput): Promise<Gene
   return data as GenerateInvoiceResult;
 }
 
+export async function updateDraftInvoiceItemDescription(
+  invoiceId: string,
+  itemId: string,
+  description: string | null,
+  expectedDescription: string | null,
+): Promise<string | null> {
+  const db = getSeshatDataClient();
+  const { data, error } = await db.rpc("update_draft_invoice_item_description", {
+    p_invoice_id: invoiceId,
+    p_item_id: itemId,
+    p_description: cleanText(description),
+    p_expected_description: expectedDescription,
+  });
+  if (error) throw new Error(seshatErrorMessage(error, "Could not update invoice line description."));
+  return data as string | null;
+}
+
 export async function setInvoicePaymentMethod(
   invoiceId: string,
   selection: InvoicePaymentMethodSelection,

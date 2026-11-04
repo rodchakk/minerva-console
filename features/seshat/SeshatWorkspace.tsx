@@ -49,6 +49,7 @@ import {
   runAutomaticBilling,
   setInvoicePaymentMethod,
   setInvoiceStatus,
+  updateDraftInvoiceItemDescription,
   seshatErrorMessage,
 } from "./financialEngine";
 import {
@@ -264,6 +265,8 @@ function Field({
   label,
   name,
   defaultValue,
+  value,
+  onChange,
   type = "text",
   required,
   as = "input",
@@ -273,6 +276,8 @@ function Field({
   label: string;
   name: string;
   defaultValue?: string | number | null;
+  value?: string | number;
+  onChange?: (value: string) => void;
   type?: string;
   required?: boolean;
   as?: "input" | "textarea";
@@ -285,7 +290,9 @@ function Field({
       {as === "textarea" ? (
         <textarea
           name={name}
-          defaultValue={defaultValue ?? ""}
+          defaultValue={value === undefined ? defaultValue ?? "" : undefined}
+          value={value}
+          onChange={onChange ? (event) => onChange(event.target.value) : undefined}
           required={required}
           rows={3}
           className="w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-white outline-none focus:border-violet-300/60"
@@ -294,7 +301,9 @@ function Field({
         <input
           name={name}
           type={type}
-          defaultValue={defaultValue ?? ""}
+          defaultValue={value === undefined ? defaultValue ?? "" : undefined}
+          value={value}
+          onChange={onChange ? (event) => onChange(event.target.value) : undefined}
           required={required}
           min={min}
           step={step}
@@ -851,6 +860,18 @@ export function SeshatWorkspace() {
     }
   }
 
+  async function saveDraftInvoiceDescription(
+    itemId: string,
+    description: string,
+    expectedDescription: string | null,
+  ) {
+    if (!invoice || invoice.status !== "draft") {
+      throw new Error("Only draft invoice descriptions can be edited.");
+    }
+    await updateDraftInvoiceItemDescription(invoice.id, itemId, description, expectedDescription);
+    await loadDetail();
+  }
+
   async function deleteDraftInvoice(invoiceId: string) {
     try {
       const { error: deleteError } = await getSeshatDataClient().from("invoices").delete().eq("id", invoiceId);
@@ -1164,6 +1185,7 @@ export function SeshatWorkspace() {
           paymentFxRates={paymentFx}
           onPaymentMethod={updateDraftPaymentMethod}
           onStatus={updateInvoiceStatus}
+          onSaveDraftDescription={saveDraftInvoiceDescription}
           onDelete={deleteDraftInvoice}
         />
       ) : null}
@@ -1486,6 +1508,27 @@ function ClientServiceForm({
 }) {
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+  const [selectedServiceId, setSelectedServiceId] = useState(clientService?.service_id ?? "");
+  const [serviceName, setServiceName] = useState(clientService?.name ?? "");
+  const [price, setPrice] = useState(String(clientService?.price ?? 0));
+  const [quantity, setQuantity] = useState(String(clientService?.quantity ?? 1));
+  const [descriptionOverride, setDescriptionOverride] = useState(clientService?.description ?? "");
+  const catalogService = services.find((service) => service.id === selectedServiceId);
+
+  function chooseService(serviceId: string) {
+    const service = services.find((item) => item.id === serviceId);
+    setSelectedServiceId(serviceId);
+    if (!clientService && service) {
+      setServiceName(service.name);
+      setPrice(String(service.default_price));
+      setQuantity(String(service.default_quantity));
+    }
+    // Changing the catalog link switches back to catalog defaults; it must
+    // never silently preserve an override written for a different service.
+    if (serviceId !== selectedServiceId && serviceId) {
+      setDescriptionOverride("");
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -1502,20 +1545,39 @@ function ClientServiceForm({
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 grid gap-3 rounded-md border border-white/[0.08] bg-white/[0.025] p-3 md:grid-cols-4">
-      <SelectField label="Catalog service" name="service_id" defaultValue={clientService?.service_id}>
-        <option value="">Manual</option>
+      <SelectField label="Catalog service" name="service_id" value={selectedServiceId} onChange={chooseService}>
+        <option value="">Manual (no catalog defaults)</option>
         {services.map((service) => <option key={service.id} value={service.id}>{service.name}</option>)}
       </SelectField>
-      <Field label="Name" name="name" defaultValue={clientService?.name} required />
-      <Field label="Price" name="price" type="number" min={0} step="0.01" defaultValue={clientService?.price ?? 0} />
-      <Field label="Quantity" name="quantity" type="number" min="0.01" step="0.01" defaultValue={clientService?.quantity ?? 1} />
+      <Field label="Name" name="name" value={serviceName} onChange={setServiceName} required />
+      <Field label="Price" name="price" type="number" min={0} step="0.01" value={price} onChange={setPrice} />
+      <Field label="Quantity" name="quantity" type="number" min="0.01" step="0.01" value={quantity} onChange={setQuantity} />
       <SelectField label="Frequency" name="frequency" defaultValue={clientService?.frequency ?? "monthly"}>
         {serviceFrequencies.map((frequency) => <option key={frequency} value={frequency}>{frequency}</option>)}
       </SelectField>
       <Field label="Start date" name="start_date" type="date" defaultValue={clientService?.start_date ?? today()} />
       <Field label="End date" name="end_date" type="date" defaultValue={clientService?.end_date} />
       <Field label="Auto invoice start" name="auto_invoice_start_date" type="date" defaultValue={clientService?.auto_invoice_start_date} />
-      <div className="md:col-span-2"><Field label="Description" name="description" defaultValue={clientService?.description} /></div>
+      <div className="md:col-span-2 space-y-1">
+        <Field
+          label="Invoice description override (optional)"
+          name="description"
+          value={descriptionOverride}
+          onChange={setDescriptionOverride}
+        />
+        <p className="text-xs text-slate-400">
+          {descriptionOverride.trim()
+            ? "Invoices will use this client-specific description."
+            : catalogService?.description?.trim()
+              ? `Uses catalog description: ${catalogService.description.trim()}`
+              : "If blank, invoices show only the service name."}
+        </p>
+        {descriptionOverride ? (
+          <button type="button" onClick={() => setDescriptionOverride("")} className="text-xs text-violet-300 underline">
+            Use catalog default
+          </button>
+        ) : null}
+      </div>
       <div className="md:col-span-2"><Field label="Notes" name="notes" defaultValue={clientService?.notes} /></div>
       <label className="flex items-center gap-2 text-sm text-slate-200"><input name="is_active" type="checkbox" defaultChecked={clientService?.is_active ?? true} /> Active</label>
       <label className="flex items-center gap-2 text-sm text-slate-200"><input name="auto_invoice" type="checkbox" defaultChecked={clientService?.auto_invoice ?? false} /> Auto Invoice</label>
@@ -2024,6 +2086,55 @@ function BankSettlementRate({
   );
 }
 
+function DraftInvoiceDescriptionEditor({
+  item,
+  onSave,
+}: {
+  item: InvoiceDetail["invoice_items"][number];
+  onSave: (itemId: string, description: string, expectedDescription: string | null) => Promise<void>;
+}) {
+  const [description, setDescription] = useState(item.description ?? "");
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const unchanged = description === (item.description ?? "");
+
+  return (
+    <form
+      className="space-y-2 border-t border-white/[0.08] py-3"
+      onSubmit={async (event) => {
+        event.preventDefault();
+        setSaving(true);
+        setMessage(null);
+        try {
+          await onSave(item.id, description, item.description);
+          setMessage("Description saved.");
+        } catch (error) {
+          setMessage(seshatErrorMessage(error, "Could not save description."));
+        } finally {
+          setSaving(false);
+        }
+      }}
+    >
+      <label className="block space-y-1.5 text-sm">
+        <span className="font-medium text-white">{item.name}</span>
+        <textarea
+          aria-label={`Description for ${item.name}`}
+          rows={2}
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          className="w-full rounded-md border border-white/[0.12] bg-white/[0.04] px-3 py-2 text-white"
+        />
+      </label>
+      <div className="flex items-center gap-3">
+        <Button type="submit" variant="secondary" disabled={saving || unchanged}>
+          {saving ? "Saving..." : "Save description"}
+        </Button>
+        {message ? <span role="status" className="text-xs text-slate-300">{message}</span> : null}
+      </div>
+    </form>
+  );
+}
+
 function InvoiceDetail({
   invoice,
   profile,
@@ -2034,6 +2145,7 @@ function InvoiceDetail({
   paymentFxRates,
   onPaymentMethod,
   onStatus,
+  onSaveDraftDescription,
   onDelete,
 }: {
   invoice: InvoiceDetail;
@@ -2045,6 +2157,7 @@ function InvoiceDetail({
   paymentFxRates: PaymentFxRate[];
   onPaymentMethod: (event: FormEvent<HTMLFormElement>) => void;
   onStatus: (id: string, status: Extract<InvoiceStatus, "issued" | "sent" | "cancelled">) => void;
+  onSaveDraftDescription: (itemId: string, description: string, expectedDescription: string | null) => Promise<void>;
   onDelete: (id: string) => void;
 }) {
   const balance = invoice.balance_due ?? Math.max(invoice.total - invoice.amount_paid, 0);
@@ -2142,6 +2255,17 @@ function InvoiceDetail({
             </div>
             <Button variant="secondary" className="gap-2"><RefreshCw className="h-4 w-4" /> Assign / Refresh</Button>
           </form>
+        </Card>
+      ) : null}
+      {invoice.status === "draft" ? (
+        <Card className="print:hidden">
+          <h3 className="mb-1 font-semibold text-white">Edit draft line descriptions</h3>
+          <p className="mb-3 text-xs text-slate-400">
+            These edits affect only this draft, not the service catalog or historical invoices.
+          </p>
+          {invoice.invoice_items.map((item) => (
+            <DraftInvoiceDescriptionEditor key={item.id} item={item} onSave={onSaveDraftDescription} />
+          ))}
         </Card>
       ) : null}
       <InvoiceDocument invoice={invoice} profile={profile} language={documentLanguage} />
