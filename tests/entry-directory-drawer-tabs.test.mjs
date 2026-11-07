@@ -20,7 +20,7 @@ test("all three drawers reuse the same stable tab primitives and original dimens
   assert.match(directory, /w-\[440px\]/);
   assert.match(users, /w-\[560px\]/);
   assert.match(queue, /grid-rows-\[auto_auto_minmax\(0,1fr\)_auto\]/);
-  assert.match(directory, /grid-rows-\[auto_minmax\(0,1fr\)_auto\]/);
+  assert.match(directory, /grid-rows-\\[auto_auto_minmax\\(0,1fr\\)_auto\\]/);
   assert.match(users, /shrink-0 border-t/);
 });
 
