@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Filter,
   KeyRound,
-  Mail,
   Pencil,
   Search,
   Send,
@@ -1436,23 +1435,6 @@ export function ActivationQueueTable({
     setActiveRowId(rowId);
   }
 
-  function runResidentPin(rowId: string) {
-    setSelectedIds([rowId]);
-    setActiveRowId(rowId);
-    setPhase("confirming");
-  }
-
-  function runResidentEmail(rowId: string) {
-    if (selectedIds.length > 1) {
-      setPhase("confirmingEmail");
-      return;
-    }
-
-    setSelectedIds([rowId]);
-    setActiveRowId(rowId);
-    setPhase("confirmingEmail");
-  }
-
   function runResidentCreateUser(rowId: string) {
     setSelectedIds([rowId]);
     setActiveRowId(rowId);
@@ -1479,24 +1461,6 @@ export function ActivationQueueTable({
     : null;
   const activeRowActionable =
     !!activeRow && !["activated", "skipped"].includes(activeRow.status);
-
-  function runRecommendedAction() {
-    if (!activeRow || !activeRecommendation) return;
-
-    if (activeRecommendation.action === "email") {
-      runResidentEmail(activeRow.id);
-      return;
-    }
-
-    if (activeRecommendation.action === "pin") {
-      runResidentPin(activeRow.id);
-      return;
-    }
-
-    if (activeRecommendation.action === "create") {
-      runResidentCreateUser(activeRow.id);
-    }
-  }
 
   const canGenerate = selectedCount > 0 && Boolean(communityId);
   const canCreateUsers = selectedCount > 0 && Boolean(communityId);
