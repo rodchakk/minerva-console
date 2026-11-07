@@ -29,6 +29,7 @@ import {
   X,
 } from "lucide-react";
 import { entryButtonClass } from "@/components/ui/entryButtonStyles";
+import { ManageResidentActivationDialog } from "@/features/entry/activation/ManageResidentActivationDialog";
 import {
   getGlobalUserManagementContextAction,
   searchUsersAction,
@@ -48,7 +49,7 @@ import {
   ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH,
 } from "@/features/entry/passwordPolicy";
 
-type ResultFilter = "all" | "RESIDENT" | "ADMIN" | "GUARD" | "inactive";
+type ResultFilter = "all" | "RESIDENT" | "ADMIN" | "GUARD" | "inactive" | "pending";
 type ManageMode = "view" | "edit" | "role" | "unit" | "password" | "status";
 type EditableCommunityRole = "ADMIN" | "RESIDENT";
 type PasswordResetMode = "quick" | "email";
@@ -176,6 +177,7 @@ export function UserSearch() {
     Record<string, Partial<UserSearchItem>>
   >({});
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [activationDialogOpen, setActivationDialogOpen] = useState(false);
   const [manageMode, setManageMode] = useState<ManageMode>("view");
   const [draft, setDraft] = useState<UserDraft | null>(null);
   const [roleDraft, setRoleDraft] =
@@ -203,7 +205,8 @@ export function UserSearch() {
 
   const filteredResults = useMemo(() => {
     if (filter === "all") return results;
-    if (filter === "inactive") return results.filter((user) => !user.isActive);
+    if (filter === "inactive") return results.filter((user) => user.source === "account" && !user.isActive);
+    if (filter === "pending") return results.filter((user) => user.source === "activation_queue");
     return results.filter((user) => user.role === filter);
   }, [filter, results]);
 
@@ -213,7 +216,8 @@ export function UserSearch() {
       ADMIN: results.filter((user) => user.role === "ADMIN").length,
       GUARD: results.filter((user) => user.role === "GUARD").length,
       RESIDENT: results.filter((user) => user.role === "RESIDENT").length,
-      inactive: results.filter((user) => !user.isActive).length,
+      inactive: results.filter((user) => user.source === "account" && !user.isActive).length,
+      pending: results.filter((user) => user.source === "activation_queue").length,
     }),
     [results],
   );
@@ -228,7 +232,7 @@ export function UserSearch() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !selectedKey) return;
+      if (event.key !== "Escape" || !selectedKey || activationDialogOpen) return;
 
       if (manageMode !== "view") {
         setManageMode("view");
@@ -244,7 +248,7 @@ export function UserSearch() {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [manageMode, selectedKey]);
+  }, [activationDialogOpen, manageMode, selectedKey]);
 
   function syncUser(user: UserSearchItem, changes: Partial<UserSearchItem>) {
     setOverrides((current) => ({
@@ -259,6 +263,7 @@ export function UserSearch() {
   function closeDrawer() {
     if (isPending) return;
     setSelectedKey(null);
+    setActivationDialogOpen(false);
     setManageMode("view");
     setMessage(null);
     setError(null);
@@ -266,6 +271,7 @@ export function UserSearch() {
 
   async function openUser(user: UserSearchItem) {
     setSelectedKey(userKey(user));
+    setActivationDialogOpen(false);
     setManageMode("view");
     setDraft({ fullName: user.fullName, phone: user.phone });
     setRoleDraft(user.role === "ADMIN" ? "ADMIN" : "RESIDENT");
@@ -279,7 +285,7 @@ export function UserSearch() {
     setError(null);
     setHouses([]);
 
-    if (!user.communityId) return;
+    if (user.source === "activation_queue" || !user.communityId) return;
 
     setContextLoading(true);
     const context = await getGlobalUserManagementContextAction(
@@ -542,6 +548,7 @@ export function UserSearch() {
                 ["ADMIN", "Admins", counts.ADMIN],
                 ["GUARD", "Guards", counts.GUARD],
                 ["inactive", "Inactive", counts.inactive],
+                ["pending", "Pending activation", counts.pending],
               ] as const).map(([value, label, count]) => (
                 <button
                   key={value}
@@ -564,7 +571,7 @@ export function UserSearch() {
                   {filteredResults.length} result{filteredResults.length === 1 ? "" : "s"} for &ldquo;{state.query}&rdquo;
                 </h2>
                 <p className="mt-1 text-[10px] text-[#8F879D]">
-                  Select a row to manage the account without leaving this workspace.
+                  Select an account or pending resident to manage them without leaving this workspace.
                 </p>
               </div>
 
@@ -651,10 +658,16 @@ export function UserSearch() {
                             <RoleBadge role={user.role} />
                           </td>
                           <td className="px-4 py-2.5 align-top">
-                            <StatusBadge isActive={user.isActive} />
+                            {user.source === "activation_queue" ? (
+                              <span className="inline-flex items-center rounded-[4px] border border-violet-400/25 bg-violet-500/10 px-2 py-1 text-[11px] font-semibold text-[#D8D1FF]">
+                                Pending activation
+                              </span>
+                            ) : (
+                              <StatusBadge isActive={user.isActive} />
+                            )}
                           </td>
                           <td className="px-4 py-2.5 align-top text-[#D3CEDA]">
-                            {formatDate(user.lastSignIn)}
+                            {user.source === "activation_queue" ? "Not activated" : formatDate(user.lastSignIn)}
                           </td>
                           <td className="px-2 py-2.5 align-middle text-right">
                             <ChevronRight className={`ml-auto size-4 ${active ? "text-[#D8D1FF]" : "text-[#8F879D]"}`} aria-hidden />
@@ -687,7 +700,7 @@ export function UserSearch() {
           <section className="relative rounded-[10px] border border-dashed border-[#141119] bg-[#24202B] px-6 py-12 text-center before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]">
             <Search className="mx-auto size-8 text-[#8F879D]" aria-hidden />
             <p className="mt-3 text-sm font-semibold text-white">
-              No ENTRY accounts matched &ldquo;{state.query}&rdquo;
+              No ENTRY accounts or pending activations matched &ldquo;{state.query}&rdquo;
             </p>
             <p className="mt-1 text-xs text-[#A9A3B2]">
               Search by name, email, username, phone, unit, community, role, or status.
@@ -696,7 +709,59 @@ export function UserSearch() {
         ) : null}
       </div>
 
-      {selectedUser ? (
+      {selectedUser?.source === "activation_queue" ? (
+        <div className="pointer-events-none fixed inset-0 z-50">
+          <section className="pointer-events-auto absolute bottom-5 right-5 top-[76px] flex w-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
+            <header className="flex items-start justify-between gap-3 border-b border-[#141119] p-4">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BEB4FF]">Activation Queue</p>
+                <h2 className="mt-2 text-xl font-semibold text-white">{selectedUser.fullName}</h2>
+                <p className="mt-2 text-xs text-[#A9A3B2]">{selectedUser.houseLabel} · {selectedUser.communityName}</p>
+                <span className="mt-3 inline-flex rounded border border-violet-400/25 bg-violet-500/10 px-2 py-1 text-xs font-semibold text-[#D8D1FF]">
+                  Pending activation · {selectedUser.activationStatus ?? "pending"}
+                </span>
+              </div>
+              <button type="button" onClick={closeDrawer} className="rounded-md border border-white/10 p-2 text-[#A9A3B2] hover:text-white" aria-label="Close pending resident details">
+                <X className="size-4" aria-hidden />
+              </button>
+            </header>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-xs">
+              <p className="text-[#A9A3B2]">This resident has a pending activation record, not an active ENTRY account.</p>
+              <div className="rounded-lg border border-white/10 bg-white/[0.012] p-4">
+                <p className="font-semibold text-white">Resident details</p>
+                <p className="mt-3 text-[#A9A3B2]">Email: <span className="text-white">{selectedUser.email || "Not provided"}</span></p>
+                <p className="mt-2 text-[#A9A3B2]">Phone: <span className="text-white">{selectedUser.phone || "Not provided"}</span></p>
+                <p className="mt-2 text-[#A9A3B2]">Unit: <span className="text-white">{selectedUser.houseLabel || "Not provided"}</span></p>
+                <p className="mt-2 text-[#A9A3B2]">Activation method: <span className="text-white">{selectedUser.activationMethod || "Not configured"}</span></p>
+              </div>
+            </div>
+            <footer className="border-t border-[#141119] p-4">
+              <button type="button" onClick={() => setActivationDialogOpen(true)} className={entryButtonClass("primary", "w-full")}>
+                Manage activation
+              </button>
+            </footer>
+          </section>
+        </div>
+      ) : null}
+
+      {activationDialogOpen && selectedUser?.source === "activation_queue" ? (
+        <ManageResidentActivationDialog
+          key={selectedUser.id}
+          target={{
+            queueId: selectedUser.id,
+            communityId: selectedUser.communityId,
+            communityName: selectedUser.communityName,
+            residentName: selectedUser.fullName,
+            unitLabel: selectedUser.houseLabel,
+            email: selectedUser.email,
+            method: selectedUser.activationMethod ?? "",
+            status: selectedUser.activationStatus ?? "pending",
+          }}
+          onClose={() => setActivationDialogOpen(false)}
+        />
+      ) : null}
+
+      {selectedUser?.source === "account" ? (
         <div className="pointer-events-none fixed inset-0 z-50">
           <section className="pointer-events-auto absolute bottom-5 right-5 top-[76px] flex w-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#141119] px-4 py-4">
