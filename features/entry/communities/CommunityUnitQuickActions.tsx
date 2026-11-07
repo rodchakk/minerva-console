@@ -108,6 +108,7 @@ export function CommunityUnitQuickActions({
     startTransition(async () => {
       const result = await updateCommunityUnitAction({
         communityId,
+        expectedUnitLabel: unit.label,
         primaryResidentUserId: hasLinkedResidents ? primaryResidentId : null,
         unitId: unit.id,
         unitLabel,

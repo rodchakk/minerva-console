@@ -54,6 +54,7 @@ export function FieldUnitActions({
     startTransition(async () => {
       const result = await renameFieldUnit({
         communityId,
+        expectedUnitLabel: unit.label,
         unitId: unit.id,
         unitLabel: trimmedLabel,
       });
