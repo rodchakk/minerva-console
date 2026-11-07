@@ -1,5 +1,48 @@
 # ENTRY — Current Work
 
+## Current priority override — 2026-09-04
+
+> This section supersedes the older ENTRY-BRAIN-001 snapshot below when determining current priority/status.
+
+### Manual Access Evidence-First — CLOSED
+
+Specification: [entry-manual-access-evidence-first-p0.md](../missions/entry-manual-access-evidence-first-p0.md)  
+Closeout: [entry-manual-access-evidence-first-closeout-2026-09-04.md](../missions/entry-manual-access-evidence-first-closeout-2026-09-04.md)
+
+**Current status:** ✅ **COMPLETED / MERGED / PRODUCTION-VALIDATED**
+
+The cross-repo implementation is live and validated:
+
+- Mobile/backend PR #17 merged.
+- Admin web PR #5 merged.
+- Minerva Console PR #131 merged.
+- Manual vehicle/pedestrian flows passed real-device QA.
+- Mandatory evidence passed.
+- Existing plate OCR was reused and a real OCR result was observed in admin history.
+- Manual checkout passed.
+- Published Minerva Console destination CRUD works.
+- Configured community destinations appear correctly in the guard manual-entry selector.
+
+This mission is no longer a launch blocker.
+
+### Remaining P0 before first real installation
+
+Canonical board: [entry-prelaunch-p0-board.md](entry-prelaunch-p0-board.md)
+
+Recommended order:
+
+1. **Guard Invalid Pass Clarity** — make expired / already-used / not-yet-valid pass states unmistakable to guards, with context and next action.
+2. **Admin Mobile Unit Deactivation** — allow authorized mobile admins to safely deactivate/reactivate an entire unit with explicit operational semantics.
+3. **Public Registration Branding Simplification** — remove the oversized top Minerva branding block and keep only discreet bottom attribution so registration remains the focus.
+
+These three missions remain P0/pre-launch unless explicitly waived by product decision.
+
+---
+
+## Historical snapshot — ENTRY-BRAIN-001
+
+The remainder of this document is retained as historical context from the earlier ENTRY Knowledge Pack capture and may contain stale statuses.
+
 Active implementation state, current branch, and the ENTRY mission board. Captured read-only as of ENTRY-BRAIN-001. Part of the ENTRY Knowledge Pack; see [entry.md](entry.md).
 
 ## Verified from code (git state at capture time)
