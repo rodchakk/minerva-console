@@ -13,6 +13,7 @@ export type ActivationResidentDrawerProps = {
   communityName: string;
   onClose: () => void;
   onChanged?: () => void;
+  variant?: "queue" | "users";
 };
 
 function initials(name: string) {
@@ -105,7 +106,7 @@ function Progress({ row }: { row: ActivationQueueRow }) {
 }
 
 export function ActivationResidentDrawer({
-  row, communityId, communityName, onClose, onChanged,
+  row, communityId, communityName, onClose, onChanged, variant = "queue",
 }: ActivationResidentDrawerProps) {
   const [tab, setTab] = useState<"details" | "history">("details");
   const [edit, setEdit] = useState<"email" | "phone" | null>(null);
@@ -117,7 +118,7 @@ export function ActivationResidentDrawer({
   return (
     <>
       <aside aria-label={`Activation details for ${row.resident}`}
-        className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
+        className={`fixed bottom-5 right-5 top-[76px] z-40 grid ${variant === "users" ? "w-[560px]" : "w-[440px]"} grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none`}>
         <header className="border-b border-[#141119] px-4 py-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex min-w-0 items-start gap-3">
