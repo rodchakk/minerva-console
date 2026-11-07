@@ -31,6 +31,15 @@ insert into public.houses(id,community_id,house_label) values
 ('20000000-0000-0000-0000-000000000004','10000000-0000-0000-0000-000000000002','Other community');
 insert into public.community_members(community_id,user_id) values ('10000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002');
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+-- Only the authenticated superadmin can read; ordinary authenticated users cannot call the write RPC.
+set role authenticated;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000002',false);
+do $$ begin
+  if (select count(*) from public.entry_unit_links) <> 0 then raise exception 'non-superadmin read allowed'; end if;
+  begin perform public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002'); raise exception 'non-superadmin write allowed'; exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
 select public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001');
 select public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002');
 do $$ begin

@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { entryButtonClass } from "@/components/ui/entryButtonStyles";
+import { ResponsibleUnitsForPerson } from "@/features/entry/users/ResponsibleUnitsForPerson";
 import {
   prepareConsoleResidentAccess,
   type PrepareConsoleResidentAccessResult,
@@ -1520,6 +1521,10 @@ export function CommunityUsersClient({
                             : "This account has elevated community access based on its assigned role."}
                       </p>
                     </div>
+                    <ResponsibleUnitsForPerson
+                      communityId={community.id}
+                      userId={selectedUser.userId}
+                    />
                   </div>
                 ) : null}
 
