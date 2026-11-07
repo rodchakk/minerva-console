@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Monitor,
   ScrollText,
+  Search,
   SlidersHorizontal,
   Users,
 } from "lucide-react";
@@ -61,7 +62,7 @@ const financeNavItems: NavItem[] = [
 const entryNavItems: NavItem[] = [
   { label: "Operations", href: "/products/entry", icon: LayoutDashboard },
   { label: "Communities", href: "/products/entry/communities", icon: Building2 },
-  { label: "Users", href: "/products/entry/users", icon: Users },
+  { label: "Global Search", href: "/products/entry/users", icon: Search },
   { label: "Messages", href: "/products/entry/messages", icon: MessageSquare },
   { label: "Tickets", href: "/products/entry/tickets", icon: LifeBuoy },
   { label: "Settings", href: "/products/entry/settings", icon: SlidersHorizontal },
