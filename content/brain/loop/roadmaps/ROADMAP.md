@@ -104,3 +104,14 @@ satisfied.
   inbox source must exist).
 - **Acceptance:** pilot report separates verified observations from
   opinion; a decision entry records a go/no-go for anything further.
+
+## MCB-0024 — Brain Desktop Extraction & Local-First Foundation
+
+- **Status:** planned — future-near mission; do not start until Rudy explicitly activates it.
+- **Purpose:** Extract Brain from Minerva Console into an independent desktop-first memory/context/workspace system. Brain remains model-agnostic: Rudy interacts primarily with GPT/ChatGPT, Claude, Codex, and eventually local AI; Brain supplies durable context, missions, decisions, project history, and workspace awareness.
+- **Platform:** Windows + macOS desktop. Electron is the preferred initial shell. No mobile Brain application is planned.
+- **Architecture:** local processing/runtime for filesystem, Git, context building, indexing, and agent/tool orchestration; cloud Postgres persistence for durable memory and recoverability. Normal use should not require Docker to remain running.
+- **Phases:** (1) extraction, (2) Electron desktop foundation, (3) cloud persistence, (4) context bridge, (5) hardening/packaging.
+- **Dependencies:** preserve and reuse MCB-0020 scoped context packs, MCB-0021 loop state, MCB-0022 guardrails. MCB-0023 remains a separate local-model experiment.
+- **Acceptance before implementation:** reviewed extraction boundary, Windows/macOS architecture, persistence decision, recovery plan, context bridge plan, and explicit Rudy approval of the execution brief.
+
