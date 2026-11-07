@@ -197,6 +197,8 @@ Seshat remains on its **existing Supabase project** and should stay on Free infr
 
 On 2026-09-03 the existing Seshat Supabase project was transferred from the `Minerva Technologies` organization to the separate `Minerva Internal` organization. This was an organizational/billing separation only: no replacement database was created and no data migration was performed.
 
+The transfer was visually confirmed in the Supabase dashboard on 2026-09-04: `seshat` appears under `Minerva Internal` on the Free plan. The original `Minerva Technologies` organization is therefore reserved for ENTRY's commercial Supabase path rather than carrying Seshat into the same paid billing boundary.
+
 ENTRY remains independently hosted in `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`) under the original `Minerva Technologies` Supabase organization. This separation allows ENTRY to move to Supabase Pro for commercial operation without automatically moving Seshat into the same paid organization/cost model.
 
 ### Approved infrastructure rules
@@ -213,6 +215,40 @@ ENTRY remains independently hosted in `gate-project-dev` (`ytzvislhvrcdtkbtpbmu`
 This decision supersedes the 2026-08-20 directional note that treated a future migration away from Supabase as already approved. The current architecture is intentionally simpler: retain the existing Supabase project, separate billing, and revisit only when real scale or criticality creates a concrete need.
 
 Long-form decision: `DEC-0009` — `content/brain/decisions/dec-0009-seshat-infrastructure-supabase-billing-separation.md`.
+
+## Operating Stage Update — 2026-09-04
+
+Seshat's immediate product priority is deliberately narrow: support Minerva's own day-to-day financial operation for the two current internal operators and improve from real use before expanding outward.
+
+Approved operating posture:
+
+1. **Internal operation first.** Build around the financial workflows Minerva is actually using now rather than designing prematurely for residential communities, patronatos, or a broad external customer base.
+2. **Real use drives scope.** New fields, reports, automations, and accounting concepts should be justified by actual Minerva usage or a concrete operating gap.
+3. **Growth is incremental.** Seshat may later expand to more Minerva users, client-facing workflows, community financial operations, or a commercial product, but those stages should emerge from the proven internal system rather than being treated as current requirements.
+4. **Keep infrastructure proportional.** The independent Free Supabase project remains appropriate for the current two-operator stage. Paid or different infrastructure should be triggered by real scale, storage, uptime, compliance, or commercial requirements rather than anticipation alone.
+5. **Do not confuse future scenarios with current scope.** Residential/community receipt workflows are useful for capacity planning, but they are not an active Seshat implementation requirement as of this update.
+
+## Future Receipt / Image Storage Planning Note — 2026-09-04
+
+Future Seshat workflows may attach photographic evidence such as receipts, invoices, payment proofs, or expense documents. If Seshat later serves communities or patronatos, image assets could become the dominant storage cost even when the relational database remains small.
+
+This is a **planning direction, not an active implementation mission**.
+
+When receipt-image upload is implemented, prefer client-side optimization before upload so Seshat does not store full-resolution phone originals by default. The working engineering target should preserve document legibility while minimizing storage:
+
+- resize large images to roughly 1600–1800 px on the long side where appropriate;
+- remove unnecessary metadata such as EXIF;
+- encode as WebP or JPEG at a quality level that preserves small text and transaction references;
+- target approximately **150–250 KB per typical receipt image**;
+- treat roughly **300–350 KB** as a practical upper target for difficult images rather than a hard universal limit;
+- do not keep both the original and optimized copy unless a later legal/compliance requirement explicitly justifies it;
+- validate compression against real receipts before freezing quality settings.
+
+These values are capacity-planning targets, not measured guarantees. A future implementation mission should test them on real Seshat receipt samples.
+
+Illustrative future capacity scenario only: two communities of about 200 homes each, one resident receipt per home per month, plus about 50 administrative receipt images per community per month, would produce roughly 6,000 images/year. At an average of 200 KB per optimized image, that is about 1.2 GB/year of new image storage. This is **not a forecast for current Seshat usage**; the current internal two-operator stage should generate materially less storage.
+
+If actual commercial usage approaches Free-plan storage or operational limits, reevaluate Storage and the Supabase plan/provider based on measured volume at that time rather than preemptively changing architecture now.
 
 ## Product Evolution Principle
 
@@ -232,7 +268,10 @@ The target is a specialist financial operating system for the kind of product + 
 ## Status
 
 - **Status:** Approved
-- **Stage:** Active product / incremental evolution
-- **Current infrastructure:** Existing Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) in `Minerva Internal` Free; paused at 2026-09-03 capture
+- **Stage:** Active internal product / incremental evolution from real Minerva use
+- **Current users:** two internal operators
+- **Current infrastructure:** Existing Supabase project `seshat` (`vfvbvywvmoevyucqgtos`) in `Minerva Internal` Free; transfer confirmed 2026-09-04; paused at capture
+- **Immediate product focus:** Minerva's own financial operation first; expand only from proven internal workflows
 - **Financial operating model adaptation:** Approved direction, not yet scheduled
+- **Future receipt/image optimization:** Planning direction only; not an active implementation mission
 - **Future backend migration:** Not currently planned or approved; reevaluate only if scale/criticality creates a concrete need
