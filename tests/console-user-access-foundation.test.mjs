@@ -5,6 +5,7 @@ import { test } from "node:test";
 
 const root = process.cwd();
 const migrationName = "20260902010000_console_user_access_foundation.sql";
+const f02Migration = "supabase/migrations/20261028032025_bedrock_f02_notification_audience_isolation.sql";
 
 function read(path) {
   return readFileSync(join(root, path), "utf8");
@@ -130,7 +131,9 @@ test("Phase A introduces no new admin invite client or service-role requirement"
 });
 
 test("Console access changes do not spill into Brain, ENTRY, or migrations", async () => {
-  const files = await changedFiles();
+  // This historical Phase A guard remains scoped to unexpected changes. F02 is
+  // an independently authorized notification migration with its own tests.
+  const files = (await changedFiles()).filter((file) => file !== f02Migration);
 
   assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
