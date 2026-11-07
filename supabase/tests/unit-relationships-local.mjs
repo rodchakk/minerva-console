@@ -43,6 +43,7 @@ const rpc = (action, args = {}, token = admin.token) => request('/rest/v1/rpc/ma
 assert.equal((await rpc('link_units', { p_unit_id: a, p_other_unit_id: b })).status, 403, 'default gate');
 assert.equal((await rpc('rename_unit', { p_unit_id: a, p_label: 'Apartamento 1', p_expected_label: 'Apartamento 1' })).status, 200, 'legacy label editing remains available with associations disabled');
 sql(`update public.community_settings set allow_unit_relationships=true where community_id='${community}'; notify pgrst, 'reload schema';`);
+const associationBefore = await snapshot(true);
 assert.equal((await rpc('link_units', { p_unit_id: a, p_other_unit_id: b }, member.token)).status, 403);
 assert.equal((await rpc('link_units', { p_unit_id: a, p_other_unit_id: outside })).status, 409);
 assert.equal((await rpc('rename_unit', { p_unit_id: randomUUID(), p_label: 'Missing', p_expected_label: 'Missing' })).status, 409);
@@ -52,6 +53,7 @@ const pair = await Promise.all([rpc('link_units', { p_unit_id: a, p_other_unit_i
 pair.forEach(r => assert.equal(r.status, 200, JSON.stringify(r)));
 assert.equal(pair[0].data.id, pair[1].data.id);
 assert.equal(pair.filter(r => r.data.created).length, 1);
+assert.equal(sql(`select count(*) from public.superadmin_audit_log where action='entry.unit_link.create' and target_id='${pair[0].data.id}'`), '1');
 assert.deepEqual((await request('/rest/v1/entry_unit_links?select=id', member.token)).data, []);
 assert.equal((await request('/rest/v1/entry_unit_links?select=id', admin.token)).data.length, 1);
 assert.equal((await request(`/rest/v1/entry_unit_links?id=eq.${pair[0].data.id}`, config.SERVICE_ROLE_KEY, {}, 'DELETE')).status, 403);
@@ -60,6 +62,7 @@ assert.equal(responsibility.status, 200);
 assert.equal((await rpc('remove_responsible', { p_responsibility_id: responsibility.data.id })).status, 200);
 assert.equal((await rpc('assign_responsible', { p_unit_id: b, p_user_id: member.id })).status, 200);
 assert.equal((await rpc('assign_responsible', { p_unit_id: b, p_user_id: admin.id })).status, 409);
+assert.deepEqual(await snapshot(true), associationBefore, 'associations must not change units, residence, access or finance');
 sql(`insert into public.resident_activation_queue(community_id,house_id,unit_label,resident_name) values ('${community}','${a}','Apartamento 1','Pending lab');`);
 assert.ok((await rpc('rename_unit', { p_unit_id: a, p_label: 'Blocked', p_expected_label: 'Apartamento 1' })).status >= 400);
 sql(`delete from public.resident_activation_queue where community_id='${community}';
@@ -67,8 +70,9 @@ insert into public.community_registration_campaigns(id,community_id,internal_nam
 insert into public.community_registration_units(campaign_id,community_id,house_id,unit_label_snapshot,normalized_unit_label) values ('${community}','${community}','${a}','Apartamento 1','apartamento1');`);
 assert.ok((await rpc('rename_unit', { p_unit_id: a, p_label: 'Blocked', p_expected_label: 'Apartamento 1' })).status >= 400);
 sql(`update public.community_registration_campaigns set status='closed' where id='${community}';`);
-async function snapshot() {
-  const tables = sql("select tablename from pg_tables where schemaname='public' and tablename not in ('houses','superadmin_audit_log') order by tablename").split('\n');
+async function snapshot(associations = false) {
+  const excluded = associations ? "'entry_unit_links','entry_unit_responsibilities','superadmin_audit_log'" : "'houses','superadmin_audit_log'";
+  const tables = sql(`select tablename from pg_tables where schemaname='public' and tablename not in (${excluded}) order by tablename`).split('\n');
   return Object.fromEntries(tables.map(t => [t, sql(`select coalesce(jsonb_agg(to_jsonb(t) order by to_jsonb(t)::text),'[]') from public."${t}" t`)]));
 }
 const before = await snapshot();
