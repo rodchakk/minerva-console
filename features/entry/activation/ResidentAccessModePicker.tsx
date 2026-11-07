@@ -9,6 +9,8 @@ type ResidentAccessModePickerProps = {
   onChange: (mode: ResidentAccessMode) => void;
   disabled?: Partial<Record<ResidentAccessMode, string>>;
   compact?: boolean;
+  hideQuick?: boolean;
+  existingResident?: boolean;
 };
 
 function RadioMark({ active }: { active: boolean }) {
@@ -31,6 +33,8 @@ export function ResidentAccessModePicker({
   onChange,
   disabled = {},
   compact = false,
+  hideQuick = false,
+  existingResident = false,
 }: ResidentAccessModePickerProps) {
   const inviteActive = value === "email" || value === "pin";
   const emailDisabledReason = disabled.email;
@@ -54,7 +58,7 @@ export function ResidentAccessModePicker({
 
   return (
     <div className="grid gap-3">
-      <button
+      {!hideQuick ? <button
         type="button"
         disabled={Boolean(quickDisabledReason)}
         onClick={() => onChange("quick")}
@@ -89,7 +93,7 @@ export function ResidentAccessModePicker({
           </div>
           <RadioMark active={value === "quick"} />
         </div>
-      </button>
+      </button> : null}
 
       <div
         className={`overflow-hidden rounded-xl border transition ${
@@ -122,7 +126,9 @@ export function ResidentAccessModePicker({
               </p>
               <p className="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                 {inviteDisabledReason ??
-                  "Create the resident through the standard activation flow and send an email invitation or generate an activation PIN so they can finish setup in the app."}
+                  existingResident
+                    ? "Continue this resident\'s existing activation by email or PIN without creating a new account."
+                    : "Create the resident through the standard activation flow and send an email invitation or generate an activation PIN so they can finish setup in the app."}
               </p>
             </div>
             <RadioMark active={inviteActive} />

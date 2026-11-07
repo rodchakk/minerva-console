@@ -146,7 +146,7 @@ jobs:
         run: npm ci
 
       - name: Run Activation Queue regressions
-        run: node --test tests/entry-activation-queue-workspace.test.mjs
+        run: node --test tests/entry-activation-queue-workspace.test.mjs tests/entry-unified-activation.test.mjs
 
   entry-registration-report-tests:
     name: ENTRY registration confirmation reports

@@ -85,7 +85,7 @@ export type SendEmailInviteResult = {
       email: string;
       status: "sent" | "failed" | "skipped";
       message?: string;
-      // Only populated on explicitly requested single-resident creation results.
+      // Only populated on explicitly requested single-resident activation flows.
       // Never persisted or logged; this is the exact PIN used for the invitation.
       pinForSharing?: string;
     }>;
@@ -113,8 +113,8 @@ export async function sendActivationEmails(input: {
   communityId: string;
   communityName: string;
   queueIds: string[];
-  // Restrict one-time PIN disclosure to the create-resident success screen.
-  // Bulk send/resend callers must not receive PINs in their result.
+  // Restrict one-time PIN disclosure to explicitly requested single-resident
+  // activation screens. Bulk send/resend callers must not receive PINs.
   includePinForSharing?: boolean;
 }): Promise<SendEmailInviteResult> {
   const { user } = await requireSuperadmin();

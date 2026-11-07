@@ -16,6 +16,9 @@ import {
 } from "@/lib/supabase/utils";
 
 export type UserSearchItem = {
+  source: "account" | "activation_queue";
+  activationMethod?: string;
+  activationStatus?: string;
   communityCity: string;
   communityId: string;
   communityName: string;
@@ -245,6 +248,7 @@ export async function searchUsersAction(
         const record = item as Record<string, unknown>;
 
         return {
+          source: "account" as const,
           communityId: coerceString(record.community_id),
           communityName: coerceString(record.community_name),
           createdAt: coerceString(record.created_at),
@@ -347,9 +351,122 @@ export async function searchUsersAction(
       })
     : [];
 
+  // Activation Queue holds prepared residents without an auth user_id. Search
+  // it separately instead of treating "no sa_list_users result" as "not found".
+  // Only metadata is read; PIN values and hashes are never queried.
+  const safeQueueQuery = query.replace(/[(),%*"\\]/g, " ").trim().slice(0, 120);
+  if (!safeQueueQuery) return { query, results };
+
+  const queueStatuses = ["pending", "invited", "pin_generated", "failed"];
+  const queueFields =
+    "id,community_id,house_id,unit_label,resident_name,phone,email,suggested_username,activation_method,status,created_at,activated_user_id";
+  const queueFilter = [
+    "resident_name",
+    "email",
+    "phone",
+    "suggested_username",
+    "unit_label",
+  ].map((field) => field + ".ilike.%" + safeQueueQuery + "%").join(",");
+
+  const [{ data: queueMatches, error: queueError }, { data: communityMatches, error: communityError }] =
+    await Promise.all([
+      adminSupabase.from("resident_activation_queue").select(queueFields)
+        .in("status", queueStatuses).or(queueFilter).order("created_at", { ascending: false }).limit(200),
+      adminSupabase.from("communities").select("id,name,city")
+        .or("name.ilike.%" + safeQueueQuery + "%,city.ilike.%" + safeQueueQuery + "%").limit(100),
+    ]);
+
+  const matchedCommunityIds = (communityMatches ?? [])
+    .map((item) => coerceString(item.id))
+    .filter(Boolean);
+  const { data: communityQueueRows, error: communityQueueError } =
+    matchedCommunityIds.length
+      ? await adminSupabase.from("resident_activation_queue").select(queueFields)
+          .in("community_id", matchedCommunityIds).in("status", queueStatuses)
+          .order("created_at", { ascending: false }).limit(200)
+      : { data: [], error: null };
+
+  if (queueError || communityError || communityQueueError) {
+    // Never silently claim no activation matches if the second source failed.
+    return {
+      query,
+      results,
+      message: "Activation Queue search is temporarily unavailable. Account results are shown; please retry.",
+    };
+  }
+
+  const queueById = new Map<string, Record<string, unknown>>();
+  for (const item of [...(queueMatches ?? []), ...(communityQueueRows ?? [])]) {
+    const record = item as Record<string, unknown>;
+    const id = coerceString(record.id);
+    if (id) queueById.set(id, record);
+  }
+
+  const queueCommunityIds = Array.from(new Set(
+    Array.from(queueById.values()).map((row) => coerceString(row.community_id)).filter(Boolean),
+  ));
+  const { data: queueCommunities, error: queueCommunitiesError } =
+    queueCommunityIds.length
+      ? await adminSupabase.from("communities").select("id,name,city").in("id", queueCommunityIds)
+      : { data: [], error: null };
+
+  if (queueCommunitiesError) {
+    return {
+      query,
+      results,
+      message: "Activation Queue community details could not be loaded. Account results are shown; please retry.",
+    };
+  }
+
+  const queueCommunityById = new Map(
+    (queueCommunities ?? []).map((item) => [
+      coerceString(item.id),
+      { name: coerceString(item.name), city: coerceString(item.city) },
+    ]),
+  );
+  const accountUserIds = new Set(results.map((item) => item.id));
+  const accountPeople = new Set(results.map((item) =>
+    [item.communityId, item.houseId, item.fullName.trim().toLowerCase()].join("::"),
+  ));
+
+  const queueResults: UserSearchItem[] = Array.from(queueById.values())
+    .filter((record) => {
+      const linkedUserId = coerceString(record.activated_user_id);
+      const personKey = [
+        coerceString(record.community_id),
+        coerceString(record.house_id),
+        coerceString(record.resident_name).trim().toLowerCase(),
+      ].join("::");
+      return (!linkedUserId || !accountUserIds.has(linkedUserId)) && !accountPeople.has(personKey);
+    })
+    .map((record) => {
+      const communityId = coerceString(record.community_id);
+      const community = queueCommunityById.get(communityId);
+      return {
+        source: "activation_queue" as const,
+        activationMethod: coerceString(record.activation_method),
+        activationStatus: coerceString(record.status, "pending"),
+        communityCity: community?.city ?? "",
+        communityId,
+        communityName: community?.name ?? "Unknown community",
+        createdAt: coerceString(record.created_at),
+        email: coerceString(record.email),
+        fullName: coerceString(record.resident_name, "Unnamed resident"),
+        houseId: coerceString(record.house_id),
+        houseLabel: coerceString(record.unit_label),
+        id: coerceString(record.id),
+        isActive: false,
+        isPrimary: false,
+        lastSignIn: "",
+        phone: coerceString(record.phone),
+        role: "RESIDENT",
+        username: coerceString(record.suggested_username),
+      };
+    });
+
   return {
     query,
-    results,
+    results: [...results, ...queueResults],
   };
 }
 

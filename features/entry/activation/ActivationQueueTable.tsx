@@ -6,7 +6,6 @@ import {
   ChevronRight,
   Filter,
   KeyRound,
-  Mail,
   Pencil,
   Search,
   Send,
@@ -23,6 +22,7 @@ import type {
   ActivationQueueRow,
 } from "@/features/entry/activation/actions";
 import { createActivatedUsers } from "@/features/entry/activation/createUserActions";
+import { ManageResidentActivationDialog } from "@/features/entry/activation/ManageResidentActivationDialog";
 import {
   ResidentAccessModePicker,
   type ResidentAccessMode,
@@ -1187,6 +1187,7 @@ export function ActivationQueueTable({
   );
   const [emailEditorRowId, setEmailEditorRowId] = useState<string | null>(null);
   const [phoneEditorRowId, setPhoneEditorRowId] = useState<string | null>(null);
+  const [managingQueueRowId, setManagingQueueRowId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!filterOpen) return;
@@ -1334,6 +1335,9 @@ export function ActivationQueueTable({
   const phoneEditorRow = phoneEditorRowId
     ? rows.find((row) => row.id === phoneEditorRowId) ?? null
     : null;
+  const managingQueueRow = managingQueueRowId
+    ? rows.find((row) => row.id === managingQueueRowId) ?? null
+    : null;
   const allSelectedAreInvited =
     selectedRows.length > 0 &&
     selectedRows.every((row) => row.status === "invited");
@@ -1431,23 +1435,6 @@ export function ActivationQueueTable({
     setActiveRowId(rowId);
   }
 
-  function runResidentPin(rowId: string) {
-    setSelectedIds([rowId]);
-    setActiveRowId(rowId);
-    setPhase("confirming");
-  }
-
-  function runResidentEmail(rowId: string) {
-    if (selectedIds.length > 1) {
-      setPhase("confirmingEmail");
-      return;
-    }
-
-    setSelectedIds([rowId]);
-    setActiveRowId(rowId);
-    setPhase("confirmingEmail");
-  }
-
   function runResidentCreateUser(rowId: string) {
     setSelectedIds([rowId]);
     setActiveRowId(rowId);
@@ -1475,24 +1462,6 @@ export function ActivationQueueTable({
   const activeRowActionable =
     !!activeRow && !["activated", "skipped"].includes(activeRow.status);
 
-  function runRecommendedAction() {
-    if (!activeRow || !activeRecommendation) return;
-
-    if (activeRecommendation.action === "email") {
-      runResidentEmail(activeRow.id);
-      return;
-    }
-
-    if (activeRecommendation.action === "pin") {
-      runResidentPin(activeRow.id);
-      return;
-    }
-
-    if (activeRecommendation.action === "create") {
-      runResidentCreateUser(activeRow.id);
-    }
-  }
-
   const canGenerate = selectedCount > 0 && Boolean(communityId);
   const canCreateUsers = selectedCount > 0 && Boolean(communityId);
   const selectedEmailEligible =
@@ -1519,6 +1488,23 @@ export function ActivationQueueTable({
           communityId={communityId}
           row={phoneEditorRow}
           onClose={() => setPhoneEditorRowId(null)}
+        />
+      ) : null}
+
+      {managingQueueRow ? (
+        <ManageResidentActivationDialog
+          key={managingQueueRow.id}
+          target={{
+            queueId: managingQueueRow.id,
+            communityId,
+            communityName,
+            residentName: managingQueueRow.resident,
+            unitLabel: managingQueueRow.unit,
+            email: managingQueueRow.email,
+            method: managingQueueRow.method,
+            status: managingQueueRow.status,
+          }}
+          onClose={() => setManagingQueueRowId(null)}
         />
       ) : null}
 
@@ -2337,46 +2323,22 @@ export function ActivationQueueTable({
 
               <button
                 type="button"
-                onClick={runRecommendedAction}
-                disabled={
-                  !activeRecommendation ||
-                  activeRecommendation.action === "none" ||
-                  phase !== "idle"
-                }
+                onClick={() => setManagingQueueRowId(activeRow.id)}
+                disabled={!activeRowActionable || phase !== "idle"}
                 className="inline-flex h-9 w-full items-center justify-center rounded-[7px] border border-[#120539] bg-[#7553FF] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#120539] disabled:cursor-not-allowed disabled:opacity-45"
               >
-                {activeRecommendation?.label ?? "No recommended action"}
+                Manage activation
               </button>
 
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  onClick={() => runResidentPin(activeRow.id)}
-                  disabled={!activeRowActionable || phase !== "idle"}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
-                >
-                  <KeyRound className="size-3" aria-hidden />
-                  PIN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => runResidentEmail(activeRow.id)}
-                  disabled={!activeRowActionable || phase !== "idle"}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
-                >
-                  <Mail className="size-3" aria-hidden />
-                  Invite
-                </button>
-                <button
-                  type="button"
-                  onClick={() => runResidentCreateUser(activeRow.id)}
-                  disabled={!activeRowActionable || phase !== "idle"}
-                  className="inline-flex h-8 items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
-                >
-                  <UserPlus className="size-3" aria-hidden />
-                  Create user
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => runResidentCreateUser(activeRow.id)}
+                disabled={!activeRowActionable || phase !== "idle"}
+                className="mt-2 inline-flex h-8 w-full items-center justify-center gap-1.5 rounded-[6px] border border-[#141119] bg-[#2E2936] px-2 text-[10px] font-semibold text-white disabled:opacity-35"
+              >
+                <UserPlus className="size-3" aria-hidden />
+                Create user
+              </button>
             </div>
           </aside>
         ) : null}
