@@ -63,7 +63,7 @@ test("Community Directory uses the approved full-bleed ENTRY visual system", () 
   assert.match(source, /bg-\[#1F1B26\]/);
   assert.match(source, /border-\[#141119\]/);
   assert.match(source, /bg-\[#7553FF\]/);
-  assert.match(source, /bg-\[#120539\]/);
+  assert.match(source, /border-\[#120539\]/);
   assert.match(source, /focus:shadow-\[inset_0_1px_0_#141119,0_0_0_2px_#7553FF\]/);
 });
 

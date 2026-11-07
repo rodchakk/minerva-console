@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
+import { EntryDrawerTabs, EntryDrawerField, EntryDrawerSection } from "@/features/entry/components/EntryDrawerTabs";
 import { matchesDirectorySearch } from "@/features/entry/communities/directorySearch";
 import { CreateSingleUnitDialog } from "@/features/entry/communities/CreateSingleUnitDialog";
 import { UnitResidentActions } from "@/features/entry/communities/UnitResidentActions";
@@ -178,6 +179,8 @@ export function CommunityDirectoryWorkspace({
   const [filterOpen, setFilterOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [directoryTab, setDirectoryTab] = useState<"overview" | "household" | "operational">("overview");
+
   const [desktopWorkspaceHeight, setDesktopWorkspaceHeight] = useState<number | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -558,11 +561,12 @@ export function CommunityDirectoryWorkspace({
                       <tr
                         key={unit.id}
                         tabIndex={0}
-                        onClick={() => setSelectedId(unit.id)}
+                        onClick={() => { setSelectedId(unit.id); setDirectoryTab("overview"); }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
                             setSelectedId(unit.id);
+                          setDirectoryTab("overview");
                           }
                         }}
                         className={cn(
@@ -611,7 +615,7 @@ export function CommunityDirectoryWorkspace({
         </section>
 
         {selectedUnit && recommendation ? (
-          <aside className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
+          <aside className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
             <div className="border-b border-[#141119] px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
@@ -641,98 +645,102 @@ export function CommunityDirectoryWorkspace({
               </div>
             </div>
 
-            <div className="min-h-0 overflow-y-auto overscroll-contain p-3.5 [scrollbar-gutter:stable]">
-              <section className="overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
-                <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Unit overview</p></div>
-                {[
-                  ["Location reference", selectedUnit.unitReference || "Not registered"],
-                  ["Resident-facing reference", selectedUnit.publicReference || "Not registered"],
-                  ["Residents", String(selectedUnit.residentCount)],
-                  ["Pending activation", String(selectedUnit.pendingActivations)],
-                  ["Active passes", String(selectedUnit.activePasses)],
-                  ["Last access", selectedUnit.lastAccess === "Not available" ? "No access recorded" : selectedUnit.lastAccess],
-                  ["Status", selectedUnit.isActive ? "Active" : "Inactive"],
-                ].map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 border-b border-white/[0.06] px-3 py-2.5 text-[11px] last:border-b-0">
-                    <span className="text-[#8F879D]">{label}</span>
-                    <span className="break-words text-right text-white">{value}</span>
-                  </div>
-                ))}
-              </section>
+            <EntryDrawerTabs
+              label="Unit management sections"
+              tabs={[
+                { id: "overview", label: "Unit overview" },
+                { id: "household", label: `Household (${selectedUnit.residents.length})` },
+                { id: "operational", label: "Operational" },
+              ]}
+              value={directoryTab}
+              onChange={setDirectoryTab}
+            />
 
-              <section className="mt-3 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
-                <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Household</p></div>
-                {selectedUnit.residents.length > 0 ? (
-                  <div className="divide-y divide-white/[0.06]">
-                    {selectedUnit.residents.map((resident) => {
-                      const isPrimaryResident =
-                        resident.isPrimary ||
-                        resident.userId === selectedUnit.primaryResidentId ||
-                        Boolean(
-                          selectedUnit.primaryResidentName &&
+            <div key={`${selectedUnit.id}:${directoryTab}`}
+              role="tabpanel"
+              className="min-h-0 overflow-y-auto overscroll-contain p-3.5 [scrollbar-gutter:stable]">
+              {directoryTab === "overview" ? (
+                <div className="space-y-3.5">
+                  <EntryDrawerSection title="Unit information">
+                    <EntryDrawerField label="Location reference">{selectedUnit.unitReference || "Not registered"}</EntryDrawerField>
+                    <EntryDrawerField label="Resident-facing reference">{selectedUnit.publicReference || "Not registered"}</EntryDrawerField>
+                    <EntryDrawerField label="Status">{selectedUnit.isActive ? "Active" : "Inactive"}</EntryDrawerField>
+                  </EntryDrawerSection>
+                  <EntryDrawerSection title="Access summary">
+                    <EntryDrawerField label="Last access">
+                      {selectedUnit.lastAccess === "Not available" ? "No access recorded" : selectedUnit.lastAccess}
+                    </EntryDrawerField>
+                    <EntryDrawerField label="Pending activation">{selectedUnit.pendingActivations}</EntryDrawerField>
+                  </EntryDrawerSection>
+                </div>
+              ) : null}
+
+              {directoryTab === "household" ? (
+                <EntryDrawerSection title={`Household · ${selectedUnit.residents.length} residents`}
+                  description="People assigned to this unit. Use the existing resident actions to manage access.">
+                  {selectedUnit.residents.length > 0 ? (
+                    <div className="divide-y divide-white/[0.06]">
+                      {selectedUnit.residents.map((resident) => {
+                        const isPrimaryResident =
+                          resident.isPrimary ||
+                          resident.userId === selectedUnit.primaryResidentId ||
+                          Boolean(
+                            selectedUnit.primaryResidentName &&
                             resident.fullName.trim().toLowerCase() ===
                               selectedUnit.primaryResidentName.trim().toLowerCase(),
-                        );
-
-                      return (
-                        <div key={resident.userId} className="px-3 py-2.5">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-[11px] font-semibold text-white">
-                                {resident.fullName}
-                              </p>
-                              <p className="mt-1 truncate text-[10px] text-[#8F879D]">
-                                {resident.email || resident.phone || resident.account}
-                              </p>
+                          );
+                        return (
+                          <div key={resident.userId} className="flex items-center gap-3 px-3.5 py-3.5">
+                            <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full border border-violet-400/20 bg-violet-500/10 text-xs font-semibold text-[#D8D1FF]">
+                              {resident.fullName.trim().slice(0, 1).toUpperCase()}
+                            </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="break-words text-sm font-semibold leading-5 text-white">{resident.fullName}</p>
+                              <p className="mt-1 break-all text-xs leading-4 text-[#A9A3B2]">{resident.email || resident.phone || resident.account}</p>
+                              <p className="mt-1 text-xs text-[#BEB4FF]">{isPrimaryResident ? "Primary resident" : "Resident"} · {resident.status === "active" ? "Active" : "Inactive"}</p>
                             </div>
-                            <div className="flex shrink-0 items-center gap-1.5">
-                              <Tag tone={isPrimaryResident ? "success" : "default"}>
-                                {isPrimaryResident ? "Primary resident" : "Resident"}
-                              </Tag>
-                              <UnitResidentActions
-                                communityId={communityId}
-                                resident={resident}
-                                triggerClassName="grid size-7 place-items-center rounded-md border border-white/10 bg-white/[0.025] text-[#BEB4FF] transition hover:border-violet-400/40 hover:text-white"
-                              />
-                            </div>
+                            <UnitResidentActions
+                              communityId={communityId}
+                              resident={resident}
+                              triggerClassName="grid size-8 shrink-0 place-items-center rounded-md border border-white/10 bg-white/[0.025] text-[#BEB4FF] transition hover:border-violet-400/40 hover:text-white"
+                            />
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="px-3 py-4 text-[11px] text-[#A9A3B2]">No residents are currently linked to this unit.</p>
-                )}
-              </section>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="px-3.5 py-5 text-[13px] text-[#A9A3B2]">No residents are currently linked to this unit.</p>
+                  )}
+                </EntryDrawerSection>
+              ) : null}
 
-              <section className="mt-3 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
-                <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Operational context</p></div>
-                <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 border-b border-white/[0.06] px-3 py-2.5 text-[11px]">
-                  <span className="text-[#8F879D]">Activation queue</span>
-                  <span className="text-right text-white">
-                    {selectedUnit.pendingActivations > 0
-                      ? `${selectedUnit.pendingActivations} resident${selectedUnit.pendingActivations === 1 ? "" : "s"} pending`
-                      : "Queue clear"}
-                  </span>
-                </div>
-                <div className="grid grid-cols-[132px_minmax(0,1fr)] gap-3 px-3 py-2.5 text-[11px]">
-                  <span className="text-[#8F879D]">Access activity</span>
-                  <span className="text-right text-white">{selectedUnit.lastAccess === "Not available" ? "No access recorded" : selectedUnit.lastAccess}</span>
-                </div>
-              </section>
+              {directoryTab === "operational" ? (
+                <div className="space-y-3.5">
+                  <EntryDrawerSection title="Operational context">
+                    <EntryDrawerField label="Activation queue">
+                      {selectedUnit.pendingActivations > 0
+                        ? `${selectedUnit.pendingActivations} resident${selectedUnit.pendingActivations === 1 ? "" : "s"} pending`
+                        : "Queue clear"}
+                    </EntryDrawerField>
+                    <EntryDrawerField label="Access activity">
+                      {selectedUnit.lastAccess === "Not available" ? "No access recorded" : selectedUnit.lastAccess}
+                    </EntryDrawerField>
+                    <EntryDrawerField label="Unit status">{selectedUnit.isActive ? "Active" : "Inactive"}</EntryDrawerField>
+                  </EntryDrawerSection>
 
-              {selectedUnit.activePassItems.length > 0 ? (
-                <section className="mt-3 overflow-hidden rounded-lg border border-white/[0.08] bg-white/[0.012]">
-                  <div className="border-b border-white/[0.07] px-3 py-2.5"><p className="text-xs font-semibold text-white">Active passes</p></div>
-                  <div className="divide-y divide-white/[0.06]">
-                    {selectedUnit.activePassItems.slice(0, 6).map((pass) => (
-                      <div key={pass.id} className="px-3 py-2.5">
-                        <p className="text-[11px] font-semibold text-white">{pass.passName}</p>
-                        <p className="mt-1 text-[10px] text-[#8F879D]">{pass.holderName || pass.residentName} · {pass.status}</p>
+                  {selectedUnit.activePassItems.length > 0 ? (
+                    <EntryDrawerSection title="Active passes">
+                      <div className="divide-y divide-white/[0.06]">
+                        {selectedUnit.activePassItems.slice(0, 6).map((pass) => (
+                          <div key={pass.id} className="px-3.5 py-3">
+                            <p className="text-[13px] font-semibold text-white">{pass.passName}</p>
+                            <p className="mt-1 text-xs leading-4 text-[#A9A3B2]">{pass.holderName || pass.residentName} · {pass.status}</p>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                </section>
+                    </EntryDrawerSection>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 
@@ -758,12 +766,20 @@ export function CommunityDirectoryWorkspace({
                 >
                   Open unit details
                 </Link>
-                <Link
-                  href={`/products/entry/activation?community_id=${communityId}`}
-                  className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119]"
-                >
-                  Activation queue
-                </Link>
+                {selectedUnit.pendingActivations > 0 ? (
+                  <Link
+                    href={`/products/entry/activation?community_id=${communityId}`}
+                    className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-white shadow-[0_2px_0_#141119]"
+                  >
+                    Activation queue
+                  </Link>
+                ) : (
+                  <button type="button" disabled
+                    title="No residents pending activation in this unit"
+                    className="inline-flex h-9 items-center justify-center rounded-[7px] border border-[#141119] bg-[#2E2936] px-3 text-xs font-semibold text-[#8F879D] opacity-45 cursor-not-allowed">
+                    Activation queue
+                  </button>
+                )}
               </div>
             </div>
           </aside>

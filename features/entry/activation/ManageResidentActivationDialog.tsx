@@ -8,6 +8,7 @@ import { buildActivationWhatsAppMessage } from "@/features/entry/activation/acti
 import { ResidentAccessModePicker, type ResidentAccessMode } from "@/features/entry/activation/ResidentAccessModePicker";
 import { sendActivationEmails } from "@/features/entry/activation/emailActions";
 import { generateActivationPins } from "@/features/entry/activation/pinActions";
+import { createActivatedUsers, type CreateActivatedUserItem } from "@/features/entry/activation/createUserActions";
 
 export type ExistingActivationTarget = {
   queueId: string;
@@ -37,6 +38,7 @@ export function ManageResidentActivationDialog({
   const [mode, setMode] = useState<ResidentAccessMode>(canEmail ? "email" : "pin");
   const [isPending, startTransition] = useTransition();
   const [pin, setPin] = useState<string | null>(null);
+  const [createdUser, setCreatedUser] = useState<CreateActivatedUserItem | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,16 +56,35 @@ export function ManageResidentActivationDialog({
   function close() {
     if (isPending) return;
     setPin(null);
+    setCreatedUser(null);
     onClose();
   }
 
   function submit() {
-    if (isPending || pin) return;
+    if (isPending || pin || createdUser) return;
     setError(null);
     setWarning(null);
     setCopied(false);
 
     startTransition(async () => {
+      if (mode === "quick") {
+        const result = await createActivatedUsers({
+          communityId: target.communityId,
+          queueIds: [target.queueId],
+        });
+        if (!result.success) {
+          setError(result.error);
+          return;
+        }
+        const created = result.data.items.find(item => item.queue_id === target.queueId);
+        if (!created || created.status !== "activated" || !created.temporary_password) {
+          setError(created?.message ?? "The account could not be activated. Review Activation Queue before retrying.");
+          return;
+        }
+        setCreatedUser(created);
+        router.refresh();
+        return;
+      }
       if (mode === "email") {
         // The PIN returned is the exact one generated for this email.
         // Never generate a second PIN after sending: it would invalidate the first.
@@ -109,9 +130,21 @@ export function ManageResidentActivationDialog({
   }
 
   async function copyForWhatsApp() {
-    if (!message) return;
+    const credentials = createdUser
+      ? [
+          "ENTRY · Cuenta activada",
+          `Residente: ${createdUser.resident_name ?? target.residentName}`,
+          `Comunidad: ${target.communityName}`,
+          `Unidad: ${createdUser.unit_label ?? target.unitLabel}`,
+          `Usuario: ${createdUser.login_identity ?? createdUser.suggested_username ?? createdUser.email ?? "—"}`,
+          `Contraseña temporal: ${createdUser.temporary_password ?? "—"}`,
+          "Inicia sesión en ENTRY y cambia tu contraseña.",
+          "https://www.minervatechs.com/entry",
+        ].join("\n")
+      : message;
+    if (!credentials) return;
     try {
-      await navigator.clipboard.writeText(message);
+      await navigator.clipboard.writeText(credentials);
       setCopied(true);
       setError(null);
     } catch {
@@ -149,7 +182,22 @@ export function ManageResidentActivationDialog({
         </header>
 
         <div className="min-h-0 space-y-4 overflow-y-auto p-5">
-          {pin ? (
+          {createdUser ? (
+            <>
+              <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+                Active ENTRY account created. Save the temporary password now; it will not be shown again.
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/[0.025] p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#BEB4FF]">Login identity</p>
+                <p className="mt-2 break-all text-sm font-semibold text-white">
+                  {createdUser.login_identity ?? createdUser.suggested_username ?? createdUser.email ?? "—"}
+                </p>
+                <p className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-[#BEB4FF]">Temporary password</p>
+                <p className="mt-2 break-all font-mono text-lg font-semibold text-white">{createdUser.temporary_password}</p>
+                <p className="mt-3 text-xs leading-5 text-[#B7AEBD]">Only share these credentials with the authorized resident.</p>
+              </div>
+            </>
+          ) : pin ? (
             <>
               <div className="rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
                 {emailSent
@@ -187,13 +235,12 @@ export function ManageResidentActivationDialog({
           ) : (
             <>
               <p className="text-xs leading-5 text-[#A9A3B2]">
-                Use the existing ENTRY activation flow for this resident.
-                Sending an email or regenerating a PIN replaces any previous activation PIN.
+                Select the existing ENTRY workflow for this resident. Email and PIN options
+                replace any previous activation PIN. Quick create activates the account immediately.
               </p>
               <ResidentAccessModePicker
                 value={mode}
                 onChange={setMode}
-                hideQuick
                 existingResident
                 disabled={{
                   email: canEmail
@@ -211,11 +258,11 @@ export function ManageResidentActivationDialog({
         </div>
 
         <footer className="flex flex-wrap justify-end gap-2 border-t border-white/10 p-4">
-          {pin ? (
+          {pin || createdUser ? (
             <>
               <Button type="button" variant="secondary" onClick={copyForWhatsApp}>
                 {copied ? <Check className="mr-2 size-4" aria-hidden /> : <Copy className="mr-2 size-4" aria-hidden />}
-                {copied ? "Copied" : "Copy for WhatsApp"}
+                {copied ? "Copied" : createdUser ? "Copy credentials" : "Copy for WhatsApp"}
               </Button>
               <Button type="button" onClick={close}>Done</Button>
             </>
@@ -225,7 +272,7 @@ export function ManageResidentActivationDialog({
                 Cancel
               </Button>
               <Button type="button" onClick={submit} disabled={isPending || (mode === "email" && !canEmail)}>
-                {isPending ? "Working..." : mode === "email" ? "Send invitation + prepare WhatsApp" : "Generate PIN for WhatsApp"}
+                {isPending ? "Working..." : mode === "quick" ? "Create active user" : mode === "email" ? "Send invitation + prepare WhatsApp" : "Generate PIN for WhatsApp"}
               </Button>
             </>
           )}

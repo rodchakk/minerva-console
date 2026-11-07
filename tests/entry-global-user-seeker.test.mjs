@@ -33,7 +33,7 @@ test("global ENTRY Users is a table-first seeker with a fixed management drawer"
 
   assert.match(
     page,
-    /Find any ENTRY account and manage access, identity, role, and unit/,
+    /Search ENTRY accounts and pending activations by name, email, phone,/,
   );
   assert.match(
     source,
@@ -44,6 +44,14 @@ test("global ENTRY Users is a table-first seeker with a fixed management drawer"
   assert.match(source, /fixed inset-0 z-50/);
   assert.match(source, /w-\[560px\]/);
   assert.match(source, /User management/);
+  const sidebar = read("components/layout/AppSidebar.tsx");
+  const topbar = read("components/layout/Topbar.tsx");
+  assert.match(page, /Global Search/);
+  assert.match(page, /ENTRY SEARCH/);
+  assert.match(sidebar, /label: "Global Search", href: "\/products\/entry\/users", icon: Search/);
+  assert.match(topbar, /"ENTRY", "Global Search"/);
+  // The route remains unchanged to preserve bookmarks and existing permissions.
+  assert.match(sidebar, /href: "\/products\/entry\/users"/);
   assert.match(source, /Account details/);
   assert.match(source, /Account actions/);
   assert.match(source, /Navigation/);

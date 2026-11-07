@@ -27,14 +27,14 @@ export default async function EntryUsersPage(
       <section className="px-0.5 pt-5">
         <div className="min-w-0 max-w-3xl">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
-            ENTRY DIRECTORY
+            ENTRY SEARCH
           </p>
           <h1 className="mt-2 text-3xl font-semibold tracking-[-0.03em] text-white lg:text-[2.05rem]">
-            ENTRY users
+            Global Search
           </h1>
           <p className="mt-2 text-sm leading-6 text-[#A9A3B2]">
-            Find any ENTRY account and manage access, identity, role, and unit
-            assignment from one workspace.
+            Search ENTRY accounts and pending activations by name, email, phone,
+            unit or community, then manage access from one workspace.
           </p>
         </div>
       </section>
