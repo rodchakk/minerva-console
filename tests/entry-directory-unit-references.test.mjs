@@ -42,8 +42,8 @@ test("directory displays references, searches them and identifies missing ones",
   assert.match(directory, /matchesDirectorySearch\(query, searchable\)/);
   assert.match(directory, /Missing reference/);
   assert.match(directory, /No reference registered/);
-  assert.match(directory, /\["Location reference", selectedUnit\.unitReference \|\| "Not registered"\]/);
-  assert.match(directory, /\["Resident-facing reference", selectedUnit\.publicReference \|\| "Not registered"\]/);
+  assert.match(directory, /<EntryDrawerField label="Location reference">\{selectedUnit\.unitReference \|\| "Not registered"\}/);
+  assert.match(directory, /<EntryDrawerField label="Resident-facing reference">\{selectedUnit\.publicReference \|\| "Not registered"\}/);
   assert.match(detail, /unit\.unitReference \|\| "Not registered"/);
   assert.match(detail, /unit\.publicReference/);
 });
