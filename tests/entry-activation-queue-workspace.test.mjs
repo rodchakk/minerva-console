@@ -73,8 +73,6 @@ test("Activation Queue retains batch operations and unifies single-resident acti
   assert.match(source, /generateActivationPins/);
   assert.match(source, /sendActivationEmails/);
   assert.match(source, /createActivatedUsers/);
-  assert.match(source, /function runResidentPin/);
-  assert.match(source, /function runResidentEmail/);
   assert.match(source, /function runResidentCreateUser/);
   assert.match(source, /ManageResidentActivationDialog/);
   assert.match(source, /setManagingQueueRowId\(activeRow\.id\)/);
@@ -92,15 +90,12 @@ test("resident action uses one queue-scoped manager, not bulk selections", () =>
   assert.doesNotMatch(source, /onClick=\{\(\) => runResidentEmail\(activeRow\.id\)\}/);
 });
 
-test("resident email action preserves an existing multi-selection for batch invites", () => {
+test("bulk invite flow remains separate from single-resident management", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
-
-  assert.match(
-    source,
-    /function runResidentEmail\(rowId: string\) \{[\s\S]*if \(selectedIds\.length > 1\) \{[\s\S]*setPhase\("confirmingEmail"\);[\s\S]*return;[\s\S]*setSelectedIds\(\[rowId\]\)/,
-  );
-  assert.match(source, /function runResidentEmail\(rowId: string\)[\s\S]*selectedIds\.length > 1/);
-  assert.match(source, /\{selectedCount\} resident\{selectedCount === 1 \? "" : "s"\} selected/);
+  assert.match(source, /async function handleConfirmSendEmail/);
+  assert.match(source, /queueIds: selectedIds/);
+  assert.match(source, /Send emails/);
+  assert.match(source, /ManageResidentActivationDialog/);
 });
 
 test("Activation Queue resident detail shows derived progress and queue blockers without backend changes", () => {
