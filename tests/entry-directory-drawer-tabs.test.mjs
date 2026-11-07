@@ -58,12 +58,20 @@ test("all existing activation outcomes live in one dialog with safe PIN handling
 test("unit drawer separates overview household and operational without moving its footer", () => {
   const directory = read("features/entry/communities/CommunityDirectoryWorkspace.tsx");
   assert.match(directory, /id: "overview", label: "Unit overview"/);
-  assert.match(directory, /id: "household", label: "Household"/);
+  assert.match(directory, /id: "household", label: `Household \(\$\{selectedUnit.residents.length\}\)`/);
   assert.match(directory, /id: "operational", label: "Operational"/);
   assert.match(directory, /directoryTab === "overview"/);
   assert.match(directory, /directoryTab === "household"/);
   assert.match(directory, /directoryTab === "operational"/);
   assert.match(directory, /selectedUnit\.residents\.map/);
+  // The compact count now belongs to the Household tab, not overview cards.
+  const overviewStart = directory.indexOf('{directoryTab === "overview" ? (');
+  const overviewEnd = directory.indexOf('{directoryTab === "household" ? (', overviewStart);
+  assert.ok(overviewStart >= 0 && overviewEnd > overviewStart);
+  const overview = directory.slice(overviewStart, overviewEnd);
+  assert.doesNotMatch(overview, /text-xl font-semibold text-white/);
+  assert.doesNotMatch(overview, /<p className="text-xs text-\[#B7AEBD\]">Residents<\/p>/);
+  assert.doesNotMatch(overview, /<p className="text-xs text-\[#B7AEBD\]">Active passes<\/p>/);
   assert.match(directory, /UnitResidentActions/);
   assert.match(directory, /selectedUnit\.pendingActivations > 0 \? \(/);
   assert.match(directory, /disabled/);
