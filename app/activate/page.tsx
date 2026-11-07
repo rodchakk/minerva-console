@@ -1,16 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 
-function getPinFromUrl(): string {
+function getActivationIdFromUrl(): string {
   if (typeof window === "undefined") return "";
   const params = new URLSearchParams(window.location.search);
-  return params.get("pin") ?? "";
+  return params.get("id") ?? "";
 }
 
 type Step =
   | "loading"
+  | "pin-entry"
   | "mobile-redirect"
   | "invalid"
   | "notifications"
@@ -100,14 +101,20 @@ async function postActivationJson<T>(url: string, body: Record<string, unknown>)
 }
 
 export default function ActivatePage() {
-  const pin = useMemo(() => getPinFromUrl(), []);
-  const hasValidPin = /^\d{6}$/.test(pin);
+  const activationId = useMemo(() => getActivationIdFromUrl(), []);
+  const hasValidActivationId =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      activationId,
+    );
 
-  const [step, setStep] = useState<Step>(() => (hasValidPin ? "loading" : "invalid"));
+  const [step, setStep] = useState<Step>(() =>
+    hasValidActivationId ? "pin-entry" : "invalid",
+  );
   const [validation, setValidation] = useState<ValidationResult | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(() =>
-    hasValidPin ? null : "No se encontró un PIN válido en el enlace.",
+    hasValidActivationId ? null : "El enlace de activación no es válido.",
   );
+  const [pin, setPin] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -119,7 +126,6 @@ export default function ActivatePage() {
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password]);
 
   const validatedRef = useRef(false);
-  const deepLinkAttemptedRef = useRef(false);
 
   const validatePin = useCallback(async () => {
     if (validatedRef.current) return validation;
@@ -128,7 +134,7 @@ export default function ActivatePage() {
     try {
       const { data, ok } = await postActivationJson<ValidationResult>(
         "/activate/validate",
-        { pin },
+        { activationId, pin },
       );
 
       if (!ok) {
@@ -151,10 +157,10 @@ export default function ActivatePage() {
       setStep("invalid");
       return null;
     }
-  }, [pin, validation]);
+  }, [activationId, pin, validation]);
 
-  const startWebFlow = useCallback(async () => {
-    const result = validation ?? (await validatePin());
+  const startWebFlow = useCallback(async (knownResult?: ValidationResult) => {
+    const result = knownResult ?? validation ?? (await validatePin());
     if (!result) return;
 
     if (typeof Notification !== "undefined") {
@@ -165,29 +171,24 @@ export default function ActivatePage() {
     setStep("notifications");
   }, [validation, validatePin]);
 
-  useEffect(() => {
-    if (deepLinkAttemptedRef.current) return;
-    deepLinkAttemptedRef.current = true;
-
-    if (!hasValidPin) {
+  async function handlePinSubmit() {
+    if (!/^\d{6}$/.test(pin)) {
+      setErrorMsg("Escribe el PIN de seis dígitos recibido por separado.");
       return;
     }
 
+    setStep("loading");
+    setErrorMsg(null);
+    const result = await validatePin();
+    if (!result) return;
+
     if (isMobileDevice()) {
-      // Show choice screen immediately; validate PIN in the background so
-      // the web flow is ready if the user chooses "Continuar en navegador".
-      const mobileRedirectTimer = window.setTimeout(() => {
-        setStep("mobile-redirect");
-        void validatePin();
-      }, 0);
-      return () => window.clearTimeout(mobileRedirectTimer);
+      setStep("mobile-redirect");
+      return;
     }
 
-    const webFlowTimer = window.setTimeout(() => {
-      void startWebFlow();
-    }, 0);
-    return () => window.clearTimeout(webFlowTimer);
-  }, [hasValidPin, startWebFlow, validatePin]);
+    await startWebFlow(result);
+  }
 
   async function handleRequestNotifications() {
     if (typeof Notification === "undefined") {
@@ -219,7 +220,7 @@ export default function ActivatePage() {
 
     const { data, ok } = await postActivationJson<CompleteResult>(
       "/activate/complete",
-      { password, pin },
+      { activationId, password, pin },
     );
 
     setSubmitting(false);
@@ -269,6 +270,50 @@ export default function ActivatePage() {
             <p className="mt-3 text-sm leading-6 text-[var(--text-muted)]">
               Estamos validando tu enlace de activación.
             </p>
+          </div>
+        ) : null}
+
+        {step === "pin-entry" ? (
+          <div className="mt-6 text-left sm:mt-8">
+            <h1 className="text-center text-xl font-semibold text-white sm:text-2xl">
+              Escribe tu PIN
+            </h1>
+            <p className="mt-3 text-center text-sm leading-6 text-[var(--text-muted)]">
+              Usa el PIN de seis dígitos incluido en tu invitación.
+            </p>
+            <label className="mt-5 block text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
+              PIN de activación
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              value={pin}
+              onChange={(event) => {
+                setPin(event.target.value.replace(/\D/g, "").slice(0, 6));
+                if (errorMsg) setErrorMsg(null);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" && /^\d{6}$/.test(pin)) {
+                  void handlePinSubmit();
+                }
+              }}
+              className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-center font-mono text-2xl tracking-[0.35em] text-white placeholder:text-slate-500 focus:border-violet-400/60 focus:outline-none"
+              placeholder="000000"
+            />
+            {errorMsg ? (
+              <div className="mt-4 rounded-xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-100">
+                {errorMsg}
+              </div>
+            ) : null}
+            <Button
+              className="mt-6 w-full py-3"
+              disabled={!/^\d{6}$/.test(pin)}
+              onClick={() => void handlePinSubmit()}
+            >
+              Continuar
+            </Button>
           </div>
         ) : null}
 

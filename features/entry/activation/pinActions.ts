@@ -13,6 +13,7 @@ export type GeneratePinItem = {
   email: string | null;
   suggested_username: string | null;
   activation_method: string | null;
+  activation_id: string | null;
   pin: string | null;
   status: "pin_generated" | "skipped" | "failed";
   message: string | null;
@@ -55,7 +56,7 @@ export async function generateActivationPins(input: {
   try {
     const supabase = await createClient();
     const { data, error } = await supabase.rpc(
-      "generate_resident_activation_pins_locked_v1",
+      "generate_resident_activation_pins_locked_v2",
       {
         p_community_id: communityId,
         p_queue_ids: queueIds,

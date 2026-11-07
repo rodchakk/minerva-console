@@ -4,6 +4,27 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: "/activate/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, max-age=0",
+          },
+          {
+            key: "Pragma",
+            value: "no-cache",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "no-referrer",
+          },
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
+      },
+      {
         source: "/entry/register/:path*",
         headers: [
           {
