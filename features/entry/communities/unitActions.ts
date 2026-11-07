@@ -24,6 +24,7 @@ export type CreateResidentResult = CommunityUnitActionResult & {
 
 export type UpdateCommunityUnitInput = {
   communityId: string;
+  expectedUnitLabel: string;
   primaryResidentUserId?: string | null;
   unitId: string;
   unitLabel: string;
@@ -245,26 +246,53 @@ export async function updateCommunityUnitAction(
   }
 
   const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("houses")
-    .update({ house_label: unitLabel })
-    .eq("community_id", communityId)
-    .eq("id", unitId)
-    .select("id")
-    .maybeSingle();
+  const expectedUnitLabel = input.expectedUnitLabel.trim();
+  if (unitLabel !== expectedUnitLabel) {
+    const { data: setting, error: settingError } = await supabase
+      .from("community_settings")
+      .select("allow_unit_relationships")
+      .eq("community_id", communityId)
+      .maybeSingle();
 
-  if (error) {
-    return {
-      error: error.message,
-      success: false,
-    };
-  }
+    if (settingError) return { error: settingError.message, success: false };
 
-  if (!data) {
-    return {
-      error: "Unit not found in this community.",
-      success: false,
-    };
+    if (setting?.allow_unit_relationships === true) {
+      const client = await createClient();
+      const { error } = await client.rpc("manage_entry_unit_relationship_v1", {
+        p_action: "rename_unit",
+        p_community_id: communityId,
+        p_unit_id: unitId,
+        p_other_unit_id: null,
+        p_user_id: null,
+        p_link_id: null,
+        p_responsibility_id: null,
+        p_label: unitLabel,
+        p_expected_label: expectedUnitLabel,
+      });
+
+      if (error) return { error: error.message, success: false };
+    } else {
+      const { data, error } = await supabase
+        .from("houses")
+        .update({ house_label: unitLabel })
+        .eq("community_id", communityId)
+        .eq("id", unitId)
+        .select("id")
+        .maybeSingle();
+
+      if (error) return { error: error.message, success: false };
+      if (!data) return { error: "Unit not found in this community.", success: false };
+    }
+  } else {
+    const { data, error } = await supabase
+      .from("houses")
+      .select("id")
+      .eq("community_id", communityId)
+      .eq("id", unitId)
+      .maybeSingle();
+
+    if (error) return { error: error.message, success: false };
+    if (!data) return { error: "Unit not found in this community.", success: false };
   }
 
   if (primaryResidentUserId !== undefined) {

@@ -326,6 +326,7 @@ export async function assignFieldResidentToUnit(input: {
 
 export async function renameFieldUnit(input: {
   communityId: string;
+  expectedUnitLabel: string;
   unitId: string;
   unitLabel: string;
 }): Promise<FieldActionResult> {

@@ -10,6 +10,18 @@ const fixture = readFileSync(
   new URL("../supabase/tests/fixtures/entry-unit-relationships.sql", import.meta.url),
   "utf8",
 );
+const unitActions = readFileSync(
+  new URL("../features/entry/communities/unitActions.ts", import.meta.url),
+  "utf8",
+);
+const fieldUnitActions = readFileSync(
+  new URL("../features/entry/field/FieldUnitActions.tsx", import.meta.url),
+  "utf8",
+);
+const fieldPeopleActions = readFileSync(
+  new URL("../features/entry/field/peopleActions.ts", import.meta.url),
+  "utf8",
+);
 
 test("unit links and responsibilities are separate, tenant-scoped, historical associations", () => {
   assert.match(migration, /create table public\.entry_unit_links/i);
@@ -29,4 +41,13 @@ test("PostgreSQL fixture covers reversals, same-community integrity and safe ren
   for (const phrase of ["reverse link duplicated", "self-link accepted", "cross-community link accepted", "missing membership accepted", "relink history missing", "rename altered relationship", "entry-unit-relationships fixture PASS"]) {
     assert.ok(fixture.includes(phrase), `Missing fixture assertion: ${phrase}`);
   }
+});
+
+test("enabled communities route every existing unit rename through the audited RPC", () => {
+  assert.match(unitActions, /expectedUnitLabel/);
+  assert.match(unitActions, /allow_unit_relationships/);
+  assert.match(unitActions, /manage_entry_unit_relationship_v1/);
+  assert.match(unitActions, /p_expected_label: expectedUnitLabel/);
+  assert.match(fieldUnitActions, /expectedUnitLabel: unit\.label/);
+  assert.match(fieldPeopleActions, /expectedUnitLabel: string/);
 });
