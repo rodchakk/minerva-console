@@ -6,6 +6,7 @@ import {
   useActionState,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -29,7 +30,11 @@ import {
   X,
 } from "lucide-react";
 import { entryButtonClass } from "@/components/ui/entryButtonStyles";
-import { ManageResidentActivationDialog } from "@/features/entry/activation/ManageResidentActivationDialog";
+import { ActivationResidentDrawer } from "@/features/entry/activation/ActivationResidentDrawer";
+import type { ActivationQueueRow } from "@/features/entry/activation/actions";
+import { getActivationResidentForUsersAction } from "@/features/entry/activation/lookupActions";
+import { EntryDrawerTabs, EntryDrawerSection, EntryDrawerField } from "@/features/entry/components/EntryDrawerTabs";
+import { getGlobalHouseholdMembersAction, type GlobalHouseholdMember } from "@/features/entry/users/householdActions";
 import {
   getGlobalUserManagementContextAction,
   searchUsersAction,
@@ -177,7 +182,14 @@ export function UserSearch() {
     Record<string, Partial<UserSearchItem>>
   >({});
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [activationDialogOpen, setActivationDialogOpen] = useState(false);
+  const [pendingResidentRow, setPendingResidentRow] = useState<ActivationQueueRow | null>(null);
+  const [activationLoading, setActivationLoading] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
+  const [userTab, setUserTab] = useState<"account" | "household" | "operational">("account");
+  const [householdMembers, setHouseholdMembers] = useState<GlobalHouseholdMember[]>([]);
+  const [householdLoading, setHouseholdLoading] = useState(false);
+  const [householdError, setHouseholdError] = useState<string | null>(null);
+  const loadRequestRef = useRef(0);
   const [manageMode, setManageMode] = useState<ManageMode>("view");
   const [draft, setDraft] = useState<UserDraft | null>(null);
   const [roleDraft, setRoleDraft] =
@@ -232,7 +244,7 @@ export function UserSearch() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !selectedKey || activationDialogOpen) return;
+      if (event.key !== "Escape" || !selectedKey) return;
 
       if (manageMode !== "view") {
         setManageMode("view");
@@ -248,7 +260,7 @@ export function UserSearch() {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [activationDialogOpen, manageMode, selectedKey]);
+  }, [manageMode, selectedKey]);
 
   function syncUser(user: UserSearchItem, changes: Partial<UserSearchItem>) {
     setOverrides((current) => ({
@@ -262,16 +274,25 @@ export function UserSearch() {
 
   function closeDrawer() {
     if (isPending) return;
+    loadRequestRef.current += 1;
     setSelectedKey(null);
-    setActivationDialogOpen(false);
+    setPendingResidentRow(null);
+    setActivationLoading(false);
     setManageMode("view");
     setMessage(null);
     setError(null);
   }
 
   async function openUser(user: UserSearchItem) {
+    const requestId = ++loadRequestRef.current;
     setSelectedKey(userKey(user));
-    setActivationDialogOpen(false);
+    setPendingResidentRow(null);
+    setActivationLoading(false);
+    setActivationError(null);
+    setUserTab("account");
+    setHouseholdMembers([]);
+    setHouseholdLoading(false);
+    setHouseholdError(null);
     setManageMode("view");
     setDraft({ fullName: user.fullName, phone: user.phone });
     setRoleDraft(user.role === "ADMIN" ? "ADMIN" : "RESIDENT");
@@ -285,21 +306,46 @@ export function UserSearch() {
     setError(null);
     setHouses([]);
 
-    if (user.source === "activation_queue" || !user.communityId) return;
-
-    setContextLoading(true);
-    const context = await getGlobalUserManagementContextAction(
-      user.communityId,
-      user.id,
-    );
-    setContextLoading(false);
-
-    if (!context.success) {
-      setError(context.error ?? "Could not load community context.");
+    if (user.source === "activation_queue") {
+      setActivationLoading(true);
+      try {
+        const lookup = await getActivationResidentForUsersAction(user.communityId, user.id);
+        if (requestId !== loadRequestRef.current) return;
+        if (lookup.success) {
+          setPendingResidentRow(lookup.row);
+        } else {
+          setActivationError(lookup.error);
+        }
+      } catch {
+        if (requestId === loadRequestRef.current) setActivationError("Unable to load this activation record.");
+      } finally {
+        if (requestId === loadRequestRef.current) setActivationLoading(false);
+      }
       return;
     }
+    if (!user.communityId) return;
 
-    setHouses(context.houses);
+    setContextLoading(true);
+    setHouseholdLoading(Boolean(user.houseId));
+    const [context, household] = await Promise.all([
+      getGlobalUserManagementContextAction(user.communityId, user.id),
+      user.houseId
+        ? getGlobalHouseholdMembersAction(user.communityId, user.houseId)
+        : Promise.resolve({ success: true as const, members: [] as GlobalHouseholdMember[] }),
+    ]);
+    if (requestId !== loadRequestRef.current) return;
+    setContextLoading(false);
+    setHouseholdLoading(false);
+    if (!context.success) {
+      setError(context.error ?? "Could not load community context.");
+    } else {
+      setHouses(context.houses);
+    }
+    if (household.success) {
+      setHouseholdMembers(household.members);
+    } else {
+      setHouseholdError(household.error);
+    }
   }
 
   function submitEdit() {
@@ -709,56 +755,57 @@ export function UserSearch() {
         ) : null}
       </div>
 
-      {selectedUser?.source === "activation_queue" ? (
+      {selectedUser?.source === "activation_queue" && pendingResidentRow ? (
+        <ActivationResidentDrawer
+          key={pendingResidentRow.id}
+          variant="users"
+          row={pendingResidentRow}
+          communityId={selectedUser.communityId}
+          communityName={selectedUser.communityName}
+          onClose={closeDrawer}
+          onChanged={async () => {
+            const updated = await getActivationResidentForUsersAction(selectedUser.communityId, selectedUser.id);
+            if (updated.success) {
+              setPendingResidentRow(updated.row);
+            } else {
+              setActivationError(updated.error);
+            }
+            router.refresh();
+          }}
+        />
+      ) : null}
+
+      {selectedUser?.source === "activation_queue" && !pendingResidentRow ? (
         <div className="pointer-events-none fixed inset-0 z-50">
-          <section className="pointer-events-auto absolute bottom-5 right-5 top-[76px] flex w-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
-            <header className="flex items-start justify-between gap-3 border-b border-[#141119] p-4">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#BEB4FF]">Activation Queue</p>
-                <h2 className="mt-2 text-xl font-semibold text-white">{selectedUser.fullName}</h2>
-                <p className="mt-2 text-xs text-[#A9A3B2]">{selectedUser.houseLabel} · {selectedUser.communityName}</p>
-                <span className="mt-3 inline-flex rounded border border-violet-400/25 bg-violet-500/10 px-2 py-1 text-xs font-semibold text-[#D8D1FF]">
-                  Pending activation · {selectedUser.activationStatus ?? "pending"}
-                </span>
-              </div>
-              <button type="button" onClick={closeDrawer} className="rounded-md border border-white/10 p-2 text-[#A9A3B2] hover:text-white" aria-label="Close pending resident details">
-                <X className="size-4" aria-hidden />
-              </button>
-            </header>
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4 text-xs">
-              <p className="text-[#A9A3B2]">This resident has a pending activation record, not an active ENTRY account.</p>
-              <div className="rounded-lg border border-white/10 bg-white/[0.012] p-4">
-                <p className="font-semibold text-white">Resident details</p>
-                <p className="mt-3 text-[#A9A3B2]">Email: <span className="text-white">{selectedUser.email || "Not provided"}</span></p>
-                <p className="mt-2 text-[#A9A3B2]">Phone: <span className="text-white">{selectedUser.phone || "Not provided"}</span></p>
-                <p className="mt-2 text-[#A9A3B2]">Unit: <span className="text-white">{selectedUser.houseLabel || "Not provided"}</span></p>
-                <p className="mt-2 text-[#A9A3B2]">Activation method: <span className="text-white">{selectedUser.activationMethod || "Not configured"}</span></p>
-              </div>
+          <section className="pointer-events-auto absolute bottom-5 right-5 top-[76px] w-[560px] overflow-y-auto rounded-[10px] border border-[#141119] bg-[#292431] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-white">{selectedUser.fullName}</h2>
+              <button type="button" onClick={closeDrawer} aria-label="Close activation details" className="text-[#B7AEBD] hover:text-white"><X className="size-5"/></button>
             </div>
-            <footer className="border-t border-[#141119] p-4">
-              <button type="button" onClick={() => setActivationDialogOpen(true)} className={entryButtonClass("primary", "w-full")}>
-                Manage activation
-              </button>
+            <p className="mt-4 text-[13px] text-[#B7AEBD]">
+              {activationLoading ? "Loading activation details..." : activationError ?? "No activation details available."}
+            </p>
+            <footer className="shrink-0 border-t border-[#141119] bg-[#292431] px-4 py-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">Navigation</p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {selectedUser.houseId ? (
+                  <Link href={`/products/entry/communities/${selectedUser.communityId}/units/${selectedUser.houseId}`}
+                    className={entryButtonClass("secondary", "w-full")}>
+                    <Home className="size-4 text-[#BEB4FF]" aria-hidden /> Open unit
+                  </Link>
+                ) : (
+                  <span className={entryButtonClass("secondary", "w-full opacity-40 pointer-events-none")}>
+                    <Home className="size-4 text-[#BEB4FF]" aria-hidden /> Open unit
+                  </span>
+                )}
+                <Link href={`/products/entry/communities/${selectedUser.communityId}`}
+                  className={entryButtonClass("secondary", "w-full")}>
+                  <Building2 className="size-4 text-[#BEB4FF]" aria-hidden /> Open community
+                </Link>
+              </div>
             </footer>
           </section>
         </div>
-      ) : null}
-
-      {activationDialogOpen && selectedUser?.source === "activation_queue" ? (
-        <ManageResidentActivationDialog
-          key={selectedUser.id}
-          target={{
-            queueId: selectedUser.id,
-            communityId: selectedUser.communityId,
-            communityName: selectedUser.communityName,
-            residentName: selectedUser.fullName,
-            unitLabel: selectedUser.houseLabel,
-            email: selectedUser.email,
-            method: selectedUser.activationMethod ?? "",
-            status: selectedUser.activationStatus ?? "pending",
-          }}
-          onClose={() => setActivationDialogOpen(false)}
-        />
       ) : null}
 
       {selectedUser?.source === "account" ? (
@@ -794,7 +841,25 @@ export function UserSearch() {
               </button>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 [scrollbar-gutter:stable]">
+            <EntryDrawerTabs
+              label="User management sections"
+              tabs={[
+                { id: "account", label: "Account" },
+                { id: "household", label: "Household" },
+                { id: "operational", label: "Operational" },
+              ]}
+              value={userTab}
+              onChange={(next) => {
+                if (isPending) return;
+                setManageMode("view");
+                setUserTab(next);
+                setError(null);
+              }}
+            />
+
+            <div key={`${selectedUser.id}:${userTab}:${manageMode}`}
+              role="tabpanel"
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 [scrollbar-gutter:stable]">
               {message ? (
                 <div className="mb-4 rounded-lg border border-emerald-400/20 bg-emerald-500/10 px-3.5 py-3 text-xs text-emerald-100">
                   {message}
@@ -807,7 +872,9 @@ export function UserSearch() {
               ) : null}
 
               {manageMode === "view" ? (
-                <div className="space-y-4">
+                <>
+                  {userTab === "account" ? (
+                    <div className="space-y-4">
                   <section className="overflow-hidden rounded-lg border border-[#141119] bg-white/[0.012]">
                     <div className="border-b border-[#141119] px-3.5 py-3">
                       <p className="text-xs font-semibold text-white">Account details</p>
@@ -821,26 +888,16 @@ export function UserSearch() {
                         ["Identity type", getIdentityType(selectedUser)],
                         ["Phone", selectedUser.phone || "Not provided"],
                         ["Role", getRoleLabel(selectedUser.role)],
-                        ...(selectedUser.houseId
-                          ? [[
-                              "Household role",
-                              selectedUser.isPrimary
-                                ? "Primary resident"
-                                : "Household member",
-                            ]]
-                          : []),
                         ["Community", selectedUser.communityName || "Unknown"],
                         ["Unit", selectedUser.houseLabel || "No unit linked"],
-                        ["Last sign-in", formatDate(selectedUser.lastSignIn)],
-                        ["Account created", formatDate(selectedUser.createdAt)],
                       ].map(([label, value]) => (
                         <div
                           key={label}
                           className="grid grid-cols-[145px_minmax(0,1fr)] gap-3 px-3.5 py-3"
                         >
-                          <span className="text-[11px] text-[#8F879D]">{label}</span>
+                          <span className="text-[13px] leading-5 text-[#B7AEBD]">{label}</span>
                           <strong
-                            className="truncate text-right text-[11px] font-semibold text-white"
+                            className="break-words text-right text-[13px] font-semibold leading-5 text-white"
                             title={value}
                           >
                             {value}
@@ -964,46 +1021,75 @@ export function UserSearch() {
                     </div>
                   </section>
 
-                  <section className="rounded-lg border border-[#141119] bg-white/[0.012] p-3.5">
-                    <div>
-                      <p className="text-xs font-semibold text-white">Navigation</p>
-                      <p className="mt-1 text-[10px] text-[#8F879D]">
-                        Open the related operational workspace when deeper context is needed.
+                    </div>
+                  ) : null}
+                  {userTab === "household" ? (
+                    <div className="space-y-3.5">
+                      <p className="text-[13px] leading-5 text-[#B7AEBD]">
+                        People assigned to the same residential unit.
                       </p>
+                      {householdLoading ? (
+                        <p className="text-[13px] text-[#B7AEBD]">Loading household members...</p>
+                      ) : householdError ? (
+                        <p role="alert" className="text-[13px] text-rose-200">{householdError}</p>
+                      ) : !selectedUser.houseId ? (
+                        <p className="rounded-lg border border-white/10 p-4 text-[13px] text-[#B7AEBD]">
+                          This account is not linked to a residential unit.
+                        </p>
+                      ) : (
+                        <EntryDrawerSection title={`Household · ${selectedUser.houseLabel || "Selected unit"}`}>
+                          {householdMembers.length > 0 ? (
+                            <div className="divide-y divide-white/[0.06]">
+                              {householdMembers.map((member) => (
+                                <div key={member.userId} className="flex items-center gap-3 px-3.5 py-3">
+                                  <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-full border border-violet-400/20 bg-violet-500/10 text-[12px] font-semibold text-[#D8D1FF]">
+                                    {initials(member.fullName)}
+                                  </span>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="break-words text-sm font-semibold text-white">
+                                      {member.fullName}{member.userId === selectedUser.id ? " · You are viewing" : ""}
+                                    </p>
+                                    <p className="mt-1 break-all text-[12px] leading-4 text-[#B7AEBD]">{member.contact}</p>
+                                    <p className="mt-1 text-[12px] text-[#BEB4FF]">
+                                      {member.isPrimary ? "Primary resident" : getRoleLabel(member.role)}
+                                      {" · "}{member.isActive ? "Active" : "Inactive"}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="px-3.5 py-4 text-[13px] text-[#B7AEBD]">No household members found for this unit.</p>
+                          )}
+                        </EntryDrawerSection>
+                      )}
                     </div>
-                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                      {selectedUser.houseId ? (
-                        <Link
-                          href={`/products/entry/communities/${selectedUser.communityId}/units/${selectedUser.houseId}`}
-                          className={entryButtonClass("secondary", "w-full")}
-                        >
-                          <Home className="size-3.5 text-[#BEB4FF]" aria-hidden />
-                          Open unit
-                        </Link>
-                      ) : null}
-                      <Link
-                        href={`/products/entry/communities/${selectedUser.communityId}`}
-                        className={entryButtonClass("secondary", "w-full")}
-                      >
-                        <Building2 className="size-3.5 text-[#BEB4FF]" aria-hidden />
-                        Open community
-                      </Link>
+                  ) : null}
+                  {userTab === "operational" ? (
+                    <div className="space-y-3.5">
+                      <p className="text-[13px] leading-5 text-[#B7AEBD]">Account activity and access context.</p>
+                      <EntryDrawerSection title="Account activity">
+                        <EntryDrawerField label="Last sign-in">{formatDate(selectedUser.lastSignIn)}</EntryDrawerField>
+                        <EntryDrawerField label="Account created">{formatDate(selectedUser.createdAt)}</EntryDrawerField>
+                        <EntryDrawerField label="Account status">{selectedUser.isActive ? "Active" : "Inactive"}</EntryDrawerField>
+                        <EntryDrawerField label="Role">{getRoleLabel(selectedUser.role)}</EntryDrawerField>
+                        <EntryDrawerField label="Household role">
+                          {selectedUser.houseId ? (selectedUser.isPrimary ? "Primary resident" : "Household member") : "Not assigned"}
+                        </EntryDrawerField>
+                      </EntryDrawerSection>
+                      <div className="rounded-lg border border-[rgba(117,83,255,0.20)] bg-[rgba(117,83,255,0.05)] px-3.5 py-3.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">Access context</p>
+                        <p className="mt-2 text-[13px] leading-5 text-[#D3CEDA]">
+                          {selectedUser.role === "RESIDENT"
+                            ? "Resident access is tied to the assigned community unit and account activation state."
+                            : selectedUser.role === "GUARD"
+                              ? "Guard access is operator-level and is not tied to a residential unit."
+                              : "This account has elevated community access based on its assigned role."}
+                        </p>
+                      </div>
                     </div>
-                  </section>
-
-                  <div className="rounded-lg border border-[rgba(117,83,255,0.20)] bg-[rgba(117,83,255,0.05)] px-3.5 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">
-                      Access context
-                    </p>
-                    <p className="mt-2 text-xs leading-5 text-[#D3CEDA]">
-                      {selectedUser.role === "RESIDENT"
-                        ? "Resident access is tied to the assigned community unit and account activation state."
-                        : selectedUser.role === "GUARD"
-                          ? "Guard access is operator-level and is not tied to a residential unit."
-                          : "This account has elevated community access based on its assigned role."}
-                    </p>
-                  </div>
-                </div>
+                  ) : null}
+                </>
               ) : null}
 
               {manageMode === "edit" && draft ? (
