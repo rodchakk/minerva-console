@@ -649,7 +649,7 @@ export function CommunityDirectoryWorkspace({
               label="Unit management sections"
               tabs={[
                 { id: "overview", label: "Unit overview" },
-                { id: "household", label: "Household" },
+                { id: "household", label: `Household (${selectedUnit.residents.length})` },
                 { id: "operational", label: "Operational" },
               ]}
               value={directoryTab}
@@ -666,16 +666,6 @@ export function CommunityDirectoryWorkspace({
                     <EntryDrawerField label="Resident-facing reference">{selectedUnit.publicReference || "Not registered"}</EntryDrawerField>
                     <EntryDrawerField label="Status">{selectedUnit.isActive ? "Active" : "Inactive"}</EntryDrawerField>
                   </EntryDrawerSection>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-white/[0.09] bg-white/[0.025] p-3">
-                      <p className="text-xs text-[#B7AEBD]">Residents</p>
-                      <p className="mt-1 text-xl font-semibold text-white">{selectedUnit.residentCount}</p>
-                    </div>
-                    <div className="rounded-lg border border-white/[0.09] bg-white/[0.025] p-3">
-                      <p className="text-xs text-[#B7AEBD]">Active passes</p>
-                      <p className="mt-1 text-xl font-semibold text-white">{selectedUnit.activePasses}</p>
-                    </div>
-                  </div>
                   <EntryDrawerSection title="Access summary">
                     <EntryDrawerField label="Last access">
                       {selectedUnit.lastAccess === "Not available" ? "No access recorded" : selectedUnit.lastAccess}
