@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Filter,
@@ -9,7 +8,6 @@ import {
   Search,
   Send,
   UserPlus,
-  X,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
