@@ -23,18 +23,32 @@ export function normalizeCommunityUnitLabelPrefix(
   return trimmed;
 }
 
+export function canonicalizeCommunityUnitLabel(
+  unitLabelPrefix: string,
+  unitLabel: string,
+) {
+  const prefix = normalizeCommunityUnitLabelPrefix(unitLabelPrefix);
+  const normalizedLabel = normalizeUnitLabelSegment(unitLabel);
+
+  if (!normalizedLabel) return "";
+  if (!prefix) return normalizedLabel;
+
+  if (hasCommunityUnitPrefix(normalizedLabel, prefix)) {
+    const suffix = normalizeUnitLabelSegment(
+      normalizedLabel.slice(prefix.length),
+    );
+
+    return suffix ? `${prefix} ${suffix}` : prefix;
+  }
+
+  return `${prefix} ${normalizedLabel}`.trim();
+}
+
 export function buildCommunityUnitLookupLabel(
   unitLabelPrefix: string,
   unitSuffix: string,
 ) {
-  const prefix = normalizeCommunityUnitLabelPrefix(unitLabelPrefix);
-  const suffix = normalizeUnitLabelSegment(unitSuffix);
-
-  if (!suffix) return "";
-  if (!prefix) return suffix;
-  if (hasCommunityUnitPrefix(suffix, prefix)) return suffix;
-
-  return `${prefix} ${suffix}`.trim();
+  return canonicalizeCommunityUnitLabel(unitLabelPrefix, unitSuffix);
 }
 
 export function hasCommunityUnitPrefix(value: string, unitLabelPrefix: string) {

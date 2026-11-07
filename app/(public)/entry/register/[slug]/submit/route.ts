@@ -4,7 +4,11 @@ import {
   normalizePublicSlug,
   readCampaignAccessCookieValue,
 } from "@/features/entry/communityRegistration/public/accessState";
-import { submitCommunityRegistrationHousehold } from "@/features/entry/communityRegistration/public/gateway";
+import {
+  lookupCommunityRegistrationUnit,
+  resolveCommunityRegistrationUnitPrefix,
+  submitCommunityRegistrationHousehold,
+} from "@/features/entry/communityRegistration/public/gateway";
 import {
   enforceInitialSubmissionRateLimit,
   isRateLimitDenied,
@@ -15,6 +19,7 @@ import {
   jsonRegistrationResponse,
 } from "@/features/entry/communityRegistration/public/requestSecurity";
 import { parseHouseholdSubmissionBody } from "@/features/entry/communityRegistration/public/submissionPayload";
+import { canonicalizeCommunityUnitLabel } from "@/features/entry/communityRegistration/public/unitLabelPrefix";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 
 export const dynamic = "force-dynamic";
@@ -143,11 +148,54 @@ export async function POST(
     return submissionResponse({ error: "invalid_request", submitted: false }, 400);
   }
 
+  // Re-resolve the unit server-side before submission instead of trusting the
+  // browser's label. This preserves exact labels for existing-unit campaigns
+  // while allowing resident-provided units to be canonicalized below.
+  const unitLookup = await lookupCommunityRegistrationUnit({
+    publicSlug: slug,
+    tokenHash: accessState.tokenHash,
+    unitLabel: parsedBody.body.unitLabel,
+  });
+
+  if (!unitLookup.available) {
+    return submissionResponse(
+      {
+        error:
+          unitLookup.reason === "already_registered"
+            ? "already_registered"
+            : "unavailable",
+        submitted: false,
+      },
+      409,
+    );
+  }
+
+  let submissionUnitLabel = unitLookup.unitLabel;
+
+  if (unitLookup.registrationMode === "resident_provided_units") {
+    const unitLabelPrefix = await resolveCommunityRegistrationUnitPrefix({
+      publicSlug: slug,
+    });
+
+    if (!unitLabelPrefix) {
+      return submissionResponse({ error: "unavailable", submitted: false }, 409);
+    }
+
+    submissionUnitLabel = canonicalizeCommunityUnitLabel(
+      unitLabelPrefix,
+      submissionUnitLabel,
+    );
+
+    if (!submissionUnitLabel) {
+      return submissionResponse({ error: "invalid_request", submitted: false }, 400);
+    }
+  }
+
   const submission = await submitCommunityRegistrationHousehold({
     publicSlug: slug,
     residents: parsedBody.body.residents,
     tokenHash: accessState.tokenHash,
-    unitLabel: parsedBody.body.unitLabel,
+    unitLabel: submissionUnitLabel,
     unitReference: parsedBody.body.unitReference,
   });
 
