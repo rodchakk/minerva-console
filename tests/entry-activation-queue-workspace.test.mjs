@@ -54,59 +54,38 @@ test("Activation Queue keeps pending invite distinct from awaiting activation", 
   );
 });
 
-test("Activation Queue is table-first and opens resident details in a fixed drawer", () => {
+test("Activation Queue remains table-first and uses the shared stable-width drawer", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
-
+  const drawer = read("features/entry/activation/ActivationResidentDrawer.tsx");
+  const tabs = read("features/entry/components/EntryDrawerTabs.tsx");
   assert.match(source, /100dvh/);
-  assert.match(source, /overflow-auto overscroll-contain/);
-  assert.match(source, /overflow-y-auto overscroll-contain/);
-  assert.match(source, /scrollbar-gutter:stable/);
-  assert.match(source, /useState<string \| null>\(null\)/);
-  assert.match(source, /fixed bottom-5 right-5 top-\[76px\]/);
-  assert.match(source, /w-\[440px\]/);
-  assert.doesNotMatch(source, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
+  assert.match(source, /ActivationResidentDrawer/);
+  assert.match(drawer, /fixed bottom-5 right-5 top-\[76px\]/);
+  assert.match(drawer, /w-\[440px\]/);
+  assert.match(drawer, /w-\[560px\]/);
+  assert.match(drawer, /grid-rows-\[auto_auto_minmax\(0,1fr\)_auto\]/);
+  assert.match(drawer, /overflow-y-auto overscroll-contain/);
+  assert.match(drawer, /EntryDrawerTabs/);
+  assert.match(tabs, /role="tablist"/);
+  assert.match(drawer, /Resident details/);
+  assert.match(drawer, /Invitation history/);
 });
 
-test("Activation Queue retains batch operations and unifies single-resident activation", () => {
+test("Activation Queue retains existing batch operations and one resident activation button", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
+  const drawer = read("features/entry/activation/ActivationResidentDrawer.tsx");
+  const dialog = read("features/entry/activation/ManageResidentActivationDialog.tsx");
 
   assert.match(source, /generateActivationPins/);
   assert.match(source, /sendActivationEmails/);
   assert.match(source, /createActivatedUsers/);
-  assert.match(source, /function runResidentCreateUser/);
-  assert.match(source, /ManageResidentActivationDialog/);
-  assert.match(source, /setManagingQueueRowId\(activeRow\.id\)/);
-  assert.match(source, /Manage activation/);
-  assert.match(source, /Create user/);
-});
-
-test("resident action uses one queue-scoped manager, not bulk selections", () => {
-  const source = read("features/entry/activation/ActivationQueueTable.tsx");
-
-  assert.match(source, /managingQueueRowId/);
-  assert.match(source, /queueId: managingQueueRow\.id/);
-  assert.match(source, /disabled=\{!activeRowActionable \|\| phase !== "idle"\}/);
-  assert.doesNotMatch(source, /onClick=\{\(\) => runResidentPin\(activeRow\.id\)\}/);
-  assert.doesNotMatch(source, /onClick=\{\(\) => runResidentEmail\(activeRow\.id\)\}/);
-});
-
-test("bulk invite flow remains separate from single-resident management", () => {
-  const source = read("features/entry/activation/ActivationQueueTable.tsx");
   assert.match(source, /async function handleConfirmSendEmail/);
   assert.match(source, /queueIds: selectedIds/);
-  assert.match(source, /Send emails/);
-  assert.match(source, /ManageResidentActivationDialog/);
-});
-
-test("Activation Queue resident detail shows derived progress and queue blockers without backend changes", () => {
-  const source = read("features/entry/activation/ActivationQueueTable.tsx");
-
-  assert.match(source, /Activation progress/);
-  assert.match(source, /Queue checks/);
-  assert.match(source, /Queue checks clear/);
-  assert.match(source, /getQueueBlockers/);
-  assert.match(source, /getActivationStage/);
-  assert.doesNotMatch(source, /supabase\.(?:from|rpc|insert|update|upsert)\(/);
+  assert.match(drawer, /Manage activation/);
+  assert.doesNotMatch(drawer, /Create user/);
+  assert.match(dialog, /createActivatedUsers/);
+  assert.match(dialog, /mode === "quick"/);
+  assert.match(dialog, /includePinForSharing: true/);
 });
 
 test("queue review acknowledgement is compact and operational", () => {
@@ -121,16 +100,14 @@ test("queue review acknowledgement is compact and operational", () => {
 });
 
 
-test("Activation Queue exposes safe pre-activation email correction", () => {
-  const table = read("features/entry/activation/ActivationQueueTable.tsx");
+test("shared pending drawer retains safe pre-activation email correction", () => {
+  const drawer = read("features/entry/activation/ActivationResidentDrawer.tsx");
+  const editor = read("features/entry/activation/ActivationResidentEditors.tsx");
   const action = read("features/entry/activation/emailEditActions.ts");
-  const migration = read(
-    "supabase/migrations/20260925021500_update_resident_activation_email_v1.sql",
-  );
-
-  assert.match(table, /Change activation email/);
-  assert.match(table, /Edit email/);
-  assert.match(table, /updateActivationEmail/);
+  const migration = read("supabase/migrations/20260925021500_update_resident_activation_email_v1.sql");
+  assert.match(drawer, /Edit email/);
+  assert.match(editor, /Change activation email/);
+  assert.match(editor, /updateActivationEmail/);
   assert.match(action, /update_resident_activation_email_v1/);
   assert.match(migration, /status = 'expired'/);
   assert.match(migration, /status = 'pending'/);
@@ -153,46 +130,20 @@ test("Console PIN generation serializes with activation email edits", () => {
 });
 
 
-test("Activation Queue supports safe pre-activation phone correction", () => {
-  const table = read("features/entry/activation/ActivationQueueTable.tsx");
-  const action = read("features/entry/activation/phoneEditActions.ts");
-  const migration = read(
-    "supabase/migrations/20260925043000_activation_queue_phone_and_delivery_timestamps.sql",
-  );
-
-  assert.match(table, /Change activation phone/);
-  assert.match(table, /Edit phone/);
-  assert.match(table, /updateActivationPhone/);
-  assert.match(action, /update_resident_activation_phone_v1/);
-  assert.match(migration, /activation_reset/);
-  assert.match(migration, /phone_send_in_progress/);
-  assert.match(migration, /status = 'expired'/);
-});
-
-test("Activation Queue shows invitation history, follow-up age and PIN timing separately", () => {
-  const table = read("features/entry/activation/ActivationQueueTable.tsx");
+test("shared pending drawer keeps phone correction and invitation history", () => {
+  const drawer = read("features/entry/activation/ActivationResidentDrawer.tsx");
+  const editor = read("features/entry/activation/ActivationResidentEditors.tsx");
   const actions = read("features/entry/activation/actions.ts");
-  const migration = read(
-    "supabase/migrations/20260927054000_entry_activation_follow_up_buckets.sql",
-  );
-
-  assert.match(table, /Last action/);
-  assert.match(table, /First invitation sent/);
-  assert.match(table, /Last invitation sent/);
-  assert.match(table, /Invitation attempts/);
-  assert.match(table, /Last PIN generated/);
-  assert.match(table, /Needs follow-up/);
-  assert.match(table, /Not invited/);
-  assert.match(table, /Recent/);
-  assert.match(table, /Waiting/);
-  assert.match(actions, /lastActivationAt/);
-  assert.match(actions, /first_invitation_sent_at/);
-  assert.match(actions, /last_invitation_sent_at/);
-  assert.match(actions, /invitation_attempt_count/);
+  const migration = read("supabase/migrations/20260925043000_activation_queue_phone_and_delivery_timestamps.sql");
+  assert.match(drawer, /Edit phone/);
+  assert.match(drawer, /Invitation history/);
+  assert.match(drawer, /row\.lastPinGeneratedAt/);
+  assert.match(drawer, /row\.invitationAttemptCount/);
+  assert.match(drawer, /Needs follow-up/);
+  assert.match(editor, /updateActivationPhone/);
+  assert.match(migration, /activation_reset/);
   assert.match(actions, /list_resident_activation_queue_v3/);
-  assert.match(migration, /max\(p\.created_at\) as last_pin_generated_at/);
 });
-
 
 test("Activation Queue does not treat digits inside an email as a phone query", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
