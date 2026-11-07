@@ -67,7 +67,7 @@ test("Activation Queue is table-first and opens resident details in a fixed draw
   assert.doesNotMatch(source, /xl:grid-cols-\[minmax\(0,1fr\)_360px\]/);
 });
 
-test("Activation Queue preserves the existing activation actions and adds direct resident PIN action", () => {
+test("Activation Queue retains batch operations and unifies single-resident activation", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
 
   assert.match(source, /generateActivationPins/);
@@ -76,26 +76,20 @@ test("Activation Queue preserves the existing activation actions and adds direct
   assert.match(source, /function runResidentPin/);
   assert.match(source, /function runResidentEmail/);
   assert.match(source, /function runResidentCreateUser/);
-  assert.match(source, /Generate PIN/);
-  assert.match(source, /Send invite/);
+  assert.match(source, /ManageResidentActivationDialog/);
+  assert.match(source, /setManagingQueueRowId\(activeRow\.id\)/);
+  assert.match(source, /Manage activation/);
   assert.match(source, /Create user/);
 });
 
-test("resident-side actions do not require an unrelated bulk selection", () => {
+test("resident action uses one queue-scoped manager, not bulk selections", () => {
   const source = read("features/entry/activation/ActivationQueueTable.tsx");
 
-  assert.match(
-    source,
-    /runResidentEmail\(activeRow\.id\)[\s\S]*disabled=\{!activeRowActionable \|\| phase !== "idle"\}/,
-  );
-  assert.match(
-    source,
-    /runResidentPin\(activeRow\.id\)[\s\S]*disabled=\{!activeRowActionable \|\| phase !== "idle"\}/,
-  );
-  assert.doesNotMatch(
-    source,
-    /runResident(?:Email|Pin)\(activeRow\.id\)[\s\S]{0,180}selectedCount === 0/,
-  );
+  assert.match(source, /managingQueueRowId/);
+  assert.match(source, /queueId: managingQueueRow\.id/);
+  assert.match(source, /disabled=\{!activeRowActionable \|\| phase !== "idle"\}/);
+  assert.doesNotMatch(source, /onClick=\{\(\) => runResidentPin\(activeRow\.id\)\}/);
+  assert.doesNotMatch(source, /onClick=\{\(\) => runResidentEmail\(activeRow\.id\)\}/);
 });
 
 test("resident email action preserves an existing multi-selection for batch invites", () => {
