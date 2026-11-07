@@ -64,7 +64,7 @@ test("unit editing persists primary resident through house_residents.is_primary"
   assert.match(detailQueries, /\.from\("house_residents"\)[\s\S]*\.select\("house_id,user_id,is_primary"\)/);
   assert.match(detailQueries, /activeResidents\.find\(\(resident\) => resident\.isPrimary\)/);
   assert.match(quickActions, /Primary resident/);
-  assert.match(quickActions, /primaryResidentUserId: hasLinkedResidents \? primaryResidentId : null/);
+  assert.match(quickActions, /setCommunityUnitPrimaryResidentAction\(\{ communityId, unitId: unit.id, userId: primaryResidentId \}\)/);
   assert.match(unitActions, /setPrimaryResidentForUnit/);
   assert.match(unitActions, /\.update\(\{ is_primary: false/);
   assert.match(unitActions, /\.update\(\{ is_primary: true/);

@@ -1522,6 +1522,7 @@ export function CommunityUsersClient({
                       </p>
                     </div>
                     <ResponsibleUnitsForPerson
+                      key={`${community.id}:${selectedUser.userId}`}
                       communityId={community.id}
                       userId={selectedUser.userId}
                     />

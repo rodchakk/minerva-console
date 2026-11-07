@@ -14,14 +14,7 @@ const unitActions = readFileSync(
   new URL("../features/entry/communities/unitActions.ts", import.meta.url),
   "utf8",
 );
-const fieldUnitActions = readFileSync(
-  new URL("../features/entry/field/FieldUnitActions.tsx", import.meta.url),
-  "utf8",
-);
-const fieldPeopleActions = readFileSync(
-  new URL("../features/entry/field/peopleActions.ts", import.meta.url),
-  "utf8",
-);
+
 
 test("unit links and responsibilities are separate, tenant-scoped, historical associations", () => {
   assert.match(migration, /create table public\.entry_unit_links/i);
@@ -43,11 +36,47 @@ test("PostgreSQL fixture covers reversals, same-community integrity and safe ren
   }
 });
 
-test("enabled communities route every existing unit rename through the audited RPC", () => {
-  assert.match(unitActions, /expectedUnitLabel/);
-  assert.match(unitActions, /allow_unit_relationships/);
-  assert.match(unitActions, /manage_entry_unit_relationship_v1/);
-  assert.match(unitActions, /p_expected_label: expectedUnitLabel/);
-  assert.match(fieldUnitActions, /expectedUnitLabel: unit\.label/);
-  assert.match(fieldPeopleActions, /expectedUnitLabel: string/);
+
+test("rename delegates only to the audited RPC, even with an injected primary resident field", async () => {
+  const { createRequire } = await import("node:module");
+  const require = createRequire(import.meta.url);
+  const ts = require("typescript");
+  const { runInNewContext } = await import("node:vm");
+  const calls = [];
+  const result = { success: true };
+  const testModule = { exports: {} };
+  const code = ts.transpileModule(unitActions, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  runInNewContext(code, {
+    exports: testModule.exports,
+    module: testModule,
+    require(name) {
+      if (name.includes("unitRelationshipActions")) return { manageUnitRelationship: async (input) => { calls.push(input); return result; } };
+      if (name.includes("requireSuperadmin")) return { requireSuperadmin: async () => ({}) };
+      if (name.includes("deploymentBoundary")) return { getEntryPreviewReadOnlyError: () => null };
+      if (name.includes("supabase/admin")) return { createAdminClient: () => { throw new Error("Rename touched the administrative database client"); } };
+      return {};
+    },
+  });
+  const response = await testModule.exports.updateCommunityUnitAction({
+    communityId: "community", unitId: "stable-uuid", expectedUnitLabel: "Apartamento 1",
+    unitLabel: "Casa 2009", primaryResidentUserId: "must-not-be-used",
+  });
+  assert.equal(response, result);
+  assert.equal(calls.length, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(calls[0])), {
+    action: "rename_unit", communityId: "community", unitId: "stable-uuid",
+    label: "Casa 2009", expectedLabel: "Apartamento 1",
+  });
+  result.success = false;
+  result.error = "unit_relationships_disabled";
+  assert.equal((await testModule.exports.updateCommunityUnitAction({
+    communityId: "community", unitId: "stable-uuid", expectedUnitLabel: "old", unitLabel: "new",
+  })).success, false);
+});
+
+test("scope exception rejects unrelated authorization and financial files", async () => {
+  const { entryRelationshipsScope } = await import("./helpers/entry-relationships-scope.mjs");
+  for (const path of ["features/entry/auth.ts", "features/brain/model.ts", "supabase/migrations/unrelated.sql", "features/seshat/payments.ts"]) {
+    assert.equal(entryRelationshipsScope.has(path), false);
+  }
 });

@@ -6,13 +6,14 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function UnitRelationshipsSection({ communityId, unitId, unitLabel }: { communityId: string; unitId: string; unitLabel: string }) {
   await requireSuperadmin();
   const db = createAdminClient();
-  const [{ data: setting }, { data: allUnits }, { data: profiles }, { data: linkRows }, { data: responsibilityRows }] = await Promise.all([
+  const [{ data: setting, error: settingError }, { data: allUnits, error: unitsError }, { data: profiles, error: profilesError }, { data: linkRows, error: linksError }, { data: responsibilityRows, error: responsibilitiesError }] = await Promise.all([
     db.from("community_settings").select("allow_unit_relationships").eq("community_id", communityId).maybeSingle(),
     db.from("houses").select("id,house_label,public_reference,unit_reference").eq("community_id", communityId).order("house_label").limit(3000),
     db.from("profiles").select("user_id,full_name,role,is_active").eq("community_id", communityId).order("full_name").limit(3000),
     db.from("entry_unit_links").select("id,unit_a_id,unit_b_id").eq("community_id", communityId).is("ended_at", null).or(`unit_a_id.eq.${unitId},unit_b_id.eq.${unitId}`),
     db.from("entry_unit_responsibilities").select("id,user_id").eq("community_id", communityId).eq("house_id", unitId).is("ended_at", null),
   ]);
+  if (settingError || unitsError || profilesError || linksError || responsibilitiesError) return <p role="alert">Unit relationships are unavailable. Check the database migration and try again.</p>;
   if (setting?.allow_unit_relationships !== true) return <section className="rounded-xl border border-[var(--border)] p-5"><h2 className="font-semibold text-white">Unit relationships</h2><p className="mt-2 text-sm text-[var(--text-muted)]">This feature is not enabled for this community.</p></section>;
   const unitMap = new Map((allUnits ?? []).map((x) => [String(x.id), x]));
   const profileMap = new Map((profiles ?? []).map((x) => [String(x.user_id), x]));

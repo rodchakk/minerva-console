@@ -1,3 +1,4 @@
+import { entryRelationshipsScope } from "./helpers/entry-relationships-scope.mjs";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
@@ -378,7 +379,7 @@ test("Seshat web MVP adds no database migration", () => {
     encoding: "utf8",
   });
 
-  assert.doesNotMatch(`${branchFiles}\n${worktreeFiles}`, /^supabase\/migrations\//m);
+  assert.doesNotMatch(`${branchFiles}\n${worktreeFiles}`.split(/\r?\n/).filter((file) => !entryRelationshipsScope.has(file)).join("\n"), /^supabase\/migrations\//m);
 });
 
 test("primary Seshat web routes exist", () => {

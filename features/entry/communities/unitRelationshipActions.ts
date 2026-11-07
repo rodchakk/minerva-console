@@ -11,10 +11,11 @@ export type UnitRelationshipAction = "link_units" | "unlink_units" | "assign_res
 export async function getUserResponsibleUnits(communityId: string, userId: string) {
   await requireSuperadmin();
   const db = createAdminClient();
-  const [{ data: setting }, { data: rows, error }] = await Promise.all([
+  const [{ data: setting, error: settingError }, { data: rows, error }] = await Promise.all([
     db.from("community_settings").select("allow_unit_relationships").eq("community_id", communityId).maybeSingle(),
     db.from("entry_unit_responsibilities").select("id,house_id,ended_at").eq("community_id", communityId).eq("user_id", userId).is("ended_at", null),
   ]);
+  if (settingError) return { enabled: true, error: "Unit relationships are unavailable. The database migration must be installed first.", items: [], units: [] };
   if (setting?.allow_unit_relationships !== true) return { enabled: false, error: null, items: [], units: [] };
   if (error) return { enabled: true, error: error.message, items: [], units: [] };
   const { data: membership } = await db.from("community_members").select("user_id").eq("community_id", communityId).eq("user_id", userId).maybeSingle();
@@ -58,5 +59,8 @@ export async function manageUnitRelationship(input: {
   revalidatePath(`/products/entry/communities/${input.communityId}/units/${input.unitId}`);
   revalidatePath(`/products/entry/communities/${input.communityId}/units`);
   revalidatePath(`/products/entry/communities/${input.communityId}/users`);
+  revalidatePath(`/field/entry/communities/${input.communityId}/people`);
+  revalidatePath(`/field/entry/communities/${input.communityId}/people/units/${input.unitId}`);
+  revalidatePath('/products/entry/users');
   return { data, success: true as const };
 }

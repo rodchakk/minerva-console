@@ -10,17 +10,23 @@ export function ResponsibleUnitsForPerson({ communityId, userId }: { communityId
   const [pending, startTransition] = useTransition();
   useEffect(() => {
     let current = true;
-    getUserResponsibleUnits(communityId, userId).then((result) => { if (current) setData(result); });
+    getUserResponsibleUnits(communityId, userId).then((result) => { if (current) setData(result); }).catch(() => { if (current) setMessage("Could not load responsible units. Please reopen this detail."); });
     return () => { current = false; };
   }, [communityId, userId]);
   function run(action: "assign_responsible" | "remove_responsible", unitId: string, recordId?: string) {
+    setMessage("");
     startTransition(async () => {
-      const result = await manageUnitRelationship({ action, communityId, unitId, userId, recordId });
-      if (!result.success) { setMessage(result.error ?? "Could not update responsibility."); return; }
-      setMessage("Saved.");
-      setData(await getUserResponsibleUnits(communityId, userId));
+      try {
+        const result = await manageUnitRelationship({ action, communityId, unitId, userId, recordId });
+        if (!result.success) { setMessage(result.error ?? "Could not update responsibility."); return; }
+        setMessage("Saved.");
+        setData(await getUserResponsibleUnits(communityId, userId));
+      } catch {
+        setMessage("Could not confirm the change. Reopen this detail before retrying.");
+      }
     });
   }
+  if (!data && message) return <p role="alert">{message}</p>;
   if (!data) return <p className="mt-4 text-sm text-[var(--console-text-muted)]">Loading responsible units…</p>;
   if (!data.enabled) return null;
   const assigned = new Set(data.items.map((item) => item.houseId));

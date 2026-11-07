@@ -1,5 +1,6 @@
 "use server";
 
+import { manageUnitRelationship } from "./unitRelationshipActions";
 import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
@@ -25,7 +26,6 @@ export type CreateResidentResult = CommunityUnitActionResult & {
 export type UpdateCommunityUnitInput = {
   communityId: string;
   expectedUnitLabel: string;
-  primaryResidentUserId?: string | null;
   unitId: string;
   unitLabel: string;
 };
@@ -223,94 +223,34 @@ export async function updateCommunityUnitAction(
     return { error: previewReadOnlyError, success: false };
   }
 
-  const communityId = input.communityId.trim();
-  const unitId = input.unitId.trim();
-  const unitLabel = input.unitLabel.trim();
-  const primaryResidentUserId =
-    input.primaryResidentUserId === undefined
-      ? undefined
-      : input.primaryResidentUserId?.trim() || null;
+  return manageUnitRelationship({
+    action: "rename_unit",
+    communityId: input.communityId.trim(),
+    unitId: input.unitId.trim(),
+    label: input.unitLabel.trim(),
+    expectedLabel: input.expectedUnitLabel,
+  });
+}
 
-  if (!communityId || !unitId) {
-    return {
-      error: "Community ID and unit ID are required.",
-      success: false,
-    };
+export async function setCommunityUnitPrimaryResidentAction(input: {
+  communityId: string;
+  unitId: string;
+  userId: string;
+}): Promise<CommunityUnitActionResult> {
+  await requireSuperadmin();
+  const boundary = getEntryPreviewReadOnlyError();
+  if (boundary) return { success: false, error: boundary };
+  if (!input.communityId || !input.unitId || !input.userId) {
+    return { success: false, error: "Community, unit and resident are required." };
   }
-
-  if (!unitLabel) {
-    return {
-      error: "Unit label is required.",
-      success: false,
-    };
-  }
-
-  const supabase = createAdminClient();
-  const expectedUnitLabel = input.expectedUnitLabel.trim();
-  if (unitLabel !== expectedUnitLabel) {
-    const { data: setting, error: settingError } = await supabase
-      .from("community_settings")
-      .select("allow_unit_relationships")
-      .eq("community_id", communityId)
-      .maybeSingle();
-
-    if (settingError) return { error: settingError.message, success: false };
-
-    if (setting?.allow_unit_relationships === true) {
-      const client = await createClient();
-      const { error } = await client.rpc("manage_entry_unit_relationship_v1", {
-        p_action: "rename_unit",
-        p_community_id: communityId,
-        p_unit_id: unitId,
-        p_other_unit_id: null,
-        p_user_id: null,
-        p_link_id: null,
-        p_responsibility_id: null,
-        p_label: unitLabel,
-        p_expected_label: expectedUnitLabel,
-      });
-
-      if (error) return { error: error.message, success: false };
-    } else {
-      const { data, error } = await supabase
-        .from("houses")
-        .update({ house_label: unitLabel })
-        .eq("community_id", communityId)
-        .eq("id", unitId)
-        .select("id")
-        .maybeSingle();
-
-      if (error) return { error: error.message, success: false };
-      if (!data) return { error: "Unit not found in this community.", success: false };
-    }
-  } else {
-    const { data, error } = await supabase
-      .from("houses")
-      .select("id")
-      .eq("community_id", communityId)
-      .eq("id", unitId)
-      .maybeSingle();
-
-    if (error) return { error: error.message, success: false };
-    if (!data) return { error: "Unit not found in this community.", success: false };
-  }
-
-  if (primaryResidentUserId !== undefined) {
-    const primaryResult = await setPrimaryResidentForUnit({
-      adminSupabase: supabase,
-      communityId,
-      unitId,
-      userId: primaryResidentUserId,
-    });
-
-    if (!primaryResult.success) {
-      return primaryResult;
-    }
-  }
-
-  revalidateUnitPaths(communityId, unitId);
-
-  return { success: true };
+  const result = await setPrimaryResidentForUnit({
+    adminSupabase: createAdminClient(),
+    communityId: input.communityId,
+    unitId: input.unitId,
+    userId: input.userId,
+  });
+  if (result.success) revalidateUnitPaths(input.communityId, input.unitId);
+  return result;
 }
 
 export async function setCommunityUnitActiveStatusAction(

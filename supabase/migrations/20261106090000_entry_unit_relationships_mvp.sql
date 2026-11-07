@@ -47,10 +47,10 @@ alter table public.entry_unit_links enable row level security;
 alter table public.entry_unit_links force row level security;
 alter table public.entry_unit_responsibilities enable row level security;
 alter table public.entry_unit_responsibilities force row level security;
-revoke all on public.entry_unit_links, public.entry_unit_responsibilities from public, anon, authenticated;
-grant select on public.entry_unit_links, public.entry_unit_responsibilities to authenticated;
-create policy entry_unit_links_superadmin_read on public.entry_unit_links for select to authenticated using (public.is_superadmin());
-create policy entry_unit_responsibilities_superadmin_read on public.entry_unit_responsibilities for select to authenticated using (public.is_superadmin());
+revoke all on public.entry_unit_links, public.entry_unit_responsibilities from public, anon, authenticated, service_role;
+grant select on public.entry_unit_links, public.entry_unit_responsibilities to authenticated, service_role;
+create policy entry_unit_links_superadmin_read on public.entry_unit_links for select to authenticated using (public.is_superadmin() and exists (select 1 from public.community_settings s where s.community_id = entry_unit_links.community_id and s.allow_unit_relationships));
+create policy entry_unit_responsibilities_superadmin_read on public.entry_unit_responsibilities for select to authenticated using (public.is_superadmin() and exists (select 1 from public.community_settings s where s.community_id = entry_unit_responsibilities.community_id and s.allow_unit_relationships));
 
 create or replace function public.manage_entry_unit_relationship_v1(
   p_action text, p_community_id uuid, p_unit_id uuid default null,
@@ -69,14 +69,17 @@ begin
   if v_actor is null or not public.is_superadmin(v_actor) then
     raise exception 'superadmin_required' using errcode = '42501';
   end if;
-  if p_action not in ('link_units','unlink_units','assign_responsible','remove_responsible','rename_unit') then
+  if p_action is null or p_action not in ('link_units','unlink_units','assign_responsible','remove_responsible','rename_unit') then
     raise exception 'invalid_action' using errcode = '22023';
   end if;
   -- Serialize feature gating and all edits within this community. No client-supplied actor is trusted.
   perform pg_advisory_xact_lock(hashtextextended(p_community_id::text, 711309));
-  perform 1 from public.community_settings s
-   where s.community_id = p_community_id and s.allow_unit_relationships for update;
-  if not found then raise exception 'unit_relationships_disabled' using errcode = '42501'; end if;
+  -- Existing label editing is independent of the new association feature gate.
+  if p_action <> 'rename_unit' then
+    perform 1 from public.community_settings s
+     where s.community_id = p_community_id and s.allow_unit_relationships for update;
+    if not found then raise exception 'unit_relationships_disabled' using errcode = '42501'; end if;
+  end if;
 
   if p_action = 'link_units' then
     if p_unit_id is null or p_other_unit_id is null or p_unit_id = p_other_unit_id then
