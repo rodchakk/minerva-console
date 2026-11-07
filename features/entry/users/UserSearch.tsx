@@ -245,6 +245,9 @@ export function UserSearch() {
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape" || !selectedKey) return;
+      // Pending resident dialogs may display a one-time PIN or password.
+      // Do not unmount the shared drawer from the global Escape handler.
+      if (selectedUser?.source === "activation_queue") return;
 
       if (manageMode !== "view") {
         setManageMode("view");
@@ -260,7 +263,7 @@ export function UserSearch() {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [manageMode, selectedKey]);
+  }, [manageMode, selectedKey, selectedUser?.source]);
 
   function syncUser(user: UserSearchItem, changes: Partial<UserSearchItem>) {
     setOverrides((current) => ({
