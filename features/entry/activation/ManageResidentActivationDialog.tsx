@@ -140,7 +140,7 @@ export function ManageResidentActivationDialog({
           `Contraseña temporal: ${createdUser.temporary_password ?? "—"}`,
           "Inicia sesión en ENTRY y cambia tu contraseña.",
           "https://www.minervatechs.com/entry",
-        ].join("\\n")
+        ].join("\n")
       : message;
     if (!credentials) return;
     try {
