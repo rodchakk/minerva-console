@@ -460,6 +460,14 @@ export function UserSearch() {
           : `Unit changed to ${result.houseLabel ?? selectedHouse.label}.`,
       );
       setManageMode("view");
+      const members = await getGlobalHouseholdMembersAction(selectedUser.communityId, unitDraft);
+      if (members.success) {
+        setHouseholdMembers(members.members);
+        setHouseholdError(null);
+      } else {
+        setHouseholdMembers([]);
+        setHouseholdError(members.error);
+      }
       router.refresh();
     });
   }
