@@ -705,6 +705,10 @@ function getFollowUpFilterLabel(view: FollowUpView) {
   return getFollowUpLabel(view);
 }
 
+function hasValue(value: string) {
+  return Boolean(value.trim() && value.trim() !== "—");
+}
+
 const ACTIVATION_QUEUE_PAGE_SIZE = 50;
 
 function QueueTag({
@@ -738,6 +742,7 @@ export function ActivationQueueTable({
   communityName,
   rows,
 }: ActivationQueueTableProps) {
+  const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
