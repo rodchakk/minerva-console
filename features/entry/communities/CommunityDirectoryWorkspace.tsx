@@ -180,7 +180,7 @@ export function CommunityDirectoryWorkspace({
   const [moreOpen, setMoreOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [directoryTab, setDirectoryTab] = useState<"overview" | "household" | "operational">("overview");
-  useEffect(() => { setDirectoryTab("overview"); }, [selectedId]);
+
   const [desktopWorkspaceHeight, setDesktopWorkspaceHeight] = useState<number | null>(null);
   const pageRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
@@ -561,11 +561,12 @@ export function CommunityDirectoryWorkspace({
                       <tr
                         key={unit.id}
                         tabIndex={0}
-                        onClick={() => setSelectedId(unit.id)}
+                        onClick={() => { setSelectedId(unit.id); setDirectoryTab("overview"); }}
                         onKeyDown={(event) => {
                           if (event.key === "Enter" || event.key === " ") {
                             event.preventDefault();
                             setSelectedId(unit.id);
+                          setDirectoryTab("overview");
                           }
                         }}
                         className={cn(
