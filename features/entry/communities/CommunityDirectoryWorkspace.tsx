@@ -615,7 +615,7 @@ export function CommunityDirectoryWorkspace({
         </section>
 
         {selectedUnit && recommendation ? (
-          <aside className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
+          <aside className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
             <div className="border-b border-[#141119] px-4 py-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3">
