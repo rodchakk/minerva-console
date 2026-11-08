@@ -38,12 +38,28 @@ test("unit links and responsibilities are separate, tenant-scoped, historical as
   assert.match(migration, /before update of house_label on public\.houses/i);
   assert.match(migration, /after update of house_label on public\.houses/i);
   assert.match(migration, /revoke all on function public\.enforce_entry_house_label_update_v1\(\) from public, anon, authenticated, service_role/i);
+  assert.match(migration, /'actor_kind', case when auth\.uid\(\) is null then 'system' else 'user' end/i);
+  assert.match(migration, /'actor_role', coalesce\([\s\S]*auth\.jwt\(\) ->> 'role'/i);
   assert.doesNotMatch(migration, /update public\.house_residents/i);
   assert.doesNotMatch(migration, /update public\.profiles/i);
 });
 
+test("all label writers acquire the house row before the community advisory lock", () => {
+  const renameStart = migration.indexOf("select house_label into v_label");
+  const renameEnd = migration.indexOf("return jsonb_build_object('id',p_unit_id,'old_label'", renameStart);
+  assert.ok(renameStart >= 0 && renameEnd > renameStart, "rename branch not found");
+  const renameBranch = migration.slice(renameStart, renameEnd);
+  const rowLock = renameBranch.indexOf("for update;");
+  const advisoryLock = renameBranch.indexOf("pg_advisory_xact_lock");
+  const labelUpdate = renameBranch.indexOf("update public.houses");
+  assert.ok(rowLock >= 0, "rename branch must lock the unit row");
+  assert.ok(rowLock < advisoryLock, "RPC must not take the advisory lock before the row lock");
+  assert.ok(advisoryLock < labelUpdate, "RPC must serialize the community before updating the label");
+  assert.match(migration, /before update of house_label[\s\S]*execute function public\.enforce_entry_house_label_update_v1\(\)/i);
+});
+
 test("CI executes the PostgreSQL fixture with inherited rename routes and test-only grants", () => {
-  for (const phrase of ["legacy label bypassed pending activation", "legacy profile bypassed open campaign", "direct update bypassed pending activation", "RPC audit duplicated", "entry-unit-relationships fixture PASS"]) {
+  for (const phrase of ["legacy label bypassed pending activation", "legacy profile bypassed open campaign", "direct update bypassed pending activation", "service role bypassed pending activation", "service role audit context missing", "RPC audit duplicated", "entry-unit-relationships fixture PASS"]) {
     assert.ok(fixture.includes(phrase), `Missing fixture assertion: ${phrase}`);
   }
   assert.match(fixture, /grant select on public\.community_settings[\s\S]*to authenticated/i);

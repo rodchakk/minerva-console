@@ -7,6 +7,7 @@ end $$;
 create schema auth;
 create table auth.users(id uuid primary key);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
+create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
 create table public.communities(id uuid primary key default gen_random_uuid());
 create table public.community_settings(community_id uuid primary key references communities(id));
 create table public.houses(id uuid primary key default gen_random_uuid(), community_id uuid not null references communities(id), house_label text not null, owner_name text, unique(id,community_id), unique(community_id,house_label));
@@ -39,6 +40,8 @@ end $$;
 grant usage on schema public,auth to authenticated;
 grant select on public.community_settings,public.entry_unit_links,public.entry_unit_responsibilities,public.superadmin_audit_log to authenticated;
 grant select,update on public.houses to authenticated;
+grant usage on schema public,auth to service_role;
+grant select,update on public.houses to service_role;
 grant execute on function public.admin_update_house_label(uuid,text),public.admin_update_house_profile(uuid,text,text) to authenticated;
 insert into auth.users values ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002');
 insert into public.superadmin_users values ('00000000-0000-0000-0000-000000000001',true),('00000000-0000-0000-0000-000000000002',false);
@@ -72,6 +75,14 @@ do $$ begin
 end $$;
 reset role;
 do $$ begin if (select owner_name from public.houses where id='20000000-0000-0000-0000-000000000001') is not null then raise exception 'blocked profile update changed owner'; end if; end $$;
+select set_config('request.jwt.claim.sub','',false);
+select set_config('request.jwt.claims','{"role":"service_role"}',false);
+set role service_role;
+do $$ begin
+  begin update public.houses set house_label='Blocked service' where id='20000000-0000-0000-0000-000000000001'; raise exception 'service role bypassed pending activation'; exception when sqlstate '55000' then null; end;
+end $$;
+reset role;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
 delete from public.resident_activation_queue;
 
 -- An open registration campaign is protected through the same three routes.
@@ -116,6 +127,26 @@ begin
   if (select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename') <> v_count+1 then raise exception 'RPC audit duplicated'; end if;
 end $$;
 reset role;
+-- System writes retain a NULL user actor and record their actual execution
+-- context instead of inventing an auth.users identity.
+select set_config('request.jwt.claim.sub','',false);
+select set_config('request.jwt.claims','{"role":"service_role"}',false);
+set role service_role;
+update public.houses set house_label='Unit C service' where id='20000000-0000-0000-0000-000000000003';
+reset role;
+do $$ begin
+  if not exists (
+    select 1 from public.superadmin_audit_log
+     where action='entry.unit_label.rename'
+       and target_id='20000000-0000-0000-0000-000000000003'
+       and actor_user_id is null
+       and metadata->>'actor_kind'='system'
+       and metadata->>'actor_role'='service_role'
+       and metadata->>'new_label'='Unit C service'
+  ) then raise exception 'service role audit context missing'; end if;
+end $$;
+select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+select set_config('request.jwt.claims','{"role":"authenticated"}',false);
 select public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001');
 select public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002');
 do $$ begin

@@ -44,6 +44,7 @@ const rpc = (action, args = {}, token = admin.token) => request('/rest/v1/rpc/ma
 const legacyLabel = (label) => request('/rest/v1/rpc/admin_update_house_label', admin.token, { p_house_id: a, p_house_label: label });
 const legacyProfile = (label, owner) => request('/rest/v1/rpc/admin_update_house_profile', admin.token, { p_house_id: a, p_house_label: label, p_owner_name: owner });
 const directLabel = (label) => request(`/rest/v1/houses?id=eq.${a}`, admin.token, { house_label: label }, 'PATCH');
+const serviceDirectLabel = (label) => request(`/rest/v1/houses?id=eq.${a}`, config.SERVICE_ROLE_KEY, { house_label: label }, 'PATCH');
 assert.equal((await rpc('link_units', { p_unit_id: a, p_other_unit_id: b })).status, 403, 'default gate');
 assert.equal((await rpc('rename_unit', { p_unit_id: a, p_label: 'Apartamento 1', p_expected_label: 'Apartamento 1' })).status, 200, 'legacy label editing remains available with associations disabled');
 sql(`update public.community_settings set allow_unit_relationships=true where community_id='${community}'; notify pgrst, 'reload schema';`);
@@ -73,6 +74,7 @@ assert.ok((await rpc('rename_unit', { p_unit_id: a, p_label: 'Blocked', p_expect
 assert.ok((await legacyLabel('Blocked legacy')).status >= 400);
 assert.ok((await legacyProfile('Blocked profile', 'Changed owner')).status >= 400);
 assert.ok((await directLabel('Blocked direct')).status >= 400);
+assert.ok((await serviceDirectLabel('Blocked service')).status >= 400);
 assert.equal(sql(`select coalesce(owner_name,'') from public.houses where id='${a}'`), ownerBeforeBlockedRename, 'blocked profile rename must roll back owner change');
 sql(`delete from public.resident_activation_queue where community_id='${community}';
 insert into public.community_registration_campaigns(id,community_id,internal_name,public_title,public_slug,status) values ('${community}','${community}','Lab','Lab','${community}','open');
@@ -81,8 +83,28 @@ assert.ok((await rpc('rename_unit', { p_unit_id: a, p_label: 'Blocked', p_expect
 assert.ok((await legacyLabel('Blocked legacy')).status >= 400);
 assert.ok((await legacyProfile('Blocked profile', 'Changed owner')).status >= 400);
 assert.ok((await directLabel('Blocked direct')).status >= 400);
+assert.ok((await serviceDirectLabel('Blocked service')).status >= 400);
 sql(`update public.community_registration_campaigns set status='closed' where id='${community}';`);
 assert.equal((await directLabel(' unit-b ')).status, 409, 'direct update normalized conflict');
+assert.equal((await serviceDirectLabel(' unit-b ')).status, 409, 'service role direct update normalized conflict');
+const deadlocksBefore = Number(sql('select deadlocks from pg_stat_database where datname=current_database()'));
+sql(`create function public.delay_service_rename_test() returns trigger language plpgsql as $$ begin if new.house_label='Service concurrent' then perform pg_sleep(1); end if; return new; end $$;
+create trigger aaa_delay_service_rename_test before update of house_label on public.houses for each row execute function public.delay_service_rename_test();`);
+const serviceWriter = serviceDirectLabel('Service concurrent');
+await new Promise((resolve) => setTimeout(resolve, 100));
+const rpcWriter = rpc('rename_unit', { p_unit_id: a, p_label: 'RPC concurrent', p_expected_label: 'Apartamento 1' });
+const mixedWriters = await Promise.race([
+  Promise.all([rpcWriter, serviceWriter]),
+  new Promise((_, reject) => setTimeout(() => reject(new Error('mixed rename writers timed out')), 10000)),
+]);
+sql('drop trigger aaa_delay_service_rename_test on public.houses; drop function public.delay_service_rename_test();');
+assert.equal(mixedWriters[1].status, 204, JSON.stringify(mixedWriters));
+assert.ok([200, 500].includes(mixedWriters[0].status), JSON.stringify(mixedWriters));
+assert.notEqual(mixedWriters[0].data?.code, '40P01', JSON.stringify(mixedWriters));
+assert.equal(Number(sql('select deadlocks from pg_stat_database where datname=current_database()')), deadlocksBefore, 'mixed writers must not deadlock');
+assert.equal(sql(`select house_label from public.houses where id='${a}'`), 'Service concurrent');
+assert.equal(sql(`select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename' and target_id='${a}' and actor_user_id is null and metadata->>'actor_kind'='system' and metadata->>'actor_role'='service_role' and metadata->>'new_label'='Service concurrent'`), '1', 'service role audit must retain system identity without inventing a user');
+assert.equal((await serviceDirectLabel('Apartamento 1')).status, 204);
 let renameAuditCount = Number(sql(`select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename' and target_id='${a}'`));
 assert.equal((await directLabel('Apartamento direct')).status, 204);
 assert.equal(Number(sql(`select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename' and target_id='${a}'`)), ++renameAuditCount);
@@ -125,4 +147,4 @@ assert.equal(sql(`select house_label from public.houses where id='${a}'`), 'Casa
 sql('drop trigger reject_audit_test on public.superadmin_audit_log; drop function public.reject_audit_test();');
 sql(`update public.community_settings set allow_unit_relationships=false where community_id='${community}'`);
 assert.deepEqual((await request(`/rest/v1/entry_unit_links?select=id&community_id=eq.${community}`, admin.token)).data, []);
-console.log('PASS: real local Auth JWTs, PostgREST RPC/RLS, default gate, community constraints, concurrency, history, rename isolation and atomic audit rollback');
+console.log('PASS: real local Auth JWTs, PostgREST RPC/RLS, default gate, community constraints, mixed RPC/service-role concurrency without deadlock, system audit identity, history, rename isolation and atomic audit rollback');

@@ -153,7 +153,13 @@ begin
     jsonb_build_object(
       'community_id', new.community_id,
       'old_label', old.house_label,
-      'new_label', new.house_label
+      'new_label', new.house_label,
+      'actor_kind', case when auth.uid() is null then 'system' else 'user' end,
+      'actor_role', coalesce(
+        nullif(auth.jwt() ->> 'role', ''),
+        nullif(current_setting('role', true), 'none'),
+        session_user
+      )
     )
   );
   return new;
@@ -188,10 +194,10 @@ begin
   if p_action is null or p_action not in ('link_units','unlink_units','assign_responsible','remove_responsible','rename_unit') then
     raise exception 'invalid_action' using errcode = '22023';
   end if;
-  -- Serialize feature gating and all edits within this community. No client-supplied actor is trusted.
-  perform pg_advisory_xact_lock(hashtextextended(p_community_id::text, 711309));
   -- Existing label editing is independent of the new association feature gate.
   if p_action <> 'rename_unit' then
+    -- Serialize feature gating and association edits within this community.
+    perform pg_advisory_xact_lock(hashtextextended(p_community_id::text, 711309));
     perform 1 from public.community_settings s
      where s.community_id = p_community_id and s.allow_unit_relationships for update;
     if not found then raise exception 'unit_relationships_disabled' using errcode = '42501'; end if;
@@ -258,6 +264,10 @@ begin
     select house_label into v_label from public.houses where id=p_unit_id and community_id=p_community_id for update;
     if not found then raise exception 'unit_not_in_community' using errcode = '23503'; end if;
     if v_label is distinct from p_expected_label then raise exception 'unit_label_changed_refresh' using errcode = '40001'; end if;
+    -- Direct and legacy UPDATEs already hold this row lock when their BEFORE
+    -- ROW trigger takes the advisory lock. Match that order to prevent the
+    -- advisory->row / row->advisory deadlock cycle.
+    perform pg_advisory_xact_lock(hashtextextended(p_community_id::text, 711309));
     update public.houses set house_label=btrim(p_label) where id=p_unit_id and community_id=p_community_id;
     return jsonb_build_object('id',p_unit_id,'old_label',v_label,'new_label',btrim(p_label));
   end if;
