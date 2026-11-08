@@ -88,10 +88,16 @@ sql(`update public.community_registration_campaigns set status='closed' where id
 assert.equal((await directLabel(' unit-b ')).status, 409, 'direct update normalized conflict');
 assert.equal((await serviceDirectLabel(' unit-b ')).status, 409, 'service role direct update normalized conflict');
 const deadlocksBefore = Number(sql('select deadlocks from pg_stat_database where datname=current_database()'));
-sql(`create function public.delay_service_rename_test() returns trigger language plpgsql as $$ begin if new.house_label='Service concurrent' then perform pg_sleep(1); end if; return new; end $$;
+sql(`create function public.delay_service_rename_test() returns trigger language plpgsql as $$ begin if new.house_label='Service concurrent' then perform pg_sleep(2); end if; return new; end $$;
 create trigger aaa_delay_service_rename_test before update of house_label on public.houses for each row execute function public.delay_service_rename_test();`);
 const serviceWriter = serviceDirectLabel('Service concurrent');
-await new Promise((resolve) => setTimeout(resolve, 100));
+let directWriterHoldsRow = false;
+for (let attempt = 0; attempt < 20; attempt += 1) {
+  directWriterHoldsRow = sql(`select exists(select 1 from pg_stat_activity where datname=current_database() and usename='authenticator' and wait_event='PgSleep')`) === 't';
+  if (directWriterHoldsRow) break;
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}
+assert.ok(directWriterHoldsRow, 'direct writer did not reach the forced row-lock window');
 const rpcWriter = rpc('rename_unit', { p_unit_id: a, p_label: 'RPC concurrent', p_expected_label: 'Apartamento 1' });
 const mixedWriters = await Promise.race([
   Promise.all([rpcWriter, serviceWriter]),
@@ -99,7 +105,8 @@ const mixedWriters = await Promise.race([
 ]);
 sql('drop trigger aaa_delay_service_rename_test on public.houses; drop function public.delay_service_rename_test();');
 assert.equal(mixedWriters[1].status, 204, JSON.stringify(mixedWriters));
-assert.ok([200, 500].includes(mixedWriters[0].status), JSON.stringify(mixedWriters));
+assert.equal(mixedWriters[0].status, 500, JSON.stringify(mixedWriters));
+assert.equal(mixedWriters[0].data?.code, '40001', JSON.stringify(mixedWriters));
 assert.notEqual(mixedWriters[0].data?.code, '40P01', JSON.stringify(mixedWriters));
 assert.equal(Number(sql('select deadlocks from pg_stat_database where datname=current_database()')), deadlocksBefore, 'mixed writers must not deadlock');
 assert.equal(sql(`select house_label from public.houses where id='${a}'`), 'Service concurrent');
