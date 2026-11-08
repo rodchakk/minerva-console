@@ -9,7 +9,7 @@ create table auth.users(id uuid primary key);
 create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
 create table public.communities(id uuid primary key default gen_random_uuid());
 create table public.community_settings(community_id uuid primary key references communities(id));
-create table public.houses(id uuid primary key default gen_random_uuid(), community_id uuid not null references communities(id), house_label text not null, unique(id,community_id), unique(community_id,house_label));
+create table public.houses(id uuid primary key default gen_random_uuid(), community_id uuid not null references communities(id), house_label text not null, owner_name text, unique(id,community_id), unique(community_id,house_label));
 create table public.community_members(id uuid primary key default gen_random_uuid(), community_id uuid not null references communities(id), user_id uuid not null references auth.users(id), unique(community_id,user_id));
 create table public.resident_activation_queue(community_id uuid, house_id uuid, status text, unit_label text);
 create table public.community_registration_units(community_id uuid, house_id uuid, status text, campaign_id uuid);
@@ -19,7 +19,27 @@ create table public.superadmin_users(user_id uuid primary key, is_active boolean
 create function public.is_superadmin(p_user_id uuid default null) returns boolean language sql stable security definer set search_path=public,pg_temp as $$ select exists(select 1 from superadmin_users where user_id=coalesce(p_user_id,auth.uid()) and is_active) $$;
 create function public.normalize_unit_label(text) returns text language sql immutable as $$ select regexp_replace(lower($1),'[^a-z0-9]','','g') $$;
 create function public._cr_normalize_unit_label_v1(text) returns text language sql immutable as $$ select regexp_replace(lower($1),'[^a-z0-9]','','g') $$;
+-- Test doubles preserve the legacy write behavior and signatures. The MVP
+-- migration must protect them without replacing or revoking them.
+create function public.admin_update_house_label(p_house_id uuid, p_house_label text)
+returns table(id uuid, community_id uuid, house_label text)
+language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+  if not public.is_superadmin() then raise exception 'Unauthorized' using errcode='42501'; end if;
+  return query update public.houses h set house_label=btrim(p_house_label) where h.id=p_house_id returning h.id,h.community_id,h.house_label;
+end $$;
+create function public.admin_update_house_profile(p_house_id uuid, p_house_label text, p_owner_name text default null)
+returns table(id uuid, community_id uuid, house_label text, owner_name text)
+language plpgsql security definer set search_path=public,pg_temp as $$
+begin
+  if not public.is_superadmin() then raise exception 'Unauthorized' using errcode='42501'; end if;
+  return query update public.houses h set house_label=btrim(p_house_label),owner_name=p_owner_name where h.id=p_house_id returning h.id,h.community_id,h.house_label,h.owner_name;
+end $$;
 \ir /tmp/migration.sql
+grant usage on schema public,auth to authenticated;
+grant select on public.community_settings,public.entry_unit_links,public.entry_unit_responsibilities,public.superadmin_audit_log to authenticated;
+grant select,update on public.houses to authenticated;
+grant execute on function public.admin_update_house_label(uuid,text),public.admin_update_house_profile(uuid,text,text) to authenticated;
 insert into auth.users values ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002');
 insert into public.superadmin_users values ('00000000-0000-0000-0000-000000000001',true),('00000000-0000-0000-0000-000000000002',false);
 insert into public.communities values ('10000000-0000-0000-0000-000000000001'),('10000000-0000-0000-0000-000000000002');
@@ -40,6 +60,62 @@ do $$ begin
 end $$;
 reset role;
 select set_config('request.jwt.claim.sub','00000000-0000-0000-0000-000000000001',false);
+-- Pending activation blocks every real label-writing route. The combined
+-- profile update must roll back its owner change too.
+insert into public.resident_activation_queue(community_id,house_id,status,unit_label) values
+('10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','pending','House A');
+set role authenticated;
+do $$ begin
+  begin perform public.admin_update_house_label('20000000-0000-0000-0000-000000000001','Blocked legacy'); raise exception 'legacy label bypassed pending activation'; exception when sqlstate '55000' then null; end;
+  begin perform public.admin_update_house_profile('20000000-0000-0000-0000-000000000001','Blocked profile','Changed owner'); raise exception 'legacy profile bypassed pending activation'; exception when sqlstate '55000' then null; end;
+  begin update public.houses set house_label='Blocked direct' where id='20000000-0000-0000-0000-000000000001'; raise exception 'direct update bypassed pending activation'; exception when sqlstate '55000' then null; end;
+end $$;
+reset role;
+do $$ begin if (select owner_name from public.houses where id='20000000-0000-0000-0000-000000000001') is not null then raise exception 'blocked profile update changed owner'; end if; end $$;
+delete from public.resident_activation_queue;
+
+-- An open registration campaign is protected through the same three routes.
+insert into public.community_registration_campaigns(id,status) values ('30000000-0000-0000-0000-000000000001','open');
+insert into public.community_registration_units(community_id,house_id,status,campaign_id) values
+('10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','unregistered','30000000-0000-0000-0000-000000000001');
+set role authenticated;
+do $$ begin
+  begin perform public.admin_update_house_label('20000000-0000-0000-0000-000000000001','Blocked legacy'); raise exception 'legacy label bypassed open campaign'; exception when sqlstate '55000' then null; end;
+  begin perform public.admin_update_house_profile('20000000-0000-0000-0000-000000000001','Blocked profile','Changed owner'); raise exception 'legacy profile bypassed open campaign'; exception when sqlstate '55000' then null; end;
+  begin update public.houses set house_label='Blocked direct' where id='20000000-0000-0000-0000-000000000001'; raise exception 'direct update bypassed open campaign'; exception when sqlstate '55000' then null; end;
+end $$;
+reset role;
+update public.community_registration_campaigns set status='closed' where id='30000000-0000-0000-0000-000000000001';
+
+-- Normalized conflicts apply to inherited routes too.
+set role authenticated;
+do $$ begin
+  begin update public.houses set house_label=' house-a ' where id='20000000-0000-0000-0000-000000000002'; raise exception 'normalized conflict bypassed'; exception when unique_violation then null; end;
+end $$;
+reset role;
+
+-- One audit row per effective rename, including the new RPC. A no-op update
+-- must not produce an audit row.
+set role authenticated;
+do $$
+declare v_count bigint;
+begin
+  select count(*) into v_count from public.superadmin_audit_log where action='entry.unit_label.rename';
+  perform public.admin_update_house_label('20000000-0000-0000-0000-000000000003','Unit C legacy');
+  if (select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename') <> v_count+1 then raise exception 'legacy label audit count'; end if;
+  v_count := v_count+1;
+  perform public.admin_update_house_profile('20000000-0000-0000-0000-000000000003','Unit C profile','Owner');
+  if (select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename') <> v_count+1 then raise exception 'legacy profile audit count'; end if;
+  v_count := v_count+1;
+  update public.houses set house_label='Unit C direct' where id='20000000-0000-0000-0000-000000000003';
+  if (select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename') <> v_count+1 then raise exception 'direct audit count'; end if;
+  v_count := v_count+1;
+  update public.houses set house_label='Unit C direct' where id='20000000-0000-0000-0000-000000000003';
+  if (select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename') <> v_count then raise exception 'no-op audit count'; end if;
+  perform public.manage_entry_unit_relationship_v1('rename_unit','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000003',null,null,null,null,'Unit C RPC','Unit C direct');
+  if (select count(*) from public.superadmin_audit_log where action='entry.unit_label.rename') <> v_count+1 then raise exception 'RPC audit duplicated'; end if;
+end $$;
+reset role;
 select public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002','20000000-0000-0000-0000-000000000001');
 select public.manage_entry_unit_relationship_v1('link_units','10000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000001','20000000-0000-0000-0000-000000000002');
 do $$ begin
@@ -60,5 +136,13 @@ select public.manage_entry_unit_relationship_v1('rename_unit','10000000-0000-000
 do $$ begin
  if (select count(*) from public.entry_unit_links where ended_at is null) <> 1 then raise exception 'rename altered relationship'; end if;
  if (select count(*) from public.superadmin_audit_log where action like 'entry.%') < 5 then raise exception 'audit missing'; end if;
+end $$;
+-- Historical rows intentionally block physical deletion. Operational removal
+-- remains deactivation/end-dating, so no cascade may erase relationship history.
+do $$ begin
+  begin delete from public.houses where id='20000000-0000-0000-0000-000000000001'; raise exception 'related unit delete allowed'; exception when foreign_key_violation then null; end;
+  begin delete from public.community_members where community_id='10000000-0000-0000-0000-000000000001' and user_id='00000000-0000-0000-0000-000000000002'; raise exception 'responsible membership delete allowed'; exception when foreign_key_violation then null; end;
+  begin delete from public.communities where id='10000000-0000-0000-0000-000000000001'; raise exception 'related community delete allowed'; exception when foreign_key_violation then null; end;
+  begin delete from auth.users where id='00000000-0000-0000-0000-000000000001'; raise exception 'relationship actor delete allowed'; exception when foreign_key_violation then null; end;
 end $$;
 select 'entry-unit-relationships fixture PASS';

@@ -52,6 +52,122 @@ grant select on public.entry_unit_links, public.entry_unit_responsibilities to a
 create policy entry_unit_links_superadmin_read on public.entry_unit_links for select to authenticated using (public.is_superadmin() and exists (select 1 from public.community_settings s where s.community_id = entry_unit_links.community_id and s.allow_unit_relationships));
 create policy entry_unit_responsibilities_superadmin_read on public.entry_unit_responsibilities for select to authenticated using (public.is_superadmin() and exists (select 1 from public.community_settings s where s.community_id = entry_unit_responsibilities.community_id and s.allow_unit_relationships));
 
+-- Every route that changes houses.house_label, including legacy SECURITY
+-- DEFINER RPCs and authorized direct UPDATEs, must pass the same checks.
+create or replace function public.enforce_entry_house_label_update_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, auth, pg_temp
+set row_security = off
+as $$
+declare
+  v_old_normalized text;
+  v_new_normalized text;
+  v_new_registration_normalized text;
+begin
+  if new.house_label is not distinct from old.house_label then
+    return new;
+  end if;
+
+  -- Use the same community lock as the relationship RPC. This serializes
+  -- direct and legacy writers with the optimistic rename path.
+  perform pg_advisory_xact_lock(hashtextextended(old.community_id::text, 711309));
+
+  new.house_label := btrim(coalesce(new.house_label, ''));
+  if new.house_label = '' or char_length(new.house_label) > 120 then
+    raise exception 'invalid_unit_label' using errcode = '22023';
+  end if;
+
+  v_old_normalized := public.normalize_unit_label(old.house_label);
+  v_new_normalized := public.normalize_unit_label(new.house_label);
+  v_new_registration_normalized := public._cr_normalize_unit_label_v1(new.house_label);
+
+  if exists (
+    select 1
+      from public.houses h
+     where h.community_id = old.community_id
+       and h.id <> old.id
+       and (
+         public.normalize_unit_label(h.house_label) = v_new_normalized
+         or public._cr_normalize_unit_label_v1(h.house_label) = v_new_registration_normalized
+       )
+  ) then
+    raise exception 'unit_label_conflict' using errcode = '23505';
+  end if;
+
+  if exists (
+    select 1
+      from public.resident_activation_queue q
+     where q.community_id = old.community_id
+       and q.status in ('pending', 'invited', 'pin_generated')
+       and (
+         q.house_id = old.id
+         or (
+           q.house_id is null
+           and public.normalize_unit_label(q.unit_label) = v_old_normalized
+         )
+       )
+  ) or exists (
+    select 1
+      from public.community_registration_units u
+      join public.community_registration_campaigns c on c.id = u.campaign_id
+     where u.community_id = old.community_id
+       and u.house_id = old.id
+       and u.status = 'unregistered'
+       and c.status in ('open', 'paused')
+  ) then
+    raise exception 'unit_label_has_pending_registration_or_activation' using errcode = '55000';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke all on function public.enforce_entry_house_label_update_v1() from public, anon, authenticated, service_role;
+
+create trigger enforce_entry_house_label_update_v1
+before update of house_label on public.houses
+for each row
+execute function public.enforce_entry_house_label_update_v1();
+
+create or replace function public.audit_entry_house_label_update_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog, public, auth, pg_temp
+set row_security = off
+as $$
+begin
+  insert into public.superadmin_audit_log(
+    actor_user_id,
+    action,
+    target_type,
+    target_id,
+    metadata
+  ) values (
+    auth.uid(),
+    'entry.unit_label.rename',
+    'house',
+    new.id,
+    jsonb_build_object(
+      'community_id', new.community_id,
+      'old_label', old.house_label,
+      'new_label', new.house_label
+    )
+  );
+  return new;
+end;
+$$;
+
+revoke all on function public.audit_entry_house_label_update_v1() from public, anon, authenticated, service_role;
+
+create trigger audit_entry_house_label_update_v1
+after update of house_label on public.houses
+for each row
+when (old.house_label is distinct from new.house_label)
+execute function public.audit_entry_house_label_update_v1();
+
 create or replace function public.manage_entry_unit_relationship_v1(
   p_action text, p_community_id uuid, p_unit_id uuid default null,
   p_other_unit_id uuid default null, p_user_id uuid default null,
@@ -64,7 +180,7 @@ set row_security = off
 as $$
 declare
   v_actor uuid := auth.uid(); v_a uuid; v_b uuid; v_id uuid; v_label text; v_created boolean;
-  v_other_label text; v_now timestamptz := clock_timestamp(); v_record jsonb;
+  v_now timestamptz := clock_timestamp(); v_record jsonb;
 begin
   if v_actor is null or not public.is_superadmin(v_actor) then
     raise exception 'superadmin_required' using errcode = '42501';
@@ -142,21 +258,7 @@ begin
     select house_label into v_label from public.houses where id=p_unit_id and community_id=p_community_id for update;
     if not found then raise exception 'unit_not_in_community' using errcode = '23503'; end if;
     if v_label is distinct from p_expected_label then raise exception 'unit_label_changed_refresh' using errcode = '40001'; end if;
-    if exists(select 1 from public.houses h where h.community_id=p_community_id and h.id<>p_unit_id
-      and (public.normalize_unit_label(h.house_label)=public.normalize_unit_label(p_label)
-        or public._cr_normalize_unit_label_v1(h.house_label)=public._cr_normalize_unit_label_v1(p_label))) then
-      raise exception 'unit_label_conflict' using errcode = '23505';
-    end if;
-    if exists(select 1 from public.resident_activation_queue q where q.community_id=p_community_id
-      and q.status in ('pending','invited','pin_generated')
-      and (q.house_id=p_unit_id or (q.house_id is null and public.normalize_unit_label(q.unit_label)=public.normalize_unit_label(v_label))))
-      or exists(select 1 from public.community_registration_units u join public.community_registration_campaigns c on c.id=u.campaign_id
-       where u.community_id=p_community_id and u.house_id=p_unit_id and u.status='unregistered' and c.status in ('open','paused')) then
-      raise exception 'unit_label_has_pending_registration_or_activation' using errcode = '55000';
-    end if;
     update public.houses set house_label=btrim(p_label) where id=p_unit_id and community_id=p_community_id;
-    insert into public.superadmin_audit_log(actor_user_id,action,target_type,target_id,metadata)
-    values(v_actor,'entry.unit_label.rename','house',p_unit_id,jsonb_build_object('community_id',p_community_id,'old_label',v_label,'new_label',btrim(p_label)));
     return jsonb_build_object('id',p_unit_id,'old_label',v_label,'new_label',btrim(p_label));
   end if;
 end;
