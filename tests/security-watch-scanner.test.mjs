@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  validCatalog, watchEntries, toOsvFinding, toNvdFindings, deduplicate, withinWindow
+  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow
 } from "../scripts/security-watch-core.mjs";
 import catalog from "../security-watch/catalog.json" with { type: "json" };
 
@@ -54,4 +54,23 @@ test("duplicate advisories only render once per fingerprint", () => {
   const f = toOsvFinding({ id: "GHSA-aaaa-bbbb-cccc", summary: "Example", published: "2026-11-08T01:00:00Z" }, entry);
   assert.equal(deduplicate([f, f]).length, 1);
   assert.deepEqual(deduplicate([f, f])[0].products.map((x) => x.id).sort(), ["entry", "minerva-console"]);
+});
+
+test("official Supabase vendor advisories match registered provider, never confirm hosted exposure", () => {
+  const entries = watchEntries(catalog);
+  const vuln = {
+    ghsa_id: "GHSA-fgvp-cqg6-q8h2",
+    summary: "Supabase Storage provider bulletin",
+    description: "Public advisory about Storage RLS",
+    severity: "critical",
+    published_at: "2026-11-06T12:00:00Z",
+    updated_at: "2026-11-06T13:00:00Z"
+  };
+  const result = toProviderAdvisoryFindings(vuln, "supabase/storage", entries);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].source, "github");
+  assert.equal(result[0].severity, "CRITICAL");
+  assert.equal(result[0].confidence, "VENDOR_NOTICE");
+  assert.deepEqual(result[0].products.map((p) => p.id), ["entry", "seshat"]);
+  assert.equal(toProviderAdvisoryFindings({ ...vuln, withdrawn_at: "2026-11-08T01:00:00Z" }, "supabase/storage", entries).length, 0);
 });
