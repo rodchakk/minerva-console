@@ -39,8 +39,13 @@ function collectFindings(current: SecurityScan, previous: StoredScan | null) {
   // A provider failure must never erase the previous findings for that provider.
   // Recent findings stay actionable between bulletin publication windows.
   for (const item of previous?.findings || []) {
-    const published = Date.parse(item.publishedAt || item.modifiedAt || "");
-    if (!Number.isFinite(published) || now - published <= RETAIN_DAYS * 86400000) {
+    const published = Date.parse(item.publishedAt || "");
+    const modified = Date.parse(item.modifiedAt || "");
+    const newestPublicEvent = Math.max(
+      Number.isFinite(published) ? published : 0,
+      Number.isFinite(modified) ? modified : 0
+    );
+    if (!newestPublicEvent || now - newestPublicEvent <= RETAIN_DAYS * 86400000) {
       latest.set(item.key, item);
     }
   }
