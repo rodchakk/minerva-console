@@ -52,6 +52,7 @@ export function watchEntries(catalog) {
 
 export function priority(value) {
   const severity = String(value || "").toUpperCase();
+  if (severity === "MODERATE") return "MEDIUM";
   return PRIORITY.has(severity) ? severity : "UNKNOWN";
 }
 
