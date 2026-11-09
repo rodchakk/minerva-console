@@ -15,7 +15,9 @@ export async function UnitRelationshipsSection({ communityId, unitId, unitLabel 
     searchCommunityMemberOptions(communityId),
   ]);
   if (settingError || linksError || responsibilitiesError) return <p role="alert">Unit relationships are unavailable. Check the database migration and try again.</p>;
-  if (setting?.allow_unit_relationships !== true) return <section className="rounded-xl border border-[var(--border)] p-5"><h2 className="font-semibold text-white">Unit relationships</h2><p className="mt-2 text-sm text-[var(--text-muted)]">This feature is not enabled for this community.</p></section>;
+  // Keep the new management UI entirely hidden in communities where the
+  // relationship feature is disabled (e.g. Andalucía).
+  if (setting?.allow_unit_relationships !== true) return null;
 
   const linkedUnitIds = [...new Set((linkRows ?? []).map((row) => String(row.unit_a_id) === unitId ? String(row.unit_b_id) : String(row.unit_a_id)))];
   const responsibleUserIds = [...new Set((responsibilityRows ?? []).map((row) => String(row.user_id)))];

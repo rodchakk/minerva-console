@@ -35,6 +35,7 @@ type Props = {
   unit: CommunityUnitPreview;
   unitDisplayLabel: string;
   unitTypeLabel: string;
+  relationships?: ReactNode;
 };
 
 const residentFilters: Array<{ label: string; value: ResidentFilter }> = [
@@ -141,6 +142,7 @@ export function CommunityUnitDetailWorkspace({
   unit,
   unitDisplayLabel,
   unitTypeLabel,
+  relationships,
 }: Props) {
   const [tab, setTab] = useState<DetailTab>("residents");
   const [query, setQuery] = useState(initialQuery);
@@ -289,24 +291,26 @@ export function CommunityUnitDetailWorkspace({
     <div
       ref={pageRef}
       style={
-        desktopWorkspaceHeight
+        !relationships && desktopWorkspaceHeight
           ? { height: `${desktopWorkspaceHeight}px` }
           : undefined
       }
-      className="-mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-4 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:min-h-0 lg:overflow-hidden lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7"
+      className={cn(
+        "-mx-4 -my-4 min-h-[calc(100vh-4rem)] bg-[#2E2936] px-4 py-4 text-[#E7E5EA] lg:-mx-6 lg:-my-5 lg:min-h-0 lg:px-6 lg:py-5 2xl:-mx-7 2xl:px-7",
+        relationships ? "lg:overflow-y-auto" : "lg:overflow-hidden",
+      )}
     >
-      <div className="flex min-h-[calc(100vh-6.5rem)] flex-col gap-3 lg:h-full lg:min-h-0">
+      <div className={cn("flex min-h-[calc(100vh-6.5rem)] flex-col gap-3", relationships ? "lg:min-h-full" : "lg:h-full lg:min-h-0")}>
         <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="min-w-0">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#BEB4FF]">
               ENTRY · UNIT DETAILS
             </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.035em] text-white">
-              Unit Details
-            </h1>
-            <p className="mt-2 text-sm font-semibold text-white">
-              {unitDisplayLabel} · {communityName}
-            </p>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <h1 className="min-w-0 break-words text-3xl font-semibold tracking-[-0.035em] text-white">{unitDisplayLabel}</h1>
+              <Tag tone={unit.isActive ? "success" : "default"}>{unit.isActive ? "Active" : "Inactive"}</Tag>
+            </div>
+            <p className="mt-2 text-sm font-semibold text-[#D6D0DC]">{communityName}</p>
             <p className="mt-1 text-xs text-[#A9A3B2]">
               Location reference: <span className="break-words text-[#D6D0DC]">{unit.unitReference || "Not registered"}</span>
             </p>
@@ -370,6 +374,9 @@ export function CommunityUnitDetailWorkspace({
             </div>
           </div>
         </header>
+
+        {relationships ? <div className="shrink-0">{relationships}</div> : null}
+        {relationships ? <h2 className="pt-1 text-lg font-semibold text-white">Unit overview</h2> : null}
 
         <section className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:grid-cols-4">
           <SummaryMetric
