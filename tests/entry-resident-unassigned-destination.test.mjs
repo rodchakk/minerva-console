@@ -64,8 +64,8 @@ test("Previously unassigned resident can be assigned without silently reactivati
 });
 
 test("New SECURITY DEFINER functions revoke public/anonymous and require authentication", () => {
-  assert.match(migration, /revoke all on function public\.sa_unassign_community_resident_unit_v1\(uuid, uuid\) from public, anon/);
-  assert.match(migration, /grant execute on function public\.sa_unassign_community_resident_unit_v1\(uuid, uuid\) to authenticated, service_role/);
+  assert.match(migration, /revoke all on function public\.sa_unassign_community_resident_unit_v1\(uuid, uuid, uuid\) from public, anon/);
+  assert.match(migration, /grant execute on function public\.sa_unassign_community_resident_unit_v1\(uuid, uuid, uuid\) to authenticated, service_role/);
   assert.match(migration, /revoke all on function public\.sa_reassign_unassigned_community_resident_v1\(uuid, uuid, uuid\) from public, anon/);
   assert.match(migration, /grant execute on function public\.sa_reassign_unassigned_community_resident_v1\(uuid, uuid, uuid\) to authenticated, service_role/);
 });
