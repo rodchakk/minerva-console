@@ -2,7 +2,7 @@ import "server-only";
 
 import { Redis } from "@upstash/redis";
 import { Resend } from "resend";
-import { formatDiagnosis, type SecurityFinding, type SecurityScan, type StoredScan } from "./model";
+import { formatDiagnosis, monitoredProducts, type SecurityFinding, type SecurityScan, type StoredScan } from "./model";
 
 const CURRENT_KEY = "minerva:security-watch:v1:latest";
 const NOTIFIED_KEY = "minerva:security-watch:v1:emailed-keys";
@@ -37,6 +37,16 @@ export async function readSecurityWatchState(): Promise<{
   }
 }
 
+function currentlyTracked(finding: SecurityFinding): SecurityFinding | null {
+  // A manually updated catalog must immediately stop showing advisories tied
+  // exclusively to retired product versions. No runtime probing is performed.
+  const keep = finding.products.filter((p) =>
+    monitoredProducts.some((product) =>
+      product.id === p.id && product.technologies.some((tech) =>
+        tech.name === finding.technology && tech.version === finding.version)));
+  return keep.length ? { ...finding, products: keep } : null;
+}
+
 function collectFindings(current: SecurityScan, previous: StoredScan | null) {
   const now = Date.parse(current.checkedAt);
   const latest = new Map<string, SecurityFinding>();
@@ -50,10 +60,14 @@ function collectFindings(current: SecurityScan, previous: StoredScan | null) {
       Number.isFinite(modified) ? modified : 0
     );
     if (!newestPublicEvent || now - newestPublicEvent <= RETAIN_DAYS * 86400000) {
-      latest.set(item.key, item);
+      const active = currentlyTracked(item);
+      if (active) latest.set(item.key, active);
     }
   }
-  for (const item of current.findings) latest.set(item.key, item);
+  for (const item of current.findings) {
+    const active = currentlyTracked(item);
+    if (active) latest.set(item.key, active);
+  }
   const result = [...latest.values()].sort((a, b) => {
     const order = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3, UNKNOWN: 4 };
     return (order[a.severity] - order[b.severity]) ||

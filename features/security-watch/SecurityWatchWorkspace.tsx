@@ -158,7 +158,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
                     <td className={styles.noticeCell}>
                       <strong>{finding.title}</strong>
                       <p>{finding.summary}</p>
-                      <small>{finding.advisoryId} · {finding.source.toUpperCase()} · {finding.publishedAt ? formatDate(finding.publishedAt) : "Publication unknown"}</small>
+                      <small>{finding.advisoryId} · {finding.source.toUpperCase()} · {finding.publishedAt ? formatDate(finding.publishedAt) : "Publication unknown"} · <a href={finding.url} target="_blank" rel="noopener noreferrer">Official source</a></small>
                     </td>
                     <td className={styles.technology}>{finding.technology}<small>{finding.version}</small></td>
                     <td><div className={styles.pills}>{finding.products.map((p) => <span key={p.id}>{p.name}</span>)}</div></td>
