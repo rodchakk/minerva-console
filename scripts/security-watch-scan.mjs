@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import {
-  deduplicate, toNvdFindings, toOsvFinding, validCatalog, watchEntries, withinWindow
+  deduplicate, toNvdFindings, toOsvFinding, toProviderAdvisoryFindings, validCatalog, watchEntries, withinWindow
 } from "./security-watch-core.mjs";
 
 const OSV = "https://api.osv.dev/v1";
@@ -105,13 +105,37 @@ async function nvdScan(entries) {
   throw new Error("NVD result volume exceeded scan safety limit");
 }
 
+async function vendorAdvisoryScan(entries) {
+  if (!entries.some((entry) => entry.kind === "keyword" &&
+    entry.keyword.toLowerCase() === "supabase")) return [];
+  const repos = ["supabase/storage", "supabase/auth", "supabase/realtime"];
+  const findings = [];
+  for (const repository of repos) {
+    const url = "https://api.github.com/repos/" + repository + "/security-advisories?per_page=100";
+    const advisories = await jsonRequest(url, {
+      headers: {
+        "accept": "application/vnd.github+json",
+        "x-github-api-version": "2022-11-28",
+        "user-agent": "Minerva-Security-Watch/1.0"
+      }
+    });
+    if (!Array.isArray(advisories)) throw new Error("Vendor security advisory feed format mismatch");
+    for (const advisory of advisories) {
+      for (const finding of toProviderAdvisoryFindings(advisory, repository, entries)) {
+        if (withinWindow(finding, sinceMs)) findings.push(finding);
+      }
+    }
+  }
+  return findings;
+}
+
 async function main() {
   const raw = await readFile(new URL("../security-watch/catalog.json", import.meta.url), "utf8");
   const catalog = validCatalog(JSON.parse(raw));
   const entries = watchEntries(catalog);
   const sources = {};
   const findings = [];
-  for (const [name, scan] of [["osv", osvScan], ["nvd", nvdScan]]) {
+  for (const [name, scan] of [["osv", osvScan], ["nvd", nvdScan], ["github", vendorAdvisoryScan]]) {
     try {
       const results = await scan(entries);
       findings.push(...results);
