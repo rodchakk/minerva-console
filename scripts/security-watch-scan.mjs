@@ -3,7 +3,7 @@
 import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import {
-  deduplicate, toNvdFindings, toOsvFinding, toProviderAdvisoryFindings, validCatalog, watchEntries, withinWindow
+  deduplicate, toNvdFindings, toOsvFinding, toProviderAdvisoryFindings, validCatalog, watchEntries, withinWindow, validIngestionAcknowledgement
 } from "./security-watch-core.mjs";
 
 const OSV = "https://api.osv.dev/v1";
@@ -200,12 +200,22 @@ async function main() {
   const endpoint = "https://console.minervatechs.com/api/security-watch/ingest";
   const response = await fetch(endpoint, {
     method: "POST",
+    redirect: "manual", // Do not mistake an auth redirect to HTML /login for success.
     headers: { "content-type": "application/json", authorization: "Bearer " + identity.value },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(25000)
   });
   if (!response.ok) throw new Error("Security Watch ingestion returned HTTP " + response.status);
-  console.log("Security Watch recorded: " + payload.findings.length +
+  if (!response.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+    throw new Error("Security Watch endpoint did not return JSON acknowledgement");
+  }
+  let acknowledgement;
+  try { acknowledgement = await response.json(); }
+  catch { throw new Error("Security Watch ingestion returned invalid JSON"); }
+  if (!validIngestionAcknowledgement(acknowledgement)) {
+    throw new Error("Security Watch did not acknowledge a recorded scan");
+  }
+  console.log("Security Watch verified ingestion: " + acknowledgement.findings +
     " public notices; provider status: " +
     Object.entries(sources).map(([name, value]) => name + "=" + (value.ok ? "ok" : "failed")).join(", "));
   if (Object.values(sources).every((status) => !status.ok)) {

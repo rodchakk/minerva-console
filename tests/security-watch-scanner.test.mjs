@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority, matchesSimpleVersionRange
+  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority, matchesSimpleVersionRange, validIngestionAcknowledgement
 } from "../scripts/security-watch-core.mjs";
 import catalog from "../security-watch/catalog.json" with { type: "json" };
 
@@ -119,4 +119,15 @@ test("official Next.js advisories are mapped only to affected catalog version br
   assert.ok(matches.every((f) => f.confidence === "VENDOR_NOTICE" && f.severity === "MEDIUM"));
   assert.equal(matchesSimpleVersionRange("16.4.5", ">= 16.0.0, <= 16.4.4"), false);
   assert.equal(matchesSimpleVersionRange("16.4.1", ">= 16.0.0, <= 16.4.4"), true);
+});
+
+test("scheduler never mistakes a login page or inconclusive response for saved scan", () => {
+  assert.equal(validIngestionAcknowledgement(null), null);
+  assert.equal(validIngestionAcknowledgement({ ok: false, status: "ok", findings: 2 }), false);
+  assert.equal(validIngestionAcknowledgement({ ok: true, status: "failed", findings: 2,
+    notifications: "none", duplicate: false }), false);
+  assert.equal(validIngestionAcknowledgement({ ok: true, status: "ok", findings: 3,
+    notifications: "sent", duplicate: false }), true);
+  assert.equal(validIngestionAcknowledgement({ ok: true, status: "partial", findings: 1,
+    notifications: "none", duplicate: true }), true);
 });

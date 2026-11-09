@@ -276,3 +276,11 @@ export function toProviderAdvisoryFindings(advisory, repository, entries) {
     };
   });
 }
+
+export function validIngestionAcknowledgement(value) {
+  return value && typeof value === "object" && value.ok === true &&
+    ["ok", "partial"].includes(value.status) &&
+    Number.isInteger(value.findings) && value.findings >= 0 &&
+    ["sent", "none", "disabled_preview"].includes(value.notifications) &&
+    typeof value.duplicate === "boolean";
+}
