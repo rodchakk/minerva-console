@@ -10,8 +10,9 @@ import {
 import styles from "./SecurityWatchWorkspace.module.css";
 
 type RunSummary = { runId: string; checkedAt: string; status: string; findings: number };
-type Props = { state: StoredScan | null; error: string | null; recent: RunSummary[]; ingestConfigured: boolean; notificationsConfigured: boolean };
+type Props = { state: StoredScan | null; error: string | null; recent: RunSummary[]; ingestConfigured: boolean; notificationsConfigured: boolean; overdue: boolean };
 type Filter = "all" | "priority" | "review";
+const EMPTY_FINDINGS: SecurityFinding[] = [];
 const severe = (f: SecurityFinding) => f.severity === "CRITICAL" || f.severity === "HIGH";
 const formatDate = (value: string) => {
   try {
@@ -29,24 +30,23 @@ function severityLabel(finding: SecurityFinding) {
   return { label: "REVIEW", tone: styles.review };
 }
 
-function StatusChip({ state, error, ingestConfigured }: Pick<Props, "state" | "error" | "ingestConfigured">) {
+function StatusChip({ state, error, ingestConfigured, overdue }: Pick<Props, "state" | "error" | "ingestConfigured" | "overdue">) {
   if (!ingestConfigured) return <span className={styles.statusWarn}>ACTIVATION PENDING</span>;
   if (error) return <span className={styles.statusWarn}>STORAGE UNAVAILABLE</span>;
   if (!state) return <span className={styles.statusWarn}>SETUP PENDING</span>;
   if (state.status === "failed") return <span className={styles.statusWarn}>ALL SOURCES FAILED</span>;
   if (state.status === "partial") return <span className={styles.statusWarn}>PARTIAL COVERAGE</span>;
-  const last = Date.parse(state.checkedAt);
-  if (!Number.isFinite(last) || Date.now() - last > 36 * 3600000) {
+  if (overdue) {
     return <span className={styles.statusWarn}>MONITORING OVERDUE</span>;
   }
   return <span className={styles.statusOk}><span className={styles.dot}/> AUTOMATIC MONITORING · EVERY 12H</span>;
 }
 
-export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured, notificationsConfigured }: Props) {
+export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured, notificationsConfigured, overdue }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [copied, setCopied] = useState<string | null>(null);
   const [copyFallback, setCopyFallback] = useState<string | null>(null);
-  const findings = state?.findings || [];
+  const findings = state?.findings ?? EMPTY_FINDINGS;
   const visible = useMemo(() => findings.filter((f) => {
     if (filter === "priority") return severe(f);
     if (filter === "review") return !severe(f);
@@ -82,7 +82,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
           <p>Public vulnerability advisories related to our registered technology stack.
             <strong> No access to product code or infrastructure.</strong></p>
         </div>
-        <StatusChip state={state} error={error} ingestConfigured={ingestConfigured} />
+        <StatusChip state={state} error={error} ingestConfigured={ingestConfigured} overdue={overdue} />
       </div>
 
       <div className={styles.stats}>
