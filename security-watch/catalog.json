@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "lastReviewed": "2026-11-08",
+  "lastReviewed": "2026-11-09",
   "disclaimer": "Manually maintained inventory. Versions may differ from running deployments. A match is not confirmed exploitation or compromise.",
   "products": [
     {
@@ -16,8 +16,8 @@
           "kind": "osv",
           "ecosystem": "npm",
           "package": "next",
-          "version": "16.4.1",
-          "notes": "ENTRY Admin Web"
+          "version": "16.4.5",
+          "notes": "ENTRY Admin Web; Vercel production verified 2026-11-09"
         },
         {
           "id": "react-native",
@@ -102,7 +102,8 @@
           "kind": "osv",
           "ecosystem": "npm",
           "package": "next",
-          "version": "16.4.1"
+          "version": "16.4.5",
+          "notes": "Vercel production verified 2026-11-09"
         },
         {
           "id": "react",
@@ -147,7 +148,8 @@
           "kind": "osv",
           "ecosystem": "npm",
           "package": "next",
-          "version": "15.5.28"
+          "version": "15.5.29",
+          "notes": "Vercel production verified 2026-11-09"
         },
         {
           "id": "react",

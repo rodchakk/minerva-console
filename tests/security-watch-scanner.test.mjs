@@ -8,7 +8,7 @@ import catalog from "../security-watch/catalog.json" with { type: "json" };
 test("catalog is manual, finite and product ownership is preserved", () => {
   validCatalog(catalog);
   const entries = watchEntries(catalog);
-  const next = entries.find((x) => x.package === "next" && x.version === "16.4.1");
+  const next = entries.find((x) => x.package === "next" && x.version === "16.4.5");
   assert.ok(next);
   assert.deepEqual(next.products.map((p) => p.id).sort(), ["entry", "minerva-console"]);
   const entryWeb = entries.find((x) => x.package === "next" && x.version === "16.2.3");
@@ -29,7 +29,7 @@ test("reject invalid OSV range, duplicate product and unknown technology", () =>
 });
 
 test("OSV is a version match, not confirmed exploitation; withdrawn records excluded", () => {
-  const entry = watchEntries(catalog).find((x) => x.package === "next" && x.version === "16.4.1");
+  const entry = watchEntries(catalog).find((x) => x.package === "next" && x.version === "16.4.5");
   const advisory = { id: "GHSA-abc1-efg2-abcd", summary: "Public notice", published: "2026-11-08T01:00:00Z", database_specific: { severity: "HIGH" } };
   const finding = toOsvFinding(advisory, entry);
   assert.equal(finding.confidence, "VERSION_MATCH");
@@ -66,7 +66,7 @@ test("NVD requires structured product identifiers, not incidental keyword mentio
 });
 
 test("duplicate advisories only render once per fingerprint", () => {
-  const entry = watchEntries(catalog).find((x) => x.package === "next" && x.version === "16.4.1");
+  const entry = watchEntries(catalog).find((x) => x.package === "next" && x.version === "16.4.5");
   const f = toOsvFinding({ id: "GHSA-aaaa-bbbb-cccc", summary: "Example", published: "2026-11-08T01:00:00Z" }, entry);
   assert.equal(deduplicate([f, f]).length, 1);
   assert.deepEqual(deduplicate([f, f])[0].products.map((x) => x.id).sort(), ["entry", "minerva-console"]);
@@ -116,9 +116,10 @@ test("official Next.js advisories are mapped only to affected catalog version br
     ]
   };
   const matches = toProviderAdvisoryFindings(advisory, "vercel/next.js", watchEntries(catalog));
-  assert.equal(matches.length, 3);
-  assert.deepEqual(matches.map((x) => x.version).sort(), ["15.5.28", "16.2.3", "16.4.1"]);
+  assert.equal(matches.length, 1);
+  assert.deepEqual(matches.map((x) => x.version).sort(), ["16.2.3"]);
   assert.ok(matches.every((f) => f.confidence === "VENDOR_NOTICE" && f.severity === "MEDIUM"));
+  assert.equal(matches.some((f) => f.products?.some((p) => ["entry", "minerva-console", "minerva-webpage"].includes(p.id))), false);
   assert.equal(matchesSimpleVersionRange("16.4.5", ">= 16.0.0, <= 16.4.4"), false);
   assert.equal(matchesSimpleVersionRange("16.4.1", ">= 16.0.0, <= 16.4.4"), true);
 });
