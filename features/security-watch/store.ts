@@ -57,7 +57,7 @@ function alertable(finding: SecurityFinding) {
   return finding.severity === "CRITICAL" || finding.severity === "HIGH";
 }
 
-async function emailNewFindings(findings: SecurityFinding[], checkedAt: string) {
+async function emailNewFindings(findings: SecurityFinding[], checkedAt: string, sources: SecurityScan["sources"]) {
   if (!findings.length) return "none" as const;
   if (process.env.VERCEL_ENV !== "production") return "disabled_preview" as const;
   const apiKey = process.env.RESEND_API_KEY;
@@ -69,7 +69,7 @@ async function emailNewFindings(findings: SecurityFinding[], checkedAt: string) 
 
   const report = formatDiagnosis(findings, {
     schemaVersion: 1, runId: "email", checkedAt, recordedAt: checkedAt, findings,
-    sources: { osv: { ok: true }, nvd: { ok: true }, github: { ok: true } },
+    sources,
     status: "partial", notification: "none"
   });
   const summary = findings.slice(0, 15).map((item) =>
@@ -103,7 +103,7 @@ export async function recordSecurityWatchScan(scan: SecurityScan) {
   const newAlerts = scan.findings.filter((finding) => alertable(finding) && !sent.has(finding.key));
   let notification: StoredScan["notification"] = "none";
   try {
-    notification = await emailNewFindings(newAlerts, scan.checkedAt);
+    notification = await emailNewFindings(newAlerts, scan.checkedAt, scan.sources);
     if (notification === "sent" && newAlerts.length) {
       const [first, ...rest] = newAlerts.map((finding) => finding.key);
       if (first) await redis.sadd(NOTIFIED_KEY, first, ...rest);
