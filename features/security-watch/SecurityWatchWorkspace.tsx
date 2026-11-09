@@ -10,7 +10,7 @@ import {
 import styles from "./SecurityWatchWorkspace.module.css";
 
 type RunSummary = { runId: string; checkedAt: string; status: string; findings: number };
-type Props = { state: StoredScan | null; error: string | null; recent: RunSummary[] };
+type Props = { state: StoredScan | null; error: string | null; recent: RunSummary[]; ingestConfigured: boolean; notificationsConfigured: boolean };
 type Filter = "all" | "priority" | "review";
 const severe = (f: SecurityFinding) => f.severity === "CRITICAL" || f.severity === "HIGH";
 const formatDate = (value: string) => {
@@ -28,7 +28,8 @@ function severityLabel(finding: SecurityFinding) {
   return { label: "REVIEW", tone: styles.review };
 }
 
-function StatusChip({ state, error }: Pick<Props, "state" | "error">) {
+function StatusChip({ state, error, ingestConfigured }: Pick<Props, "state" | "error" | "ingestConfigured">) {
+  if (!ingestConfigured) return <span className={styles.statusWarn}>ACTIVATION PENDING</span>;
   if (error) return <span className={styles.statusWarn}>STORAGE UNAVAILABLE</span>;
   if (!state) return <span className={styles.statusWarn}>SETUP PENDING</span>;
   if (state.status === "failed") return <span className={styles.statusWarn}>ALL SOURCES FAILED</span>;
@@ -40,7 +41,7 @@ function StatusChip({ state, error }: Pick<Props, "state" | "error">) {
   return <span className={styles.statusOk}><span className={styles.dot}/> AUTOMATIC MONITORING · EVERY 12H</span>;
 }
 
-export function SecurityWatchWorkspace({ state, error, recent }: Props) {
+export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured, notificationsConfigured }: Props) {
   const [filter, setFilter] = useState<Filter>("all");
   const [copied, setCopied] = useState<string | null>(null);
   const [copyFallback, setCopyFallback] = useState<string | null>(null);
@@ -80,7 +81,7 @@ export function SecurityWatchWorkspace({ state, error, recent }: Props) {
           <p>Public vulnerability advisories related to our registered technology stack.
             <strong> No access to product code or infrastructure.</strong></p>
         </div>
-        <StatusChip state={state} error={error} />
+        <StatusChip state={state} error={error} ingestConfigured={ingestConfigured} />
       </div>
 
       <div className={styles.stats}>
@@ -230,6 +231,7 @@ export function SecurityWatchWorkspace({ state, error, recent }: Props) {
             <p><BellRing size={16}/> <strong>01 / Receive a notification.</strong> Only new high-priority matches trigger email.</p>
             <p><ShieldAlert size={16}/> <strong>02 / See the product and owner.</strong> Check the advisory table above.</p>
             <p><DatabaseZap size={16}/> <strong>03 / Copy diagnosis to your AI.</strong> The product team verifies and handles fixes.</p>
+            {!notificationsConfigured && <p className={styles.warningText}>Email alerts are not configured. Automatic notifications are not active.</p>}
             {state?.notification === "not_configured" && <p className={styles.warningText}>Email notification is not configured yet.</p>}
             {state?.notification === "failed" && <p className={styles.warningText}>Latest email notification failed. Check sender setup.</p>}
             {(state?.status === "partial" || state?.status === "failed") &&
