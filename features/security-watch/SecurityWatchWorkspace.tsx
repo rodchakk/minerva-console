@@ -98,7 +98,7 @@ export function SecurityWatchWorkspace({ state, error, recent }: Props) {
         </section>
         <section className={styles.metric}>
           <span>LAST AUTOMATIC CHECK</span><strong className={styles.metricTime}>{state ? formatDate(state.checkedAt) : "Not yet"}</strong>
-          <p>{state ? state.status.toUpperCase() + " · Honduras time" : "Scans at 06:00 and 18:00"}</p>
+          <p>{state ? state.status.toUpperCase() + " · Honduras time" : "Scheduled near 06:17 and 18:17"}</p>
         </section>
       </div>
 
