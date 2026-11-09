@@ -2,8 +2,11 @@ name: Minerva Security Watch (public-advisory radar)
 
 on:
   schedule:
-    # 00:17 and 12:17 UTC => 18:17 and 06:17 in Honduras.
+    # Primary: 06:17 and 18:17 Honduras (UTC-6).
     - cron: "17 0,12 * * *"
+    # Redundant slot: 06:47 and 18:47; skips if a successful recent scan exists.
+    # GitHub schedule events can be delayed/dropped. This is a best-effort fallback.
+    - cron: "47 0,12 * * *"
   workflow_dispatch:
   push:
     branches: [master]
@@ -14,6 +17,7 @@ on:
 
 permissions:
   contents: read
+  actions: read # Check recent successful runs before consuming the backup slot
   id-token: write # GitHub-issued short-lived OIDC for the exact ingest route
 
 concurrency:
@@ -31,5 +35,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.2
+      - name: Check backup slot against recently verified ingestions
+        id: backup_guard
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SECURITY_WATCH_CRON: ${{ github.event.schedule }}
+        run: node scripts/security-watch-schedule-guard.mjs
       - name: Scan public vulnerability advisories
+        if: steps.backup_guard.outputs.should_scan == 'true'
         run: node scripts/security-watch-scan.mjs

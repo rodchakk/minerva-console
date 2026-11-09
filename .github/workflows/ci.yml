@@ -391,7 +391,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.2
-      - run: node --test tests/security-watch-scanner.test.mjs tests/security-watch-oidc.test.mjs tests/security-watch-hosted-evidence.test.mjs
+      - run: node --test tests/security-watch-scanner.test.mjs tests/security-watch-oidc.test.mjs tests/security-watch-hosted-evidence.test.mjs tests/security-watch-schedule-guard.test.mjs
 
   security-watch-public-feeds-smoke:
     name: Security Watch public sources smoke (feature branch only)
