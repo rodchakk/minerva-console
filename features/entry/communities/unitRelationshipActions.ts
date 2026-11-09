@@ -65,7 +65,43 @@ async function queryCommunityMemberOptions(db: AdminClient, communityId: string,
       profileRows = profile ? [profile] : [];
     }
   } else if (term) {
-    return { error: "Enter a complete account UUID to search directly.", hasMore: false, options: [] };
+    // Reuse the existing, superadmin-only account search for names and emails.
+    // Profiles may be attached to another community, so search both the
+    // current profile community and global profiles, then independently scope
+    // every candidate to an actual membership in the requested community.
+    const userDb = await createClient();
+    const searchTerm = term.slice(0, 120);
+    const [scoped, global] = await Promise.all([
+      userDb.rpc("sa_list_users", { p_community_id: communityId, p_search: searchTerm }),
+      userDb.rpc("sa_list_users", { p_community_id: null, p_search: searchTerm }),
+    ]);
+    if (scoped.error || global.error) {
+      return { error: "Could not search community members. Please try again.", hasMore: false, options: [] };
+    }
+    const matches = new Map<string, { user_id: unknown; full_name: unknown; email?: unknown }>();
+    for (const item of [...(scoped.data ?? []), ...(global.data ?? [])]) {
+      const candidate = item as { user_id?: unknown; full_name?: unknown; email?: unknown };
+      if (candidate.user_id) matches.set(String(candidate.user_id), {
+        user_id: candidate.user_id,
+        full_name: candidate.full_name,
+        email: candidate.email,
+      });
+    }
+    const ids = [...matches.keys()];
+    if (!ids.length) return { error: null, hasMore: false, options: [] };
+    const { data, error } = await db
+      .from("community_members")
+      .select("user_id,role,is_active")
+      .eq("community_id", communityId)
+      .in("user_id", ids)
+      .order("user_id")
+      .limit(RELATIONSHIP_OPTION_LIMIT + 1);
+    if (error) return { error: error.message, hasMore: false, options: [] };
+    hasMore = (data?.length ?? 0) > RELATIONSHIP_OPTION_LIMIT;
+    memberships = (data ?? []).slice(0, RELATIONSHIP_OPTION_LIMIT);
+    profileRows = memberships
+      .map((member) => matches.get(String(member.user_id)))
+      .filter((profile): profile is { user_id: unknown; full_name: unknown; email?: unknown } => Boolean(profile));
   } else {
     const { data, error } = await db
       .from("community_members")
