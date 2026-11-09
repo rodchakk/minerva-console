@@ -91,7 +91,11 @@ async function emailNewFindings(findings: SecurityFinding[], checkedAt: string) 
 export async function recordSecurityWatchScan(scan: SecurityScan) {
   const redis = redisClient();
   const existing = await redis.get<StoredScan>(CURRENT_KEY);
-  if (existing?.runId === scan.runId) return { duplicate: true, state: existing };
+  if (existing?.runId === scan.runId ||
+      (existing && Date.parse(existing.checkedAt) > Date.parse(scan.checkedAt))) {
+    // A delayed/replayed workflow must never replace newer security information.
+    return { duplicate: true, state: existing };
+  }
   const ok = Object.values(scan.sources).filter((source) => source.ok).length;
   const status: StoredScan["status"] = ok === 2 ? "ok" : ok === 1 ? "partial" : "failed";
   const combined = collectFindings(scan, existing || null);
