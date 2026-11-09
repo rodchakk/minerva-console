@@ -375,8 +375,7 @@ export function CommunityUnitDetailWorkspace({
           </div>
         </header>
 
-        {relationships ? <div className="shrink-0">{relationships}</div> : null}
-        {relationships ? <h2 className="pt-1 text-lg font-semibold text-white">Unit overview</h2> : null}
+{relationships ? <h2 className="pt-1 text-lg font-semibold text-white">Unit overview</h2> : null}
 
         <section className="relative grid overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:grid-cols-4">
           <SummaryMetric
@@ -417,7 +416,7 @@ export function CommunityUnitDetailWorkspace({
           />
         </section>
 
-        <section className="relative flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF] lg:min-h-0">
+        <section className={cn("relative flex min-h-[560px] flex-1 flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]", relationships ? "lg:min-h-[560px] lg:flex-none" : "lg:min-h-0")}>
           <div className="flex min-h-[52px] flex-wrap items-center justify-between gap-3 border-b border-[#141119] px-4">
             <div className="flex h-full items-center gap-5">
               {(
@@ -729,6 +728,8 @@ export function CommunityUnitDetailWorkspace({
             </span>
           </div>
         </section>
+
+        {relationships ? <div className="shrink-0 pb-3">{relationships}</div> : null}
 
         {selectedResident ? (
           <aside className="fixed bottom-5 right-5 top-[76px] z-40 grid w-[440px] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">

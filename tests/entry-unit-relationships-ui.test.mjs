@@ -18,16 +18,30 @@ test("unit details integrates a clear gated relationships workspace", () => {
   assert.match(section, /setting\?\.allow_unit_relationships !== true\) return null/);
 });
 
-test("relationship UI explains scoped semantics and shows real saved results", () => {
-  assert.match(panel, /Relationships &amp; responsibilities/);
-  assert.match(panel, /Related units stay independent/);
-  assert.match(panel, /not automatically residents/);
-  assert.match(panel, /Search people by name, email or UUID/);
-  assert.match(panel, /related .*?unit/);
-  assert.match(panel, /responsible .*?person/);
+test("approved compact Unit connections appear after the operational overview", () => {
+  const heading = workspace.indexOf("Unit overview");
+  const records = workspace.indexOf('min-h-[560px] flex-1 flex-col');
+  const connections = workspace.indexOf('shrink-0 pb-3');
+  assert.ok(heading >= 0 && heading < records && records < connections, "Operational overview and records must precede connections");
+  assert.match(panel, /<details aria-label="Unit connections"/);
+  assert.doesNotMatch(panel, /<details aria-label="Unit connections"[^>]*\bopen(?:=|\s|>)/);
+  assert.match(panel, /<summary className=/);
+  assert.match(panel, /group-open:hidden/);
+  assert.match(panel, /linked \{links\.length === 1/);
+  assert.match(panel, /responsible \{responsibilities\.length === 1/);
+});
+
+test("compact connection management keeps all audited actions and readable feedback", () => {
+  for (const action of ["link_units", "unlink_units", "assign_responsible", "remove_responsible", "rename_unit"]) {
+    assert.ok(panel.includes('action: "' + action + '"'), "Action missing: " + action);
+  }
   assert.match(panel, /Change saved/);
   assert.match(panel, /window\.confirm\(/);
-  assert.match(panel, /details className/);
+  assert.match(panel, /Linked units remain independent/);
+  assert.match(panel, /applies to this unit only/);
+  assert.match(panel, /Search community people by name, email or UUID/);
+  assert.match(panel, /Responsibility is per unit/);
+  assert.match(panel, /Edit unit label \(advanced\)/);
   assert.doesNotMatch(panel, /Search by account UUID/);
 });
 
