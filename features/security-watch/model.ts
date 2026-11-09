@@ -6,6 +6,13 @@ export type SecurityWatchProduct = {
   team: string;
   environment: string;
   enabled: boolean;
+  releaseVerification?: {
+    technology: string;
+    version: string;
+    checkedAt: string;
+    provider: string;
+    deploymentId: string;
+  };
   technologies: Array<{
     id: string;
     name: string;

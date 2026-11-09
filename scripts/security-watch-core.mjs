@@ -11,6 +11,9 @@ export function validCatalog(catalog) {
       throw new Error("Invalid or duplicate product identifier");
     }
     products.add(product.id);
+    if (product.environment === "legacy" && product.enabled) {
+      throw new Error("Legacy products cannot be actively monitored");
+    }
     if (!product.name || !product.team || !Array.isArray(product.technologies)) {
       throw new Error("Product missing name, team or technologies");
     }
@@ -48,6 +51,20 @@ export function watchEntries(catalog) {
     }
   }
   return [...entries.values()];
+}
+
+// Reconcile a stored advisory with the CURRENT catalog without mutating history.
+// Disabled legacy products and retired versions must never be shown as live matches.
+export function currentlyTrackedFinding(finding, catalog) {
+  const active = new Map((catalog.products || []).filter((product) => product.enabled)
+    .map((product) => [product.id, product]));
+  const products = (finding.products || []).filter((candidate) => {
+    const product = active.get(candidate.id);
+    return product && product.name === candidate.name && product.team === candidate.team &&
+      product.technologies.some((technology) => technology.name === finding.technology &&
+        technology.version === finding.version);
+  });
+  return products.length ? { ...finding, products } : null;
 }
 
 export function priority(value) {
