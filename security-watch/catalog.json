@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 1,
+  "lastReviewed": "2026-11-08",
+  "disclaimer": "Manually maintained inventory. Versions may differ from running deployments. A match is not confirmed exploitation or compromise.",
+  "products": [
+    {
+      "id": "entry",
+      "name": "ENTRY",
+      "team": "ENTRY Team",
+      "environment": "production",
+      "enabled": true,
+      "technologies": [
+        {
+          "id": "next",
+          "name": "Next.js",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "next",
+          "version": "16.4.1",
+          "notes": "ENTRY Admin Web"
+        },
+        {
+          "id": "react-native",
+          "name": "React Native",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "react-native",
+          "version": "0.81.5",
+          "notes": "ENTRY mobile"
+        },
+        {
+          "id": "expo",
+          "name": "Expo",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "expo",
+          "version": "54.0.33",
+          "notes": "ENTRY mobile"
+        },
+        {
+          "id": "nodejs",
+          "name": "Node.js",
+          "kind": "keyword",
+          "keyword": "Node.js",
+          "version": "24.x",
+          "notes": "Vercel-managed function runtime; exact patch version must be checked"
+        },
+        {
+          "id": "supabase",
+          "name": "Supabase",
+          "kind": "keyword",
+          "keyword": "Supabase",
+          "version": "managed",
+          "notes": "Provider-managed services, verify provider remediation"
+        },
+        {
+          "id": "postgres",
+          "name": "PostgreSQL",
+          "kind": "keyword",
+          "keyword": "PostgreSQL",
+          "version": "17.6",
+          "notes": "Provider-managed PostgreSQL"
+        }
+      ]
+    },
+    {
+      "id": "minerva-console",
+      "name": "Minerva Console",
+      "team": "Minerva Platform",
+      "environment": "production",
+      "enabled": true,
+      "technologies": [
+        {
+          "id": "next",
+          "name": "Next.js",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "next",
+          "version": "16.4.1"
+        },
+        {
+          "id": "react",
+          "name": "React",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "react",
+          "version": "19.2.4"
+        },
+        {
+          "id": "nodejs",
+          "name": "Node.js",
+          "kind": "keyword",
+          "keyword": "Node.js",
+          "version": "24.x",
+          "notes": "Vercel-managed function runtime"
+        },
+        {
+          "id": "upstash",
+          "name": "Upstash Redis",
+          "kind": "keyword",
+          "keyword": "Upstash",
+          "version": "managed",
+          "notes": "Provider service; news detection may be incomplete"
+        }
+      ]
+    },
+    {
+      "id": "minerva-webpage",
+      "name": "Minerva Webpage",
+      "team": "Minerva Web Team",
+      "environment": "production",
+      "enabled": true,
+      "technologies": [
+        {
+          "id": "next",
+          "name": "Next.js",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "next",
+          "version": "15.5.28"
+        },
+        {
+          "id": "react",
+          "name": "React",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "react",
+          "version": "19.2.6"
+        },
+        {
+          "id": "sharp",
+          "name": "Sharp",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "sharp",
+          "version": "0.35.5"
+        },
+        {
+          "id": "nodejs",
+          "name": "Node.js",
+          "kind": "keyword",
+          "keyword": "Node.js",
+          "version": "24.x",
+          "notes": "Vercel-managed function runtime"
+        }
+      ]
+    },
+    {
+      "id": "seshat",
+      "name": "Seshat",
+      "team": "Seshat Team",
+      "environment": "development",
+      "enabled": true,
+      "technologies": [
+        {
+          "id": "react-native",
+          "name": "React Native",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "react-native",
+          "version": "0.81.5"
+        },
+        {
+          "id": "expo",
+          "name": "Expo",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "expo",
+          "version": "54.0.37"
+        },
+        {
+          "id": "supabase",
+          "name": "Supabase",
+          "kind": "keyword",
+          "keyword": "Supabase",
+          "version": "managed"
+        },
+        {
+          "id": "postgres",
+          "name": "PostgreSQL",
+          "kind": "keyword",
+          "keyword": "PostgreSQL",
+          "version": "17.6"
+        }
+      ]
+    },
+    {
+      "id": "brother-system",
+      "name": "Brother's system",
+      "team": "Brother's Team",
+      "environment": "unregistered",
+      "enabled": false,
+      "technologies": []
+    }
+  ]
+}
