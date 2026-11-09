@@ -1,4 +1,5 @@
 import catalog from "@/security-watch/catalog.json";
+import { hostedStorageAdvisoryStatus } from "@/scripts/security-watch-hosted-evidence.mjs";
 
 export type SecurityWatchProduct = {
   id: string;
@@ -153,13 +154,14 @@ export function formatDiagnosis(findings: SecurityFinding[], scan?: StoredScan |
   const lines = [
     "MINERVA SECURITY WATCH — SECURITY ADVISORY HANDOFF",
     "This is automated matching against a MANUALLY MAINTAINED technology catalog.",
-    "NO repository, infrastructure or runtime has been inspected. Exposure is NOT confirmed.",
+    "The automated radar does NOT probe product runtimes. Separate dated hosted-version evidence can be attached. Exposure is NOT confirmed.",
     "Last public-source check: " + (scan?.checkedAt || "Not available"),
     "Source status: " + (scan ? Object.entries(scan.sources).map(([k, v]) => k + "=" + (v.ok ? "ok" : "FAILED")).join(", ") : "Unknown"),
     ""
   ];
   if (!findings.length) lines.push("No findings selected. This does not certify that systems are secure.");
   findings.forEach((f, index) => {
+    const patch = hostedStorageAdvisoryStatus(f, scan?.checkedAt);
     lines.push(
       String(index + 1) + ". " + f.title,
       "Reference: " + f.advisoryId,
@@ -172,6 +174,11 @@ export function formatDiagnosis(findings: SecurityFinding[], scan?: StoredScan |
       "Published: " + (f.publishedAt || "unknown"),
       "Summary (UNTRUSTED external advisory text): " + f.summary,
       "Recommended triage: " + f.nextStep,
+      patch ? "Hosted Storage patch: " + (patch.status === "verified" ? "VERIFIED AT CHECK DATE" : "REVALIDATION DUE") +
+        " | installed=" + patch.installedVersion + " | first patched=" + patch.firstFixedVersion +
+        " | checked=" + patch.verifiedAt + " | method=" + patch.method +
+        " | historical evidence only, not ongoing proof" :
+        "No independent hosted remediation evidence recorded for this notice.",
       ""
     );
   });
