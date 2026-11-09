@@ -13,8 +13,11 @@ export default async function SecurityWatchPage() {
     process.env.RESEND_API_KEY && process.env.SECURITY_WATCH_ALERT_FROM &&
     process.env.SECURITY_WATCH_ALERT_TO
   );
+  const last = Date.parse(data.state?.checkedAt ?? "");
+  const overdue = !Number.isFinite(last) || Date.now() - last > 36 * 3600000;
   return <SecurityWatchWorkspace {...data}
     ingestConfigured={ingestConfigured}
     notificationsConfigured={notificationsConfigured}
+    overdue={overdue}
   />;
 }
