@@ -27,6 +27,7 @@ function severityLabel(finding: SecurityFinding) {
   if (severe(finding)) return { label: finding.severity, tone: styles.urgent };
   if (finding.confidence === "KEYWORD_ONLY") return { label: "VERIFY SCOPE", tone: styles.watch };
   if (finding.confidence === "VENDOR_NOTICE") return { label: "VENDOR NOTICE", tone: styles.watch };
+  if (finding.confidence === "CPE_PRODUCT") return { label: "PRODUCT MATCH", tone: styles.review };
   return { label: "REVIEW", tone: styles.review };
 }
 
@@ -162,7 +163,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
                     <td className={styles.technology}>{finding.technology}<small>{finding.version}</small></td>
                     <td><div className={styles.pills}>{finding.products.map((p) => <span key={p.id}>{p.name}</span>)}</div></td>
                     <td><div className={styles.team}>{[...new Set(finding.products.map((p) => p.team))].join(" / ")}</div></td>
-                    <td className={styles.nextAction}>{finding.confidence === "KEYWORD_ONLY" ? "Verify vendor and scope" : finding.confidence === "VENDOR_NOTICE" ? "Check provider patch status" : "Verify deployed version"}<small>{finding.nextStep}</small></td>
+                    <td className={styles.nextAction}>{finding.confidence === "KEYWORD_ONLY" ? "Verify vendor and scope" : finding.confidence === "VENDOR_NOTICE" ? "Check provider patch status" : finding.confidence === "CPE_PRODUCT" ? "Verify affected version" : "Verify deployed version"}<small>{finding.nextStep}</small></td>
                     <td><button type="button" className={styles.rowButton}
                       onClick={() => copyReport([finding], finding.key)}>
                       {copied === finding.key ? "Copied!" : "Copy finding"}

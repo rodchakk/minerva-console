@@ -15,6 +15,7 @@ export type SecurityWatchProduct = {
     ecosystem?: string;
     keyword?: string;
     notes?: string;
+    nvdCpe?: { vendor: string; product: string };
   }>;
 };
 
@@ -31,7 +32,7 @@ export type SecurityFinding = {
   technology: string;
   version: string;
   products: Array<{ id: string; name: string; team: string }>;
-  confidence: "VERSION_MATCH" | "KEYWORD_ONLY" | "VENDOR_NOTICE";
+  confidence: "VERSION_MATCH" | "CPE_PRODUCT" | "KEYWORD_ONLY" | "VENDOR_NOTICE";
   nextStep: string;
 };
 
@@ -95,12 +96,12 @@ export function parseScan(value: unknown): SecurityScan | null {
         !field(item.technology, 100) || !field(item.version, 80) ||
         !field(item.nextStep, 300) || !Array.isArray(item.products) ||
         item.products.length === 0 || item.products.length > 12 ||
-        (item.confidence !== "VERSION_MATCH" && item.confidence !== "KEYWORD_ONLY" && item.confidence !== "VENDOR_NOTICE")) {
+        (item.confidence !== "VERSION_MATCH" && item.confidence !== "CPE_PRODUCT" && item.confidence !== "KEYWORD_ONLY" && item.confidence !== "VENDOR_NOTICE")) {
       return null;
     }
     if (item.source === "osv" && (item.confidence !== "VERSION_MATCH" ||
          item.url !== "https://osv.dev/vulnerability/" + encodeURIComponent(item.advisoryId))) return null;
-    if (item.source === "nvd" && (item.confidence !== "KEYWORD_ONLY" ||
+    if (item.source === "nvd" && ((item.confidence !== "CPE_PRODUCT" && item.confidence !== "KEYWORD_ONLY") ||
          item.url !== "https://nvd.nist.gov/vuln/detail/" + encodeURIComponent(item.advisoryId))) return null;
     if (item.source === "github" && (item.confidence !== "VENDOR_NOTICE" ||
       typeof item.url !== "string" ||
@@ -157,7 +158,7 @@ export function formatDiagnosis(findings: SecurityFinding[], scan?: StoredScan |
       "Reference: " + f.advisoryId,
       "Source: " + f.source.toUpperCase() + " | " + f.url,
       "Severity reported: " + f.severity,
-      "Match confidence: " + (f.confidence === "VERSION_MATCH" ? "Package/version match; runtime not verified" : f.confidence === "VENDOR_NOTICE" ? "OFFICIAL VENDOR NOTICE; hosted impact not verified" : "KEYWORD ONLY; may be unrelated"),
+      "Match confidence: " + (f.confidence === "VERSION_MATCH" ? "Package/version match; runtime not verified" : f.confidence === "VENDOR_NOTICE" ? "OFFICIAL VENDOR NOTICE; hosted impact not verified" : f.confidence === "CPE_PRODUCT" ? "NVD structured product match; vulnerable version not verified" : "KEYWORD ONLY; may be unrelated"),
       "Technology/catalog version: " + f.technology + " / " + f.version,
       "Products: " + f.products.map((p) => p.name).join(", "),
       "Teams: " + [...new Set(f.products.map((p) => p.team))].join(", "),

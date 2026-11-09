@@ -39,14 +39,28 @@ test("OSV is a version match, not confirmed exploitation; withdrawn records excl
   assert.equal(withinWindow(finding, Date.parse("2026-11-09T00:00:00Z")), false);
 });
 
-test("NVD keyword notices never claim confirmed version exposure", () => {
-  const cve = { id: "CVE-2026-12345", descriptions: [{ lang: "en", value: "A Node.js runtime vulnerability in example code" }], published: "2026-11-08T06:00:00Z", metrics: { cvssMetricV31: [{ cvssData: { baseSeverity: "CRITICAL" } }] } };
-  const matches = toNvdFindings(cve, watchEntries(catalog));
+test("NVD requires structured product identifiers, not incidental keyword mentions", () => {
+  const base = {
+    id: "CVE-2026-12345",
+    descriptions: [{ lang: "en", value: "An application built with Node.js is vulnerable" }],
+    published: "2026-11-08T06:00:00Z",
+    metrics: { cvssMetricV31: [{ cvssData: { baseSeverity: "CRITICAL" } }] }
+  };
+  const entries = watchEntries(catalog);
+  assert.equal(toNvdFindings(base, entries).length, 0);
+  const unrelated = { ...base, configurations: [{ nodes: [{ cpeMatch: [{
+    vulnerable: true, criteria: "cpe:2.3:a:unrelated:server:1.0:*:*:*:*:*:*:*"
+  }] }] }] };
+  assert.equal(toNvdFindings(unrelated, entries).length, 0);
+  const actual = { ...base, configurations: [{ nodes: [{ cpeMatch: [{
+    vulnerable: true, criteria: "cpe:2.3:a:nodejs:node.js:*:*:*:*:*:*:*:*"
+  }] }] }] };
+  const matches = toNvdFindings(actual, entries);
   assert.equal(matches.length, 1);
-  assert.equal(matches[0].confidence, "KEYWORD_ONLY");
+  assert.equal(matches[0].confidence, "CPE_PRODUCT");
   assert.equal(matches[0].severity, "CRITICAL");
-  assert.deepEqual(matches[0].products.map((x) => x.id).sort(), ["entry", "minerva-console", "minerva-webpage"]);
-  assert.equal(toNvdFindings({ ...cve, descriptions: [{ lang: "en", value: "Other product" }] }, watchEntries(catalog)).length, 0);
+  assert.deepEqual(matches[0].products.map((x) => x.id).sort(),
+    ["entry", "minerva-console", "minerva-webpage"]);
 });
 
 test("duplicate advisories only render once per fingerprint", () => {

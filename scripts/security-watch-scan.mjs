@@ -81,7 +81,7 @@ async function osvScan(entries) {
 
 async function nvdScan(entries) {
   const keywords = [...new Set(entries.filter((x) => x.kind === "keyword")
-    .map((x) => x.keyword).filter(Boolean))];
+    .filter((x) => x.nvdCpe).map((x) => x.keyword).filter(Boolean))];
   if (!keywords.length) return [];
   const start = new Date(sinceMs).toISOString();
   const end = now.toISOString();

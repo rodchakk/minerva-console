@@ -131,15 +131,29 @@ export function nvdPriority(cve) {
   return "UNKNOWN";
 }
 
+function matchesCanonicalCpe(cve, target) {
+  if (!target || !/^[a-z0-9._-]+$/.test(target.vendor) ||
+      !/^[a-z0-9._-]+$/.test(target.product)) return false;
+  const configs = Array.isArray(cve?.configurations) ? cve.configurations : [];
+  function walk(node) {
+    if (!node || typeof node !== "object") return false;
+    for (const match of node.cpeMatch || []) {
+      if (match.vulnerable === false || typeof match.criteria !== "string") continue;
+      const parts = match.criteria.split(":");
+      if (parts.length >= 6 && parts[0] === "cpe" && parts[1] === "2.3" &&
+          parts[3] === target.vendor && parts[4] === target.product) return true;
+    }
+    return Array.isArray(node.children) && node.children.some(walk);
+  }
+  return configs.some((config) => (config.nodes || []).some(walk));
+}
+
 export function toNvdFindings(cve, entries) {
   if (!cve?.id || cve.vulnStatus === "Rejected") return [];
   const summary = cve.descriptions?.find((d) => d.lang === "en")?.value || "";
-  const normalized = summary.toLowerCase();
   const findings = [];
   for (const entry of entries) {
-    if (entry.kind !== "keyword") continue;
-    const keyword = entry.keyword.toLowerCase();
-    if (!normalized.includes(keyword)) continue;
+    if (entry.kind !== "keyword" || !matchesCanonicalCpe(cve, entry.nvdCpe)) continue;
     findings.push({
       key: ["nvd", cve.id, entry.watchKey].join("|"),
       source: "nvd",
@@ -153,8 +167,8 @@ export function toNvdFindings(cve, entries) {
       technology: entry.name,
       version: entry.version,
       products: entry.products,
-      confidence: "KEYWORD_ONLY",
-      nextStep: "This is a keyword match only. Verify the affected product and versions; it may not apply."
+      confidence: "CPE_PRODUCT",
+      nextStep: "The advisory's structured product ID matches this technology. Verify the actual deployed VERSION and affected range before acting."
     });
   }
   return findings;

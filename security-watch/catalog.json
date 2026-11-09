@@ -43,7 +43,11 @@
           "kind": "keyword",
           "keyword": "Node.js",
           "version": "24.x",
-          "notes": "Vercel-managed function runtime; exact patch version must be checked"
+          "notes": "Vercel-managed function runtime; exact patch version must be checked",
+          "nvdCpe": {
+            "vendor": "nodejs",
+            "product": "node.js"
+          }
         },
         {
           "id": "supabase",
@@ -59,7 +63,11 @@
           "kind": "keyword",
           "keyword": "PostgreSQL",
           "version": "17.6",
-          "notes": "Provider-managed PostgreSQL"
+          "notes": "Provider-managed PostgreSQL",
+          "nvdCpe": {
+            "vendor": "postgresql",
+            "product": "postgresql"
+          }
         }
       ]
     },
@@ -92,7 +100,11 @@
           "kind": "keyword",
           "keyword": "Node.js",
           "version": "24.x",
-          "notes": "Vercel-managed function runtime"
+          "notes": "Vercel-managed function runtime",
+          "nvdCpe": {
+            "vendor": "nodejs",
+            "product": "node.js"
+          }
         },
         {
           "id": "upstash",
@@ -141,7 +153,11 @@
           "kind": "keyword",
           "keyword": "Node.js",
           "version": "24.x",
-          "notes": "Vercel-managed function runtime"
+          "notes": "Vercel-managed function runtime",
+          "nvdCpe": {
+            "vendor": "nodejs",
+            "product": "node.js"
+          }
         }
       ]
     },
@@ -180,7 +196,11 @@
           "name": "PostgreSQL",
           "kind": "keyword",
           "keyword": "PostgreSQL",
-          "version": "17.6"
+          "version": "17.6",
+          "nvdCpe": {
+            "vendor": "postgresql",
+            "product": "postgresql"
+          }
         }
       ]
     },

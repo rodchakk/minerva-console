@@ -11,13 +11,13 @@ There is NO Run scan button, no LLM API, no paid AI calls, no repository inspect
 ## Coverage
 
 - OSV.dev: querybatch by cataloged npm package + exact version, followed by per-advisory detail requests. These are **package-version matches, not deployed runtime attestations**.
-- NVD CVE publication feed: vendor keyword mentions (Node.js, PostgreSQL, Supabase, etc.). These are **keyword mentions only**, frequently needing manual elimination of false positives. A provider advisory not included in NVD may be missed.
+- NVD updated CVE feed: targeted queries for catalog technologies, accepted only when structured CPE vendor/product identifiers match (currently Node.js and PostgreSQL). Version-range applicability still needs product-team verification. CVEs awaiting NVD enrichment without CPE identifiers may be missed. Incidental mentions of a technology in unrelated apps are rejected.
 - Direct public vendor advisories for Supabase Storage, Auth and Realtime (GitHub Security Advisories): official notices, with hosted exposure **unverified**.
 - Public recent published/updated notices (last 7 days); recent findings are retained in the UI for at most 60 days.
 - In case a source fails, UI shows partial/failed coverage, not an "all clear".
 - A match or high severity does not imply compromise.
 
-The product technology inventory is a reviewed file at security-watch/catalog.json, with each product's owner/team, environment and npm versions or vendor keywords. The initial entries are a manual starting snapshot, NOT proof of what is running in production. To add a new product (such as Brother's), ask that project's AI for an inventory with no secrets, then submit a PR updating its catalog entry. No system connection is required.
+The product technology inventory is a reviewed file at security-watch/catalog.json, with each product's owner/team, environment and npm versions, vendor keywords and optionally exact NVD CPE vendor/product identifiers. The initial entries are a manual starting snapshot, NOT proof of what is running in production. To add a new product (such as Brother's), ask that project's AI for an inventory with no secrets, then submit a PR updating its catalog entry. No system connection is required.
 
 ## Storage and isolation
 
