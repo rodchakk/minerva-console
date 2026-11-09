@@ -11,8 +11,8 @@ There is NO Run scan button, no LLM API, no paid AI calls, no repository inspect
 ## Coverage
 
 - OSV.dev: querybatch by cataloged npm package + exact version, followed by per-advisory detail requests. These are **package-version matches, not deployed runtime attestations**.
-- NVD updated CVE feed: targeted queries for catalog technologies, accepted only when structured CPE vendor/product identifiers match (currently Node.js and PostgreSQL). Version-range applicability still needs product-team verification. CVEs awaiting NVD enrichment without CPE identifiers may be missed. Incidental mentions of a technology in unrelated apps are rejected.
-- Direct public vendor advisories for Supabase Storage, Auth and Realtime (GitHub Security Advisories): official notices, with hosted exposure **unverified**.
+- NVD updated CVE feed: targeted queries for catalog technologies, accepted only when structured CPE vendor/product identifiers match (currently Node.js and PostgreSQL). Version-range applicability still needs product-team verification. CVEs awaiting NVD enrichment without CPE identifiers may be missed. To prevent old CVEs that were merely edited recently from appearing as new incidents, NVD matches must have been published within the previous 37 days. Incidental mentions of a technology in unrelated apps are rejected.
+- Direct public vendor advisories for Supabase Storage/Auth/Realtime, Vercel Next.js and Node.js GitHub repositories. Where published package ranges are available, the scanner rejects definitively unaffected Next.js versions. Hosted exposure remains **unverified**.
 - Public recent published/updated notices (last 7 days); recent findings are retained in the UI for at most 60 days.
 - In case a source fails, UI shows partial/failed coverage, not an "all clear".
 - A match or high severity does not imply compromise.

@@ -193,27 +193,85 @@ export function deduplicate(findings) {
   }).slice(0, 160);
 }
 
+const PROVIDER_SECURITY_FEEDS = {
+  "supabase/storage": "Supabase",
+  "supabase/auth": "Supabase",
+  "supabase/realtime": "Supabase",
+  "vercel/next.js": "Next.js",
+  "nodejs/node": "Node.js"
+};
+function cmpVersion(a, b) {
+  const left = a.match(/^(\d+)\.(\d+)\.(\d+)/);
+  const right = b.match(/^(\d+)\.(\d+)\.(\d+)/);
+  if (!left || !right) return null;
+  for (let i = 1; i <= 3; i++) {
+    const diff = Number(left[i]) - Number(right[i]);
+    if (diff) return Math.sign(diff);
+  }
+  return 0;
+}
+export function matchesSimpleVersionRange(version, range) {
+  if (range === "*" || range === ">= 0") return true;
+  if (typeof range !== "string") return null;
+  // Only exclude a version when every comparator is understood and definite.
+  const alternatives = range.split("||").map((s) => s.trim()).filter(Boolean);
+  if (!alternatives.length) return null;
+  let uncertain = false;
+  for (const alternative of alternatives) {
+    let satisfied = true;
+    for (const part of alternative.split(",").map((s) => s.trim()).filter(Boolean)) {
+      const match = part.match(/^(<=|>=|<|>|=)?\s*(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?)$/);
+      if (!match) { uncertain = true; satisfied = false; break; }
+      const compared = cmpVersion(version, match[2]);
+      if (compared === null) { uncertain = true; satisfied = false; break; }
+      const op = match[1] || "=";
+      const passed = op === "<=" ? compared <= 0 :
+        op === "<" ? compared < 0 : op === ">=" ? compared >= 0 :
+        op === ">" ? compared > 0 : compared === 0;
+      if (!passed) { satisfied = false; break; }
+    }
+    if (satisfied) return true;
+  }
+  return uncertain ? null : false;
+}
+
 export function toProviderAdvisoryFindings(advisory, repository, entries) {
-  if (!/^[a-z0-9-]+\/[a-z0-9-]+$/.test(repository) ||
-      !advisory?.ghsa_id || advisory.withdrawn_at || !advisory.published_at) return [];
+  const name = PROVIDER_SECURITY_FEEDS[repository];
+  if (!name || !advisory?.ghsa_id || advisory.withdrawn_at ||
+      !advisory.published_at) return [];
   const id = String(advisory.ghsa_id);
   if (!/^GHSA-[a-z0-9-]{10,40}$/i.test(id)) return [];
-  const matches = entries.filter((entry) =>
-    entry.kind === "keyword" && entry.keyword.toLowerCase() === "supabase");
-  return matches.map((entry) => ({
-    key: ["github", id, entry.watchKey].join("|"),
-    source: "github",
-    advisoryId: id,
-    title: String(advisory.summary || id).slice(0, 240),
-    summary: String(advisory.description || advisory.summary || "See vendor advisory.").slice(0, 700),
-    severity: priority(advisory.severity),
-    publishedAt: advisory.published_at,
-    modifiedAt: advisory.updated_at || null,
-    url: "https://github.com/" + repository + "/security/advisories/" + encodeURIComponent(id),
-    technology: entry.name,
-    version: entry.version,
-    products: entry.products,
-    confidence: "VENDOR_NOTICE",
-    nextStep: "Vendor bulletin only. Confirm whether Supabase already patched hosted projects and whether any client action remains."
-  }));
+  const matches = entries.filter((entry) => entry.name === name);
+  const versions = Array.isArray(advisory.vulnerabilities) ? advisory.vulnerabilities : [];
+  return matches.filter((entry) => {
+    if (repository !== "vercel/next.js") return true;
+    const packageRanges = versions.filter((v) => v?.package?.name === "next" &&
+      v?.package?.ecosystem?.toLowerCase() === "npm" && v.vulnerable_version_range);
+    if (!packageRanges.length) return true; // Vendor notice lacks ranges; review it manually.
+    const evaluations = packageRanges.map((v) => matchesSimpleVersionRange(entry.version, v.vulnerable_version_range));
+    return evaluations.some((v) => v === true || v === null);
+  }).map((entry) => {
+    const rangeSummary = repository === "vercel/next.js"
+      ? versions.filter((v) => v?.package?.name === "next")
+        .map((v) => [v.vulnerable_version_range, v.patched_versions &&
+          "patched: " + v.patched_versions].filter(Boolean).join(" → ")).slice(0, 5).join("; ")
+      : "";
+    return {
+      key: ["github", id, entry.watchKey].join("|"),
+      source: "github",
+      advisoryId: id,
+      title: String(advisory.summary || id).slice(0, 240),
+      summary: String((advisory.description || advisory.summary || "See official advisory.") +
+        (rangeSummary ? "\nAffected published ranges: " + rangeSummary : "")).slice(0, 700),
+      severity: priority(advisory.severity),
+      publishedAt: advisory.published_at,
+      modifiedAt: advisory.updated_at || null,
+      url: "https://github.com/" + repository + "/security/advisories/" + encodeURIComponent(id),
+      technology: entry.name,
+      version: entry.version,
+      products: entry.products,
+      confidence: "VENDOR_NOTICE",
+      nextStep: "Official vendor bulletin. Confirm affected version ranges, runtime requirements and whether the provider already patched hosted environments."
+    };
+  });
 }

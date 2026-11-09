@@ -63,6 +63,9 @@ function collectFindings(current: SecurityScan, previous: StoredScan | null) {
 }
 
 function alertable(finding: SecurityFinding) {
+  if (finding.confidence === "VENDOR_NOTICE") {
+    return ["CRITICAL", "HIGH", "MEDIUM"].includes(finding.severity);
+  }
   return finding.severity === "CRITICAL" || finding.severity === "HIGH";
 }
 

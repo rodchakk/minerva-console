@@ -105,7 +105,7 @@ export function parseScan(value: unknown): SecurityScan | null {
          item.url !== "https://nvd.nist.gov/vuln/detail/" + encodeURIComponent(item.advisoryId))) return null;
     if (item.source === "github" && (item.confidence !== "VENDOR_NOTICE" ||
       typeof item.url !== "string" ||
-      !/^https:\/\/github\.com\/supabase\/(storage|auth|realtime)\/security\/advisories\/GHSA-[a-z0-9-]+$/i.test(item.url) ||
+      !/^https:\/\/github\.com\/(?:supabase\/(?:storage|auth|realtime)|vercel\/next\.js|nodejs\/node)\/security\/advisories\/GHSA-[a-z0-9-]+$/i.test(item.url) ||
       !item.url.endsWith("/" + item.advisoryId))) return null;
     const seen = new Set<string>();
     const associated: SecurityFinding["products"] = [];

@@ -107,6 +107,8 @@ async function nvdScan(entries) {
         throw new Error("NVD response shape mismatch for " + keyword);
       }
       for (const item of data.vulnerabilities) {
+        const publication = Date.parse(item.cve?.published || "");
+        if (!Number.isFinite(publication) || publication < sinceMs - 30 * 86400_000) continue;
         results.push(...toNvdFindings(item.cve, entries));
       }
       offset += data.vulnerabilities.length;
@@ -120,9 +122,9 @@ async function nvdScan(entries) {
 }
 
 async function vendorAdvisoryScan(entries) {
-  if (!entries.some((entry) => entry.kind === "keyword" &&
-    entry.keyword.toLowerCase() === "supabase")) return [];
-  const repos = ["supabase/storage", "supabase/auth", "supabase/realtime"];
+  if (!entries.some((entry) => ["Supabase", "Next.js", "Node.js"].includes(entry.name))) return [];
+  const repos = ["supabase/storage", "supabase/auth", "supabase/realtime",
+    "vercel/next.js", "nodejs/node"];
   const findings = [];
   for (const repository of repos) {
     const url = "https://api.github.com/repos/" + repository + "/security-advisories?per_page=100";

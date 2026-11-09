@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority
+  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority, matchesSimpleVersionRange
 } from "../scripts/security-watch-core.mjs";
 import catalog from "../security-watch/catalog.json" with { type: "json" };
 
@@ -96,4 +96,27 @@ test("CVSS 3.1 vector severity is interpreted without guessing unsupported forma
   assert.equal(osvPriority({ severity: [{ type: "CVSS_V3", score: vector }] }), "CRITICAL");
   assert.equal(cvss3BaseScore("CVSS:4.0/AV:N/AC:L"), null);
   assert.equal(cvss3BaseScore("garbage"), null);
+});
+
+test("official Next.js advisories are mapped only to affected catalog version branches", () => {
+  const advisory = {
+    ghsa_id: "GHSA-pc58-hwjq-p385",
+    summary: "Next.js security notice",
+    description: "A version-dependent issue in Next.js",
+    published_at: "2026-11-03T12:00:00Z",
+    updated_at: "2026-11-03T12:00:00Z",
+    severity: "moderate",
+    vulnerabilities: [
+      { package: { ecosystem: "npm", name: "next" },
+        vulnerable_version_range: ">= 16.0.0, <= 16.4.4", patched_versions: "16.4.5" },
+      { package: { ecosystem: "npm", name: "next" },
+        vulnerable_version_range: "<= 15.5.28", patched_versions: "15.5.29" }
+    ]
+  };
+  const matches = toProviderAdvisoryFindings(advisory, "vercel/next.js", watchEntries(catalog));
+  assert.equal(matches.length, 2);
+  assert.deepEqual(matches.map((x) => x.version).sort(), ["15.5.28", "16.4.1"]);
+  assert.ok(matches.every((f) => f.confidence === "VENDOR_NOTICE" && f.severity === "MEDIUM"));
+  assert.equal(matchesSimpleVersionRange("16.4.5", ">= 16.0.0, <= 16.4.4"), false);
+  assert.equal(matchesSimpleVersionRange("16.4.1", ">= 16.0.0, <= 16.4.4"), true);
 });
