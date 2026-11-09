@@ -121,6 +121,12 @@ export async function updateSession(request: NextRequest) {
   if (pathname === "/api/entry/push/dispatch") {
     return protectMachineAuthenticatedResponse(NextResponse.next({ request }));
   }
+  // Security Watch is authenticated independently by a GitHub Actions OIDC token.
+  // Exact-path bypass avoids /login redirects for the scheduled machine client.
+  // The handler validates issuer, audience, repository, branch, workflow and signature.
+  if (pathname === "/api/security-watch/ingest") {
+    return protectMachineAuthenticatedResponse(NextResponse.next({ request }));
+  }
 
   let response = NextResponse.next({
     request,

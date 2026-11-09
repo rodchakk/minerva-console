@@ -2,13 +2,19 @@ name: Minerva Security Watch (public-advisory radar)
 
 on:
   schedule:
-    # 00:17 and 12:17 UTC -> 18:17 and 06:17 in Honduras (UTC-6).
-    # Off the hour to reduce GitHub scheduling delays.
+    # 00:17 and 12:17 UTC => 18:17 and 06:17 in Honduras.
     - cron: "17 0,12 * * *"
   workflow_dispatch:
+  push:
+    branches: [master]
+    paths:
+      - "security-watch/catalog.json"
+      - "scripts/security-watch-*.mjs"
+      - ".github/workflows/security-watch.yml"
 
 permissions:
   contents: read
+  id-token: write # GitHub-issued short-lived OIDC for the exact ingest route
 
 concurrency:
   group: minerva-security-watch-radar
@@ -16,10 +22,8 @@ concurrency:
 
 jobs:
   radar:
-    # Inactive until the owner explicitly enables the production pipeline.
-    if: ${{ vars.SECURITY_WATCH_ENABLED == 'true' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -27,17 +31,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24.22.2
-      - name: Validate activation configuration
-        env:
-          INGEST_URL: ${{ vars.SECURITY_WATCH_INGEST_URL }}
-          INGEST_TOKEN: ${{ secrets.SECURITY_WATCH_INGEST_TOKEN }}
-        run: |
-          if [ -z "$INGEST_URL" ] || [ -z "$INGEST_TOKEN" ]; then
-            echo "::error::Security Watch is not activated: set the ingest URL repository variable and token secret."
-            exit 1
-          fi
-      - name: Scan public OSV and NVD advisories
+      - name: Scan public vulnerability advisories
         run: node scripts/security-watch-scan.mjs
-        env:
-          SECURITY_WATCH_INGEST_URL: ${{ vars.SECURITY_WATCH_INGEST_URL }}
-          SECURITY_WATCH_INGEST_TOKEN: ${{ secrets.SECURITY_WATCH_INGEST_TOKEN }}

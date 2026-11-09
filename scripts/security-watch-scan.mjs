@@ -161,15 +161,29 @@ async function main() {
     })) }, null, 2));
     return;
   }
-  const endpoint = process.env.SECURITY_WATCH_INGEST_URL;
-  const token = process.env.SECURITY_WATCH_INGEST_TOKEN;
-  if (!endpoint || !token || !endpoint.startsWith("https://") ||
-      new URL(endpoint).pathname !== "/api/security-watch/ingest") {
-    throw new Error("Security Watch ingestion endpoint or secret not configured");
+  if (process.env.GITHUB_REPOSITORY !== "rodchakk/minerva-console" ||
+      process.env.GITHUB_REF !== "refs/heads/master") {
+    throw new Error("Automated ingestion requires the trusted default branch");
   }
+  const identityEndpoint = process.env.ACTIONS_ID_TOKEN_REQUEST_URL;
+  const identityRequestToken = process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
+  if (!identityEndpoint || !identityRequestToken ||
+      !identityEndpoint.startsWith("https://")) {
+    throw new Error("GitHub Actions OIDC identity is unavailable");
+  }
+  const identityUrl = identityEndpoint +
+    (identityEndpoint.includes("?") ? "&" : "?") +
+    "audience=minerva-security-watch-ingest-v1";
+  const identity = await jsonRequest(identityUrl, {
+    headers: { authorization: "Bearer " + identityRequestToken }
+  }, 10000);
+  if (typeof identity.value !== "string" || identity.value.length < 100) {
+    throw new Error("GitHub Actions did not issue a valid identity token");
+  }
+  const endpoint = "https://console.minervatechs.com/api/security-watch/ingest";
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: "Bearer " + token },
+    headers: { "content-type": "application/json", authorization: "Bearer " + identity.value },
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(25000)
   });

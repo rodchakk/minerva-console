@@ -1,25 +1,22 @@
-import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
+import { authenticateGitHubActions } from "@/scripts/security-watch-oidc.mjs";
 import { parseScan } from "@/features/security-watch/model";
 import { recordSecurityWatchScan } from "@/features/security-watch/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function authorized(request: Request): boolean {
-  const expected = process.env.SECURITY_WATCH_INGEST_TOKEN;
-  const header = request.headers.get("authorization") || "";
-  const actual = header.startsWith("Bearer ") ? header.slice(7) : "";
-  if (!expected || expected.length < 32 || !actual) return false;
-  const a = Buffer.from(expected);
-  const b = Buffer.from(actual);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
-
 // This endpoint is ONLY for the scheduled public-advisory scanner.
 // It does not accept URLs to fetch, code uploads, repository tokens, SQL or shell commands.
 export async function POST(request: Request) {
-  if (!authorized(request)) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  let identity: { runId: string } | null = null;
+  try {
+    identity = await authenticateGitHubActions(request.headers.get("authorization"));
+  } catch {
+    // A JWKS outage never turns the endpoint into an unauthenticated write surface.
+    return NextResponse.json({ error: "Identity provider unavailable" }, { status: 503 });
+  }
+  if (!identity) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (request.headers.get("content-type")?.split(";")[0]?.trim() !== "application/json") {
     return NextResponse.json({ error: "JSON required" }, { status: 415 });
   }
@@ -30,7 +27,7 @@ export async function POST(request: Request) {
     const body = await request.text();
     if (body.length > 260_000) return NextResponse.json({ error: "Payload too large" }, { status: 413 });
     const scan = parseScan(JSON.parse(body));
-    if (!scan) return NextResponse.json({ error: "Invalid scan report" }, { status: 400 });
+    if (!scan || scan.runId !== identity.runId) return NextResponse.json({ error: "Invalid scan report" }, { status: 400 });
     const { duplicate, state } = await recordSecurityWatchScan(scan);
     const notificationFailed = state.notification === "failed" || state.notification === "not_configured";
     return NextResponse.json({

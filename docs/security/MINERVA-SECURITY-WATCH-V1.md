@@ -23,19 +23,17 @@ The product technology inventory is a reviewed file at security-watch/catalog.js
 
 We reuse Minerva Console's existing server-side Upstash Redis instead of migrating production Supabase tables. Namespaced keys begin with minerva:security-watch:v1:. Stored records are sanitized public notices, no user/customer information. No changes to ENTRY billing, Auth, RLS, OCR, jobs or data.
 
-Only the existing Console owner can open the /security-watch page. A dedicated, bounded /api/security-watch/ingest endpoint accepts data from the scheduled scanner authenticated by SECURITY_WATCH_INGEST_TOKEN. It does not fetch arbitrary user URLs or execute commands.
+Only the existing Console owner can open the /security-watch page. A dedicated, bounded /api/security-watch/ingest endpoint authenticates the scheduled scanner using a short-lived signed GitHub OIDC token, pinned to the exact repository and workflow. It does not fetch arbitrary user URLs or execute commands.
 
-## Activation (requires the administrator)
+## Deployment and activation
 
-1. Validate catalog versions/owners and merge only after CI + UI review.
-2. Generate a new, unique random token with at least 32 characters. Do not paste it in chat, code or logs.
-3. Store the token as SECURITY_WATCH_INGEST_TOKEN in **Vercel production** and as a GitHub Actions repository **secret** of the same name.
-4. Create a GitHub Actions repository **variable** SECURITY_WATCH_INGEST_URL pointing to https://console.minervatechs.com/api/security-watch/ingest once the live hostname is checked.
-5. Configure Vercel production SECURITY_WATCH_ALERT_FROM (a verified Resend sender) and SECURITY_WATCH_ALERT_TO (intended recipients), retaining the existing RESEND_API_KEY. Preview mail is deliberately disabled.
-6. Add GitHub Actions repository variable SECURITY_WATCH_ENABLED=true only after all previous values are installed and the production endpoint is ready. Until then, the scheduled job is skipped and UI remains activation pending.
-7. Redeploy after adding Vercel variables. Trigger the GitHub workflow once manually from the default branch for a monitored smoke run. Confirm true provider status and verified mail delivery before considering it operational.
+1. Review catalog versions/teams, tests and preview. The project owner remains responsible for confirming a technology profile.
+2. Vercel production must have a verified Resend sender/recipient: SECURITY_WATCH_ALERT_FROM and SECURITY_WATCH_ALERT_TO. Existing RESEND_API_KEY and Upstash env variables are reused.
+3. Merge only after security review. The GitHub Actions workflow runs on changes to the scanner/catalog on master, then at approximately 06:17 / 18:17 Honduras. Only master may ingest.
+4. The runner obtains a short-lived GitHub-issued OIDC JWT, with the dedicated audience minerva-security-watch-ingest-v1. The server verifies the signature from GitHub's fixed JWKS, issuer, exact repository ID, branch, workflow and run ID. No shared token or GitHub Actions secret is needed.
+5. Check GitHub Actions run result and Minerva Console's timestamp/source statuses after the initial scan. Confirm mail delivery on a legitimate high-severity match. A scanner feed failure must not be presented as a clean bill of health.
 
-With SECURITY_WATCH_ENABLED=true, a missing secret makes the scheduled job fail clearly; disabled setup does not run and the UI cannot show a false healthy status.
+The /api/security-watch/ingest route is excluded from cookie login middleware only on that exact path. Its independent GitHub identity check remains mandatory; attempts without valid OIDC are rejected before storage access. No product data is fetched.
 
 ## Schedule, alerts and costs
 
