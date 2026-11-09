@@ -20,6 +20,7 @@ export async function readSecurityWatchState(): Promise<{
   state: StoredScan | null;
   error: string | null;
   recent: Array<{ runId: string; checkedAt: string; status: string; findings: number }>;
+  overdue: boolean;
 }> {
   try {
     const redis = redisClient();
@@ -27,9 +28,12 @@ export async function readSecurityWatchState(): Promise<{
       redis.get<StoredScan>(CURRENT_KEY),
       redis.lrange<{ runId: string; checkedAt: string; status: string; findings: number }>(HISTORY_KEY, 0, 7)
     ]);
-    return { state: state || null, error: null, recent: runs || [] };
+    const checkedAt = Date.parse(state?.checkedAt ?? "");
+    const overdue = !Number.isFinite(checkedAt) ||
+      Date.now() - checkedAt > 36 * 3600000;
+    return { state: state || null, error: null, recent: runs || [], overdue };
   } catch {
-    return { state: null, error: "Security Watch storage is unavailable.", recent: [] };
+    return { state: null, error: "Security Watch storage is unavailable.", recent: [], overdue: true };
   }
 }
 
