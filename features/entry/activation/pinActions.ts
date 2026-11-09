@@ -85,11 +85,21 @@ export async function generateActivationPins(input: {
     revalidatePath("/products/entry/activation");
 
     const raw = data as Record<string, unknown>;
+    const rawItems: GeneratePinItem[] = Array.isArray(raw.items)
+      ? (raw.items as GeneratePinItem[])
+      : [];
     const result: GeneratePinsResult = {
       generated_count: Number(raw.generated_count ?? 0),
       skipped_count: Number(raw.skipped_count ?? 0),
       failed_count: Number(raw.failed_count ?? 0),
-      items: Array.isArray(raw.items) ? (raw.items as GeneratePinItem[]) : [],
+      items: rawItems.map((item) =>
+        item.status === "failed" && item.message?.includes("house_inactive")
+          ? {
+              ...item,
+              message: "This unit is inactive. Activate it before issuing a PIN or creating a resident.",
+            }
+          : item,
+      ),
     };
 
     return { success: true, data: result };
