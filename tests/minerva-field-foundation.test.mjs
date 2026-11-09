@@ -48,7 +48,7 @@ test("Field exposes ENTRY and INDOOR as separate visible product modules", () =>
   assert.match(modules, /id: "entry"/);
   assert.match(modules, /href: "\/field\/entry"/);
   assert.match(modules, /id: "indoor"/);
-  assert.match(modules, /href: "\\/field\\/indoor"/);
+  assert.match(modules, /href: "\/field\/indoor"/);
   assert.equal((moduleData.match(/id: "/g) ?? []).length, 2);
 
   for (const file of appFiles) {

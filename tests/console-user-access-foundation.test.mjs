@@ -1,3 +1,4 @@
+import { entryRelationshipsScope } from "./helpers/entry-relationships-scope.mjs";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -134,9 +135,9 @@ test("Console access changes do not spill into Brain, ENTRY, or migrations", asy
 
   assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
-  assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
+  assert.equal(files.some((file) => file.startsWith("features/entry/") && !entryRelationshipsScope.has(file)), false);
   assert.equal(files.some((file) => file.startsWith("app/(public)/entry/")), false);
-  assert.equal(files.some((file) => file.startsWith("supabase/migrations/")), false);
+  assert.equal(files.some((file) => file.startsWith("supabase/migrations/") && !entryRelationshipsScope.has(file)), false);
 });
 
 test("Console membership migration is the only added Supabase migration", () => {

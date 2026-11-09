@@ -7,6 +7,7 @@ import type { CommunityUnitPreview } from "@/features/entry/communities/detailQu
 import {
   setCommunityUnitActiveStatusAction,
   updateCommunityUnitAction,
+  setCommunityUnitPrimaryResidentAction,
 } from "@/features/entry/communities/unitActions";
 import {
   getCommunityUnitPublicReferenceAction,
@@ -101,41 +102,26 @@ export function CommunityUnitQuickActions({
     });
   }
 
-  function submitEdit() {
+  function submitEdit(kind: "label" | "reference" | "primary") {
     setErrorMessage(null);
     setSuccessMessage(null);
-
     startTransition(async () => {
-      const result = await updateCommunityUnitAction({
-        communityId,
-        primaryResidentUserId: hasLinkedResidents ? primaryResidentId : null,
-        unitId: unit.id,
-        unitLabel,
-      });
-
-      if (!result.success) {
-        setErrorMessage(result.error ?? "Could not update the unit.");
-        return;
-      }
-
-      const referenceResult = await updateCommunityUnitPublicReferenceAction({
-        communityId,
-        publicReference,
-        unitId: unit.id,
-      });
-
-      if (!referenceResult.success) {
-        setErrorMessage(
-          `The unit details were saved, but the resident-facing reference could not be updated. ${referenceResult.error ?? "Please try again."}`,
-        );
+      try {
+        const result = kind === "label"
+          ? await updateCommunityUnitAction({ communityId, unitId: unit.id, unitLabel, expectedUnitLabel: unit.label })
+          : kind === "reference"
+            ? await updateCommunityUnitPublicReferenceAction({ communityId, unitId: unit.id, publicReference })
+            : await setCommunityUnitPrimaryResidentAction({ communityId, unitId: unit.id, userId: primaryResidentId });
+        if (!result.success) {
+          setErrorMessage(result.error ?? "Could not save this change.");
+          return;
+        }
+        setModalState(null);
+        setSuccessMessage("Change saved.");
         router.refresh();
-        return;
+      } catch {
+        setErrorMessage("Could not confirm the change. Refresh this detail before retrying.");
       }
-
-      setPublicReference(referenceResult.publicReference ?? "");
-      setModalState(null);
-      setSuccessMessage("Unit updated successfully.");
-      router.refresh();
     });
   }
 
@@ -253,9 +239,9 @@ export function CommunityUnitQuickActions({
                     className="w-full rounded-lg border border-[var(--border)] bg-[var(--surface-strong)] px-4 py-3 text-sm text-slate-100 outline-none transition focus:border-[var(--primary)]"
                   />
                 </label>
+                <Button type="button" disabled={isPending} onClick={() => submitEdit("label")}>Save label</Button>
                 <p className="text-sm text-[var(--text-muted)]">
-                  This updates the unit label and primary resident shown across the
-                  community workspace.
+                  Each save applies only to its own field. Other draft changes are discarded when this dialog closes.
                 </p>
 
                 <label className="block space-y-2">
@@ -286,6 +272,7 @@ export function CommunityUnitQuickActions({
                   ) : null}
                 </label>
 
+                <Button type="button" disabled={isPending || isReferenceLoading} onClick={() => submitEdit("reference")}>Save reference</Button>
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-slate-200">
                     Primary resident
@@ -313,6 +300,7 @@ export function CommunityUnitQuickActions({
                     </span>
                   ) : null}
                 </label>
+                <Button type="button" disabled={isPending || !hasLinkedResidents || !primaryResidentId} onClick={() => submitEdit("primary")}>Save primary resident</Button>
               </div>
             ) : (
               <div
@@ -347,7 +335,7 @@ export function CommunityUnitQuickActions({
                 type="button"
                 variant={modalState === "status" && unit.isActive ? "danger" : "primary"}
                 disabled={isPending || (modalState === "edit" && isReferenceLoading)}
-                onClick={modalState === "edit" ? submitEdit : submitStatusChange}
+                onClick={modalState === "edit" ? closeModal : submitStatusChange}
               >
                 {isPending
                   ? modalState === "edit"
@@ -356,7 +344,7 @@ export function CommunityUnitQuickActions({
                       ? "Deactivating..."
                       : "Activating..."
                   : modalState === "edit"
-                    ? "Save changes"
+                    ? "Close"
                     : unit.isActive
                       ? "Deactivate unit"
                       : "Activate unit"}

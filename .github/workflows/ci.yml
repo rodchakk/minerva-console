@@ -48,6 +48,29 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+  entry-unit-relationships-postgres:
+    name: ENTRY unit relationships PostgreSQL fixture
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Execute relationship migration and PostgreSQL assertions
+        run: |
+          docker cp supabase/migrations/20261106090000_entry_unit_relationships_mvp.sql "${{ job.services.postgres.id }}:/tmp/migration.sql"
+          docker cp supabase/tests/fixtures/entry-unit-relationships.sql "${{ job.services.postgres.id }}:/tmp/fixture.sql"
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/fixture.sql
+
   auth-outage-recovery-tests:
     name: Auth outage recovery regressions
     runs-on: ubuntu-latest
