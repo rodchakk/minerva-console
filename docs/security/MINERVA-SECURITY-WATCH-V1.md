@@ -32,9 +32,10 @@ Only the existing Console owner can open the /security-watch page. A dedicated, 
 3. Store the token as SECURITY_WATCH_INGEST_TOKEN in **Vercel production** and as a GitHub Actions repository **secret** of the same name.
 4. Create a GitHub Actions repository **variable** SECURITY_WATCH_INGEST_URL pointing to https://console.minervatechs.com/api/security-watch/ingest once the live hostname is checked.
 5. Configure Vercel production SECURITY_WATCH_ALERT_FROM (a verified Resend sender) and SECURITY_WATCH_ALERT_TO (intended recipients), retaining the existing RESEND_API_KEY. Preview mail is deliberately disabled.
-6. Redeploy after adding Vercel variables. Trigger the GitHub workflow once manually from the default branch for a monitored smoke run. Confirm true provider status and verified mail delivery before considering it operational.
+6. Add GitHub Actions repository variable SECURITY_WATCH_ENABLED=true only after all previous values are installed and the production endpoint is ready. Until then, the scheduled job is skipped and UI remains activation pending.
+7. Redeploy after adding Vercel variables. Trigger the GitHub workflow once manually from the default branch for a monitored smoke run. Confirm true provider status and verified mail delivery before considering it operational.
 
-A missing secret fails the scheduled job loudly; it cannot silently become a green empty dashboard.
+With SECURITY_WATCH_ENABLED=true, a missing secret makes the scheduled job fail clearly; disabled setup does not run and the UI cannot show a false healthy status.
 
 ## Schedule, alerts and costs
 
