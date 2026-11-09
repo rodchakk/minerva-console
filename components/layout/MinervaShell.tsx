@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Boxes, ChevronLeft, ChevronRight, FileClock, Menu,
-  Settings2, Users, X, Building2, CircleGauge,
+  Settings2, Users, X, Building2, CircleGauge, ShieldAlert,
 } from "lucide-react";
 import { EntryPushSessionSync } from "@/features/entry/push/EntryPushSessionSync";
 import { EntryPushSignOutForm } from "@/features/entry/push/EntryPushSignOutForm";
@@ -26,6 +26,7 @@ const nav = [
 ];
 
 const financeNav = [{ label: "SESHAT", href: "/seshat", icon: CircleGauge }];
+const securityNav = [{ label: "Security Watch", href: "/security-watch", icon: ShieldAlert }];
 
 function active(pathname: string, href: string) {
   if (href === "/products") return pathname === href || pathname === "/dashboard" || pathname === "/products/add";
@@ -36,7 +37,7 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const currentPage = [...nav, ...financeNav].find((item) => active(pathname, item.href))?.label ?? "Workspace";
+  const currentPage = [...nav, ...securityNav, ...financeNav].find((item) => active(pathname, item.href))?.label ?? "Workspace";
   const syntheticEmail = !!email && (email.endsWith("@entry.local") || email.endsWith("@entry.internal"));
   const accountInitial = email && !syntheticEmail ? email.charAt(0).toUpperCase() : "M";
 
@@ -78,6 +79,24 @@ export function MinervaShell({ children, email, previewReadOnly = false }: Props
         <p className="minerva-sidebar-label">WORKSPACE</p>
         <nav className="minerva-nav" aria-label="Main">
           {nav.map(({ label, href, icon: Icon }) => (
+            <Link
+              key={href}
+              href={href}
+              title={collapsed ? label : undefined}
+              aria-label={label}
+              aria-current={active(pathname, href) ? "page" : undefined}
+              className="minerva-nav-link"
+              onClick={() => setMobileOpen(false)}
+            >
+              <Icon aria-hidden="true" />
+              <span className="minerva-nav-label">{label}</span>
+            </Link>
+          ))}
+        </nav>
+        <div className="minerva-sidebar-rule" />
+        <p className="minerva-sidebar-label">OBSERVABILITY</p>
+        <nav className="minerva-nav" aria-label="Observability">
+          {securityNav.map(({ label, href, icon: Icon }) => (
             <Link
               key={href}
               href={href}
