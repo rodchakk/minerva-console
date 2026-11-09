@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "provider": "Supabase Storage",
+  "service": "supabase/storage",
+  "verificationDate": "2026-11-09",
+  "method": "Unauthenticated read-only GET /storage/v1/version; HTTP 200 on both managed projects",
+  "maxEvidenceAgeDays": 14,
+  "products": {
+    "entry": {
+      "projectName": "ENTRY",
+      "verifiedVersion": "1.89.13"
+    },
+    "seshat": {
+      "projectName": "Seshat",
+      "verifiedVersion": "1.89.13"
+    }
+  },
+  "advisories": [
+    {
+      "id": "GHSA-fgvp-cqg6-q8h2",
+      "firstFixedVersion": "1.89.9",
+      "originalSeverity": "CRITICAL"
+    },
+    {
+      "id": "GHSA-3m3f-pjv4-x2fp",
+      "firstFixedVersion": "1.89.10",
+      "originalSeverity": "HIGH"
+    },
+    {
+      "id": "GHSA-2p28-q2vx-mw6w",
+      "firstFixedVersion": "1.84.14",
+      "originalSeverity": "MEDIUM"
+    }
+  ],
+  "notes": "Historical, one-time hosted version verification. Not a live runtime attestation; evidence expires for UI triage after 14 days. Advisory records and their original severity are preserved. Unknown or newly published advisories are never auto-verified."
+}

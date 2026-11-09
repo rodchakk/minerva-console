@@ -8,10 +8,11 @@ import {
   type SecurityFinding, type StoredScan
 } from "./model";
 import styles from "./SecurityWatchWorkspace.module.css";
+import { hostedStorageAdvisoryStatus } from "@/scripts/security-watch-hosted-evidence.mjs";
 
 type RunSummary = { runId: string; checkedAt: string; status: string; findings: number };
 type Props = { state: StoredScan | null; error: string | null; recent: RunSummary[]; ingestConfigured: boolean; notificationsConfigured: boolean; overdue: boolean };
-type Filter = "all" | "priority" | "review";
+type Filter = "all" | "priority" | "review" | "verified";
 const EMPTY_FINDINGS: SecurityFinding[] = [];
 const severe = (f: SecurityFinding) => f.severity === "CRITICAL" || f.severity === "HIGH";
 const formatDate = (value: string) => {
@@ -23,7 +24,9 @@ const formatDate = (value: string) => {
   } catch { return "Unknown"; }
 };
 
-function severityLabel(finding: SecurityFinding) {
+function severityLabel(finding: SecurityFinding, patchStatus: string | null) {
+  if (patchStatus === "verified") return { label: "PATCH VERIFIED", tone: styles.active };
+  if (patchStatus === "recheck") return { label: "RECHECK PATCH", tone: styles.watch };
   if (severe(finding)) return { label: finding.severity, tone: styles.urgent };
   if (finding.confidence === "KEYWORD_ONLY") return { label: "VERIFY SCOPE", tone: styles.watch };
   if (finding.confidence === "VENDOR_NOTICE") return { label: "VENDOR NOTICE", tone: styles.watch };
@@ -48,13 +51,17 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
   const [copied, setCopied] = useState<string | null>(null);
   const [copyFallback, setCopyFallback] = useState<string | null>(null);
   const findings = state?.findings ?? EMPTY_FINDINGS;
+  const evidenceStatus = (f: SecurityFinding) => hostedStorageAdvisoryStatus(f, state?.checkedAt)?.status ?? null;
   const visible = useMemo(() => findings.filter((f) => {
-    if (filter === "priority") return severe(f);
-    if (filter === "review") return !severe(f);
+    const patch = hostedStorageAdvisoryStatus(f, state?.checkedAt)?.status;
+    if (filter === "priority") return !patch && severe(f);
+    if (filter === "review") return patch === "recheck" || (!patch && !severe(f));
+    if (filter === "verified") return patch === "verified";
     return true;
-  }), [findings, filter]);
-  const urgent = findings.filter(severe).length;
-  const review = findings.length - urgent;
+  }), [findings, filter, state?.checkedAt]);
+  const urgent = findings.filter((f) => !evidenceStatus(f) && severe(f)).length;
+  const review = findings.filter((f) => evidenceStatus(f) === "recheck" || (!evidenceStatus(f) && !severe(f))).length;
+  const verified = findings.filter((f) => evidenceStatus(f) === "verified").length;
   const legacyCount = productCatalog.filter((product) => product.environment === "legacy" && !product.enabled).length;
   const awaitingCount = productCatalog.filter((product) => !product.enabled && product.environment !== "legacy").length;
 
@@ -95,11 +102,11 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
         </section>
         <section className={styles.metric}>
           <span>HIGH PRIORITY MATCHES</span><strong className={styles.accent}>{String(urgent).padStart(2, "0")}</strong>
-          <p>Potential exposure — verify</p>
+          <p>Unverified high-severity matches only</p>
         </section>
         <section className={styles.metric}>
           <span>NEEDS REVIEW</span><strong>{String(review).padStart(2, "0")}</strong>
-          <p>Version or scope confirmation required</p>
+          <p>{verified} provider patches verified on hosted services</p>
         </section>
         <section className={styles.metric}>
           <span>LAST AUTOMATIC CHECK</span><strong className={styles.metricTime}>{state ? formatDate(state.checkedAt) : "Not yet"}</strong>
@@ -113,7 +120,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
           <div>
             <h2>Technical diagnosis ready for your AI</h2>
             <p>You only need to see what happened, who owns it, and copy the report.</p>
-            <span>{findings.length} current-catalog advisory matches · Historical scans retained · No automatic patches</span>
+            <span>{findings.length} public notices · {verified} verified hosted patches · Original severity and audit history retained</span>
           </div>
         </div>
         <button className={styles.mainButton} type="button" onClick={() => copyReport(findings, "all")}>
@@ -127,7 +134,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
       </div>
       <section className={styles.panel} aria-label="Advisory inbox">
         <div className={styles.panelHead}>
-          <div><h2>Advisory inbox</h2><p>Current catalog matches only. Retired-version and legacy matches stay in historical scan records; no finding is automatically declared remediated.</p></div>
+          <div><h2>Advisory inbox</h2><p>Current advisories plus dated hosted patch evidence. Verified notices remain visible; unverified or new advisories are never silently suppressed.</p></div>
           <span className={styles.counter}>{findings.length} FINDINGS</span>
         </div>
         <div className={styles.toolbar}>
@@ -135,7 +142,8 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
             {([
               ["all", "All advisories"],
               ["priority", "High priority"],
-              ["review", "Needs review"]
+              ["review", "Needs review"],
+              ["verified", "Verified patches"]
             ] as [Filter, string][]).map(([key, label]) => (
               <button key={key} type="button" aria-pressed={filter === key}
                 className={filter === key ? styles.selectedFilter : styles.filterButton}
@@ -153,19 +161,20 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
             </thead>
             <tbody>
               {visible.map((finding) => {
-                const label = severityLabel(finding);
+                const evidence = hostedStorageAdvisoryStatus(finding, state?.checkedAt);
+                const label = severityLabel(finding, evidence?.status ?? null);
                 return (
                   <tr key={finding.key}>
                     <td><span className={label.tone}>{label.label}</span></td>
                     <td className={styles.noticeCell}>
                       <strong>{finding.title}</strong>
                       <p>{finding.summary}</p>
-                      <small>{finding.advisoryId} · {finding.source.toUpperCase()} · {finding.publishedAt ? formatDate(finding.publishedAt) : "Publication unknown"} · <a href={finding.url} target="_blank" rel="noopener noreferrer">Official source</a></small>
+                      <small>{finding.advisoryId} · Original severity: {finding.severity} · {finding.source.toUpperCase()} · {finding.publishedAt ? formatDate(finding.publishedAt) : "Publication unknown"} · <a href={finding.url} target="_blank" rel="noopener noreferrer">Official source</a></small>
                     </td>
                     <td className={styles.technology}>{finding.technology}<small>{finding.version}</small></td>
                     <td><div className={styles.pills}>{finding.products.map((p) => <span key={p.id}>{p.name}</span>)}</div></td>
                     <td><div className={styles.team}>{[...new Set(finding.products.map((p) => p.team))].join(" / ")}</div></td>
-                    <td className={styles.nextAction}>{finding.confidence === "KEYWORD_ONLY" ? "Verify vendor and scope" : finding.confidence === "VENDOR_NOTICE" ? "Check provider patch status" : finding.confidence === "CPE_PRODUCT" ? "Verify affected version" : "Verify deployed version"}<small>{finding.nextStep}</small></td>
+                    <td className={styles.nextAction}>{evidence?.status === "verified" ? "Hosted patch verified" : evidence?.status === "recheck" ? "Reverify hosted Storage" : finding.confidence === "KEYWORD_ONLY" ? "Verify vendor and scope" : finding.confidence === "VENDOR_NOTICE" ? "Check provider patch status" : finding.confidence === "CPE_PRODUCT" ? "Verify affected version" : "Verify deployed version"}<small>{evidence ? `Storage ${evidence.installedVersion} checked ${evidence.verifiedAt}; fixed in ${evidence.firstFixedVersion}. ${evidence.status === "recheck" ? "Evidence expired; run a fresh read-only version check." : "Dated check, not continuous attestation."}` : finding.nextStep}</small></td>
                     <td><button type="button" className={styles.rowButton}
                       onClick={() => copyReport([finding], finding.key)}>
                       {copied === finding.key ? "Copied!" : "Copy finding"}
@@ -185,7 +194,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
           )}
         </div>
         <div className={styles.panelFoot}>
-          <span>{String(visible.length).padStart(2, "0")} SHOWN / {String(findings.length).padStart(2, "0")} TRACKED</span>
+          <span>{String(visible.length).padStart(2, "0")} SHOWN / {String(findings.length).padStart(2, "0")} TRACKED · {verified} PATCHES VERIFIED</span>
           <span>Automated sources: OSV + NVD + vendor bulletins · Version and scope matching</span>
         </div>
       </section>
