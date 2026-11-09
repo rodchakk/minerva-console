@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -19,13 +20,18 @@ export function ActivationQueueReviewAcknowledge({
   pendingCount,
   reviewedAt,
 }: ActivationQueueReviewAcknowledgeProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<OnboardingActionResult | null>(null);
 
   function handleMarkReviewed() {
     setResult(null);
     startTransition(async () => {
-      setResult(await markActivationQueueReviewedAction(communityId));
+      const actionResult = await markActivationQueueReviewedAction(communityId);
+      setResult(actionResult);
+      if (actionResult.success) {
+        router.refresh();
+      }
     });
   }
 

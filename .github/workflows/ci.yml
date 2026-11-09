@@ -149,6 +149,7 @@ jobs:
         run: |
           node --test \
             tests/entry-activation-queue-workspace.test.mjs \
+            tests/entry-onboarding-activation-review-gate.test.mjs \
             tests/entry-unified-activation.test.mjs \
             tests/entry-directory-drawer-tabs.test.mjs \
             tests/entry-global-user-seeker.test.mjs \
