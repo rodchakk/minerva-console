@@ -101,7 +101,8 @@ export async function recordSecurityWatchScan(scan: SecurityScan) {
   try {
     notification = await emailNewFindings(newAlerts, scan.checkedAt);
     if (notification === "sent" && newAlerts.length) {
-      await redis.sadd(NOTIFIED_KEY, ...newAlerts.map((finding) => finding.key));
+      const [first, ...rest] = newAlerts.map((finding) => finding.key);
+      if (first) await redis.sadd(NOTIFIED_KEY, first, ...rest);
     }
   } catch {
     notification = "failed";
