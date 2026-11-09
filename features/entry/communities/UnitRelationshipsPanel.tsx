@@ -238,7 +238,7 @@ export function UnitRelationshipsPanel({
                 run({ action: "remove_responsible", communityId, unitId, recordId: item.id }, item.label + " is no longer a responsible contact for " + unitLabel + ".");
               }}>Remove</button>
             </li>
-          ))}</ul> : <p className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[#A9A3B2]">No responsible people assigned yet. This does not affect the unit's residents.</p>}
+          ))}</ul> : <p className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[#A9A3B2]">No responsible people assigned yet. This does not affect the unit&apos;s residents.</p>}
         </section>
       </div>
 
@@ -249,7 +249,7 @@ export function UnitRelationshipsPanel({
           <label className="grid min-w-[190px] max-w-sm flex-1 gap-1 text-xs text-[#A9A3B2]">Visible unit label<input key={unitLabel} name="label" defaultValue={unitLabel} maxLength={120} required className={inputStyle} /></label>
           <button type="submit" disabled={pending} className={secondaryStyle}><Pencil className="size-4" aria-hidden />Save label</button>
         </form>
-        <p className="mt-2 text-[11px] text-[#A9A3B2]">Renaming changes only the visible label, not this unit's ID. Protected activations or duplicate labels can prevent a rename.</p>
+        <p className="mt-2 text-[11px] text-[#A9A3B2]">Renaming changes only the visible label, not this unit&apos;s ID. Protected activations or duplicate labels can prevent a rename.</p>
       </details>
     </section>
   );
