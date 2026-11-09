@@ -72,7 +72,7 @@ export function parseScan(value: unknown): SecurityScan | null {
     return null;
   }
   const products = new Map(monitoredProducts.map((p) => [p.id, p]));
-  const sources: Record<"osv" | "nvd", SourceStatus> = {
+  const sources: Record<"osv" | "nvd" | "github", SourceStatus> = {
     osv: { ok: false }, nvd: { ok: false }, github: { ok: false }
   };
   for (const name of ["osv", "nvd", "github"] as const) {
