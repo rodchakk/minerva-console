@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   radar:
+    # Inactive until the owner explicitly enables the production pipeline.
+    if: ${{ vars.SECURITY_WATCH_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
