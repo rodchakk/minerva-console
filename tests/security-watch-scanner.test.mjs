@@ -11,6 +11,8 @@ test("catalog is manual, finite and product ownership is preserved", () => {
   const next = entries.find((x) => x.package === "next" && x.version === "16.4.1");
   assert.ok(next);
   assert.deepEqual(next.products.map((p) => p.id).sort(), ["entry", "minerva-console"]);
+  const entryWeb = entries.find((x) => x.package === "next" && x.version === "16.2.3");
+  assert.deepEqual(entryWeb?.products.map((p) => p.id), ["entry-web"]);
   assert.equal(entries.some((e) => e.products.some((p) => p.id === "brother-system")), false);
 });
 
@@ -114,8 +116,8 @@ test("official Next.js advisories are mapped only to affected catalog version br
     ]
   };
   const matches = toProviderAdvisoryFindings(advisory, "vercel/next.js", watchEntries(catalog));
-  assert.equal(matches.length, 2);
-  assert.deepEqual(matches.map((x) => x.version).sort(), ["15.5.28", "16.4.1"]);
+  assert.equal(matches.length, 3);
+  assert.deepEqual(matches.map((x) => x.version).sort(), ["15.5.28", "16.2.3", "16.4.1"]);
   assert.ok(matches.every((f) => f.confidence === "VENDOR_NOTICE" && f.severity === "MEDIUM"));
   assert.equal(matchesSimpleVersionRange("16.4.5", ">= 16.0.0, <= 16.4.4"), false);
   assert.equal(matchesSimpleVersionRange("16.4.1", ">= 16.0.0, <= 16.4.4"), true);
