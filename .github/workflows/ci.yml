@@ -48,6 +48,9 @@ jobs:
       - name: TypeScript check
         run: npx tsc --noEmit
 
+      - name: ENTRY relationships UI and scoped search regressions
+        run: node --test tests/entry-unit-relationships-ui.test.mjs
+
   entry-unit-relationships-postgres:
     name: ENTRY unit relationships PostgreSQL fixture
     runs-on: ubuntu-latest
