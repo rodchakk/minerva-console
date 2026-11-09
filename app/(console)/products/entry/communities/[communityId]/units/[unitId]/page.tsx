@@ -20,6 +20,11 @@ function formatUnitDisplayLabel(label: string, unitType: string) {
   const trimmedType = getUnitTypeLabel(unitType);
 
   if (!trimmedLabel) return trimmedType;
+  // The community can be configured as "Casas" while individual units are
+  // apartments. Do not prefix an already meaningful label with "Casa".
+  if (/^(?:casas?|apartamentos?|aptos?|condominios?|condos?|oficinas?)\b/i.test(trimmedLabel)) {
+    return trimmedLabel;
+  }
   if (trimmedLabel.toLowerCase().includes(trimmedType.toLowerCase())) {
     return trimmedLabel;
   }
@@ -79,13 +84,14 @@ export default async function CommunityUnitDetailPage(
   );
 
   return (
-    <>
-      <UnitRelationshipsSection
-        communityId={community.id}
-        unitId={unit.id}
-        unitLabel={unit.label}
-      />
-      <CommunityUnitDetailWorkspace
+    <CommunityUnitDetailWorkspace
+        relationships={
+          <UnitRelationshipsSection
+            communityId={community.id}
+            unitId={unit.id}
+            unitLabel={unit.label}
+          />
+        }
         communityId={community.id}
         communityName={community.name}
         houses={data.houses}
@@ -100,6 +106,5 @@ export default async function CommunityUnitDetailPage(
         unitDisplayLabel={unitDisplayLabel}
         unitTypeLabel={unitTypeLabel}
       />
-    </>
   );
 }
