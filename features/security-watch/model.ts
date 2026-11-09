@@ -66,7 +66,7 @@ function dateOrNull(value: unknown): value is string | null {
 }
 export function parseScan(value: unknown): SecurityScan | null {
   if (!isRecord(value) || value.schemaVersion !== 1 || !field(value.runId, 110) ||
-      !field(value.checkedAt, 64) || Number.isNaN(Date.parse(value.checkedAt))) ||
+      !field(value.checkedAt, 64) || Number.isNaN(Date.parse(value.checkedAt)) ||
       Math.abs(Date.now() - Date.parse(value.checkedAt)) > 36 * 3600000 ||
       !isRecord(value.sources) || !Array.isArray(value.findings) || value.findings.length > 160) {
     return null;
