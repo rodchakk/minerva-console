@@ -55,6 +55,37 @@ export function priority(value) {
   return PRIORITY.has(severity) ? severity : "UNKNOWN";
 }
 
+
+// Interpret CVSS 3.0/3.1 vector strings only; never guess severity for CVSS 4.
+export function cvss3BaseScore(vector) {
+  if (typeof vector !== "string" || !/^CVSS:3\.[01]\//.test(vector)) return null;
+  const parts = Object.fromEntries(vector.split("/").slice(1).map((v) => v.split(":")));
+  const AV = { N: 0.85, A: 0.62, L: 0.55, P: 0.2 }[parts.AV];
+  const AC = { L: 0.77, H: 0.44 }[parts.AC];
+  const S = parts.S;
+  const PR = (S === "C" ? { N: 0.85, L: 0.68, H: 0.5 } : { N: 0.85, L: 0.62, H: 0.27 })[parts.PR];
+  const UI = { N: 0.85, R: 0.62 }[parts.UI];
+  const C = { N: 0, L: 0.22, H: 0.56 }[parts.C];
+  const I = { N: 0, L: 0.22, H: 0.56 }[parts.I];
+  const A = { N: 0, L: 0.22, H: 0.56 }[parts.A];
+  if (![AV, AC, PR, UI, C, I, A].every(Number.isFinite) || !["U", "C"].includes(S)) return null;
+  const impactSub = 1 - (1 - C) * (1 - I) * (1 - A);
+  const impact = S === "U" ? 6.42 * impactSub :
+    7.52 * (impactSub - 0.029) - 3.25 * (impactSub - 0.02) ** 15;
+  if (impact <= 0) return 0;
+  const exploit = 8.22 * AV * AC * PR * UI;
+  const raw = Math.min((S === "U" ? 1 : 1.08) * (impact + exploit), 10);
+  return Math.ceil((raw - 1e-8) * 10) / 10;
+}
+export function cvssSeverity(score) {
+  if (!Number.isFinite(score) || score < 0 || score > 10) return "UNKNOWN";
+  if (score >= 9) return "CRITICAL";
+  if (score >= 7) return "HIGH";
+  if (score >= 4) return "MEDIUM";
+  if (score > 0) return "LOW";
+  return "UNKNOWN";
+}
+
 export function osvPriority(vulnerability) {
   const direct = priority(vulnerability?.database_specific?.severity);
   if (direct !== "UNKNOWN") return direct;
@@ -62,12 +93,9 @@ export function osvPriority(vulnerability) {
   for (const item of scores) {
     if (typeof item.score !== "string") continue;
     const score = Number(item.score);
-    if (Number.isFinite(score)) {
-      if (score >= 9) return "CRITICAL";
-      if (score >= 7) return "HIGH";
-      if (score >= 4) return "MEDIUM";
-      return "LOW";
-    }
+    if (Number.isFinite(score)) return cvssSeverity(score);
+    const cvss3 = cvss3BaseScore(item.score);
+    if (cvss3 !== null) return cvssSeverity(cvss3);
   }
   return "UNKNOWN";
 }

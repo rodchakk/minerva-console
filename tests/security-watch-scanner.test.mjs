@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow
+  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority
 } from "../scripts/security-watch-core.mjs";
 import catalog from "../security-watch/catalog.json" with { type: "json" };
 
@@ -73,4 +73,13 @@ test("official Supabase vendor advisories match registered provider, never confi
   assert.equal(result[0].confidence, "VENDOR_NOTICE");
   assert.deepEqual(result[0].products.map((p) => p.id), ["entry", "seshat"]);
   assert.equal(toProviderAdvisoryFindings({ ...vuln, withdrawn_at: "2026-11-08T01:00:00Z" }, "supabase/storage", entries).length, 0);
+});
+
+test("CVSS 3.1 vector severity is interpreted without guessing unsupported formats", () => {
+  const vector = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H";
+  assert.equal(cvss3BaseScore(vector), 9.8);
+  assert.equal(cvssSeverity(cvss3BaseScore(vector)), "CRITICAL");
+  assert.equal(osvPriority({ severity: [{ type: "CVSS_V3", score: vector }] }), "CRITICAL");
+  assert.equal(cvss3BaseScore("CVSS:4.0/AV:N/AC:L"), null);
+  assert.equal(cvss3BaseScore("garbage"), null);
 });

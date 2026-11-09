@@ -87,8 +87,9 @@ async function nvdScan(entries) {
   let offset = 0;
   for (let page = 0; page < 4; page++) {
     const url = new URL(NVD);
-    url.searchParams.set("pubStartDate", start);
-    url.searchParams.set("pubEndDate", end);
+    // New publication and updates to older CVEs are both included here.
+    url.searchParams.set("lastModStartDate", start);
+    url.searchParams.set("lastModEndDate", end);
     url.searchParams.set("startIndex", String(offset));
     url.searchParams.set("resultsPerPage", "2000");
     const data = await jsonRequest(url.toString(), { headers: { "user-agent": "Minerva-Security-Watch/1.0" } }, 45000);
@@ -159,6 +160,7 @@ async function main() {
     console.log(JSON.stringify({ ...payload, findings: payload.findings.map((x) => ({
       key: x.key, severity: x.severity, products: x.products.map((p) => p.name)
     })) }, null, 2));
+    if (Object.values(sources).every((x) => !x.ok)) throw new Error("All advisory providers failed");
     return;
   }
   if (process.env.GITHUB_REPOSITORY !== "rodchakk/minerva-console" ||

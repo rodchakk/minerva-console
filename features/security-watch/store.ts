@@ -106,7 +106,7 @@ export async function recordSecurityWatchScan(scan: SecurityScan) {
     return { duplicate: true, state: existing };
   }
   const ok = Object.values(scan.sources).filter((source) => source.ok).length;
-  const status: StoredScan["status"] = ok === 3 ? "ok" : ok === 1 ? "partial" : "failed";
+  const status: StoredScan["status"] = ok === 3 ? "ok" : ok === 0 ? "failed" : "partial";
   const combined = collectFindings(scan, existing || null);
   const sent = new Set(await redis.smembers(NOTIFIED_KEY));
   const newAlerts = scan.findings.filter((finding) => alertable(finding) && !sent.has(finding.key));
