@@ -12,6 +12,7 @@ There is NO Run scan button, no LLM API, no paid AI calls, no repository inspect
 
 - OSV.dev: querybatch by cataloged npm package + exact version, followed by per-advisory detail requests. These are **package-version matches, not deployed runtime attestations**.
 - NVD CVE publication feed: vendor keyword mentions (Node.js, PostgreSQL, Supabase, etc.). These are **keyword mentions only**, frequently needing manual elimination of false positives. A provider advisory not included in NVD may be missed.
+- Direct public vendor advisories for Supabase Storage, Auth and Realtime (GitHub Security Advisories): official notices, with hosted exposure **unverified**.
 - Public recent published/updated notices (last 7 days); recent findings are retained in the UI for at most 60 days.
 - In case a source fails, UI shows partial/failed coverage, not an "all clear".
 - A match or high severity does not imply compromise.
@@ -53,4 +54,4 @@ Expected extra cost is zero while the existing GitHub Actions, Upstash, Resend a
 
 ## Deliberate limitations
 
-This is a RADAR, not a vulnerability scanner or proof of security. It does not independently certify patched runtime versions, fetch provider-only bulletins not present in OSV/NVD, or know that an AI has applied a fix. Later we may add first-party security feeds and an independent stale-heartbeat alert.
+This is a RADAR, not a vulnerability scanner or proof of security. It does not independently certify patched runtime versions, fetch provider-only bulletins not present in these public sources/vendor bulletins, or know that an AI has applied a fix. Later we may add first-party security feeds and an independent stale-heartbeat alert.
