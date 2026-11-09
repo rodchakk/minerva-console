@@ -11,7 +11,7 @@ const section = source("features/entry/communities/UnitRelationshipsSection.tsx"
 
 test("unit details integrates a clear gated relationships workspace", () => {
   assert.match(page, /relationships=\{/);
-  assert.match(workspace, /Relationships/); // props/slot keeps existing unit workspace intact
+  assert.match(workspace, /relationships\\?: ReactNode/); // slot keeps the existing workspace intact
   assert.match(workspace, /\{relationships\s*\?\s*<div/);
   assert.match(workspace, /Unit overview/);
   assert.match(page, /casas\?\|apartamentos\?/i);
