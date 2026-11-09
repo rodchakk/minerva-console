@@ -72,6 +72,24 @@
       ]
     },
     {
+      "id": "entry-web",
+      "name": "ENTRY Web",
+      "team": "ENTRY Team",
+      "environment": "unverified",
+      "enabled": true,
+      "technologies": [
+        {
+          "id": "next",
+          "name": "Next.js",
+          "kind": "osv",
+          "ecosystem": "npm",
+          "package": "next",
+          "version": "16.2.3",
+          "notes": "ENTRY Web standalone repo rodchakk/Entry-Web; manually verified default-branch version. Deployment status not confirmed."
+        }
+      ]
+    },
+    {
       "id": "minerva-console",
       "name": "Minerva Console",
       "team": "Minerva Platform",
