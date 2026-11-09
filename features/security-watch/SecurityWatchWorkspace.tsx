@@ -24,7 +24,7 @@ const formatDate = (value: string) => {
   } catch { return "Unknown"; }
 };
 
-function severityLabel(finding: SecurityFinding, patchStatus: "verified" | "recheck" | null) {
+function severityLabel(finding: SecurityFinding, patchStatus: string | null) {
   if (patchStatus === "verified") return { label: "PATCH VERIFIED", tone: styles.active };
   if (patchStatus === "recheck") return { label: "RECHECK PATCH", tone: styles.watch };
   if (severe(finding)) return { label: finding.severity, tone: styles.urgent };
