@@ -3,7 +3,7 @@
 import NextLink from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Building2, CheckCircle2, Link2, Pencil, Search, Settings2, UserRound, X, AlertCircle } from "lucide-react";
+import { Building2, CheckCircle2, Link2, Pencil, Search, Settings2, UserRound, X, AlertCircle, ChevronDown } from "lucide-react";
 import { manageUnitRelationship, searchCommunityMemberOptions, searchRelationshipUnits } from "@/features/entry/communities/unitRelationshipActions";
 
 type Option = { id: string; label: string };
@@ -113,144 +113,154 @@ export function UnitRelationshipsPanel({
     });
   }
 
+
   return (
-    <section aria-label="Unit relationships" className="space-y-4 rounded-[10px] border border-[rgba(155,125,229,0.25)] bg-[#282230] p-4 sm:p-5">
-      {feedback && (
-        <div role={feedback.tone === "error" ? "alert" : "status"} className={feedback.tone === "success"
-          ? "flex items-start gap-3 rounded-lg border border-emerald-400/25 bg-emerald-400/[0.08] px-4 py-3 text-emerald-100"
-          : "flex items-start gap-3 rounded-lg border border-rose-400/25 bg-rose-400/[0.08] px-4 py-3 text-rose-100"}>
-          {feedback.tone === "success" ? <CheckCircle2 className="mt-0.5 size-5 shrink-0" aria-hidden /> : <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden />}
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">{feedback.tone === "success" ? "Change saved" : "Could not save change"}</p>
-            <p className="mt-0.5 text-xs">{feedback.text}</p>
-          </div>
-          <button type="button" aria-label="Dismiss message" onClick={() => setFeedback(null)} className="shrink-0 text-current/70 hover:text-current"><X className="size-4" aria-hidden /></button>
-        </div>
-      )}
+    <details aria-label="Unit connections" className="group shrink-0 overflow-hidden rounded-[9px] border border-white/10 bg-[#24202B] open:border-[#5E4B79]">
+      <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-4 py-3.5 text-white transition hover:bg-white/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#B6A0FF] [&::-webkit-details-marker]:hidden">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#55436C] bg-[#382D4B] text-[#CBB8FF]">
+          <Link2 className="size-4" aria-hidden />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold">Unit connections</span>
+          <span className="mt-0.5 block text-[11px] text-[#AEA3BB]">Optional administrative relationships · No impact on resident access</span>
+        </span>
+        <span className="flex flex-wrap items-center gap-1.5 text-[10px] font-medium text-[#C5BACD]">
+          <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5">{links.length} linked {links.length === 1 ? "unit" : "units"}</span>
+          <span className="rounded-md border border-white/10 bg-white/[0.04] px-2 py-1.5">{responsibilities.length} responsible {responsibilities.length === 1 ? "person" : "people"}</span>
+        </span>
+        <span className="ml-1 text-xs font-semibold text-[#CBB8FF]">
+          <span className="group-open:hidden">Manage</span>
+          <span className="hidden group-open:inline">Close</span>
+        </span>
+        <ChevronDown className="size-4 text-[#BAADD0] transition-transform group-open:rotate-180" aria-hidden />
+      </summary>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 items-start gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-lg bg-[#7553FF]/15 text-[#C6B5FF]">
-            <Link2 className="size-5" aria-hidden />
+      <div className="space-y-4 border-t border-white/10 px-4 py-4">
+        {feedback && (
+          <div role={feedback.tone === "error" ? "alert" : "status"} className={feedback.tone === "success"
+            ? "flex items-start gap-2 rounded-md border border-emerald-400/20 bg-emerald-400/[0.06] px-3 py-2.5 text-emerald-100"
+            : "flex items-start gap-2 rounded-md border border-rose-400/20 bg-rose-400/[0.06] px-3 py-2.5 text-rose-100"}>
+            {feedback.tone === "success" ? <CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden /> : <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />}
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-semibold">{feedback.tone === "success" ? "Change saved" : "Could not save change"}</p>
+              <p className="mt-0.5 text-xs">{feedback.text}</p>
+            </div>
+            <button type="button" aria-label="Dismiss message" onClick={() => setFeedback(null)} className="shrink-0 text-current/70 hover:text-current"><X className="size-4" aria-hidden /></button>
           </div>
-          <div>
-            <h2 className="text-lg font-semibold text-white">Relationships &amp; responsibilities</h2>
-            <p className="mt-1 text-xs leading-5 text-[#B8B0C4]">Related units stay independent. Linking them does not change residents, QR passes or access.</p>
-            <p className="text-xs leading-5 text-[#B8B0C4]">Responsible people are administrative contacts, not automatically residents of linked units.</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2" aria-label="Relationship summary">
-          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-white"><Building2 className="size-4 text-[#BCA5FF]" aria-hidden /><strong>{links.length}</strong> related {links.length === 1 ? "unit" : "units"}</span>
-          <span className="inline-flex items-center gap-2 rounded-lg border border-white/10 bg-white/[0.035] px-3 py-2 text-xs text-white"><UserRound className="size-4 text-[#BCA5FF]" aria-hidden /><strong>{responsibilities.length}</strong> responsible {responsibilities.length === 1 ? "person" : "people"}</span>
-        </div>
-      </div>
+        )}
+        <p className="text-xs leading-5 text-[#AAA0B4]">Linked units remain independent. A responsible contact applies to this unit only and is not automatically assigned to linked units.</p>
+        <div className="grid gap-5 lg:grid-cols-2">
+          <section className="min-w-0 space-y-2" aria-labelledby="unit-links-heading">
+            <div>
+              <h3 id="unit-links-heading" className="text-sm font-semibold text-white">Related units <span className="font-normal text-[#A9A0B5]">· {links.length}</span></h3>
+              <p className="mt-1 text-xs text-[#9F95AC]">Units connected to {unitLabel}</p>
+            </div>
+            {links.length ? (
+              <ul className="divide-y divide-white/[0.09]">
+                {links.map((item) => <li key={item.id} className="flex items-center gap-2 py-2 text-xs">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/[0.045] text-[#BDAAE4]"><Building2 className="size-3.5" aria-hidden /></span>
+                  <div className="min-w-0 flex-1">
+                    <NextLink href={"/products/entry/communities/" + communityId + "/units/" + item.unitId} className="break-words font-semibold text-white hover:text-[#CEBBFF] hover:underline">{shortLabel(item.label)}</NextLink>
+                    {item.warning && <p className="mt-1 text-amber-200">{item.warning}</p>}
+                  </div>
+                  <button type="button" disabled={pending} className="px-2 py-1 text-[11px] text-[#BFB3C9] hover:text-rose-200 disabled:opacity-40" onClick={() => {
+                    if (!window.confirm("Unlink " + shortLabel(item.label) + " from " + unitLabel + "? Both units remain independent.")) return;
+                    run({ action: "unlink_units", communityId, unitId, recordId: item.id }, shortLabel(item.label) + " was unlinked from " + unitLabel + ".");
+                  }}>Remove</button>
+                </li>)}
+              </ul>
+            ) : <p className="py-2 text-xs text-[#9F95AC]">No related units yet.</p>}
+            <form className="flex flex-wrap gap-2 pt-2" onSubmit={(event) => { event.preventDefault(); searchUnits(); }}>
+              <label className="relative min-w-[170px] flex-1">
+                <span className="sr-only">Search units by name or UUID</span>
+                <Search className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-[#8F879D]" aria-hidden />
+                <input value={unitSearch} onChange={(event) => setUnitSearch(event.currentTarget.value)} placeholder="Search units by name" className={inputStyle + " pl-8"} />
+              </label>
+              <button type="submit" disabled={pending} className={secondaryStyle}>Search</button>
+            </form>
+            <div className="flex flex-wrap gap-2">
+              <label className="min-w-[170px] flex-1">
+                <span className="sr-only">Choose another unit</span>
+                <select value={selectedUnit} disabled={pending} onChange={(event) => setSelectedUnit(event.currentTarget.value)} className={inputStyle}>
+                  <option value="">Choose another unit...</option>
+                  {availableUnits.map((item) => <option key={item.id} value={item.id}>{shortLabel(item.label)}</option>)}
+                </select>
+              </label>
+              <button type="button" disabled={pending || !selectedUnit} className={secondaryStyle} onClick={() => {
+                const target = availableUnits.find((item) => item.id === selectedUnit);
+                if (target) run({ action: "link_units", communityId, unitId, otherUnitId: target.id }, shortLabel(target.label) + " is now related to " + unitLabel + ".");
+              }}>+ Link</button>
+            </div>
+            {searchedUnits && !availableUnits.length && <p className="text-xs text-[#AAA0B4]">No other available units match your search.</p>}
+            <p className="text-[11px] text-[#8F859B]">This unit and existing links are excluded from the selector.</p>
+          </section>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <section className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-[#24202B] p-4" aria-labelledby="unit-links-heading">
-          <div>
-            <h3 id="unit-links-heading" className="flex items-center gap-2 text-base font-semibold text-white"><Building2 className="size-4 text-[#BC9AFF]" aria-hidden />Related units</h3>
-            <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">Connect another house or apartment without merging either unit.</p>
-          </div>
-          <form className="flex flex-wrap gap-2" onSubmit={(event) => { event.preventDefault(); searchUnits(); }}>
-            <label className="relative min-w-[190px] flex-1">
-              <span className="sr-only">Search units by name or UUID</span>
-              <Search className="pointer-events-none absolute left-3 top-3 size-4 text-[#8F879D]" aria-hidden />
-              <input value={unitSearch} onChange={(event) => setUnitSearch(event.currentTarget.value)} placeholder="Search units by name or UUID" className={inputStyle + " pl-9"} />
-            </label>
-            <button type="submit" disabled={pending} className={secondaryStyle}>Search</button>
+          <section className="min-w-0 space-y-2 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-labelledby="responsible-people-heading">
+            <div>
+              <h3 id="responsible-people-heading" className="text-sm font-semibold text-white">Responsible contacts <span className="font-normal text-[#A9A0B5]">· {responsibilities.length}</span></h3>
+              <p className="mt-1 text-xs text-[#9F95AC]">People responsible for this unit only</p>
+            </div>
+            {responsibilities.length ? (
+              <ul className="divide-y divide-white/[0.09]">
+                {responsibilities.map((item) => <li key={item.id} className="flex items-center gap-2 py-2 text-xs">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#7553FF]/20 text-[11px] font-semibold text-[#DCCEFF]">{item.label.slice(0,1).toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <span className="break-words font-semibold text-white">{item.label}</span>
+                    <span className="ml-2 rounded-full bg-[#7553FF]/15 px-1.5 py-0.5 text-[10px] text-[#C8B6FF]">{item.role === "RESIDENT" ? "Resident" : item.role}</span>
+                    {!item.active && <span className="ml-2 text-amber-200">Inactive</span>}
+                    {item.warning && <p className="mt-1 text-amber-200">{item.warning}</p>}
+                  </div>
+                  <button type="button" disabled={pending} className="px-2 py-1 text-[11px] text-[#BFB3C9] hover:text-rose-200 disabled:opacity-40" onClick={() => {
+                    if (!window.confirm("Remove " + item.label + " as responsible contact for " + unitLabel + "? Their resident account will not change.")) return;
+                    run({ action: "remove_responsible", communityId, unitId, recordId: item.id }, item.label + " is no longer responsible for " + unitLabel + ".");
+                  }}>Remove</button>
+                </li>)}
+              </ul>
+            ) : <p className="py-2 text-xs text-[#9F95AC]">No responsible contacts yet.</p>}
+            <form className="flex flex-wrap gap-2 pt-2" onSubmit={(event) => { event.preventDefault(); searchPeople(); }}>
+              <label className="relative min-w-[170px] flex-1">
+                <span className="sr-only">Search community people by name, email or UUID</span>
+                <Search className="pointer-events-none absolute left-3 top-2.5 size-3.5 text-[#8F879D]" aria-hidden />
+                <input value={personSearch} onChange={(event) => setPersonSearch(event.currentTarget.value)} placeholder="Search people by name or email" className={inputStyle + " pl-8"} />
+              </label>
+              <button type="submit" disabled={pending} className={secondaryStyle}>Search</button>
+            </form>
+            <div className="flex flex-wrap gap-2">
+              <label className="min-w-[170px] flex-1">
+                <span className="sr-only">Choose responsible contact</span>
+                <select value={selectedPerson} disabled={pending} onChange={(event) => setSelectedPerson(event.currentTarget.value)} className={inputStyle}>
+                  <option value="">Select community member...</option>
+                  {availablePeople.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
+                </select>
+              </label>
+              <button type="button" disabled={pending || !selectedPerson} className={secondaryStyle} onClick={() => {
+                const target = availablePeople.find((item) => item.id === selectedPerson);
+                if (target) run({ action: "assign_responsible", communityId, unitId, userId: target.id }, shortLabel(target.label) + " is now a responsible contact for " + unitLabel + ".");
+              }}>+ Assign</button>
+            </div>
+            {!personSearch && (personPage > 0 || hasMorePeople) && <div className="flex items-center gap-2 text-xs text-[#9F95AC]">
+              <button type="button" disabled={pending || personPage === 0} className={secondaryStyle} onClick={() => loadPeoplePage(personPage - 1)}>Previous</button>
+              <span>Page {personPage + 1}</span>
+              <button type="button" disabled={pending || !hasMorePeople} className={secondaryStyle} onClick={() => loadPeoplePage(personPage + 1)}>Next</button>
+            </div>}
+            {searchedPeople && !availablePeople.length && <p className="text-xs text-[#AAA0B4]">No available community members match your search.</p>}
+            <p className="text-[11px] text-[#8F859B]">Responsibility is per unit and never inherited automatically.</p>
+          </section>
+        </div>
+        {selectorError && <p role="alert" className="text-xs text-amber-200">Some options could not be loaded. Existing connections are still shown.</p>}
+        <details className="border-t border-white/10 pt-3">
+          <summary className="flex cursor-pointer items-center gap-2 text-xs text-[#A99CB9] hover:text-white"><Settings2 className="size-3.5" aria-hidden />Edit unit label (advanced)</summary>
+          <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(event) => {
+            event.preventDefault();
+            const label = String(new FormData(event.currentTarget).get("label") ?? "").trim();
+            if (label && label !== unitLabel) run({ action: "rename_unit", communityId, unitId, label, expectedLabel: unitLabel }, "Unit label changed from " + unitLabel + " to " + label + ".");
+          }}>
+            <label className="grid min-w-[170px] max-w-sm flex-1 gap-1 text-xs text-[#9F95AC]">Visible unit label<input key={unitLabel} name="label" defaultValue={unitLabel} maxLength={120} required className={inputStyle} /></label>
+            <button type="submit" disabled={pending} className={secondaryStyle}><Pencil className="size-3.5" aria-hidden />Save label</button>
           </form>
-          <div className="flex flex-wrap gap-2">
-            <label className="min-w-[190px] flex-1">
-              <span className="sr-only">Unit to link</span>
-              <select value={selectedUnit} onChange={(event) => setSelectedUnit(event.currentTarget.value)} disabled={pending} className={inputStyle}>
-                <option value="">Choose a unit to link</option>
-                {availableUnits.map((item) => <option key={item.id} value={item.id}>{shortLabel(item.label)}</option>)}
-              </select>
-            </label>
-            <button type="button" disabled={pending || !selectedUnit} className={actionStyle} onClick={() => {
-              const target = availableUnits.find((item) => item.id === selectedUnit);
-              if (!target) return;
-              run({ action: "link_units", communityId, unitId, otherUnitId: target.id }, shortLabel(target.label) + " is now related to " + unitLabel + ".");
-            }}>+ Link unit</button>
-          </div>
-          {searchedUnits && availableUnits.length === 0 && <p className="text-xs text-[#A9A3B2]">No other units match this search.</p>}
-          {links.length ? <ul className="space-y-2">{links.map((item) => (
-            <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.025] px-3 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="grid size-9 shrink-0 place-items-center rounded-md bg-white/[0.05]"><Building2 className="size-4 text-[#D9CBFF]" aria-hidden /></div>
-                <div className="min-w-0">
-                  <NextLink className="break-words text-sm font-semibold text-white underline-offset-2 hover:text-[#CAB8FF] hover:underline" href={`/products/entry/communities/${communityId}/units/${item.unitId}`}>{shortLabel(item.label)}</NextLink>
-                  {item.warning && <p className="mt-1 text-xs text-amber-200">{item.warning}</p>}
-                </div>
-              </div>
-              <button type="button" disabled={pending} className={secondaryStyle} onClick={() => {
-                if (!window.confirm("Unlink " + shortLabel(item.label) + " from " + unitLabel + "? Both units will remain unchanged.")) return;
-                run({ action: "unlink_units", communityId, unitId, recordId: item.id }, shortLabel(item.label) + " was unlinked from " + unitLabel + ".");
-              }}>Unlink</button>
-            </li>
-          ))}</ul> : <p className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[#A9A3B2]">No related units yet. Choose a unit above to link it.</p>}
-        </section>
-
-        <section className="min-w-0 space-y-3 rounded-lg border border-white/10 bg-[#24202B] p-4" aria-labelledby="responsible-people-heading">
-          <div>
-            <h3 id="responsible-people-heading" className="flex items-center gap-2 text-base font-semibold text-white"><UserRound className="size-4 text-[#BC9AFF]" aria-hidden />Responsible people</h3>
-            <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">Assign community members as administrative contacts for this unit only.</p>
-          </div>
-          <form className="flex flex-wrap gap-2" onSubmit={(event) => { event.preventDefault(); searchPeople(); }}>
-            <label className="relative min-w-[190px] flex-1">
-              <span className="sr-only">Search community members by name, email or UUID</span>
-              <Search className="pointer-events-none absolute left-3 top-3 size-4 text-[#8F879D]" aria-hidden />
-              <input value={personSearch} onChange={(event) => setPersonSearch(event.currentTarget.value)} placeholder="Search people by name, email or UUID" className={inputStyle + " pl-9"} />
-            </label>
-            <button type="submit" disabled={pending} className={secondaryStyle}>Search</button>
-          </form>
-          <div className="flex flex-wrap gap-2">
-            <label className="min-w-[190px] flex-1">
-              <span className="sr-only">Person to assign</span>
-              <select value={selectedPerson} onChange={(event) => setSelectedPerson(event.currentTarget.value)} disabled={pending} className={inputStyle}>
-                <option value="">Choose a community member</option>
-                {availablePeople.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
-              </select>
-            </label>
-            <button type="button" disabled={pending || !selectedPerson} className={actionStyle} onClick={() => {
-              const target = availablePeople.find((item) => item.id === selectedPerson);
-              if (!target) return;
-              run({ action: "assign_responsible", communityId, unitId, userId: target.id }, shortLabel(target.label) + " is now a responsible contact for " + unitLabel + ".");
-            }}>+ Assign responsible</button>
-          </div>
-          {searchedPeople && availablePeople.length === 0 && <p className="text-xs text-[#A9A3B2]">No other community members match this search.</p>}
-          {personSearch === "" && (personPage > 0 || hasMorePeople) && <div className="flex items-center gap-2 text-xs">
-            <button type="button" disabled={pending || personPage === 0} className={secondaryStyle} onClick={() => loadPeoplePage(personPage - 1)}>Previous</button>
-            <span className="text-[#A9A3B2]">Page {personPage + 1}</span>
-            <button type="button" disabled={pending || !hasMorePeople} className={secondaryStyle} onClick={() => loadPeoplePage(personPage + 1)}>Next</button>
-          </div>}
-          {responsibilities.length ? <ul className="space-y-2">{responsibilities.map((item) => (
-            <li key={item.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/[0.025] px-3 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="grid size-9 shrink-0 place-items-center rounded-full bg-[#7553FF]/30 text-xs font-semibold text-white">{item.label.slice(0, 1).toUpperCase()}</div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2"><span className="break-words text-sm font-semibold text-white">{item.label}</span><span className="rounded-full bg-[#7553FF]/20 px-2 py-0.5 text-[10px] text-[#D4C5FF]">{item.role === "RESIDENT" ? "Resident" : item.role}</span>{!item.active && <span className="rounded-full border border-amber-400/20 px-2 py-0.5 text-[10px] text-amber-200">Inactive</span>}</div>
-                  {item.warning && <p className="mt-1 text-xs text-amber-200">{item.warning}</p>}
-                </div>
-              </div>
-              <button type="button" disabled={pending} className={secondaryStyle} onClick={() => {
-                if (!window.confirm("Remove " + item.label + " as a responsible contact for " + unitLabel + "? Their resident account will not change.")) return;
-                run({ action: "remove_responsible", communityId, unitId, recordId: item.id }, item.label + " is no longer a responsible contact for " + unitLabel + ".");
-              }}>Remove</button>
-            </li>
-          ))}</ul> : <p className="rounded-lg border border-dashed border-white/10 p-4 text-sm text-[#A9A3B2]">No responsible people assigned yet. This does not affect the unit&apos;s residents.</p>}
-        </section>
+          <p className="mt-2 text-[11px] text-[#94899D]">Renaming does not change unit identity and may be blocked by pending activations or duplicate labels.</p>
+        </details>
       </div>
-
-      {selectorError && <p role="alert" className="text-xs text-amber-200">Some assignment options could not be loaded. Existing relationships are still visible.</p>}
-      <details className="group border-t border-white/10 pt-3">
-        <summary className="flex cursor-pointer list-none items-center gap-2 text-xs font-semibold text-[#B8B0C4] hover:text-white"><Settings2 className="size-4" aria-hidden />Edit unit label <span className="text-[10px] font-normal">(advanced)</span></summary>
-        <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={(event) => { event.preventDefault(); const data = new FormData(event.currentTarget); const label = String(data.get("label") ?? "").trim(); if (label && label !== unitLabel) run({ action: "rename_unit", communityId, unitId, label, expectedLabel: unitLabel }, "Unit label changed from " + unitLabel + " to " + label + "."); }}>
-          <label className="grid min-w-[190px] max-w-sm flex-1 gap-1 text-xs text-[#A9A3B2]">Visible unit label<input key={unitLabel} name="label" defaultValue={unitLabel} maxLength={120} required className={inputStyle} /></label>
-          <button type="submit" disabled={pending} className={secondaryStyle}><Pencil className="size-4" aria-hidden />Save label</button>
-        </form>
-        <p className="mt-2 text-[11px] text-[#A9A3B2]">Renaming changes only the visible label, not this unit&apos;s ID. Protected activations or duplicate labels can prevent a rename.</p>
-      </details>
-    </section>
+    </details>
   );
 }
