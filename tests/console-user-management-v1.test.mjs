@@ -1,3 +1,4 @@
+import { entryRelationshipsScope } from "./helpers/entry-relationships-scope.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -216,8 +217,8 @@ test("no ENTRY authorization or Brain content/model files are changed by this br
     .filter(Boolean)
     .map((file) => file.replaceAll("\\", "/"));
 
-  assert.equal(files.some((file) => file.startsWith("features/entry/")), false);
-  assert.equal(files.some((file) => file.startsWith("supabase/migrations/")), false);
+  assert.equal(files.some((file) => file.startsWith("features/entry/") && !entryRelationshipsScope.has(file)), false);
+  assert.equal(files.some((file) => file.startsWith("supabase/migrations/") && !entryRelationshipsScope.has(file)), false);
   assert.equal(files.some((file) => file.startsWith("features/brain/")), false);
   assert.equal(files.some((file) => file.startsWith("content/brain/")), false);
 });

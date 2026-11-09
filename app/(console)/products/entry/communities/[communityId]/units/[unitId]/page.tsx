@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { CommunityUnitDetailWorkspace } from "@/features/entry/communities/CommunityUnitDetailWorkspace";
 import { getCommunityUnitDetailPageData } from "@/features/entry/communities/detailQueries";
+import { UnitRelationshipsSection } from "@/features/entry/communities/UnitRelationshipsSection";
 import { getUsersLastSignIn } from "@/features/entry/users/lastSignIn";
 
 function getUnitTypeLabel(label: string) {
@@ -78,20 +79,27 @@ export default async function CommunityUnitDetailPage(
   );
 
   return (
-    <CommunityUnitDetailWorkspace
-      communityId={community.id}
-      communityName={community.name}
-      houses={data.houses}
-      initialFilter={
-        typeof searchParams.status === "string" ? searchParams.status : undefined
-      }
-      initialQuery={
-        typeof searchParams.q === "string" ? searchParams.q : undefined
-      }
-      lastSignInByUserId={lastSignInByUserId}
-      unit={unit}
-      unitDisplayLabel={unitDisplayLabel}
-      unitTypeLabel={unitTypeLabel}
-    />
+    <>
+      <UnitRelationshipsSection
+        communityId={community.id}
+        unitId={unit.id}
+        unitLabel={unit.label}
+      />
+      <CommunityUnitDetailWorkspace
+        communityId={community.id}
+        communityName={community.name}
+        houses={data.houses}
+        initialFilter={
+          typeof searchParams.status === "string" ? searchParams.status : undefined
+        }
+        initialQuery={
+          typeof searchParams.q === "string" ? searchParams.q : undefined
+        }
+        lastSignInByUserId={lastSignInByUserId}
+        unit={unit}
+        unitDisplayLabel={unitDisplayLabel}
+        unitTypeLabel={unitTypeLabel}
+      />
+    </>
   );
 }

@@ -314,9 +314,12 @@ test("Field mutations require explicit confirmation and Preview disables control
 test("Unit rename hardening checks zero-row update and Field revalidation", () => {
   const unitActions = read("features/entry/communities/unitActions.ts");
 
-  assert.match(unitActions, /\.select\("id"\)/);
-  assert.match(unitActions, /\.maybeSingle\(\)/);
-  assert.match(unitActions, /Unit not found in this community/);
+  const migration = read('supabase/migrations/20261106090000_entry_unit_relationships_mvp.sql');
+  assert.match(migration, /select house_label into v_label[\s\S]*?for update/);
+  assert.match(migration, /if not found then raise exception 'unit_not_in_community'/);
+  assert.match(unitActions, /return manageUnitRelationship/);
+  const relationships = read('features/entry/communities/unitRelationshipActions.ts');
+  assert.ok(relationships.includes('/field/entry/communities/'));
   assert.match(unitActions, /\/field\/entry\/communities\/\$\{communityId\}\/people/);
 });
 

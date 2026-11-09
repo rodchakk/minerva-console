@@ -58,7 +58,7 @@ export default function FieldIndoorPage() {
         <p className="mt-3 text-xs leading-5 text-[var(--console-text-muted)]">
           Opens the separate pilot site in your browser. Vercel may require
           team sign-in to access this preview. GPS data and photographs remain
-          in that site's browser storage, not in ENTRY or Minerva Console.
+          in that site&apos;s browser storage, not in ENTRY or Minerva Console.
           Export your JSON before clearing browser data or switching devices.
         </p>
       </section>
