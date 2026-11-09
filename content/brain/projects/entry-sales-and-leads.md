@@ -4,6 +4,41 @@ Commercial strategy, target communities, field evidence, and current lead pipeli
 
 > Most information here is **Operator-provided** by Rudy. Treat it as business knowledge and field notes, not code-verified data. Keep direct observations, third-party statements, founder interpretations, hypotheses, and pending validations separate.
 
+## 2026-10-26 — Misión Segundo Cliente (decisión comercial vigente)
+
+**Autoridad / evidencia:** actualización explícita del operador, 2026-10-26. Esta sección prevalece sobre el mapa de prospectos de agosto y los seguimientos históricos más abajo; no reescribe lo que ocurrió en las visitas originales.
+
+**Situación actual:** **Residencial Andalucía es el primer cliente comercial de pago de ENTRY**, ya en funcionamiento; excluirla del listado de prospectos. Minerva necesita conseguir un segundo cliente con disciplina de caja y presupuesto mínimo. **No construir funcionalidades nuevas, no asumir gastos ni prometer cambios al producto antes de validar una oportunidad; vender ENTRY tal como opera hoy.**
+
+### Decisiones por prospecto
+
+| Prospecto | Estado comercial vigente | Evidencia / razón | Próxima acción |
+| --- | --- | --- | --- |
+| **Residencial Las Mercedes** | **Investigación activa; prospecto prioritario** | El operador recuerda una conversación del 2026-09-18 donde parecía no existir un sistema digital de control de acceso; **hipótesis pendiente de confirmación presencial**, sin identificación acreditada de decisor, capacidad de pago ni tamaño operativo actual. | Primera visita **de calificación, no propuesta**: confirmar control de visitas, acceso físico, operación de seguridad y **canal administrativo/patronato**. Solicitar reunión corta solo si encaja. |
+| **Residencial La Florida** | **Oportunidad abierta** | Propuesta formal preparada para entregar personalmente por el canal administrativo al patronato. **No consta recepción, reunión ni aceptación**. | Entregar propuesta y acordar mecanismo/fecha de respuesta, sin esperar para investigar Las Mercedes. |
+| **Residencial El Limonar** | **EN PAUSA; sin seguimiento activo** | El operador relata que su último contacto indicó que el patronato estaba enfocado en **cerrar partes de la comunidad**, por lo que veía poca atención disponible para ENTRY. Este reporte no prueba falta de interés definitivo ni confirma alcance/estado de esas obras/cierres. | **No insistir ahora.** Reabrir únicamente si aparece una señal nueva de disponibilidad/interés o terminan las prioridades internas. |
+| **Colonia El Carmen** | **DESCARTADO de la misión comercial activa** | Ya se dejó documentación y se hizo suficiente gestión según el operador. **Un bus de ruta ingresa al sector**, que funciona más como colonia/sector abierto que como residencial cerrada; el operador considera que la complejidad operacional no encaja con vender ENTRY actual sin nuevas adaptaciones. | **No más visitas, seguimientos ni propuestas** para esta misión. Conservar historia como aprendizaje, no como tarea pendiente. |
+| **Residencial Andalucía** | **Cliente vigente; NO prospecto** | Primer cliente de pago y caso de referencia operacional, de acuerdo con el operador. | Con su autorización, explorar presentaciones a otros patronatos; no mostrar datos privados de residentes. |
+
+### Prioridades y criterios de calificación
+
+1. **Las Mercedes** — validar en campo y encontrar decisor; no asumir falta de sistema por observación preliminar.
+2. **La Florida** — continuar entrega formal y gestionar una respuesta verificable.
+3. **Referencias de Andalucía** — intentar presentaciones directas con otros patronatos, con consentimiento y sin exposición de datos de clientes.
+4. **Nuevos prospectos de San Pedro Sula** — priorizar accesibilidad del decisor, encaje con el producto actual, dolor operativo y capacidad de iniciar proceso de compra en el corto plazo.
+
+**Criterios para invertir tiempo:** (a) acceso a patronato/administración o camino concreto; (b) problema real de visitantes/accesos; (c) escala y operación compatibles con ENTRY ya disponible; (d) oportunidad temporal y presupuesto razonables. La entrega de un documento a seguridad **no equivale** a reunión, interés, presupuesto ni venta.
+
+**Política operativa:** prospección y demos con producto existente; ninguna personalización o gasto antes de validación; no perseguir indefinidamente patronatos que no responden. Una comunidad puede ser cliente técnicamente compatible y **no estar comercialmente lista**.
+
+**Objetivos orientativos para 2026-10-26 a 2026-11-01:** validar Las Mercedes, entregar La Florida, intentar referencias de Andalucía, abrir alrededor de cinco contactos dirigidos, buscar dos reuniones y una propuesta **solicitada** si hay fit. Son objetivos de actividad, **no reuniones ni resultados ya logrados**.
+
+**Otros prospectos previamente mapeados, sin avance confirmado en esta actualización:** El Barrial, Girona Access, La Fuente, Vías Monserrat, Villas Angelina, Vías Paraíso Access, Magnolia Access, Los Álamos, Toledo, Los Naranjos, Santa Isabel, Jardines del Merendón, Merendón Hills y Valle del Sol. Sus sistemas, contactos, tamaño y estado deben revalidarse antes de emitir afirmaciones actuales. Candidatos con sistemas ya instalados o sin acceso al decisor no son prioridad por defecto.
+
+**Nota de atribución:** las conclusiones sobre conveniencia/descartes son decisiones del operador; los reportes de guardias y observaciones de campo siguen siendo evidencias históricas, no auditorías técnicas ni datos actualizados.
+
+---
+
 ## Official commercial strategy
 
 Approved commercial initiative:
@@ -64,7 +99,7 @@ FIRST DOOR evidence levels:
 7. Economic proposal requested.
 8. Pilot/customer obtained.
 
-## Current lead map — through 2026-08-17
+## Historical lead map — through 2026-08-17 (superseded by 2026-10-26 decisions above)
 
 | Community | Current control | Current status / next move |
 | --- | --- | --- |
