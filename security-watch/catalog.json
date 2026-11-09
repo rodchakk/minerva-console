@@ -55,7 +55,7 @@
           "kind": "keyword",
           "keyword": "Supabase",
           "version": "managed",
-          "notes": "Provider-managed services, verify provider remediation"
+          "notes": "Provider-managed services, verify provider remediation; Hosted Supabase Storage v1.89.13 verified via provider version endpoint 2026-11-08. Other managed services require independent review."
         },
         {
           "id": "postgres",
@@ -69,14 +69,21 @@
             "product": "postgresql"
           }
         }
-      ]
+      ],
+      "releaseVerification": {
+        "technology": "Next.js",
+        "version": "16.4.5",
+        "checkedAt": "2026-11-09",
+        "provider": "Vercel production",
+        "deploymentId": "dpl_BybzJHHi1H6cpMXB5VjDDVrFCXGn"
+      }
     },
     {
       "id": "entry-web",
-      "name": "ENTRY Web",
+      "name": "ENTRY Web (legacy)",
       "team": "ENTRY Team",
-      "environment": "unverified",
-      "enabled": true,
+      "environment": "legacy",
+      "enabled": false,
       "technologies": [
         {
           "id": "next",
@@ -85,7 +92,7 @@
           "ecosystem": "npm",
           "package": "next",
           "version": "16.2.3",
-          "notes": "ENTRY Web standalone repo rodchakk/Entry-Web; manually verified default-branch version. Deployment status not confirmed."
+          "notes": "Historical standalone ENTRY administration prototype (rodchakk/Entry-Web). Default-branch 16.2.3, no confirmed active deployment. LEGACY: excluded from active monitoring; retained for source audit. Do not deploy."
         }
       ]
     },
@@ -133,7 +140,14 @@
           "version": "managed",
           "notes": "Provider service; news detection may be incomplete"
         }
-      ]
+      ],
+      "releaseVerification": {
+        "technology": "Next.js",
+        "version": "16.4.5",
+        "checkedAt": "2026-11-09",
+        "provider": "Vercel production",
+        "deploymentId": "dpl_6HDfxpz4V8rswyshLYBmBrRHPKTA"
+      }
     },
     {
       "id": "minerva-webpage",
@@ -179,7 +193,14 @@
             "product": "node.js"
           }
         }
-      ]
+      ],
+      "releaseVerification": {
+        "technology": "Next.js",
+        "version": "15.5.29",
+        "checkedAt": "2026-11-09",
+        "provider": "Vercel production",
+        "deploymentId": "dpl_GYN8fzJveJKUaq7RY9D2CMjtoU11"
+      }
     },
     {
       "id": "seshat",
@@ -209,7 +230,8 @@
           "name": "Supabase",
           "kind": "keyword",
           "keyword": "Supabase",
-          "version": "managed"
+          "version": "managed",
+          "notes": "Hosted Supabase Storage v1.89.13 verified via provider version endpoint 2026-11-08. Other managed services require independent review."
         },
         {
           "id": "postgres",

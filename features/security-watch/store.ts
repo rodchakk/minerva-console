@@ -2,7 +2,8 @@ import "server-only";
 
 import { Redis } from "@upstash/redis";
 import { Resend } from "resend";
-import { formatDiagnosis, monitoredProducts, type SecurityFinding, type SecurityScan, type StoredScan } from "./model";
+import { formatDiagnosis, productCatalog, type SecurityFinding, type SecurityScan, type StoredScan } from "./model";
+import { currentlyTrackedFinding } from "@/scripts/security-watch-core.mjs";
 
 const CURRENT_KEY = "minerva:security-watch:v1:latest";
 const NOTIFIED_KEY = "minerva:security-watch:v1:emailed-keys";
@@ -31,20 +32,20 @@ export async function readSecurityWatchState(): Promise<{
     const checkedAt = Date.parse(state?.checkedAt ?? "");
     const overdue = !Number.isFinite(checkedAt) ||
       Date.now() - checkedAt > 36 * 3600000;
-    return { state: state || null, error: null, recent: runs || [], overdue };
+    // Read-time reconciliation keeps old Redis snapshots/audit history intact while
+    // preventing retired versions or excluded LEGACY products from looking active.
+    const currentState = state ? {
+      ...state,
+      findings: state.findings.map(currentlyTracked).filter((item): item is SecurityFinding => item !== null)
+    } : null;
+    return { state: currentState, error: null, recent: runs || [], overdue };
   } catch {
     return { state: null, error: "Security Watch storage is unavailable.", recent: [], overdue: true };
   }
 }
 
 function currentlyTracked(finding: SecurityFinding): SecurityFinding | null {
-  // A manually updated catalog must immediately stop showing advisories tied
-  // exclusively to retired product versions. No runtime probing is performed.
-  const keep = finding.products.filter((p) =>
-    monitoredProducts.some((product) =>
-      product.id === p.id && product.technologies.some((tech) =>
-        tech.name === finding.technology && tech.version === finding.version)));
-  return keep.length ? { ...finding, products: keep } : null;
+  return currentlyTrackedFinding(finding, { products: productCatalog }) as SecurityFinding | null;
 }
 
 function collectFindings(current: SecurityScan, previous: StoredScan | null) {
@@ -126,7 +127,9 @@ export async function recordSecurityWatchScan(scan: SecurityScan) {
   const status: StoredScan["status"] = ok === 3 ? "ok" : ok === 0 ? "failed" : "partial";
   const combined = collectFindings(scan, existing || null);
   const sent = new Set(await redis.smembers(NOTIFIED_KEY));
-  const newAlerts = scan.findings.filter((finding) => alertable(finding) && !sent.has(finding.key));
+  const newAlerts = scan.findings.map(currentlyTracked)
+    .filter((finding): finding is SecurityFinding => finding !== null)
+    .filter((finding) => alertable(finding) && !sent.has(finding.key));
   let notification: StoredScan["notification"] = "none";
   try {
     notification = await emailNewFindings(newAlerts, scan.checkedAt, scan.sources);

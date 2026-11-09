@@ -55,6 +55,8 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
   }), [findings, filter]);
   const urgent = findings.filter(severe).length;
   const review = findings.length - urgent;
+  const legacyCount = productCatalog.filter((product) => product.environment === "legacy" && !product.enabled).length;
+  const awaitingCount = productCatalog.filter((product) => !product.enabled && product.environment !== "legacy").length;
 
   async function copyReport(items: SecurityFinding[], id: string) {
     const report = formatDiagnosis(items, state);
@@ -89,7 +91,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
       <div className={styles.stats}>
         <section className={styles.metric}>
           <span>MONITORED PRODUCTS</span><strong>{String(monitoredProducts.length).padStart(2, "0")}<small>/{String(productCatalog.length).padStart(2, "0")}</small></strong>
-          <p>{productCatalog.length - monitoredProducts.length} awaiting setup</p>
+          <p>{legacyCount} legacy excluded · {awaitingCount} awaiting setup</p>
         </section>
         <section className={styles.metric}>
           <span>HIGH PRIORITY MATCHES</span><strong className={styles.accent}>{String(urgent).padStart(2, "0")}</strong>
@@ -111,7 +113,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
           <div>
             <h2>Technical diagnosis ready for your AI</h2>
             <p>You only need to see what happened, who owns it, and copy the report.</p>
-            <span>{findings.length} tracked advisory matches · No automatic patches or production changes</span>
+            <span>{findings.length} current-catalog advisory matches · Historical scans retained · No automatic patches</span>
           </div>
         </div>
         <button className={styles.mainButton} type="button" onClick={() => copyReport(findings, "all")}>
@@ -125,7 +127,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
       </div>
       <section className={styles.panel} aria-label="Advisory inbox">
         <div className={styles.panelHead}>
-          <div><h2>Advisory inbox</h2><p>Potential matches, responsible software and team, and next steps.</p></div>
+          <div><h2>Advisory inbox</h2><p>Current catalog matches only. Retired-version and legacy matches stay in historical scan records; no finding is automatically declared remediated.</p></div>
           <span className={styles.counter}>{findings.length} FINDINGS</span>
         </div>
         <div className={styles.toolbar}>
@@ -193,7 +195,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
       </div>
       <section className={styles.panel}>
         <div className={styles.panelHead}>
-          <div><h2>Products under watch</h2><p>Technology profiles only; no live access to products or repositories.</p></div>
+          <div><h2>Products under watch</h2><p>Verified releases reflect one-time deployment checks, not continuous runtime attestation. Legacy sources stay listed but are excluded from scans.</p></div>
           <span className={styles.counter}>{productCatalog.length} PRODUCTS</span>
         </div>
         <div className={styles.tableScroll}>
@@ -201,13 +203,18 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
             <thead><tr><th>Product</th><th>Registered technology / version</th><th>Responsible team</th><th>Monitoring</th></tr></thead>
             <tbody>{productCatalog.map((product) => (
               <tr key={product.id}>
-                <td><strong>{product.name}</strong><small>{product.environment}</small></td>
+                <td><strong>{product.name}</strong><small>{product.environment}</small>
+                  {product.releaseVerification && <small className={styles.releaseEvidence}>
+                    PATCH VERIFIED · {product.releaseVerification.technology} {product.releaseVerification.version} · {product.releaseVerification.checkedAt}
+                  </small>}
+                  {product.environment === "legacy" && <small className={styles.legacyNote}>Historical source only · Not deployed or monitored</small>}
+                </td>
                 <td><div className={styles.pills}>{product.technologies.length
                   ? product.technologies.map((tech) => <span key={tech.id}>{tech.name} {tech.version}</span>)
                   : <span>Profile not submitted</span>}</div></td>
                 <td className={styles.team}>{product.team}</td>
-                <td><span className={product.enabled ? styles.active : styles.pending}>
-                  {product.enabled ? "IN CATALOG" : "AWAITING SETUP"}</span></td>
+                <td><span className={product.environment === "legacy" ? styles.legacy : product.enabled ? styles.active : styles.pending}>
+                  {product.environment === "legacy" ? "LEGACY · EXCLUDED" : product.enabled ? "MONITORED" : "AWAITING SETUP"}</span></td>
               </tr>
             ))}</tbody>
           </table>
@@ -223,7 +230,7 @@ export function SecurityWatchWorkspace({ state, error, recent, ingestConfigured,
               <span className={run.status === "ok" ? styles.runDot : styles.runWarning}/>
               <span>{formatDate(run.checkedAt)}</span>
               <strong>{run.status === "ok" ? "Checked public sources" : "Coverage " + run.status}</strong>
-              <small>{run.findings} saved matches</small>
+              <small>{run.findings} saved at scan time (historical)</small>
             </div>)}
           </div>
         </section>

@@ -44,6 +44,9 @@
 .urgent{color:#ffa0ae;border:1px solid #834957;background:rgba(237,102,117,.1)}.review{color:#eccc98;border:1px solid #776043;background:rgba(225,188,131,.08)}.watch{color:#babfff;border:1px solid #4d4e71;background:rgba(168,177,245,.08)}
 .active{color:#a0ddb9;border:1px solid #467456;background:rgba(104,177,137,.09)}
 .pending{color:#edc797;border:1px solid #715342;background:rgba(229,188,133,.1)}
+.legacy{display:inline-block;padding:5px 7px;border-radius:4px;font:9px ui-monospace,monospace;white-space:nowrap;color:#ada7b4;border:1px solid #655a69;background:rgba(150,145,160,.07)}
+.releaseEvidence{color:#9fe1b4!important;max-width:265px;line-height:1.45;margin-top:5px}
+.legacyNote{color:#aaa4b2!important;max-width:265px;line-height:1.45;margin-top:5px}
 .noticeCell{min-width:290px;max-width:390px}.noticeCell strong{display:block;color:#f8edf3;font-size:12px;font-weight:750}
 .noticeCell p{font-size:10px;color:#b4a4b5;margin:4px 0;max-height:38px;overflow:hidden;text-overflow:ellipsis}
 .noticeCell small,.technology small,.nextAction small,.catalogTable small{font:9px/1.5 ui-monospace,monospace;color:#9b899e;display:block;margin-top:6px}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  validCatalog, watchEntries, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority, matchesSimpleVersionRange, validIngestionAcknowledgement
+  validCatalog, watchEntries, currentlyTrackedFinding, toOsvFinding, toNvdFindings, toProviderAdvisoryFindings, deduplicate, withinWindow, cvss3BaseScore, cvssSeverity, osvPriority, matchesSimpleVersionRange, validIngestionAcknowledgement
 } from "../scripts/security-watch-core.mjs";
 import catalog from "../security-watch/catalog.json" with { type: "json" };
 
@@ -11,9 +11,45 @@ test("catalog is manual, finite and product ownership is preserved", () => {
   const next = entries.find((x) => x.package === "next" && x.version === "16.4.5");
   assert.ok(next);
   assert.deepEqual(next.products.map((p) => p.id).sort(), ["entry", "minerva-console"]);
-  const entryWeb = entries.find((x) => x.package === "next" && x.version === "16.2.3");
-  assert.deepEqual(entryWeb?.products.map((p) => p.id), ["entry-web"]);
+  const entryWeb = catalog.products.find((x) => x.id === "entry-web");
+  assert.equal(entryWeb.environment, "legacy");
+  assert.equal(entryWeb.enabled, false);
+  assert.equal(entries.some((x) => x.products.some((p) => p.id === "entry-web")), false);
   assert.equal(entries.some((e) => e.products.some((p) => p.id === "brother-system")), false);
+});
+
+test("legacy exclusion and read-time reconciliation leave historical scans immutable", () => {
+  const live = watchEntries(catalog);
+  const oldVersion = {
+    technology: "Next.js", version: "16.4.1",
+    products: [{ id: "entry", name: "ENTRY", team: "ENTRY Team" }]
+  };
+  assert.equal(currentlyTrackedFinding(oldVersion, catalog), null);
+  const oldEntryWeb = {
+    technology: "Next.js", version: "16.2.3",
+    products: [{ id: "entry-web", name: "ENTRY Web", team: "ENTRY Team" }]
+  };
+  assert.equal(currentlyTrackedFinding(oldEntryWeb, catalog), null);
+  const shared = {
+    technology: "Next.js", version: "16.4.5",
+    products: [
+      { id: "entry", name: "ENTRY", team: "ENTRY Team" },
+      { id: "entry-web", name: "ENTRY Web", team: "ENTRY Team" }
+    ]
+  };
+  const result = currentlyTrackedFinding(shared, catalog);
+  assert.deepEqual(result.products.map((x) => x.id), ["entry"]);
+  assert.equal(shared.products.length, 2, "stored original must stay unchanged");
+  const vendor = {
+    technology: "Supabase", version: "managed",
+    products: [{ id: "entry", name: "ENTRY", team: "ENTRY Team" },
+      { id: "seshat", name: "Seshat", team: "Seshat Team" }]
+  };
+  assert.deepEqual(currentlyTrackedFinding(vendor, catalog).products.map((x) => x.id), ["entry", "seshat"]);
+  assert.equal(live.some((x) => x.version === "16.2.3"), false);
+  const invalid = structuredClone(catalog);
+  invalid.products.find((x) => x.id === "entry-web").enabled = true;
+  assert.throws(() => validCatalog(invalid), /Legacy products cannot be actively monitored/);
 });
 
 test("reject invalid OSV range, duplicate product and unknown technology", () => {
@@ -116,8 +152,8 @@ test("official Next.js advisories are mapped only to affected catalog version br
     ]
   };
   const matches = toProviderAdvisoryFindings(advisory, "vercel/next.js", watchEntries(catalog));
-  assert.equal(matches.length, 1);
-  assert.deepEqual(matches.map((x) => x.version).sort(), ["16.2.3"]);
+  assert.equal(matches.length, 0);
+  assert.deepEqual(matches.map((x) => x.version).sort(), []);
   assert.ok(matches.every((f) => f.confidence === "VENDOR_NOTICE" && f.severity === "MEDIUM"));
   assert.equal(matches.some((f) => f.products?.some((p) => ["entry", "minerva-console", "minerva-webpage"].includes(p.id))), false);
   assert.equal(matchesSimpleVersionRange("16.4.5", ">= 16.0.0, <= 16.4.4"), false);
