@@ -150,3 +150,28 @@ export function deduplicate(findings) {
     return diff || String(b.publishedAt || "").localeCompare(String(a.publishedAt || ""));
   }).slice(0, 160);
 }
+
+export function toProviderAdvisoryFindings(advisory, repository, entries) {
+  if (!/^[a-z0-9-]+\/[a-z0-9-]+$/.test(repository) ||
+      !advisory?.ghsa_id || advisory.withdrawn_at || !advisory.published_at) return [];
+  const id = String(advisory.ghsa_id);
+  if (!/^GHSA-[a-z0-9-]{10,40}$/i.test(id)) return [];
+  const matches = entries.filter((entry) =>
+    entry.kind === "keyword" && entry.keyword.toLowerCase() === "supabase");
+  return matches.map((entry) => ({
+    key: ["github", id, entry.watchKey].join("|"),
+    source: "github",
+    advisoryId: id,
+    title: String(advisory.summary || id).slice(0, 240),
+    summary: String(advisory.description || advisory.summary || "See vendor advisory.").slice(0, 700),
+    severity: priority(advisory.severity),
+    publishedAt: advisory.published_at,
+    modifiedAt: advisory.updated_at || null,
+    url: "https://github.com/" + repository + "/security/advisories/" + encodeURIComponent(id),
+    technology: entry.name,
+    version: entry.version,
+    products: entry.products,
+    confidence: "VENDOR_NOTICE",
+    nextStep: "Vendor bulletin only. Confirm whether Supabase already patched hosted projects and whether any client action remains."
+  }));
+}
