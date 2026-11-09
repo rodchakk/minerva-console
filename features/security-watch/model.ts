@@ -20,7 +20,7 @@ export type SecurityWatchProduct = {
 
 export type SecurityFinding = {
   key: string;
-  source: "osv" | "nvd";
+  source: "osv" | "nvd" | "github";
   advisoryId: string;
   title: string;
   summary: string;
@@ -31,7 +31,7 @@ export type SecurityFinding = {
   technology: string;
   version: string;
   products: Array<{ id: string; name: string; team: string }>;
-  confidence: "VERSION_MATCH" | "KEYWORD_ONLY";
+  confidence: "VERSION_MATCH" | "KEYWORD_ONLY" | "VENDOR_NOTICE";
   nextStep: string;
 };
 
@@ -41,7 +41,7 @@ export type SecurityScan = {
   schemaVersion: 1;
   runId: string;
   checkedAt: string;
-  sources: Record<"osv" | "nvd", SourceStatus>;
+  sources: Record<"osv" | "nvd" | "github", SourceStatus>;
   findings: SecurityFinding[];
 };
 
@@ -73,9 +73,9 @@ export function parseScan(value: unknown): SecurityScan | null {
   }
   const products = new Map(monitoredProducts.map((p) => [p.id, p]));
   const sources: Record<"osv" | "nvd", SourceStatus> = {
-    osv: { ok: false }, nvd: { ok: false }
+    osv: { ok: false }, nvd: { ok: false }, github: { ok: false }
   };
-  for (const name of ["osv", "nvd"] as const) {
+  for (const name of ["osv", "nvd", "github"] as const) {
     const status = value.sources[name];
     if (!isRecord(status) || typeof status.ok !== "boolean" ||
         (status.error !== undefined && !field(status.error, 140))) return null;
@@ -88,20 +88,24 @@ export function parseScan(value: unknown): SecurityScan | null {
   const findings: SecurityFinding[] = [];
   for (const item of value.findings) {
     if (!isRecord(item) || !field(item.key, 255) ||
-        (item.source !== "osv" && item.source !== "nvd") ||
+        (item.source !== "osv" && item.source !== "nvd" && item.source !== "github") ||
         !field(item.advisoryId, 100) || !field(item.title, 240) ||
         !field(item.summary, 700) || !severities.has(String(item.severity)) ||
         !dateOrNull(item.publishedAt) || !dateOrNull(item.modifiedAt) ||
         !field(item.technology, 100) || !field(item.version, 80) ||
         !field(item.nextStep, 300) || !Array.isArray(item.products) ||
         item.products.length === 0 || item.products.length > 12 ||
-        (item.confidence !== "VERSION_MATCH" && item.confidence !== "KEYWORD_ONLY")) {
+        (item.confidence !== "VERSION_MATCH" && item.confidence !== "KEYWORD_ONLY" && item.confidence !== "VENDOR_NOTICE")) {
       return null;
     }
     if (item.source === "osv" && (item.confidence !== "VERSION_MATCH" ||
          item.url !== "https://osv.dev/vulnerability/" + encodeURIComponent(item.advisoryId))) return null;
     if (item.source === "nvd" && (item.confidence !== "KEYWORD_ONLY" ||
          item.url !== "https://nvd.nist.gov/vuln/detail/" + encodeURIComponent(item.advisoryId))) return null;
+    if (item.source === "github" && (item.confidence !== "VENDOR_NOTICE" ||
+      typeof item.url !== "string" ||
+      !/^https:\/\/github\.com\/supabase\/(storage|auth|realtime)\/security\/advisories\/GHSA-[a-z0-9-]+$/i.test(item.url) ||
+      !item.url.endsWith("/" + item.advisoryId))) return null;
     const seen = new Set<string>();
     const associated: SecurityFinding["products"] = [];
     for (const p of item.products) {
@@ -153,7 +157,7 @@ export function formatDiagnosis(findings: SecurityFinding[], scan?: StoredScan |
       "Reference: " + f.advisoryId,
       "Source: " + f.source.toUpperCase() + " | " + f.url,
       "Severity reported: " + f.severity,
-      "Match confidence: " + (f.confidence === "VERSION_MATCH" ? "Package/version match; runtime not verified" : "KEYWORD ONLY; may be unrelated"),
+      "Match confidence: " + (f.confidence === "VERSION_MATCH" ? "Package/version match; runtime not verified" : f.confidence === "VENDOR_NOTICE" ? "OFFICIAL VENDOR NOTICE; hosted impact not verified" : "KEYWORD ONLY; may be unrelated"),
       "Technology/catalog version: " + f.technology + " / " + f.version,
       "Products: " + f.products.map((p) => p.name).join(", "),
       "Teams: " + [...new Set(f.products.map((p) => p.team))].join(", "),
