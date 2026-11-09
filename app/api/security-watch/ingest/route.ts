@@ -32,13 +32,14 @@ export async function POST(request: Request) {
     const scan = parseScan(JSON.parse(body));
     if (!scan) return NextResponse.json({ error: "Invalid scan report" }, { status: 400 });
     const { duplicate, state } = await recordSecurityWatchScan(scan);
+    const notificationFailed = state.notification === "failed" || state.notification === "not_configured";
     return NextResponse.json({
-      ok: true,
+      ok: !notificationFailed,
       duplicate,
       status: state.status,
       notifications: state.notification,
       findings: state.findings.length
-    }, { headers: { "Cache-Control": "no-store" } });
+    }, { status: notificationFailed ? 503 : 200, headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("[security-watch] Failed to record scan", {
       name: error instanceof Error ? error.name : "Unknown",
