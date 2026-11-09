@@ -80,30 +80,43 @@ async function osvScan(entries) {
 }
 
 async function nvdScan(entries) {
-  if (!entries.some((x) => x.kind === "keyword")) return [];
+  const keywords = [...new Set(entries.filter((x) => x.kind === "keyword")
+    .map((x) => x.keyword).filter(Boolean))];
+  if (!keywords.length) return [];
   const start = new Date(sinceMs).toISOString();
   const end = now.toISOString();
   const results = [];
-  let offset = 0;
-  for (let page = 0; page < 4; page++) {
-    const url = new URL(NVD);
-    // New publication and updates to older CVEs are both included here.
-    url.searchParams.set("lastModStartDate", start);
-    url.searchParams.set("lastModEndDate", end);
-    url.searchParams.set("startIndex", String(offset));
-    url.searchParams.set("resultsPerPage", "2000");
-    const data = await jsonRequest(url.toString(), { headers: { "user-agent": "Minerva-Security-Watch/1.0" } }, 45000);
-    if (!Array.isArray(data.vulnerabilities) || typeof data.totalResults !== "number") {
-      throw new Error("NVD response shape mismatch");
+  let requests = 0;
+
+  // Request ONLY cataloged technologies, not the entire NVD modified-CVE firehose.
+  // NVD's no-key API has a 5 requests/30s shared-IP quota, so stagger requests.
+  for (const keyword of keywords) {
+    let offset = 0;
+    for (let page = 0; page < 3; page++) {
+      if (requests++ > 0) await new Promise((resolve) => setTimeout(resolve, 7500));
+      const url = new URL(NVD);
+      url.searchParams.set("keywordSearch", keyword);
+      url.searchParams.set("lastModStartDate", start);
+      url.searchParams.set("lastModEndDate", end);
+      url.searchParams.set("startIndex", String(offset));
+      url.searchParams.set("resultsPerPage", "2000");
+      const data = await jsonRequest(url.toString(),
+        { headers: { "user-agent": "Minerva-Security-Watch/1.0" } }, 45000);
+      if (!Array.isArray(data.vulnerabilities) ||
+          !Number.isInteger(data.totalResults) || data.totalResults < 0) {
+        throw new Error("NVD response shape mismatch for " + keyword);
+      }
+      for (const item of data.vulnerabilities) {
+        results.push(...toNvdFindings(item.cve, entries));
+      }
+      offset += data.vulnerabilities.length;
+      if (offset >= data.totalResults) break;
+      if (data.vulnerabilities.length === 0 || page === 2) {
+        throw new Error("NVD keyword pagination incomplete for " + keyword);
+      }
     }
-    for (const item of data.vulnerabilities) {
-      results.push(...toNvdFindings(item.cve, entries));
-    }
-    offset += data.vulnerabilities.length;
-    if (offset >= data.totalResults) return results;
-    if (data.vulnerabilities.length === 0) throw new Error("NVD pagination stalled");
   }
-  throw new Error("NVD result volume exceeded scan safety limit");
+  return results;
 }
 
 async function vendorAdvisoryScan(entries) {
