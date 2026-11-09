@@ -69,7 +69,7 @@ async function emailNewFindings(findings: SecurityFinding[], checkedAt: string) 
 
   const report = formatDiagnosis(findings, {
     schemaVersion: 1, runId: "email", checkedAt, recordedAt: checkedAt, findings,
-    sources: { osv: { ok: true }, nvd: { ok: true } },
+    sources: { osv: { ok: true }, nvd: { ok: true }, github: { ok: true } },
     status: "partial", notification: "none"
   });
   const summary = findings.slice(0, 15).map((item) =>
@@ -97,7 +97,7 @@ export async function recordSecurityWatchScan(scan: SecurityScan) {
     return { duplicate: true, state: existing };
   }
   const ok = Object.values(scan.sources).filter((source) => source.ok).length;
-  const status: StoredScan["status"] = ok === 2 ? "ok" : ok === 1 ? "partial" : "failed";
+  const status: StoredScan["status"] = ok === 3 ? "ok" : ok === 1 ? "partial" : "failed";
   const combined = collectFindings(scan, existing || null);
   const sent = new Set(await redis.smembers(NOTIFIED_KEY));
   const newAlerts = scan.findings.filter((finding) => alertable(finding) && !sent.has(finding.key));
