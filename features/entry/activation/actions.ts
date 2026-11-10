@@ -4,6 +4,7 @@ import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import type { CommunityWithProgressItem } from "@/features/entry/communities/queries";
 import { listCommunitiesWithProgress } from "@/features/entry/communities/queries";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentActivationUnitLabels } from "@/features/entry/activation/currentUnitLabels";
 import {
   coerceBoolean,
   coerceNumber,
@@ -526,10 +527,21 @@ export async function getActivationQueuePageData(input: {
     }
   }
 
-  const rows =
+  let rows =
     queueError || !Array.isArray(queueData)
       ? []
       : queueData.map(mapActivationQueueRow);
+
+  // Prefer the current house label for display, but preserve onboarding
+  // snapshots (and an available queue screen) if the auxiliary read fails.
+  if (rows.length > 0) {
+    try {
+      const labels = await getCurrentActivationUnitLabels(communityId, rows.map((row) => row.id));
+      rows = rows.map((row) => ({ ...row, unit: labels.get(row.id) ?? row.unit }));
+    } catch {
+      // A descriptive read must not make the activation queue unavailable.
+    }
+  }
 
   const progress = mapOnboardingProgress(progressData);
   const hasPreparedResidents = rows.length > 0;
