@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
-const migration = readFileSync(new URL("../supabase/migrations/20261110021500_entry_allow_bound_activation_unit_rename.sql", import.meta.url), "utf8");
+const migration = readFileSync(new URL("../supabase/migrations/20261110031137_entry_allow_bound_activation_unit_rename.sql", import.meta.url), "utf8");
 const helper = readFileSync(new URL("../features/entry/activation/currentUnitLabels.ts", import.meta.url), "utf8");
 const queue = readFileSync(new URL("../features/entry/activation/actions.ts", import.meta.url), "utf8");
 const pins = readFileSync(new URL("../features/entry/activation/pinActions.ts", import.meta.url), "utf8");

@@ -73,7 +73,7 @@ jobs:
           docker cp supabase/migrations/20261106090000_entry_unit_relationships_mvp.sql "${{ job.services.postgres.id }}:/tmp/migration.sql"
           docker cp supabase/tests/fixtures/entry-unit-relationships.sql "${{ job.services.postgres.id }}:/tmp/fixture.sql"
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/fixture.sql
-          docker cp supabase/migrations/20261110021500_entry_allow_bound_activation_unit_rename.sql "${{ job.services.postgres.id }}:/tmp/rename-patch.sql"
+          docker cp supabase/migrations/20261110031137_entry_allow_bound_activation_unit_rename.sql "${{ job.services.postgres.id }}:/tmp/rename-patch.sql"
           docker cp supabase/tests/fixtures/entry-unit-rename-after-activation.sql "${{ job.services.postgres.id }}:/tmp/rename-after-activation.sql"
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/rename-patch.sql
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/rename-after-activation.sql
