@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ChevronRight, Filter, MoreHorizontal, Plus, Search, X } from "lucide-react";
+import { ArrowLeft, ChevronRight, Download, Filter, MoreHorizontal, Plus, Search, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ResidentQuickCreate } from "@/features/entry/communities/ResidentQuickCreate";
 import { EntryDrawerTabs, EntryDrawerField, EntryDrawerSection } from "@/features/entry/components/EntryDrawerTabs";
@@ -317,6 +317,15 @@ export function CommunityDirectoryWorkspace({
               <ArrowLeft className="size-4" aria-hidden />
               Back to community
             </DimensionalLink>
+
+            <a
+              href={`/products/entry/communities/${communityId}/units/export`}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-[7px] border border-[#141119] bg-[#2E2936] px-4 text-sm font-semibold text-white shadow-[0_2px_0_#141119] hover:bg-[#3A3541]"
+              title="Descargar directorio para revisión del patronato"
+            >
+              <Download className="size-4" aria-hidden />
+              Exportar directorio Excel
+            </a>
 
             <button
               type="button"
