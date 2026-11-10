@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentActivationUnitLabels } from "@/features/entry/activation/currentUnitLabels";
 
 export type GeneratePinItem = {
   queue_id: string;
@@ -85,11 +86,18 @@ export async function generateActivationPins(input: {
     revalidatePath("/products/entry/activation");
 
     const raw = data as Record<string, unknown>;
+    let items = Array.isArray(raw.items) ? (raw.items as GeneratePinItem[]) : [];
+    try {
+      const labels = await getCurrentActivationUnitLabels(communityId, items.map((item) => item.queue_id));
+      items = items.map((item) => ({ ...item, unit_label: labels.get(item.queue_id) ?? item.unit_label }));
+    } catch {
+      // Descriptive lookup failure must never invalidate a generated PIN.
+    }
     const result: GeneratePinsResult = {
       generated_count: Number(raw.generated_count ?? 0),
       skipped_count: Number(raw.skipped_count ?? 0),
       failed_count: Number(raw.failed_count ?? 0),
-      items: Array.isArray(raw.items) ? (raw.items as GeneratePinItem[]) : [],
+      items,
     };
 
     return { success: true, data: result };

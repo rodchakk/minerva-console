@@ -73,6 +73,10 @@ jobs:
           docker cp supabase/migrations/20261106090000_entry_unit_relationships_mvp.sql "${{ job.services.postgres.id }}:/tmp/migration.sql"
           docker cp supabase/tests/fixtures/entry-unit-relationships.sql "${{ job.services.postgres.id }}:/tmp/fixture.sql"
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/fixture.sql
+          docker cp supabase/migrations/20261110021500_entry_allow_bound_activation_unit_rename.sql "${{ job.services.postgres.id }}:/tmp/rename-patch.sql"
+          docker cp supabase/tests/fixtures/entry-unit-rename-after-activation.sql "${{ job.services.postgres.id }}:/tmp/rename-after-activation.sql"
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/rename-patch.sql
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/rename-after-activation.sql
 
   auth-outage-recovery-tests:
     name: Auth outage recovery regressions
@@ -180,6 +184,9 @@ jobs:
             tests/entry-global-user-seeker.test.mjs \
             tests/entry-community-directory-workspace.test.mjs \
             tests/entry-directory-unit-references.test.mjs
+
+      - name: Rename activation-bound units regression
+        run: node --test tests/entry-safe-unit-rename-pending-activation.test.mjs
 
   entry-registration-report-tests:
     name: ENTRY registration confirmation reports
