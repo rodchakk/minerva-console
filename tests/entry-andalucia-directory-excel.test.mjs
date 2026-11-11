@@ -22,6 +22,7 @@ function extractZipEntry(bytes, path) {
 }
 
 import { buildDirectoryExcel, DIRECTORY_HEADERS } from "../features/entry/communities/directoryExcel.ts";
+import { linkedGroups } from "../features/entry/communities/directoryGroups.ts";
 
 test("patronato directory is valid XLSX with one sheet and seven columns", () => {
   const bytes = buildDirectoryExcel("Residencial Andalucía", new Date("2026-11-10T18:00:00Z"), [
@@ -66,4 +67,38 @@ test("untrusted strings are emitted as text, not executable formulas", () => {
   assert.equal(sheet.B8.v, "=2+3");
   assert.equal(sheet.B8.f, undefined);
   assert.equal(sheet.E8.f, undefined);
+});
+
+test("linked apartments share an existing verified building label, not numbered unit labels", () => {
+  const units = [
+    { id: "base", label: "Apartamentos Aracely" },
+    { id: "2", label: "Apartamentos Aracely #02" },
+    { id: "3", label: "Apartamentos Aracely #03" },
+    { id: "other", label: "Casa 12" },
+  ];
+  const groups = linkedGroups(units, [
+    { unit_a_id: "base", unit_b_id: "2" },
+    { unit_a_id: "2", unit_b_id: "3" },
+  ]);
+  assert.equal(groups.get("base"), "Apartamentos Aracely");
+  assert.equal(groups.get("2"), "Apartamentos Aracely");
+  assert.equal(groups.get("3"), "Apartamentos Aracely");
+  assert.equal(groups.has("other"), false);
+});
+
+test("no inferred links, missing parent and conflicting groups remain unconfirmed", () => {
+  const units = [
+    { id: "2", label: "Apartamentos Calderón #02" },
+    { id: "6", label: "Apartamentos Calderón #06" },
+    { id: "a", label: "Edificio Norte" },
+    { id: "b", label: "Edificio Sur" },
+    { id: "c", label: "Casa 9" },
+  ];
+  const groups = linkedGroups(units, [
+    { unit_a_id: "2", unit_b_id: "6" },
+    { unit_a_id: "a", unit_b_id: "b" },
+  ]);
+  assert.match(groups.get("2"), /^Conjunto por confirmar/);
+  assert.match(groups.get("a"), /^Conjunto por confirmar/);
+  assert.equal(groups.has("c"), false);
 });
