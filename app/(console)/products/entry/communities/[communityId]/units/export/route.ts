@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import * as XLSX from "xlsx";
+import { buildDirectoryExcel } from "@/features/entry/communities/directoryExcel";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
 import { getCommunityUnitsPageData } from "@/features/entry/communities/detailQueries";
@@ -7,16 +7,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const HEADERS = [
-  "Tipo",
-  "Unidad / negocio",
-  "Conjunto / edificio",
-  "Referencia para ubicar",
-  "Residentes / contacto",
-  "Revisión",
-  "Corrección",
-] as const;
 
 type Unit = Awaited<ReturnType<typeof getCommunityUnitsPageData>>["items"][number];
 type Link = { unit_a_id: string; unit_b_id: string };
@@ -130,28 +120,11 @@ export async function GET(
     a.label.localeCompare(b.label, "es", { numeric: true })
   );
 
-  const values: string[][] = [
-    ["Directorio de " + community.name],
-    ["Generado: " + new Intl.DateTimeFormat("es-HN", { dateStyle: "long", timeZone: "America/Tegucigalpa" }).format(new Date())],
-    ["Revisión: seleccione Por revisar, Correcto o Corregir. Anote el cambio solicitado en Corrección."],
-    [],
-    [...HEADERS],
-    ...rows.map((row) => [
-      row.type, row.label, row.group, row.reference,
-      row.residents, "Por revisar", "",
-    ].map(plainText)),
-  ];
-  const worksheet = XLSX.utils.aoa_to_sheet(values);
-  worksheet["!merges"] = [
-    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
-    { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
-    { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
-  ];
-  worksheet["!cols"] = [17, 29, 39, 40, 44, 18, 48].map((wch) => ({ wch }));
-  worksheet["!autofilter"] = { ref: "A5:G" + Math.max(5, values.length) };
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Directorio");
-  const bytes = XLSX.write(workbook, { type: "buffer", bookType: "xlsx", compression: true });
+  const values: [string, string, string, string, string, string, string][] = rows.map((row) => [
+    plainText(row.type), plainText(row.label), plainText(row.group),
+    plainText(row.reference), plainText(row.residents), "Por revisar", "",
+  ]);
+  const bytes = buildDirectoryExcel(community.name, new Date(), values);
   const filename = "Directorio_" + safeFilename(community.name) + ".xlsx";
 
   return new Response(new Uint8Array(bytes), {
