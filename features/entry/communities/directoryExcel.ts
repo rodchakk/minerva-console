@@ -85,8 +85,8 @@ export function buildDirectoryExcel(community: string, date: Date, rows: Directo
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 <dimension ref="A1:G${last}"/><sheetViews><sheetView workbookViewId="0"><pane ySplit="7" topLeftCell="A8" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A8" sqref="A8"/></sheetView></sheetViews>
 <sheetFormatPr defaultRowHeight="18"/><cols>${cols}</cols><sheetData>${sheetRows}</sheetData>
-<mergeCells count="3"><mergeCell ref="A1:G1"/><mergeCell ref="A2:G2"/><mergeCell ref="A3:G3"/></mergeCells>
 <autoFilter ref="A7:G${last}"/>
+<mergeCells count="3"><mergeCell ref="A1:G1"/><mergeCell ref="A2:G2"/><mergeCell ref="A3:G3"/></mergeCells>
 <dataValidations count="1"><dataValidation type="list" allowBlank="0" showErrorMessage="1" errorTitle="Seleccione una opción" error="Use Por revisar, Correcto o Corregir." sqref="F8:F1048576"><formula1>"Por revisar,Correcto,Corregir"</formula1></dataValidation></dataValidations>
 <pageMargins left="0.25" right="0.25" top="0.4" bottom="0.4" header="0.2" footer="0.2"/>
 </worksheet>`;
