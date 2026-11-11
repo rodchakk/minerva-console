@@ -27,7 +27,7 @@ function zip(parts: ZipPart[]): Buffer {
     const header = Buffer.alloc(30);
     header.writeUInt32LE(0x04034b50, 0);
     header.writeUInt16LE(20, 4);
-    header.writeUInt16LE(8, 6);
+    header.writeUInt16LE(0, 6);
     header.writeUInt16LE(8, 8);
     header.writeUInt32LE(crc, 14);
     header.writeUInt32LE(packed.length, 18);
@@ -38,7 +38,7 @@ function zip(parts: ZipPart[]): Buffer {
     entry.writeUInt32LE(0x02014b50, 0);
     entry.writeUInt16LE(20, 4);
     entry.writeUInt16LE(20, 6);
-    entry.writeUInt16LE(8, 8);
+    entry.writeUInt16LE(0, 8);
     entry.writeUInt16LE(8, 10);
     entry.writeUInt32LE(crc, 16);
     entry.writeUInt32LE(packed.length, 20);
