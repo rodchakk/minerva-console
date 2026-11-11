@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import * as XLSX from "xlsx";
 import { inflateRawSync } from "node:zlib";
@@ -101,4 +102,32 @@ test("no inferred links, missing parent and conflicting groups remain unconfirme
   assert.match(groups.get("2"), /^Conjunto por confirmar/);
   assert.match(groups.get("a"), /^Conjunto por confirmar/);
   assert.equal(groups.has("c"), false);
+});
+
+test("export endpoint requires superadmin and community-scoped, non-cacheable download", () => {
+  const route = readFileSync("app/(console)/products/entry/communities/[communityId]/units/export/route.ts", "utf8");
+  const query = readFileSync("features/entry/communities/directoryExportQueries.ts", "utf8");
+  assert.match(route, /await requireSuperadmin\(\)/);
+  assert.match(route, /getCommunityWithProgress\(communityId\)/);
+  assert.match(route, /getCommunityDirectoryExport\(communityId\)/);
+  assert.match(route, /"Cache-Control": "private, no-store"/);
+  assert.match(query, /"house_residents"\)\.select\("id,house_id,user_id,is_active"\)/);
+  assert.match(query, /\.eq\("is_active", true\)/);
+  assert.match(query, /\.eq\("community_id", communityId\)/);
+  assert.match(query, /start \+= size/);
+  assert.match(query, /throw new Error\("Directory export source unavailable/);
+});
+
+test("full-size community export keeps every row and does not mix community labels", () => {
+  const input = Array.from({ length: 148 }, (_, i) => [
+    "Casa", "Casa " + (i + 1), "—", "Referencia " + (i + 1),
+    "Residente " + (i + 1), "Por revisar", "",
+  ]);
+  const bytes = buildDirectoryExcel("Residencial Andalucia", new Date("2026-11-10T18:00:00Z"), input);
+  const wb = XLSX.read(bytes, { type: "buffer" });
+  assert.deepEqual(wb.SheetNames, ["Directorio"]);
+  assert.equal(wb.Sheets.Directorio["!ref"], "A1:G155");
+  assert.equal(wb.Sheets.Directorio.B155.v, "Casa 148");
+  assert.equal(wb.Sheets.Directorio.A1.v, "DIRECTORIO DE RESIDENCIAL ANDALUCIA");
+  assert.doesNotMatch(extractZipEntry(bytes, "xl/worksheets/sheet1.xml"), /Paradis/);
 });
