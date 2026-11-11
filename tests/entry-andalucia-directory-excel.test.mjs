@@ -1,6 +1,26 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import * as XLSX from "xlsx";
+import { inflateRawSync } from "node:zlib";
+
+function extractZipEntry(bytes, path) {
+  let pos = 0;
+  while (pos + 30 < bytes.length && bytes.readUInt32LE(pos) === 0x04034b50) {
+    const method = bytes.readUInt16LE(pos + 8);
+    const compressed = bytes.readUInt32LE(pos + 18);
+    const nameLength = bytes.readUInt16LE(pos + 26);
+    const extraLength = bytes.readUInt16LE(pos + 28);
+    const name = bytes.subarray(pos + 30, pos + 30 + nameLength).toString();
+    const start = pos + 30 + nameLength + extraLength;
+    if (name === path) {
+      const raw = bytes.subarray(start, start + compressed);
+      return (method === 8 ? inflateRawSync(raw) : raw).toString();
+    }
+    pos = start + compressed;
+  }
+  throw new Error("Missing ZIP entry: " + path);
+}
+
 import { buildDirectoryExcel, DIRECTORY_HEADERS } from "../features/entry/communities/directoryExcel.ts";
 
 test("patronato directory is valid XLSX with one sheet and seven columns", () => {
@@ -18,7 +38,7 @@ test("patronato directory is valid XLSX with one sheet and seven columns", () =>
   assert.equal(sheet.B8.v, "Apto 02");
   assert.equal(sheet.C8.v, "Apartamentos Los Pinos");
   assert.equal(sheet.F8.v, "Por revisar");
-  assert.equal(sheet.G8.v, "");
+  assert.equal(sheet.G8?.v ?? "", "");
   assert.equal(sheet.B9.v, "Casa 105");
 });
 
@@ -26,11 +46,8 @@ test("directory retains review controls, frozen headers and Minerva styles", () 
   const bytes = buildDirectoryExcel("Paradis", new Date("2026-11-10T18:00:00Z"), [
     ["Por confirmar", "Local 01", "—", "Sin referencia registrada", "Sin residente registrado", "Por revisar", ""],
   ]);
-  const workbook = XLSX.read(bytes, { type: "buffer", bookFiles: true });
-  const files = workbook.files;
-  assert.ok(files);
-  const sheet = files["xl/worksheets/sheet1.xml"].asNodeBuffer().toString();
-  const styles = files["xl/styles.xml"].asNodeBuffer().toString();
+  const sheet = extractZipEntry(bytes, "xl/worksheets/sheet1.xml");
+  const styles = extractZipEntry(bytes, "xl/styles.xml");
   assert.match(sheet, /ySplit="7"/);
   assert.match(sheet, /autoFilter ref="A7:G8"/);
   assert.match(sheet, /sqref="F8:F1048576"/);
