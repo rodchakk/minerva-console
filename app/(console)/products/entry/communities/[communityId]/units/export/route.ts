@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { buildDirectoryExcel } from "@/features/entry/communities/directoryExcel";
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { getCommunityWithProgress } from "@/features/entry/communities/queries";
-import { getCommunityUnitsPageData } from "@/features/entry/communities/detailQueries";
-import { createClient } from "@/lib/supabase/server";
+import { getCommunityDirectoryExport, type DirectoryUnit } from "@/features/entry/communities/directoryExportQueries";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type Unit = Awaited<ReturnType<typeof getCommunityUnitsPageData>>["items"][number];
+type Unit = DirectoryUnit;
 type Link = { unit_a_id: string; unit_b_id: string };
 
 function plainText(value: string) {
@@ -81,26 +80,19 @@ export async function GET(
     return NextResponse.json({ error: "Community not found" }, { status: 404 });
   }
 
-  const supabase = await createClient();
-  const [directory, linkResult] = await Promise.all([
-    getCommunityUnitsPageData({ communityId }),
-    supabase.from("entry_unit_links")
-      .select("unit_a_id,unit_b_id")
-      .eq("community_id", communityId)
-      .is("ended_at", null),
-  ]);
-
-  if (directory.state === "unavailable" || linkResult.error) {
-    // Fail closed. An incomplete export might falsely show units as unlinked.
-    console.error("[entry-directory-export] source unavailable", {
-      communityId, linkErrorCode: linkResult.error?.code ?? null,
-      directoryState: directory.state,
+  let directory: Awaited<ReturnType<typeof getCommunityDirectoryExport>>;
+  try {
+    directory = await getCommunityDirectoryExport(communityId);
+  } catch (error) {
+    console.error("[entry-directory-export] required source unavailable", {
+      communityId,
+      reason: error instanceof Error ? error.message : "Unknown read failure",
     });
     return NextResponse.json({ error: "Directory temporarily unavailable" }, { status: 503 });
   }
 
-  const groups = linkedGroups(directory.items, (linkResult.data ?? []) as Link[]);
-  const rows = directory.items.map((unit) => {
+  const groups = linkedGroups(directory.units, directory.links);
+  const rows = directory.units.map((unit) => {
     const reference = [unit.publicReference, unit.unitReference]
       .map((value) => value.trim()).filter(Boolean);
     const activeNames = Array.from(new Set(
