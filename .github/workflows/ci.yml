@@ -51,6 +51,22 @@ jobs:
       - name: ENTRY relationships UI and scoped search regressions
         run: node --test tests/entry-unit-relationships-ui.test.mjs
 
+  entry-directory-export-tests:
+    name: ENTRY patronato Excel export
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Verify generated workbook and edit controls
+        run: node --test tests/entry-andalucia-directory-excel.test.mjs
+
   entry-unit-relationships-postgres:
     name: ENTRY unit relationships PostgreSQL fixture
     runs-on: ubuntu-latest
