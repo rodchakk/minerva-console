@@ -131,3 +131,19 @@ test("full-size community export keeps every row and does not mix community labe
   assert.equal(wb.Sheets.Directorio.A1.v, "DIRECTORIO DE RESIDENCIAL ANDALUCIA");
   assert.doesNotMatch(extractZipEntry(bytes, "xl/worksheets/sheet1.xml"), /Paradis/);
 });
+
+test("worksheet follows SpreadsheetML element order required by desktop Excel", () => {
+  const bytes = buildDirectoryExcel("Residencial Andalucia", new Date("2026-11-10T18:00:00Z"), [
+    ["Casa", "Casa 1", "—", "Ref", "Test Resident", "Por revisar", ""],
+  ]);
+  const sheet = extractZipEntry(bytes, "xl/worksheets/sheet1.xml");
+  const order = ["<sheetViews>", "<sheetFormatPr", "<cols>", "<sheetData>", "<autoFilter", "<mergeCells", "<dataValidations", "<pageMargins"];
+  let previous = -1;
+  for (const tag of order) {
+    const index = sheet.indexOf(tag);
+    assert.ok(index > previous, "Invalid SpreadsheetML element sequence: " + tag);
+    previous = index;
+  }
+  assert.equal((sheet.match(/<worksheet\\b/g) ?? []).length, 1);
+  assert.equal((sheet.match(/<\\/worksheet>/g) ?? []).length, 1);
+});
