@@ -46,14 +46,18 @@ function linkedGroups(units: Unit[], links: Link[]) {
       }
     }
     if (members.length < 2) continue;
-    const explicitBuilding = members
+    const buildingNames = Array.from(new Set(members
       .map((item) => item.label.trim())
       .filter((label) => /^(?:apartamentos|edificio|condominio|residencial)\b/i.test(label))
-      .sort((a, b) => a.localeCompare(b, "es"))[0];
+    )).sort((a, b) => a.localeCompare(b, "es"));
     const neutralAnchor = members
       .map((item) => item.label.trim())
       .sort((a, b) => a.localeCompare(b, "es"))[0];
-    const name = explicitBuilding || "Conjunto por confirmar (" + neutralAnchor + ")";
+    // Links connect independent units, not a canonical building record.
+    // Never choose an arbitrary winner if several possible group names exist.
+    const name = buildingNames.length === 1
+      ? buildingNames[0]
+      : "Conjunto por confirmar (" + neutralAnchor + ")";
     for (const member of members) names.set(member.id, name);
   }
   return names;
