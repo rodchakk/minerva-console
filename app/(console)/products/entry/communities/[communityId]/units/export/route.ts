@@ -10,11 +10,6 @@ export const dynamic = "force-dynamic";
 type Unit = DirectoryUnit;
 type Link = { unit_a_id: string; unit_b_id: string };
 
-function plainText(value: string) {
-  // Avoid interpreting untrusted labels and names as spreadsheet formulas.
-  return /^[=+@\-\t\r]/.test(value) ? "'" + value : value;
-}
-
 function unitType(label: string) {
   if (/^(?:apto\.?|apartamento\b|apartamentos\b)/i.test(label.trim())) return "Apartamento";
   if (/^(?:casa\b|vivienda\b)/i.test(label.trim())) return "Casa";
@@ -113,8 +108,8 @@ export async function GET(
   );
 
   const values: [string, string, string, string, string, string, string][] = rows.map((row) => [
-    plainText(row.type), plainText(row.label), plainText(row.group),
-    plainText(row.reference), plainText(row.residents), "Por revisar", "",
+    row.type, row.label, row.group,
+    row.reference, row.residents, "Por revisar", "",
   ]);
   const bytes = buildDirectoryExcel(community.name, new Date(), values);
   const filename = "Directorio_" + safeFilename(community.name) + ".xlsx";
