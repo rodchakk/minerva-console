@@ -144,6 +144,6 @@ test("worksheet follows SpreadsheetML element order required by desktop Excel", 
     assert.ok(index > previous, "Invalid SpreadsheetML element sequence: " + tag);
     previous = index;
   }
-  assert.equal(sheet.split("</worksheet>").length - 1, 1);
+  assert.equal(sheet.split("<worksheet ").length - 1, 1);
   assert.equal(sheet.split("</worksheet>").length - 1, 1);
 });
