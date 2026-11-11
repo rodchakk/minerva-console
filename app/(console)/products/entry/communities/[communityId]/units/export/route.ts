@@ -46,9 +46,12 @@ function linkedGroups(units: Unit[], links: Link[]) {
       }
     }
     if (members.length < 2) continue;
+    // A suffix (#02, #3) identifies an independent unit, not a second building.
+    // Use an explicitly existing unsuffixed label as the common name.
     const buildingNames = Array.from(new Set(members
       .map((item) => item.label.trim())
       .filter((label) => /^(?:apartamentos|edificio|condominio|residencial)\b/i.test(label))
+      .filter((label) => !/\s+#\s*\d+$/u.test(label))
     )).sort((a, b) => a.localeCompare(b, "es"));
     const neutralAnchor = members
       .map((item) => item.label.trim())
