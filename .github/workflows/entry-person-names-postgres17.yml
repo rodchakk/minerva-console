@@ -1,0 +1,38 @@
+name: ENTRY person-name PostgreSQL 17 fixture
+
+on:
+  pull_request:
+    paths:
+      - "supabase/migrations/20261112190000_entry_person_name_capitalization.sql"
+      - "supabase/migrations/20261112190100_entry_quick_edit_display_name_compatibility.sql"
+      - "supabase/tests/entry-person-names-postgres17.sql"
+      - ".github/workflows/entry-person-names-postgres17.yml"
+  workflow_dispatch:
+
+jobs:
+  postgres-name-normalization:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: test-only-password
+          POSTGRES_DB: entry_name_fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d entry_name_fixture"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+      - name: Exercise real migration and six name triggers
+        env:
+          PGPASSWORD: test-only-password
+        run: |
+          psql -h 127.0.0.1 -U postgres -d entry_name_fixture -v ON_ERROR_STOP=1 -f supabase/tests/entry-person-names-postgres17.sql
