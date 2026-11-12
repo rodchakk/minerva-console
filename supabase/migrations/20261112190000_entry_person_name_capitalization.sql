@@ -17,7 +17,9 @@ as $fn$
 $fn$;
 
 revoke all on function public.entry_display_person_name_v1(text) from public, anon, authenticated;
-grant execute on function public.entry_display_person_name_v1(text) to service_role;
+-- Required for invoker-rights triggers on resident-facing writes.
+-- This helper is pure text formatting and exposes no stored data.
+grant execute on function public.entry_display_person_name_v1(text) to anon, authenticated, service_role;
 
 -- One trigger implementation keeps all person-name fields consistent at write time.
 -- No changes to UUIDs, email, username, PIN, roles, membership, or access fields.
@@ -34,7 +36,9 @@ begin
   elsif TG_TABLE_NAME = 'community_registration_residents' then
     NEW.full_name := public.entry_display_person_name_v1(NEW.full_name);
     -- Keep the deliberately lowercase comparison key, including on imports.
-    NEW.normalized_full_name := public._cr_normalize_name_v1(NEW.full_name);
+    -- Inline only the canonical lowercase transformation here: the
+    -- existing identity-normalization helper is intentionally service-role only.
+    NEW.normalized_full_name := nullif(lower(regexp_replace(btrim(coalesce(NEW.full_name, '')), '[[:space:]]+', ' ', 'g')), '');
   elsif TG_TABLE_NAME = 'resident_invites' then
     NEW.full_name := public.entry_display_person_name_v1(NEW.full_name);
   elsif TG_TABLE_NAME = 'resident_favorites' then
