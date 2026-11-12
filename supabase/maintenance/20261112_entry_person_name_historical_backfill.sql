@@ -88,7 +88,7 @@ begin
     union all select full_name from public.resident_invites
     union all select full_name from public.resident_favorites
     union all select owner_name from public.houses
-  ) s where n is not null and n is distinct from public.entry_display_person_name_v1(n);
+  ) s where s.n is not null and s.n is distinct from public.entry_display_person_name_v1(s.n);
   if n <> 0 then
     raise exception 'Name repair incomplete: % nonconforming display values',n;
   end if;
