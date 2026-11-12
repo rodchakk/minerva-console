@@ -13,7 +13,7 @@ test('display write guard covers all six intended human-name fields', () => {
   for (const table of ['profiles', 'resident_activation_queue', 'community_registration_residents', 'resident_invites', 'resident_favorites', 'houses']) {
     assert.match(migration, new RegExp("TG_TABLE_NAME = '"+table+"'|on public\\."+table, 'i'));
   }
-  assert.match(migration, /NEW\.normalized_full_name\s*:=\s*public\._cr_normalize_name_v1\(NEW\.full_name\)/);
+  assert.match(migration, /NEW\.normalized_full_name\s*:=\s*nullif\(lower\(regexp_replace\(/);
 });
 
 test('search normalizers are not overwritten by display migration', () => {
