@@ -35,6 +35,7 @@ import type { ActivationQueueRow } from "@/features/entry/activation/actions";
 import { getActivationResidentForUsersAction } from "@/features/entry/activation/lookupActions";
 import { EntryDrawerTabs, EntryDrawerSection, EntryDrawerField } from "@/features/entry/components/EntryDrawerTabs";
 import { getGlobalHouseholdMembersAction, type GlobalHouseholdMember } from "@/features/entry/users/householdActions";
+import { moveResidentToUnitAction } from "@/features/entry/communities/residentMoveActions";
 import {
   getGlobalUserManagementContextAction,
   searchUsersAction,
@@ -58,6 +59,7 @@ type ResultFilter = "all" | "RESIDENT" | "ADMIN" | "GUARD" | "inactive" | "pendi
 type ManageMode = "view" | "edit" | "role" | "unit" | "password" | "status";
 type EditableCommunityRole = "ADMIN" | "RESIDENT";
 type PasswordResetMode = "quick" | "email";
+const UNASSIGNED_DESTINATION = "__unassigned__";
 
 type UserDraft = {
   fullName: string;
@@ -432,8 +434,41 @@ export function UserSearch() {
       return;
     }
 
+    if (unitDraft === UNASSIGNED_DESTINATION) {
+      if (!selectedUser.houseId) {
+        setError("This account is already unassigned.");
+        return;
+      }
+      if (!window.confirm(`Unassign ${selectedUser.fullName} from ${selectedUser.houseLabel || "their current unit"}? This also deactivates the account. Historical records are preserved.`)) return;
+      startTransition(async () => {
+        const result = await moveResidentToUnitAction({
+          communityId: selectedUser.communityId,
+          sourceHouseId: selectedUser.houseId,
+          targetHouseId: null,
+          userId: selectedUser.id,
+        });
+        if (!result.success) {
+          setError(result.error ?? "Could not unassign this resident.");
+          return;
+        }
+        syncUser(selectedUser, {
+          houseId: "",
+          houseLabel: "",
+          isPrimary: false,
+          isActive: false,
+          role: "UNASSIGNED",
+        });
+        setHouseholdMembers([]);
+        setHouseholdError(null);
+        setMessage("Resident unassigned and account deactivated. Historical records are preserved.");
+        setManageMode("view");
+        router.refresh();
+      });
+      return;
+    }
+
     const selectedHouse = houses.find((house) => house.id === unitDraft);
-    if (!selectedHouse) {
+    if (!selectedHouse || !selectedHouse.isActive) {
       setError("Selected unit is no longer available.");
       return;
     }
@@ -1226,7 +1261,7 @@ export function UserSearch() {
                   <div>
                     <p className="text-sm font-semibold text-white">Change unit</p>
                     <p className="mt-1 text-xs leading-5 text-[#A9A3B2]">
-                      Move this account to another unit inside {selectedUser.communityName}.
+                      Move this account to another unit inside {selectedUser.communityName}, or leave the resident unassigned.
                     </p>
                   </div>
 
@@ -1238,6 +1273,7 @@ export function UserSearch() {
                       className="h-10 w-full rounded-md border border-[#141119] bg-[#2E2936] px-3 text-sm text-white outline-none focus:ring-2 focus:ring-[#7553FF]"
                     >
                       <option value="">Select unit</option>
+                      {selectedUser.houseId ? <option value={UNASSIGNED_DESTINATION}>Unassigned — No unit</option> : null}
                       {houses.map((house) => (
                         <option key={house.id} value={house.id} disabled={!house.isActive}>
                           {house.label}{house.isActive ? "" : " (inactive)"}
@@ -1246,7 +1282,11 @@ export function UserSearch() {
                     </select>
                   </label>
 
-                  {selectedUser.isPrimary ? (
+                  {unitDraft === UNASSIGNED_DESTINATION ? (
+                    <div className="rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-3.5 py-3 text-xs leading-5 text-amber-100">
+                      Unassigning removes this account from its current unit and deactivates account access. Audit and access history remain unchanged.
+                    </div>
+                  ) : selectedUser.isPrimary ? (
                     <div className="rounded-lg border border-amber-400/20 bg-amber-500/[0.07] px-3.5 py-3 text-xs leading-5 text-amber-100">
                       This account is currently the Primary resident. If the destination unit already has a Primary resident, this account will become a household member; otherwise the primary relationship is preserved.
                     </div>
@@ -1267,7 +1307,7 @@ export function UserSearch() {
                       onClick={submitUnitChange}
                       disabled={isPending || !unitDraft || unitDraft === selectedUser.houseId}
                     >
-                      {isPending ? "Moving..." : "Change unit"}
+                      {isPending ? "Updating..." : unitDraft === UNASSIGNED_DESTINATION ? "Unassign resident" : "Change unit"}
                     </button>
                   </div>
                 </div>
