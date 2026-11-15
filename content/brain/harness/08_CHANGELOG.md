@@ -2,6 +2,14 @@
 
 Append-only. Most recent first.
 
+## 2026-11-09 - ENTRY-DIRECTORY-001 - Andalucia patronato Excel layout approved
+
+- Captured approved product decision `DEC-0010`: one-sheet, seven-column directory export from Minerva Console for Residencial Andalucia, designed for the patronato to verify houses, apartments, businesses, residents and unit references.
+- Replaced confusing `Pertenece a` with `Conjunto / edificio` sourced from verified active unit connections; administrative links are not ownership or a hierarchy and each apartment remains independent.
+- Preserved the reviewed simple demo layout: clear typography, modest Minerva red accents, filterable rows, and two editable feedback fields (`Revisión` and `Corrección`).
+- Excluded dashboard charts, multiple sheets, security/activation internals, credentials, and deferred `Responsible contacts`. Classified uncertain business/unit types as pending verification rather than guessing.
+- Implementation is planned for 2026-11-10; this capture makes **no code, production data, auth, export, or deployment change**, and adds no MCB mission-ledger entry per `DEC-0005`.
+
 ## 2026-09-03 - SESHAT-BRAIN-001 - Supabase billing separation captured
 
 - Added `DEC-0009` approving `SESHAT — Infrastructure / Supabase Billing Separation` as the current infrastructure decision for Seshat.

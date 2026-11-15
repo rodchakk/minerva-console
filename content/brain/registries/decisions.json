@@ -106,5 +106,31 @@
     "tags": ["seshat", "infrastructure", "supabase", "billing", "free-tier", "internal-tool", "cost-control"],
     "related": ["PRJ-0002", "PRJ-0001", "DEC-0004", "DEC-0008"],
     "path": "content/brain/decisions/dec-0009-seshat-infrastructure-supabase-billing-separation.md"
+  },
+  {
+    "id": "DEC-0010",
+    "type": "decision",
+    "status": "approved",
+    "title": "ENTRY Andalucía simple Excel directory for patronato cleanup",
+    "summary": "Approved one-sheet Excel export for Residencial Andalucía with seven clear columns: Tipo, Unidad / negocio, Conjunto / edificio, Referencia para ubicar, Residentes / contacto, Revisión and Corrección. Conjunto / edificio uses verified active unit links without implying property or hierarchy; no dashboards, multiple tabs, responsible contacts or sensitive credentials. Implementation planned for 2026-11-10; design-only capture.",
+    "created": "2026-11-09",
+    "updated": "2026-11-09",
+    "tags": [
+      "entry",
+      "andalucia",
+      "reporting",
+      "excel",
+      "patronato",
+      "unit-connections",
+      "data-quality",
+      "export"
+    ],
+    "related": [
+      "DEC-0004",
+      "DEC-0005",
+      "DEC-0008",
+      "PRJ-0001"
+    ],
+    "path": "content/brain/decisions/dec-0010-entry-andalucia-simple-directory-export.md"
   }
 ]
