@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, ChevronRight } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import type { CommunityOnboardingDetail } from "@/features/entry/communities/queries";
@@ -163,6 +164,7 @@ export function CommunityOnboardingReadinessPanel({
   nextStepKey,
   progressLabel,
 }: CommunityOnboardingReadinessPanelProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [result, setResult] = useState<OnboardingActionResult | null>(null);
   const [completionNote, setCompletionNote] = useState("");
@@ -206,6 +208,9 @@ export function CommunityOnboardingReadinessPanel({
     startTransition(async () => {
       const actionResult = await markActivationQueueReviewedAction(communityId);
       setResult(actionResult);
+      if (actionResult.success) {
+        router.refresh();
+      }
     });
   }
 
