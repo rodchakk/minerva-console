@@ -1,5 +1,10 @@
 import type { NextRequest } from "next/server";
 import { getEntryPreviewReadOnlyError } from "@/features/entry/deploymentBoundary";
+import {
+  enforceActivationCompleteRateLimit,
+  isRateLimitDenied,
+  rateLimitJsonResponse,
+} from "@/features/entry/communityRegistration/public/rateLimit";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -14,22 +19,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const rateLimit = await enforceActivationCompleteRateLimit(request);
+  if (isRateLimitDenied(rateLimit)) {
+    return rateLimitJsonResponse(rateLimit);
+  }
+
+  let activationId = "";
   let pin = "";
   let password = "";
   try {
-    const body = (await request.json()) as { password?: unknown; pin?: unknown };
+    const body = (await request.json()) as {
+      activationId?: unknown;
+      password?: unknown;
+      pin?: unknown;
+    };
+    activationId = String(body.activationId ?? "").trim();
     pin = String(body.pin ?? "").trim();
     password = String(body.password ?? "");
   } catch {
     return Response.json({ error: "invalid_request", success: false }, { status: 400 });
   }
 
-  if (!/^\d{6}$/.test(pin) || password.length < 8) {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(activationId) || !/^\d{6}$/.test(pin) || password.length < 8) {
     return Response.json({ error: "invalid_request", success: false }, { status: 400 });
   }
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("complete_resident_activation_pin_v1", {
+  const { data, error } = await supabase.rpc("complete_resident_activation_pin_v2", {
+    p_activation_id: activationId,
     p_password: password,
     p_pin: pin,
   });

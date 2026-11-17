@@ -15,6 +15,8 @@ export const RATE_LIMIT_QUOTA_MESSAGE =
   "Has realizado demasiados intentos. Espera un momento e inténtalo nuevamente.";
 
 const RATE_LIMIT_POLICIES = {
+  activationCompleteNetwork: { limit: 10, window: "10 m" },
+  activationValidateNetwork: { limit: 20, window: "10 m" },
   campaignAccessNetwork: { limit: 10, window: "10 m" },
   campaignPageRead: { limit: 30, window: "10 m" },
   correctionAccessNetwork: { limit: 6, window: "10 m" },
@@ -413,6 +415,18 @@ export async function enforceCampaignAccessRateLimit(
 ) {
   return enforceEntryRateLimitChecks([
     networkCheck(source, "campaignAccessNetwork", input.slug),
+  ]);
+}
+
+export async function enforceActivationValidateRateLimit(source: HeaderSource) {
+  return enforceEntryRateLimitChecks([
+    networkCheck(source, "activationValidateNetwork", "resident-activation"),
+  ]);
+}
+
+export async function enforceActivationCompleteRateLimit(source: HeaderSource) {
+  return enforceEntryRateLimitChecks([
+    networkCheck(source, "activationCompleteNetwork", "resident-activation"),
   ]);
 }
 

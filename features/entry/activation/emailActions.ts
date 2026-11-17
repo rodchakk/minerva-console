@@ -241,8 +241,9 @@ export async function sendActivationEmails(input: {
       continue;
     }
 
-    // Never send an invitation with a missing PIN.
-    if (item.status !== "pin_generated" || !item.pin) {
+    // v2 invitations require both credential components. The opaque handle is
+    // placed in the link; the PIN is displayed separately in the message.
+    if (item.status !== "pin_generated" || !item.pin || !item.activation_id) {
       failed_count++;
       emailResults.push({
         queue_id: item.queue_id,
@@ -256,8 +257,8 @@ export async function sendActivationEmails(input: {
     const sharePin =
       sharePinForQueue === item.queue_id ? item.pin : undefined;
     const activationLink = baseUrl
-      ? `${baseUrl}/activate?pin=${item.pin}`
-      : `entry://activate?pin=${item.pin}`;
+      ? `${baseUrl}/activate?id=${encodeURIComponent(item.activation_id)}`
+      : `entry://activate?id=${encodeURIComponent(item.activation_id)}`;
     const emailContent = buildActivationInviteEmail({
       activationLink,
       communityName,

@@ -215,12 +215,12 @@ async function processMessage(
     }
 
     // Generate a fresh PIN just-in-time via the worker-only RPC.
-    // worker_generate_resident_activation_pin_v1 is service_role-gated
+    // worker_generate_resident_activation_pin_v2 is service_role-gated
     // (both via auth.role() check and via GRANT) so it does not depend on
     // a user JWT — which the generic generate_resident_activation_pins_v1
     // does (it calls is_superadmin() → auth.uid()).
     const { data: pinData, error: pinErr } = await supabase.rpc(
-      "worker_generate_resident_activation_pin_v1",
+      "worker_generate_resident_activation_pin_v2",
       {
         p_community_id: msg.community_id,
         p_queue_id: msg.activation_queue_id,
@@ -228,15 +228,24 @@ async function processMessage(
     );
 
     if (pinErr) throw new Error(`pin_generation_failed: ${pinErr.message}`);
-    const pinRow = pinData as { pin?: string | null; status?: string } | null;
-    if (!pinRow || pinRow.status !== "pin_generated" || !pinRow.pin) {
+    const pinRow = pinData as {
+      activation_id?: string | null;
+      pin?: string | null;
+      status?: string;
+    } | null;
+    if (
+      !pinRow ||
+      pinRow.status !== "pin_generated" ||
+      !pinRow.pin ||
+      !pinRow.activation_id
+    ) {
       throw new Error("pin_not_generated");
     }
     const generatedPin = pinRow.pin;
 
     const activationLink = ACTIVATION_BASE_URL
-      ? `${ACTIVATION_BASE_URL}/activate?pin=${encodeURIComponent(generatedPin)}`
-      : `entry://activate?pin=${encodeURIComponent(generatedPin)}`;
+      ? `${ACTIVATION_BASE_URL}/activate?id=${encodeURIComponent(pinRow.activation_id)}`
+      : `entry://activate?id=${encodeURIComponent(pinRow.activation_id)}`;
 
     let provider = "resend";
     let providerMessageId: string | null = null;
