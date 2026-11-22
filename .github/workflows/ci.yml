@@ -51,6 +51,44 @@ jobs:
       - name: ENTRY relationships UI and scoped search regressions
         run: node --test tests/entry-unit-relationships-ui.test.mjs
 
+  entry-facilities-contract-tests:
+    name: ENTRY Facilities module toggle regressions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+      - name: Verify module switch, facility state, and backend guards
+        run: node --test tests/entry-facilities-module-toggle.test.mjs
+
+  entry-facilities-postgres-tests:
+    name: ENTRY Facilities module PostgreSQL 17.6
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Apply isolated fixture, migration, and SQL assertions
+        run: |
+          docker cp supabase/tests/fixtures/entry-facilities-module-switch-setup.sql "${{ job.services.postgres.id }}:/tmp/fixture.sql"
+          docker cp supabase/migrations/20261121235000_enforce_facilities_community_switch.sql "${{ job.services.postgres.id }}:/tmp/migration.sql"
+          docker cp supabase/tests/fixtures/entry-facilities-module-switch-assert.sql "${{ job.services.postgres.id }}:/tmp/assert.sql"
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/fixture.sql
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/migration.sql
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/assert.sql
+
   entry-directory-export-tests:
     name: ENTRY patronato Excel export
     runs-on: ubuntu-latest

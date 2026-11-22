@@ -558,6 +558,112 @@ export async function createCommunityAction(
   };
 }
 
+
+export type UpdateCommunityReservationsInput = {
+  communityId: string;
+  enabled: boolean;
+};
+
+export type UpdateCommunityFacilityStateInput = {
+  communityId: string;
+  facilityId: string;
+  enabled: boolean;
+};
+
+type FacilitySettingsActionResult = {
+  error?: string;
+  success: boolean;
+};
+
+function validCommunityUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+}
+
+export async function updateCommunityReservationsAction(
+  input: UpdateCommunityReservationsInput,
+): Promise<FacilitySettingsActionResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+  if (previewReadOnlyError) return { success: false, error: previewReadOnlyError };
+
+  const communityId = input.communityId.trim();
+  if (!validCommunityUuid(communityId) || typeof input.enabled !== "boolean") {
+    return { success: false, error: "Invalid community or reservations state." };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("update_community_settings_v1", {
+    p_community_id: communityId,
+    p_allow_reservations: input.enabled,
+  });
+
+  if (error) return { success: false, error: error.message };
+
+  const updated = data && typeof data === "object" && !Array.isArray(data)
+    ? (data as Record<string, unknown>)
+    : {};
+  if (updated.allow_reservations !== input.enabled) {
+    return { success: false, error: "Reservations setting could not be verified." };
+  }
+
+  revalidatePath("/products/entry/communities");
+  revalidatePath("/products/entry/communities/" + communityId);
+  return { success: true };
+}
+
+export async function updateCommunityFacilityStateAction(
+  input: UpdateCommunityFacilityStateInput,
+): Promise<FacilitySettingsActionResult> {
+  await requireSuperadmin();
+  const previewReadOnlyError = getEntryPreviewReadOnlyError();
+  if (previewReadOnlyError) return { success: false, error: previewReadOnlyError };
+
+  const communityId = input.communityId.trim();
+  const facilityId = input.facilityId.trim();
+  if (!validCommunityUuid(communityId) || !validCommunityUuid(facilityId) ||
+      typeof input.enabled !== "boolean") {
+    return { success: false, error: "Invalid community, facility, or state." };
+  }
+
+  const supabase = await createClient();
+  const { data: facility, error: loadError } = await supabase
+    .from("community_facilities")
+    .select("id,community_id,name,description,is_active,opening_time,closing_time,slot_minutes,approval_mode,price_per_slot,currency_code")
+    .eq("id", facilityId)
+    .eq("community_id", communityId)
+    .maybeSingle();
+
+  if (loadError || !facility) {
+    return { success: false, error: loadError?.message || "Facility not found in this community." };
+  }
+
+  if (facility.is_active === input.enabled) return { success: true };
+
+  const { data, error } = await supabase.rpc("superadmin_upsert_community_facility", {
+    p_community_id: communityId,
+    p_facility_id: facilityId,
+    p_name: facility.name,
+    p_description: facility.description,
+    p_is_active: input.enabled,
+    p_opening_time: facility.opening_time,
+    p_closing_time: facility.closing_time,
+    p_slot_minutes: facility.slot_minutes,
+    p_approval_mode: facility.approval_mode,
+    p_price_per_slot: facility.price_per_slot,
+    p_currency_code: facility.currency_code,
+  });
+
+  if (error) return { success: false, error: error.message };
+
+  const updated = Array.isArray(data) ? data[0] : data;
+  if (!updated || updated.id !== facilityId || updated.is_active !== input.enabled) {
+    return { success: false, error: "Facility state could not be verified." };
+  }
+
+  revalidatePath("/products/entry/communities/" + communityId);
+  return { success: true };
+}
+
 export async function createCommunityFacilitiesAction(
   input: CreateCommunityFacilitiesInput,
 ): Promise<CreateCommunityFacilitiesResult> {
