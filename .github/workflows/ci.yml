@@ -89,6 +89,31 @@ jobs:
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/migration.sql
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/assert.sql
 
+  entry-facility-upsert-postgres-tests:
+    name: ENTRY Facility toggle PostgreSQL 17.6
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Apply fixture and verify individual facility enable/disable
+        run: |
+          docker cp supabase/tests/fixtures/entry-facilities-module-switch-setup.sql "${{ job.services.postgres.id }}:/tmp/fixture.sql"
+          docker cp supabase/migrations/20261122003000_fix_facility_upsert_ambiguous_id.sql "${{ job.services.postgres.id }}:/tmp/migration.sql"
+          docker cp supabase/tests/fixtures/entry-facility-upsert-id-assert.sql "${{ job.services.postgres.id }}:/tmp/assert.sql"
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/fixture.sql
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/migration.sql
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/assert.sql
+
   entry-directory-export-tests:
     name: ENTRY patronato Excel export
     runs-on: ubuntu-latest
