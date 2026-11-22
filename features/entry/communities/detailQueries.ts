@@ -775,7 +775,7 @@ async function loadUnitsPreview(
 
     return {
       items,
-      state: items.length > 0 ? "live" : "empty",
+      state: !allowReservations ? "disabled" : items.length > 0 ? "live" : "empty",
       total: items.length,
     };
   } catch (error) {
@@ -1181,10 +1181,8 @@ async function loadFacilitiesPreview(
       };
     }
 
-    const allowReservations =
-      settingsData?.allow_reservations === undefined
-        ? true
-        : coerceBoolean(settingsData.allow_reservations);
+    // Fail closed: never report Facilities as live without an explicit enabled setting.
+    const allowReservations = settingsData?.allow_reservations === true;
 
     if (error) {
       return {
