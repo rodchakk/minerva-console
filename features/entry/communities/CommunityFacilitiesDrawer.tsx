@@ -493,7 +493,7 @@ export function CommunityFacilitiesDrawer({
                       </div>
                     </div>
                     <span className="inline-flex h-7 items-center rounded-[4px] border border-[#141119] bg-[#2E2936] px-2.5 text-[10px] font-semibold text-[#8F879D]">
-                      Read-only
+                      {reservationsEnabled ? "Status editable" : "Module disabled"}
                     </span>
                   </div>
 
