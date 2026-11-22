@@ -775,7 +775,7 @@ async function loadUnitsPreview(
 
     return {
       items,
-      state: !allowReservations ? "disabled" : items.length > 0 ? "live" : "empty",
+      state: items.length > 0 ? "live" : "empty",
       total: items.length,
     };
   } catch (error) {
@@ -1252,7 +1252,7 @@ async function loadFacilitiesPreview(
     return {
       activeCount: items.filter((item) => item.isActive).length,
       items: items.slice(0, PREVIEW_LIMIT),
-      state: items.length > 0 ? "live" : "empty",
+      state: !allowReservations ? "disabled" : items.length > 0 ? "live" : "empty",
       total: items.length,
     };
   } catch (error) {
