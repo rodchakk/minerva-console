@@ -27,7 +27,7 @@ BEGIN
   WHERE cf.community_id = v_cid AND cf.is_active = true
   ORDER BY cf.name;
 END;
-$function$
+$function$;
 
 -- admin_list_community_facilities
 CREATE OR REPLACE FUNCTION public.admin_list_community_facilities()
@@ -55,7 +55,7 @@ BEGIN
   WHERE cf.community_id = v_cid
   ORDER BY cf.is_active DESC, cf.name;
 END;
-$function$
+$function$;
 
 -- admin_list_facility_reservations
 CREATE OR REPLACE FUNCTION public.admin_list_facility_reservations(p_status text DEFAULT NULL::text, p_date date DEFAULT NULL::date)
@@ -94,7 +94,7 @@ BEGIN
     AND (p_date   IS NULL OR fr.start_at::date = p_date)
   ORDER BY fr.start_at ASC;
 END;
-$function$
+$function$;
 
 -- list_my_facility_reservations
 CREATE OR REPLACE FUNCTION public.list_my_facility_reservations()
@@ -120,7 +120,7 @@ BEGIN
     )
   ORDER BY fr.start_at ASC;
 END;
-$function$
+$function$;
 
 -- get_facility_availability
 CREATE OR REPLACE FUNCTION public.get_facility_availability(p_facility_id uuid, p_date date)
@@ -216,7 +216,7 @@ BEGIN
     v_slot_start := v_slot_end;
   END LOOP;
 END;
-$function$
+$function$;
 
 -- guard_community_facilities_by_setting
 CREATE OR REPLACE FUNCTION public.guard_community_facilities_by_setting()
@@ -244,7 +244,7 @@ begin
 
   return new;
 end;
-$function$
+$function$;
 
 -- guard_facility_reservations_by_setting
 CREATE OR REPLACE FUNCTION public.guard_facility_reservations_by_setting()
@@ -275,7 +275,7 @@ begin
   raise exception 'Reservations are disabled for community %', new.community_id
     using errcode = '23514';
 end;
-$function$
+$function$;
 
 
 DROP POLICY IF EXISTS community_facilities_feature_enabled_select ON public.community_facilities;
