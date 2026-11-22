@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, Plus, Search, X } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
 import { entryButtonClass } from "@/components/ui/entryButtonStyles";
-import { createCommunityFacilitiesAction } from "@/features/entry/communities/actions";
+import {
+  createCommunityFacilitiesAction,
+  updateCommunityFacilityStateAction,
+  updateCommunityReservationsAction,
+} from "@/features/entry/communities/actions";
 import type {
   CommunityDetailPreviews,
   CommunityFacilityPreview,
@@ -73,6 +77,12 @@ export function CommunityFacilitiesDrawer({
     facilities[0]?.id ?? null,
   );
   const [isCreating, startCreateTransition] = useTransition();
+  const [isUpdatingModule, startModuleTransition] = useTransition();
+  const [isUpdatingFacility, startFacilityTransition] = useTransition();
+  const [moduleMessage, setModuleMessage] = useState<string | null>(null);
+  const [moduleError, setModuleError] = useState<string | null>(null);
+  const [facilityMessage, setFacilityMessage] = useState<string | null>(null);
+  const [facilityError, setFacilityError] = useState<string | null>(null);
 
   const filteredFacilities = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -129,7 +139,55 @@ export function CommunityFacilitiesDrawer({
     null;
   const activeCount = facilities.filter((facility) => facility.isActive).length;
   const stateCopy = getFacilityStateCopy(state, facilities.length > 0);
-  const canCreateFacilities = state !== "disabled" && state !== "unavailable";
+  const reservationsEnabled = state !== "disabled" && state !== "unavailable";
+  const canEditFacilities = reservationsEnabled;
+  const canCreateFacilities = reservationsEnabled;
+
+  function toggleModule() {
+    if (state === "unavailable" || isUpdatingModule) return;
+    const enabled = !reservationsEnabled;
+    if (!enabled && !window.confirm(
+      "Disable Facilities for this residential? Residents and admins will not be able to make new reservations. Existing facilities and reservation history will be preserved.",
+    )) return;
+
+    setModuleError(null);
+    setModuleMessage(null);
+    startModuleTransition(async () => {
+      const result = await updateCommunityReservationsAction({ communityId, enabled });
+      if (!result.success) {
+        setModuleError(result.error ?? "Could not update Facilities.");
+        return;
+      }
+
+      setModuleMessage(enabled ? "Facilities enabled." : "Facilities disabled. Existing data is preserved.");
+      router.refresh();
+    });
+  }
+
+  function toggleSelectedFacility() {
+    if (!selectedFacility || !canEditFacilities || isUpdatingFacility) return;
+    const enabled = !selectedFacility.isActive;
+    if (!enabled && !window.confirm(
+      "Disable this facility? It will no longer be available for new reservations. Existing reservations will not be deleted.",
+    )) return;
+
+    setFacilityError(null);
+    setFacilityMessage(null);
+    startFacilityTransition(async () => {
+      const result = await updateCommunityFacilityStateAction({
+        communityId,
+        facilityId: selectedFacility.id,
+        enabled,
+      });
+      if (!result.success) {
+        setFacilityError(result.error ?? "Could not update the facility.");
+        return;
+      }
+
+      setFacilityMessage(enabled ? "Facility enabled." : "Facility disabled.");
+      router.refresh();
+    });
+  }
 
   function submitFacility() {
     setCreateMessage(null);
@@ -276,6 +334,31 @@ export function CommunityFacilitiesDrawer({
                         : "Awaiting setup"}
                 </p>
               </div>
+            </div>
+
+            <div className="border-b border-[#141119] bg-[#211D28] px-5 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-white/10 bg-[#24202B] p-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#BEB4FF]">Facilities module</p>
+                  <p className="mt-1 text-sm font-semibold text-white">
+                    {state === "unavailable" ? "Status unavailable" : reservationsEnabled ? "Enabled for this community" : "Disabled for this community"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#A9A3B2]">
+                    Turning it off keeps facilities and reservation history stored; new bookings are blocked.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-pressed={reservationsEnabled}
+                  disabled={state === "unavailable" || isUpdatingModule}
+                  onClick={toggleModule}
+                  className={entryButtonClass(reservationsEnabled ? "secondary" : "primary", "min-w-[170px] justify-center")}
+                >
+                  {isUpdatingModule ? "Saving..." : reservationsEnabled ? "Disable Facilities" : "Enable Facilities"}
+                </button>
+              </div>
+              {moduleMessage ? <p className="mt-2 text-sm text-emerald-200" role="status">{moduleMessage}</p> : null}
+              {moduleError ? <p className="mt-2 text-sm text-rose-200" role="alert">{moduleError}</p> : null}
             </div>
 
             <div className="flex min-h-0 flex-1 flex-col px-5 py-4">
@@ -435,25 +518,30 @@ export function CommunityFacilitiesDrawer({
                   </div>
 
                   <div className="mt-4 grid gap-2 md:grid-cols-3">
-                    {[
-                      "Edit facility",
-                      "Disable facility",
-                      "Configure reservations",
-                    ].map((label) => (
+                    <button
+                      type="button"
+                      onClick={toggleSelectedFacility}
+                      disabled={!canEditFacilities || isUpdatingFacility}
+                      className={entryButtonClass("secondary", "w-full justify-center")}
+                    >
+                      {isUpdatingFacility
+                        ? "Saving..."
+                        : selectedFacility.isActive ? "Disable facility" : "Enable facility"}
+                    </button>
+                    {["Edit facility", "Configure reservations"].map((label) => (
                       <button
                         key={label}
                         type="button"
                         disabled
-                        className={entryButtonClass(
-                          "secondary",
-                          "w-full justify-center text-[#8F879D]",
-                        )}
+                        className={entryButtonClass("secondary", "w-full justify-center text-[#8F879D]")}
                       >
                         {label}
                         <span className="text-[9px] font-medium text-[#6F6878]">Soon</span>
                       </button>
                     ))}
                   </div>
+                  {facilityMessage ? <p role="status" className="mt-2 text-sm text-emerald-200">{facilityMessage}</p> : null}
+                  {facilityError ? <p role="alert" className="mt-2 text-sm text-rose-200">{facilityError}</p> : null}
                 </div>
               ) : (
                 <div className="rounded-lg border border-dashed border-[#141119] bg-white/3 px-4 py-5 text-sm text-[#8F879D]">
