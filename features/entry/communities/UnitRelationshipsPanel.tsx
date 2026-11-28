@@ -21,10 +21,10 @@ function shortLabel(label: string) {
 }
 
 export function UnitRelationshipsPanel({
-  communityId, unitId, unitLabel, units, people, peopleHasMore, links, responsibilities, selectorError,
+  communityId, unitId, unitLabel, units, people, peopleHasMore, links, responsibilities, selectorError, onChanged,
 }: {
   communityId: string; unitId: string; unitLabel: string; units: Option[]; people: Option[];
-  peopleHasMore: boolean; links: Link[]; responsibilities: Responsibility[]; selectorError: string | null;
+  peopleHasMore: boolean; links: Link[]; responsibilities: Responsibility[]; selectorError: string | null; onChanged?: () => void;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -59,6 +59,7 @@ export function UnitRelationshipsPanel({
         setPersonPage(0);
         setSearchedPeopleHasMore(null);
         setFeedback({ tone: "success", text: successText });
+        onChanged?.();
         router.refresh();
       } catch {
         setFeedback({ tone: "error", text: "Could not confirm the change. Refresh this page before trying again." });

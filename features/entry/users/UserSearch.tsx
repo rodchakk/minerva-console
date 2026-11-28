@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { GlobalUnitDrawer } from "./GlobalUnitDrawer";
+import { searchGlobalUnitsAction, getGlobalUnitAction, type GlobalUnitResult } from "./globalUnitActions";
 import { useRouter } from "next/navigation";
 import {
   useActionState,
@@ -55,7 +57,7 @@ import {
   ENTRY_ADMIN_TEMP_PASSWORD_MIN_LENGTH,
 } from "@/features/entry/passwordPolicy";
 
-type ResultFilter = "all" | "RESIDENT" | "ADMIN" | "GUARD" | "inactive" | "pending";
+type ResultFilter = "all" | "users" | "units" | "RESIDENT" | "ADMIN" | "GUARD" | "inactive" | "pending";
 type ManageMode = "view" | "edit" | "role" | "unit" | "password" | "status";
 type EditableCommunityRole = "ADMIN" | "RESIDENT";
 type PasswordResetMode = "quick" | "email";
@@ -180,6 +182,35 @@ export function UserSearch() {
   const router = useRouter();
   const [state, formAction] = useActionState(searchUsersAction, { results: [] });
   const [filter, setFilter] = useState<ResultFilter>("all");
+  const [unitResults, setUnitResults] = useState<GlobalUnitResult[]>([]);
+  const [unitSearchError, setUnitSearchError] = useState("");
+  const [unitSearchLoading, setUnitSearchLoading] = useState(false);
+  const [unitTruncated, setUnitTruncated] = useState(false);
+  const [unitRevision, setUnitRevision] = useState(0);
+  const [unitStack, setUnitStack] = useState<GlobalUnitResult[]>([]);
+  const [householdLinks, setHouseholdLinks] = useState<Array<{ id: string; unitId: string; label: string }>>([]);
+  const [householdLinksError, setHouseholdLinksError] = useState("");
+  const selectedUnit = unitStack.at(-1);
+  useEffect(() => {
+    let live = true;
+    const query = state.query;
+    if (!query) return;
+    setUnitSearchLoading(true);
+    setUnitResults([]);
+    setUnitSearchError("");
+    setUnitTruncated(false);
+    searchGlobalUnitsAction(query).then(result => {
+      if (!live) return;
+      setUnitResults(result.units);
+      setUnitTruncated(result.truncated);
+      setUnitSearchError(result.error ?? "");
+    }).catch(() => { if (live) setUnitSearchError("Unable to search units."); })
+      .finally(() => { if (live) setUnitSearchLoading(false); });
+    return () => { live = false; };
+  }, [state.query, unitRevision]);
+  function openUnit(unit: GlobalUnitResult) {
+    setUnitStack([unit]);
+  }
   const [overrides, setOverrides] = useState<
     Record<string, Partial<UserSearchItem>>
   >({});
@@ -218,7 +249,8 @@ export function UserSearch() {
   );
 
   const filteredResults = useMemo(() => {
-    if (filter === "all") return results;
+    if (filter === "units") return [];
+    if (filter === "all" || filter === "users") return results;
     if (filter === "inactive") return results.filter((user) => user.source === "account" && !user.isActive);
     if (filter === "pending") return results.filter((user) => user.source === "activation_queue");
     return results.filter((user) => user.role === filter);
@@ -245,8 +277,21 @@ export function UserSearch() {
   );
 
   useEffect(() => {
+    let live = true;
+    setHouseholdLinks([]);
+    setHouseholdLinksError("");
+    if (userTab !== "household" || !selectedUser?.houseId) return;
+    getGlobalUnitAction(selectedUser.communityId, selectedUser.houseId).then(data => {
+      if (!live) return;
+      if (!data || data.relationships.error) { setHouseholdLinksError("Unit connections unavailable."); return; }
+      if (data.relationships.enabled) setHouseholdLinks(data.relationships.links);
+    }).catch(() => { if (live) setHouseholdLinksError("Unit connections unavailable."); });
+    return () => { live = false; };
+  }, [userTab, selectedUser?.communityId, selectedUser?.houseId, unitRevision]);
+
+  useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape" || !selectedKey) return;
+      if (event.key !== "Escape" || !selectedKey || unitStack.length) return;
       // Pending resident dialogs may display a one-time PIN or password.
       // Do not unmount the shared drawer from the global Escape handler.
       if (selectedUser?.source === "activation_queue") return;
@@ -265,7 +310,7 @@ export function UserSearch() {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [manageMode, selectedKey, selectedUser?.source]);
+  }, [manageMode, selectedKey, selectedUser?.source, unitStack.length]);
 
   function syncUser(user: UserSearchItem, changes: Partial<UserSearchItem>) {
     setOverrides((current) => ({
@@ -289,6 +334,7 @@ export function UserSearch() {
   }
 
   async function openUser(user: UserSearchItem) {
+    setUnitStack([]);
     const requestId = ++loadRequestRef.current;
     setSelectedKey(userKey(user));
     setPendingResidentRow(null);
@@ -599,7 +645,8 @@ export function UserSearch() {
   }
 
   const hasQuery = Boolean(state.query);
-  const hasResults = results.length > 0;
+  const visibleUnits = filter === "all" || filter === "units" ? unitResults : [];
+  const hasResults = results.length > 0 || unitResults.length > 0 || unitSearchLoading || Boolean(unitSearchError);
 
   return (
     <>
@@ -635,7 +682,9 @@ export function UserSearch() {
           <>
             <div className="flex flex-wrap items-center gap-2">
               {([
-                ["all", "All", counts.all],
+                ["all", "All", counts.all + unitResults.length],
+                ["users", "Users", counts.all],
+                ["units", "Units", unitResults.length],
                 ["RESIDENT", "Residents", counts.RESIDENT],
                 ["ADMIN", "Admins", counts.ADMIN],
                 ["GUARD", "Guards", counts.GUARD],
@@ -660,10 +709,10 @@ export function UserSearch() {
             <section className="relative min-h-[420px] overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]">
               <div className="border-b border-[#141119] px-4 py-3">
                 <h2 className="text-sm font-semibold text-white">
-                  {filteredResults.length} result{filteredResults.length === 1 ? "" : "s"} for &ldquo;{state.query}&rdquo;
+                  {filteredResults.length + visibleUnits.length} result{filteredResults.length + visibleUnits.length === 1 ? "" : "s"} for &ldquo;{state.query}&rdquo;
                 </h2>
                 <p className="mt-1 text-[10px] text-[#8F879D]">
-                  Select an account or pending resident to manage them without leaving this workspace.
+                  Select a user, pending resident or unit to manage them without leaving this workspace.
                 </p>
               </div>
 
@@ -680,7 +729,7 @@ export function UserSearch() {
                   </colgroup>
                   <thead className="sticky top-0 z-10 border-b border-[#141119] bg-[#1F1B26] text-[#8F879D]">
                     <tr className="text-[10px] uppercase tracking-[0.13em]">
-                      <th className="px-4 py-2.5 font-semibold">User</th>
+                      <th className="px-4 py-2.5 font-semibold">Result</th>
                       <th className="px-4 py-2.5 font-semibold">Community</th>
                       <th className="px-4 py-2.5 font-semibold">Unit</th>
                       <th className="px-4 py-2.5 font-semibold">Role</th>
@@ -690,6 +739,11 @@ export function UserSearch() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#141119] text-[#D6D0DC]">
+                    {visibleUnits.map(unit => <tr key={`unit:${unit.id}`} tabIndex={0} onClick={() => openUnit(unit)} onKeyDown={event => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); openUnit(unit); } }} className={`cursor-pointer hover:bg-white/[0.018] ${selectedUnit?.id === unit.id ? "bg-violet-500/10" : ""}`}>
+                      <td className="px-4 py-2.5"><div className="flex items-center gap-3"><Home className="size-5 text-[#BEB4FF]"/><span className="font-semibold text-white">{unit.label}</span></div></td>
+                      <td className="px-4 py-2.5">{unit.communityName}<p className="text-[10px] text-[#8F879D]">{unit.communityCity}</p></td>
+                      <td className="px-4 py-2.5">{unit.label}</td><td className="px-4 py-2.5">Unit</td><td className="px-4 py-2.5"><StatusBadge isActive={unit.isActive}/></td><td className="px-4 py-2.5">—</td><td className="px-2"><ChevronRight className="size-4"/></td>
+                    </tr>)}
                     {filteredResults.map((user) => {
                       const active = selectedKey === userKey(user);
 
@@ -771,12 +825,15 @@ export function UserSearch() {
                 </table>
               </div>
 
-              {filteredResults.length === 0 ? (
+              {unitSearchLoading && <p className="p-4 text-xs text-[#A9A3B2]">Searching units...</p>}
+              {unitSearchError && <p role="alert" className="p-4 text-xs text-rose-300">{unitSearchError}</p>}
+              {unitTruncated && <p className="p-4 text-xs text-[#A9A3B2]">Unit results limited to 100. Refine your search.</p>}
+              {filteredResults.length === 0 && visibleUnits.length === 0 && !unitSearchLoading ? (
                 <div className="grid min-h-56 place-items-center px-6 text-center">
                   <div>
                     <UsersRound className="mx-auto size-8 text-[#8F879D]" aria-hidden />
                     <p className="mt-3 text-sm font-semibold text-white">
-                      No accounts match this filter
+                      No results match this filter
                     </p>
                     <p className="mt-1 text-xs text-[#A9A3B2]">
                       Choose another account type or search again.
@@ -792,7 +849,7 @@ export function UserSearch() {
           <section className="relative rounded-[10px] border border-dashed border-[#141119] bg-[#24202B] px-6 py-12 text-center before:absolute before:left-0 before:top-0 before:h-px before:w-[72px] before:bg-[#7553FF]">
             <Search className="mx-auto size-8 text-[#8F879D]" aria-hidden />
             <p className="mt-3 text-sm font-semibold text-white">
-              No ENTRY accounts or pending activations matched &ldquo;{state.query}&rdquo;
+              No ENTRY accounts, pending activations or units matched &ldquo;{state.query}&rdquo;
             </p>
             <p className="mt-1 text-xs text-[#A9A3B2]">
               Search by name, email, username, phone, unit, community, role, or status.
@@ -801,7 +858,8 @@ export function UserSearch() {
         ) : null}
       </div>
 
-      {selectedUser?.source === "activation_queue" && pendingResidentRow ? (
+      {selectedUnit && <GlobalUnitDrawer key={selectedUnit.id} target={selectedUnit} close={() => setUnitStack([])} onBack={unitStack.length > 1 ? () => setUnitStack(stack => stack.slice(0,-1)) : undefined} openUnit={(id,label) => setUnitStack(stack => [...stack, {...selectedUnit,id,label}])} onChanged={() => setUnitRevision(n => n+1)}/>}
+      {selectedUser?.source === "activation_queue" && pendingResidentRow && !selectedUnit ? (
         <ActivationResidentDrawer
           key={pendingResidentRow.id}
           variant="users"
@@ -1109,6 +1167,11 @@ export function UserSearch() {
                           )}
                         </EntryDrawerSection>
                       )}
+                      {selectedUser.houseId && <EntryDrawerSection title="Unit connections" description="Administrative relationships · No impact on resident access">
+                        <button type="button" className="flex w-full justify-between px-3.5 py-3 text-left text-sm text-white" onClick={() => openUnit({id:selectedUser.houseId,communityId:selectedUser.communityId,communityName:selectedUser.communityName,communityCity:selectedUser.communityCity,label:selectedUser.houseLabel,isActive:true,unitReference:"",publicReference:""})}>Open {selectedUser.houseLabel || "unit"}<ChevronRight className="size-4"/></button>
+                        {householdLinksError && <p role="alert" className="p-3 text-xs text-rose-300">{householdLinksError}</p>}
+                        {householdLinks.map(link => <button type="button" key={link.id} className="flex w-full justify-between border-t border-white/5 px-3.5 py-3 text-left text-sm text-white" onClick={() => openUnit({id:link.unitId,communityId:selectedUser.communityId,communityName:selectedUser.communityName,communityCity:selectedUser.communityCity,label:link.label,isActive:true,unitReference:"",publicReference:""})}>{link.label}<ChevronRight className="size-4"/></button>)}
+                      </EntryDrawerSection>}
                     </div>
                   ) : null}
                   {userTab === "operational" ? (
