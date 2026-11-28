@@ -21,6 +21,7 @@ import type { CommunityUnitHouseOption } from "@/features/entry/communities/deta
 import { ENTRY_ADMIN_TEMP_PASSWORD_HELPER } from "@/features/entry/passwordPolicy";
 
 type ResidentQuickCreateProps = {
+  onChanged?: () => void;
   communityId: string;
   communityName: string;
   fixedUnitId?: string;
@@ -40,6 +41,7 @@ export function ResidentQuickCreate({
   houses,
   triggerClassName,
   triggerLabel = "Create resident",
+  onChanged,
 }: ResidentQuickCreateProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -145,7 +147,7 @@ export function ResidentQuickCreate({
         });
 
         setResult({ kind: "quick", value: nextResult });
-        if (nextResult.success) router.refresh();
+        if (nextResult.success) { onChanged?.(); router.refresh(); }
         return;
       }
 
@@ -159,7 +161,7 @@ export function ResidentQuickCreate({
       });
 
       setResult({ kind: "prepared", value: nextResult });
-      if (nextResult.success) router.refresh();
+      if (nextResult.success) { onChanged?.(); router.refresh(); }
     });
   }
 

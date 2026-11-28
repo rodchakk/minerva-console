@@ -156,6 +156,9 @@ jobs:
           docker cp supabase/tests/fixtures/entry-unit-rename-after-activation.sql "${{ job.services.postgres.id }}:/tmp/rename-after-activation.sql"
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/rename-patch.sql
           docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/rename-after-activation.sql
+          docker cp supabase/tests/candidates/entry_directory_lifecycle_v3.sql "${{ job.services.postgres.id }}:/tmp/entry-directory-lifecycle-v3.sql"
+          docker cp supabase/tests/fixtures/entry-directory-lifecycle-v3.sql "${{ job.services.postgres.id }}:/tmp/entry-directory-lifecycle-fixture.sql"
+          docker exec -e PGPASSWORD=postgres "${{ job.services.postgres.id }}" psql -X -v ON_ERROR_STOP=1 -U postgres -d postgres -f /tmp/entry-directory-lifecycle-fixture.sql
 
   auth-outage-recovery-tests:
     name: Auth outage recovery regressions

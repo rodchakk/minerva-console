@@ -21,10 +21,10 @@ function shortLabel(label: string) {
 }
 
 export function UnitRelationshipsPanel({
-  communityId, unitId, unitLabel, units, people, peopleHasMore, links, responsibilities, selectorError,
+  communityId, unitId, unitLabel, units, people, peopleHasMore, links, responsibilities, selectorError, onChanged, compact = false, onOpenUnit, onOpenUser,
 }: {
   communityId: string; unitId: string; unitLabel: string; units: Option[]; people: Option[];
-  peopleHasMore: boolean; links: Link[]; responsibilities: Responsibility[]; selectorError: string | null;
+  peopleHasMore: boolean; links: Link[]; responsibilities: Responsibility[]; selectorError: string | null; onChanged?: () => void; compact?: boolean; onOpenUnit?: (id:string,label:string)=>void; onOpenUser?: (id:string)=>void;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -59,6 +59,7 @@ export function UnitRelationshipsPanel({
         setPersonPage(0);
         setSearchedPeopleHasMore(null);
         setFeedback({ tone: "success", text: successText });
+        onChanged?.();
         router.refresh();
       } catch {
         setFeedback({ tone: "error", text: "Could not confirm the change. Refresh this page before trying again." });
@@ -115,7 +116,7 @@ export function UnitRelationshipsPanel({
 
 
   return (
-    <details aria-label="Unit connections" className="group shrink-0 overflow-hidden rounded-[9px] border border-white/10 bg-[#24202B] open:border-[#5E4B79]">
+    <details open={compact || undefined} aria-label="Unit connections" className="group shrink-0 overflow-hidden rounded-[9px] border border-white/10 bg-[#24202B] open:border-[#5E4B79]">
       <summary className="flex cursor-pointer list-none flex-wrap items-center gap-3 px-4 py-3.5 text-white transition hover:bg-white/[0.025] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#B6A0FF] [&::-webkit-details-marker]:hidden">
         <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-[#55436C] bg-[#382D4B] text-[#CBB8FF]">
           <Link2 className="size-4" aria-hidden />
@@ -149,7 +150,7 @@ export function UnitRelationshipsPanel({
           </div>
         )}
         <p className="text-xs leading-5 text-[#AAA0B4]">Linked units remain independent. A responsible contact applies to this unit only and is not automatically assigned to linked units.</p>
-        <div className="grid gap-5 lg:grid-cols-2">
+        <div className={compact ? "grid gap-5" : "grid gap-5 lg:grid-cols-2"}>
           <section className="min-w-0 space-y-2" aria-labelledby="unit-links-heading">
             <div>
               <h3 id="unit-links-heading" className="text-sm font-semibold text-white">Related units <span className="font-normal text-[#A9A0B5]">· {links.length}</span></h3>
@@ -160,7 +161,7 @@ export function UnitRelationshipsPanel({
                 {links.map((item) => <li key={item.id} className="flex items-center gap-2 py-2 text-xs">
                   <span className="grid size-7 shrink-0 place-items-center rounded-md bg-white/[0.045] text-[#BDAAE4]"><Building2 className="size-3.5" aria-hidden /></span>
                   <div className="min-w-0 flex-1">
-                    <NextLink href={"/products/entry/communities/" + communityId + "/units/" + item.unitId} className="break-words font-semibold text-white hover:text-[#CEBBFF] hover:underline">{shortLabel(item.label)}</NextLink>
+                    {onOpenUnit ? <button type="button" className="break-words text-left font-semibold text-white hover:text-[#CEBBFF] hover:underline" onClick={() => onOpenUnit(item.unitId,shortLabel(item.label))}>{shortLabel(item.label)}</button> : <NextLink href={"/products/entry/communities/" + communityId + "/units/" + item.unitId} className="break-words font-semibold text-white hover:text-[#CEBBFF] hover:underline">{shortLabel(item.label)}</NextLink>}
                     {item.warning && <p className="mt-1 text-amber-200">{item.warning}</p>}
                   </div>
                   <button type="button" disabled={pending} className="px-2 py-1 text-[11px] text-[#BFB3C9] hover:text-rose-200 disabled:opacity-40" onClick={() => {
@@ -195,7 +196,7 @@ export function UnitRelationshipsPanel({
             <p className="text-[11px] text-[#8F859B]">This unit and existing links are excluded from the selector.</p>
           </section>
 
-          <section className="min-w-0 space-y-2 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" aria-labelledby="responsible-people-heading">
+          <section className={compact ? "min-w-0 space-y-2 border-t border-white/10 pt-4" : "min-w-0 space-y-2 border-t border-white/10 pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0"} aria-labelledby="responsible-people-heading">
             <div>
               <h3 id="responsible-people-heading" className="text-sm font-semibold text-white">Responsible contacts <span className="font-normal text-[#A9A0B5]">· {responsibilities.length}</span></h3>
               <p className="mt-1 text-xs text-[#9F95AC]">People responsible for this unit only</p>
@@ -205,7 +206,7 @@ export function UnitRelationshipsPanel({
                 {responsibilities.map((item) => <li key={item.id} className="flex items-center gap-2 py-2 text-xs">
                   <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#7553FF]/20 text-[11px] font-semibold text-[#DCCEFF]">{item.label.slice(0,1).toUpperCase()}</span>
                   <div className="min-w-0 flex-1">
-                    <span className="break-words font-semibold text-white">{item.label}</span>
+                    {onOpenUser ? <button type="button" className="break-words text-left font-semibold text-white hover:underline" onClick={() => onOpenUser(item.userId)}>{item.label}</button> : <span className="break-words font-semibold text-white">{item.label}</span>}
                     <span className="ml-2 rounded-full bg-[#7553FF]/15 px-1.5 py-0.5 text-[10px] text-[#C8B6FF]">{item.role === "RESIDENT" ? "Resident" : item.role}</span>
                     {!item.active && <span className="ml-2 text-amber-200">Inactive</span>}
                     {item.warning && <p className="mt-1 text-amber-200">{item.warning}</p>}

@@ -18,6 +18,7 @@ type CommunityUnitQuickActionsProps = {
   communityId: string;
   displayMode?: "default" | "menu";
   unit: CommunityUnitPreview;
+  onChanged?: () => void;
 };
 
 type ModalState = "edit" | "status" | null;
@@ -31,6 +32,7 @@ export function CommunityUnitQuickActions({
   communityId,
   displayMode = "default",
   unit,
+  onChanged,
 }: CommunityUnitQuickActionsProps) {
   const router = useRouter();
   const [modalState, setModalState] = useState<ModalState>(null);
@@ -118,6 +120,7 @@ export function CommunityUnitQuickActions({
         }
         setModalState(null);
         setSuccessMessage("Change saved.");
+        onChanged?.();
         router.refresh();
       } catch {
         setErrorMessage("Could not confirm the change. Refresh this detail before retrying.");
@@ -152,6 +155,7 @@ export function CommunityUnitQuickActions({
           ? "Unit disabled successfully. Linked resident accounts were deactivated."
           : "Unit enabled successfully. Unit-deactivated resident accounts were restored.",
       );
+      onChanged?.();
       router.refresh();
     });
   }
