@@ -182,32 +182,25 @@ export function UserSearch() {
   const router = useRouter();
   const [state, formAction] = useActionState(searchUsersAction, { results: [] });
   const [filter, setFilter] = useState<ResultFilter>("all");
-  const [unitResults, setUnitResults] = useState<GlobalUnitResult[]>([]);
-  const [unitSearchError, setUnitSearchError] = useState("");
-  const [unitSearchLoading, setUnitSearchLoading] = useState(false);
-  const [unitTruncated, setUnitTruncated] = useState(false);
   const [unitRevision, setUnitRevision] = useState(0);
   const [unitStack, setUnitStack] = useState<GlobalUnitResult[]>([]);
-  const [householdLinks, setHouseholdLinks] = useState<Array<{ id: string; unitId: string; label: string }>>([]);
-  const [householdLinksError, setHouseholdLinksError] = useState("");
+  const [unitLookup, setUnitLookup] = useState<{key:string;units:GlobalUnitResult[];truncated:boolean;error?:string} | null>(null);
+  const [connectionLookup, setConnectionLookup] = useState<{key:string;links:Array<{id:string;unitId:string;label:string}>;error?:string} | null>(null);
   const selectedUnit = unitStack.at(-1);
+  const lookupKey = JSON.stringify([state.query,unitRevision]);
+  const currentUnitLookup = unitLookup?.key === lookupKey ? unitLookup : null;
+  const unitResults = currentUnitLookup?.units ?? [];
+  const unitSearchError = currentUnitLookup?.error ?? "";
+  const unitSearchLoading = Boolean(state.query && !currentUnitLookup);
+  const unitTruncated = currentUnitLookup?.truncated ?? false;
   useEffect(() => {
     let live = true;
-    const query = state.query;
-    if (!query) { setUnitResults([]); setUnitSearchLoading(false); setUnitSearchError(""); setUnitTruncated(false); return; }
-    setUnitSearchLoading(true);
-    setUnitResults([]);
-    setUnitSearchError("");
-    setUnitTruncated(false);
-    searchGlobalUnitsAction(query).then(result => {
-      if (!live) return;
-      setUnitResults(result.units);
-      setUnitTruncated(result.truncated);
-      setUnitSearchError(result.error ?? "");
-    }).catch(() => { if (live) setUnitSearchError("Unable to search units."); })
-      .finally(() => { if (live) setUnitSearchLoading(false); });
+    if (!state.query) return;
+    searchGlobalUnitsAction(state.query).then(result => {
+      if (live) setUnitLookup({key:lookupKey,...result});
+    }).catch(() => { if (live) setUnitLookup({key:lookupKey,units:[],truncated:false,error:"Unable to search units."}); });
     return () => { live = false; };
-  }, [state.query, unitRevision]);
+  }, [state.query,lookupKey]);
   function openUnit(unit: GlobalUnitResult) {
     setUnitStack([unit]);
   }
@@ -276,18 +269,22 @@ export function UserSearch() {
     [results, selectedKey],
   );
 
+  const connectionCommunity = selectedUser?.communityId;
+  const connectionHouse = selectedUser?.houseId;
+  const connectionKey = JSON.stringify([connectionCommunity,connectionHouse,unitRevision]);
+  const currentConnections = connectionLookup?.key === connectionKey ? connectionLookup : null;
+  const householdLinks = currentConnections?.links ?? [];
+  const householdLinksError = currentConnections?.error ?? "";
   useEffect(() => {
     let live = true;
-    setHouseholdLinks([]);
-    setHouseholdLinksError("");
-    if (userTab !== "household" || !selectedUser?.houseId) return;
-    getGlobalUnitAction(selectedUser.communityId, selectedUser.houseId).then(data => {
+    if (userTab !== "household" || !connectionCommunity || !connectionHouse) return;
+    getGlobalUnitAction(connectionCommunity,connectionHouse).then(data => {
       if (!live) return;
-      if (!data || data.relationships.error) { setHouseholdLinksError("Unit connections unavailable."); return; }
-      if (data.relationships.enabled) setHouseholdLinks(data.relationships.links);
-    }).catch(() => { if (live) setHouseholdLinksError("Unit connections unavailable."); });
+      if (!data || data.relationships.error) { setConnectionLookup({key:connectionKey,links:[],error:"Unit connections unavailable."}); return; }
+      setConnectionLookup({key:connectionKey,links:data.relationships.enabled ? data.relationships.links : []});
+    }).catch(() => { if (live) setConnectionLookup({key:connectionKey,links:[],error:"Unit connections unavailable."}); });
     return () => { live = false; };
-  }, [userTab, selectedUser?.communityId, selectedUser?.houseId, unitRevision]);
+  }, [userTab,connectionCommunity,connectionHouse,connectionKey]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

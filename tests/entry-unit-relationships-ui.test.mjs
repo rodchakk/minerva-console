@@ -15,7 +15,8 @@ test("unit details integrates a clear gated relationships workspace", () => {
   assert.match(workspace, /\{relationships\s*\?\s*<div/);
   assert.match(workspace, /Unit overview/);
   assert.match(page, /casas\?\|apartamentos\?/i);
-  assert.match(section, /setting\?\.allow_unit_relationships !== true\) return null/);
+  assert.match(section, /if \(!result\.enabled\) return null/);
+  assert.match(actions, /setting\?\.allow_unit_relationships !== true\) return \{ enabled: false/);
 });
 
 test("approved compact Unit connections appear after the operational overview", () => {
@@ -23,8 +24,9 @@ test("approved compact Unit connections appear after the operational overview", 
   const records = workspace.indexOf('min-h-[560px] flex-1 flex-col');
   const connections = workspace.indexOf('shrink-0 pb-3');
   assert.ok(heading >= 0 && heading < records && records < connections, "Operational overview and records must precede connections");
-  assert.match(panel, /<details aria-label="Unit connections"/);
-  assert.doesNotMatch(panel, /<details aria-label="Unit connections"[^>]*\bopen(?:=|\s|>)/);
+  assert.match(panel, /compact = false/);
+  assert.match(panel, /<details open=\{compact \|\| undefined\} aria-label="Unit connections"/);
+  assert.doesNotMatch(section, /\bcompact\b/);
   assert.match(panel, /<summary className=/);
   assert.match(panel, /group-open:hidden/);
   assert.match(panel, /linked \{links\.length === 1/);
