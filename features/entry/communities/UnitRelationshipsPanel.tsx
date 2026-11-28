@@ -21,10 +21,10 @@ function shortLabel(label: string) {
 }
 
 export function UnitRelationshipsPanel({
-  communityId, unitId, unitLabel, units, people, peopleHasMore, links, responsibilities, selectorError, onChanged, compact = false, onOpenUnit,
+  communityId, unitId, unitLabel, units, people, peopleHasMore, links, responsibilities, selectorError, onChanged, compact = false, onOpenUnit, onOpenUser,
 }: {
   communityId: string; unitId: string; unitLabel: string; units: Option[]; people: Option[];
-  peopleHasMore: boolean; links: Link[]; responsibilities: Responsibility[]; selectorError: string | null; onChanged?: () => void; compact?: boolean; onOpenUnit?: (id:string,label:string)=>void;
+  peopleHasMore: boolean; links: Link[]; responsibilities: Responsibility[]; selectorError: string | null; onChanged?: () => void; compact?: boolean; onOpenUnit?: (id:string,label:string)=>void; onOpenUser?: (id:string)=>void;
 }) {
   const router = useRouter();
   const [feedback, setFeedback] = useState<Feedback | null>(null);
@@ -206,7 +206,7 @@ export function UnitRelationshipsPanel({
                 {responsibilities.map((item) => <li key={item.id} className="flex items-center gap-2 py-2 text-xs">
                   <span className="grid size-7 shrink-0 place-items-center rounded-full bg-[#7553FF]/20 text-[11px] font-semibold text-[#DCCEFF]">{item.label.slice(0,1).toUpperCase()}</span>
                   <div className="min-w-0 flex-1">
-                    <span className="break-words font-semibold text-white">{item.label}</span>
+                    {onOpenUser ? <button type="button" className="break-words text-left font-semibold text-white hover:underline" onClick={() => onOpenUser(item.userId)}>{item.label}</button> : <span className="break-words font-semibold text-white">{item.label}</span>}
                     <span className="ml-2 rounded-full bg-[#7553FF]/15 px-1.5 py-0.5 text-[10px] text-[#C8B6FF]">{item.role === "RESIDENT" ? "Resident" : item.role}</span>
                     {!item.active && <span className="ml-2 text-amber-200">Inactive</span>}
                     {item.warning && <p className="mt-1 text-amber-200">{item.warning}</p>}

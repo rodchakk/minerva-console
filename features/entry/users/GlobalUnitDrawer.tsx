@@ -13,9 +13,11 @@ import { getGlobalUnitAction, type GlobalUnitResult } from "./globalUnitActions"
 type Tab = "overview" | "household" | "operational" | "connections" | "actions";
 type Detail = NonNullable<Awaited<ReturnType<typeof getGlobalUnitAction>>>;
 
-export function GlobalUnitDrawer({ target, close, openUnit, onBack, onChanged }: {
+export function GlobalUnitDrawer({ target, close, openUnit, openUser, navigationError, onBack, onChanged }: {
   target: GlobalUnitResult; close: () => void;
   openUnit: (id: string, label: string) => void;
+  openUser: (id: string) => Promise<void>;
+  navigationError: string;
   onBack?: () => void; onChanged: () => void;
 }) {
   const [tab, setTab] = useState<Tab>("overview");
@@ -55,6 +57,7 @@ export function GlobalUnitDrawer({ target, close, openUnit, onBack, onChanged }:
     </div>
     <EntryDrawerTabs<Tab> label="Unit management sections" tabs={[{id:"overview",label:"Overview"},{id:"household",label:unit ? `Household (${unit.residents.length})` : "Household"},{id:"operational",label:"Operational"},{id:"connections",label:"Unit connections"},{id:"actions",label:"Actions"}]} value={tab} onChange={setTab}/>
     <div role="tabpanel" className="min-h-0 flex-1 space-y-3.5 overflow-y-auto overscroll-contain p-3.5 [scrollbar-gutter:stable]">
+      {navigationError && <p role="alert" className="text-xs text-rose-300">{navigationError}</p>}
       {error ? <p role="alert" className="text-xs text-rose-300">{error}</p> : !unit || !detail ? <p className="text-xs text-[#A9A3B2]">Loading unit...</p> : <>
         {tab === "overview" && <>
           <EntryDrawerSection title="Unit information"><EntryDrawerField label="Location reference">{unit.unitReference || "Not registered"}</EntryDrawerField><EntryDrawerField label="Resident-facing reference">{unit.publicReference || "Not registered"}</EntryDrawerField><EntryDrawerField label="Status">{unit.isActive ? "Active":"Inactive"}</EntryDrawerField></EntryDrawerSection>
@@ -62,7 +65,7 @@ export function GlobalUnitDrawer({ target, close, openUnit, onBack, onChanged }:
           <EntryDrawerSection title="Unit connections"><EntryDrawerField label="Linked units">{rel?.error ? "Unavailable" : rel?.enabled ? links.length : "Not enabled"}</EntryDrawerField><EntryDrawerField label="Responsible people">{rel?.error ? "Unavailable" : rel?.enabled ? people.length : "Not enabled"}</EntryDrawerField></EntryDrawerSection>
         </>}
         {tab === "household" && <EntryDrawerSection title={`Household · ${unit.residents.length} residents`}>
-          {unit.residents.map(r => <div key={r.userId} className="border-b border-white/5 px-3.5 py-3"><p className="text-sm font-semibold text-white">{r.fullName}</p><p className="text-xs text-[#A9A3B2]">{r.isPrimary ? "Primary resident" : r.role} · {r.isActive ? "Active" : "Inactive"}</p></div>)}
+          {unit.residents.map(r => <button type="button" key={r.userId} onClick={() => void openUser(r.userId)} className="block w-full border-b border-white/5 px-3.5 py-3 text-left hover:bg-white/[0.02]"><span className="block text-sm font-semibold text-white">{r.fullName}</span><span className="block text-xs text-[#A9A3B2]">{r.isPrimary ? "Primary resident" : r.role} · {r.isActive ? "Active" : "Inactive"}</span></button>)}
           {unit.pendingActivationItems.map(r => <div key={r.id} className="border-b border-white/5 px-3.5 py-3"><p className="text-sm font-semibold text-white">{r.residentName}</p><p className="text-xs text-[#BEB4FF]">Pending activation · {r.status}</p></div>)}
           {!unit.residents.length && !unit.pendingActivationItems.length && <p className="p-3 text-xs text-[#A9A3B2]">No residents linked.</p>}
         </EntryDrawerSection>}
@@ -71,7 +74,7 @@ export function GlobalUnitDrawer({ target, close, openUnit, onBack, onChanged }:
           {unit.activePassItems.length > 0 && <EntryDrawerSection title="Active passes">{unit.activePassItems.slice(0,6).map(pass => <div key={pass.id} className="px-3.5 py-3"><p className="text-sm text-white">{pass.passName}</p><p className="text-xs text-[#A9A3B2]">{pass.holderName || pass.residentName} · {pass.status}</p></div>)}</EntryDrawerSection>}
         </>}
         {tab === "connections" && (rel?.enabled ? <>
-          <UnitRelationshipsPanel communityId={target.communityId} unitId={unit.id} unitLabel={unit.label} units={rel.units} people={rel.people} peopleHasMore={rel.peopleHasMore} links={rel.links} responsibilities={rel.responsibilities} selectorError={rel.selectorError} onChanged={refresh} compact onOpenUnit={openUnit}/>
+          <UnitRelationshipsPanel communityId={target.communityId} unitId={unit.id} unitLabel={unit.label} units={rel.units} people={rel.people} peopleHasMore={rel.peopleHasMore} links={rel.links} responsibilities={rel.responsibilities} selectorError={rel.selectorError} onChanged={refresh} compact onOpenUnit={openUnit} onOpenUser={id=>void openUser(id)}/>
         </> : <p className="text-xs text-[#A9A3B2]">{rel?.error || "Unit relationships are not enabled for this community."}</p>)}
         {tab === "actions" && <EntryDrawerSection title="Unit actions"><div className="p-3"><CommunityUnitQuickActions communityId={target.communityId} unit={unit} onChanged={refresh}/></div></EntryDrawerSection>}
       </>}

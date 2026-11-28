@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { GlobalUnitDrawer } from "./GlobalUnitDrawer";
-import { searchGlobalUnitsAction, getGlobalUnitAction, type GlobalUnitResult } from "./globalUnitActions";
+import { searchGlobalUnitsAction, getGlobalUnitAction, getGlobalAccountByIdAction, type GlobalUnitResult } from "./globalUnitActions";
 import { useRouter } from "next/navigation";
 import {
   useActionState,
@@ -184,6 +184,9 @@ export function UserSearch() {
   const [filter, setFilter] = useState<ResultFilter>("all");
   const [unitRevision, setUnitRevision] = useState(0);
   const [unitStack, setUnitStack] = useState<GlobalUnitResult[]>([]);
+  const [openedAccount, setOpenedAccount] = useState<UserSearchItem | null>(null);
+  const accountNavigationRequest = useRef(0);
+  const [navigationError,setNavigationError] = useState("");
   const [unitLookup, setUnitLookup] = useState<{key:string;units:GlobalUnitResult[];truncated:boolean;error?:string} | null>(null);
   const [connectionLookup, setConnectionLookup] = useState<{key:string;links:Array<{id:string;unitId:string;label:string}>;error?:string} | null>(null);
   const selectedUnit = unitStack.at(-1);
@@ -202,6 +205,8 @@ export function UserSearch() {
     return () => { live = false; };
   }, [state.query,lookupKey]);
   function openUnit(unit: GlobalUnitResult) {
+    accountNavigationRequest.current += 1;
+    setNavigationError("");
     setUnitStack([unit]);
   }
   const [overrides, setOverrides] = useState<
@@ -264,9 +269,9 @@ export function UserSearch() {
   const selectedUser = useMemo(
     () =>
       selectedKey
-        ? results.find((user) => userKey(user) === selectedKey) ?? null
+        ? results.find((user) => userKey(user) === selectedKey) ?? (openedAccount && userKey(openedAccount) === selectedKey ? {...openedAccount,...(overrides[selectedKey] ?? {})} : null)
         : null,
-    [results, selectedKey],
+    [results, selectedKey, openedAccount, overrides],
   );
 
   const connectionCommunity = selectedUser?.communityId;
@@ -330,7 +335,20 @@ export function UserSearch() {
     setError(null);
   }
 
+  async function navigateAccount(communityId: string, userId: string) {
+    const request = ++accountNavigationRequest.current;
+    setNavigationError("");
+    try {
+      const user = await getGlobalAccountByIdAction(communityId,userId);
+      if (request !== accountNavigationRequest.current) return;
+      if (!user) { setNavigationError("Account details are unavailable."); return; }
+      await openUser(user);
+    } catch { if (request === accountNavigationRequest.current) setNavigationError("Unable to open this account."); }
+  }
+
   async function openUser(user: UserSearchItem) {
+    accountNavigationRequest.current += 1;
+    setOpenedAccount(user);
     setUnitStack([]);
     const requestId = ++loadRequestRef.current;
     setSelectedKey(userKey(user));
@@ -855,7 +873,7 @@ export function UserSearch() {
         ) : null}
       </div>
 
-      {selectedUnit && <GlobalUnitDrawer key={selectedUnit.id} target={selectedUnit} close={() => setUnitStack([])} onBack={unitStack.length > 1 ? () => setUnitStack(stack => stack.slice(0,-1)) : selectedUser ? () => setUnitStack([]) : undefined} openUnit={(id,label) => setUnitStack(stack => [...stack, {...selectedUnit,id,label}])} onChanged={() => setUnitRevision(n => n+1)}/>}
+      {selectedUnit && <GlobalUnitDrawer key={selectedUnit.id} target={selectedUnit} close={() => {accountNavigationRequest.current += 1;setUnitStack([]);}} onBack={unitStack.length > 1 ? () => {accountNavigationRequest.current += 1;setUnitStack(stack => stack.slice(0,-1));} : selectedUser ? () => {accountNavigationRequest.current += 1;setUnitStack([]);} : undefined} openUnit={(id,label) => {accountNavigationRequest.current += 1;setNavigationError("");setUnitStack(stack => [...stack, {...selectedUnit,id,label}]);}} openUser={id=>navigateAccount(selectedUnit.communityId,id)} navigationError={navigationError} onChanged={() => setUnitRevision(n => n+1)}/>}
       {selectedUser?.source === "activation_queue" && pendingResidentRow && !selectedUnit ? (
         <ActivationResidentDrawer
           key={pendingResidentRow.id}

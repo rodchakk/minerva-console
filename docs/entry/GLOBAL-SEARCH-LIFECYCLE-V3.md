@@ -22,3 +22,9 @@ NO-GO for production until acceptance is green. This is a partial implementation
 - Transfer operator with history to second synthetic community; origin history remains, new permissions only, no cross-tenant leak; old JWT rejected. Repeat/idempotency and failure rollback.
 - Search unit with zero residents; unit -> resident -> linked unit navigation; stable drawer tabs; updates refresh without losing search; activation still works; test permissions, errors and mobile contracts.
 - Full test/lint/typecheck/build in pinned Node runtime plus isolated PostgreSQL 17 + Auth/PostgREST/Storage integration and backup/restore evidence before production. No real user deletion in development. No production migration or deployment until review.
+
+## Approved product decisions — 2026-11-28
+- Unused users may be permanently removed even with verified automatic welcome and administrative setup/deactivation history; retain an administrative snapshot and the operator who deleted them. Any operational history blocks deletion.
+- Previously connected units may be deleted after ending all active links/responsibilities, provided there is no operational/financial/registration history or current dependency. Archive administrative relationship history first.
+- Transfer is **RESIDENT only**. Generic guard accounts, admins and superadmins are never transferable. Keep Auth identity/email/password/name/phone, select active destination community and house. Origin history and debts remain in origin, destination is a fresh membership and household; old passes/frequent accesses must not carry over, old sessions must be invalidated. Do not expose origin history to destination. No production changes authorized by this design approval.
+- UI: only eligibility-approved Delete action, no dependency dashboard. Critical actions tab contains only Transfer community (residents) and Delete account when eligible. No fake action.

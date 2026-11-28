@@ -2,6 +2,9 @@
 
 import { requireSuperadmin } from "@/features/auth/requireSuperadmin";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { coerceString, coerceBoolean } from "@/lib/supabase/utils";
+import type { UserSearchItem } from "./actions";
 import { getCommunityUnitDetailPageData } from "@/features/entry/communities/detailQueries";
 import { getUnitRelationshipsAction } from "@/features/entry/communities/unitRelationshipActions";
 
@@ -48,4 +51,23 @@ export async function getGlobalUnitAction(communityId: string, unitId: string) {
   if (!result.unit || !result.community) return null;
   const relationships = await getUnitRelationshipsAction(communityId, unitId);
   return { unit: result.unit, houses: result.houses, relationships };
+}
+
+export async function getGlobalAccountByIdAction(communityId: string, userId: string): Promise<UserSearchItem | null> {
+  await requireSuperadmin();
+  if (!UUID.test(communityId) || !UUID.test(userId)) return null;
+  const db = await createClient();
+  const admin = createAdminClient();
+  const [accounts, membership, profile, community, primary] = await Promise.all([
+    db.rpc("sa_list_users", {p_community_id: communityId,p_search:null}),
+    admin.from("community_members").select("user_id,role,is_active").eq("community_id",communityId).eq("user_id",userId).maybeSingle(),
+    admin.from("profiles").select("user_id,username").eq("user_id",userId).eq("community_id",communityId).maybeSingle(),
+    db.from("communities").select("id,name,city").eq("id",communityId).maybeSingle(),
+    admin.from("house_residents").select("house_id").eq("community_id",communityId).eq("user_id",userId).eq("is_active",true).eq("is_primary",true),
+  ]);
+  if (accounts.error || membership.error || profile.error || community.error || primary.error || !membership.data || !community.data) return null;
+  const row = (Array.isArray(accounts.data) ? accounts.data : []).find(item => coerceString(item.user_id || item.id) === userId && (!item.community_id || String(item.community_id) === communityId));
+  if (!row) return null;
+  const houseId = coerceString(row.house_id);
+  return {source:"account", id:userId, communityId, communityName:coerceString(community.data.name), communityCity:coerceString(community.data.city), fullName:coerceString(row.full_name,"Unnamed user"), email:coerceString(row.email), username:coerceString(profile.data?.username), phone:coerceString(row.phone), houseId, houseLabel:coerceString(row.house_label), createdAt:coerceString(row.created_at), lastSignIn:coerceString(row.last_sign_in), isActive:coerceBoolean(membership.data.is_active), role:coerceString(membership.data.role), isPrimary:Boolean(houseId && primary.data?.some(item=>String(item.house_id)===houseId))};
 }
