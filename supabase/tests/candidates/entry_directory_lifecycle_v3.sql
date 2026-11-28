@@ -166,7 +166,7 @@ begin
   -- row which must be snapshotted before physical removal.
   if exists(select 1 from public.superadmin_audit_log l where l.actor_user_id=p_user_id or
     (l.target_id=p_user_id and (l.target_type is distinct from 'user' or l.action not in ('community_user.deactivate','community_user.reactivate')))) then return false; end if;
-  if exists(select 1 from public.system_event_log l where p_user_id in (l.user_id,l.actor_id,l.entity_id) and not (
+  if exists(select 1 from public.system_event_log l where p_user_id in (l.user_id,l.actor_id,l.entity_id) and (
     coalesce(l.community_id=p_community_id,false) and (
       (l.user_id=p_user_id and l.actor_id is distinct from p_user_id and l.event_type='USER_PROFILE_SETUP' and l.module='superadmin' and l.source='superadmin')
       or (l.user_id=p_user_id and l.entity_id=p_user_id and l.actor_id is distinct from p_user_id and l.event_type in ('USER_DEACTIVATED_BY_SUPERADMIN','USER_REACTIVATED_BY_SUPERADMIN') and l.module='superadmin' and l.source='minerva_console')
