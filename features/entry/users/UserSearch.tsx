@@ -194,7 +194,7 @@ export function UserSearch() {
   useEffect(() => {
     let live = true;
     const query = state.query;
-    if (!query) return;
+    if (!query) { setUnitResults([]); setUnitSearchLoading(false); setUnitSearchError(""); setUnitTruncated(false); return; }
     setUnitSearchLoading(true);
     setUnitResults([]);
     setUnitSearchError("");
@@ -858,7 +858,7 @@ export function UserSearch() {
         ) : null}
       </div>
 
-      {selectedUnit && <GlobalUnitDrawer key={selectedUnit.id} target={selectedUnit} close={() => setUnitStack([])} onBack={unitStack.length > 1 ? () => setUnitStack(stack => stack.slice(0,-1)) : undefined} openUnit={(id,label) => setUnitStack(stack => [...stack, {...selectedUnit,id,label}])} onChanged={() => setUnitRevision(n => n+1)}/>}
+      {selectedUnit && <GlobalUnitDrawer key={selectedUnit.id} target={selectedUnit} close={() => setUnitStack([])} onBack={unitStack.length > 1 ? () => setUnitStack(stack => stack.slice(0,-1)) : selectedUser ? () => setUnitStack([]) : undefined} openUnit={(id,label) => setUnitStack(stack => [...stack, {...selectedUnit,id,label}])} onChanged={() => setUnitRevision(n => n+1)}/>}
       {selectedUser?.source === "activation_queue" && pendingResidentRow && !selectedUnit ? (
         <ActivationResidentDrawer
           key={pendingResidentRow.id}
@@ -879,7 +879,7 @@ export function UserSearch() {
         />
       ) : null}
 
-      {selectedUser?.source === "activation_queue" && !pendingResidentRow ? (
+      {selectedUser?.source === "activation_queue" && !pendingResidentRow && !selectedUnit ? (
         <div className="pointer-events-none fixed inset-0 z-50">
           <section className="pointer-events-auto absolute bottom-5 right-5 top-[76px] w-[560px] overflow-y-auto rounded-[10px] border border-[#141119] bg-[#292431] p-5 shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
             <div className="flex items-center justify-between gap-3">
@@ -912,7 +912,7 @@ export function UserSearch() {
         </div>
       ) : null}
 
-      {selectedUser?.source === "account" ? (
+      {selectedUser?.source === "account" && !selectedUnit ? (
         <div className="pointer-events-none fixed inset-0 z-50">
           <section className="pointer-events-auto absolute bottom-5 right-5 top-[76px] flex w-[560px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none">
             <div className="flex shrink-0 items-start justify-between gap-4 border-b border-[#141119] px-4 py-4">

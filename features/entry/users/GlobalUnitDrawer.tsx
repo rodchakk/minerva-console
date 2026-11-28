@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { X, Home, ChevronRight } from "lucide-react";
+import { X, Home } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { EntryDrawerTabs, EntryDrawerSection, EntryDrawerField } from "@/features/entry/components/EntryDrawerTabs";
 import { CommunityUnitQuickActions } from "@/features/entry/communities/CommunityUnitQuickActions";
@@ -42,7 +42,7 @@ export function GlobalUnitDrawer({ target, close, openUnit, onBack, onChanged }:
   const links = rel?.enabled ? rel.links : [];
   const people = rel?.enabled ? rel.responsibilities : [];
   const lastAccess = unit?.lastAccess === "Not available" ? "No access recorded" : unit?.lastAccess;
-  return <aside className="fixed bottom-4 right-4 top-24 z-40 flex w-[min(440px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#24202B] shadow-2xl" aria-label="Unit management">
+  return <aside className="fixed bottom-5 right-5 top-[76px] z-50 flex w-[440px] flex-col overflow-hidden rounded-[10px] border border-[#141119] bg-[#292431] shadow-[0_24px_70px_rgba(0,0,0,0.45)] max-xl:inset-x-0 max-xl:bottom-0 max-xl:top-[54px] max-xl:w-auto max-xl:rounded-none" aria-label="Unit management">
     <div className="shrink-0 border-b border-[#141119] bg-[#292431] p-4">
       <div className="flex justify-between gap-3">
         <div className="min-w-0">
@@ -71,14 +71,13 @@ export function GlobalUnitDrawer({ target, close, openUnit, onBack, onChanged }:
           {unit.activePassItems.length > 0 && <EntryDrawerSection title="Active passes">{unit.activePassItems.slice(0,6).map(pass => <div key={pass.id} className="px-3.5 py-3"><p className="text-sm text-white">{pass.passName}</p><p className="text-xs text-[#A9A3B2]">{pass.holderName || pass.residentName} · {pass.status}</p></div>)}</EntryDrawerSection>}
         </>}
         {tab === "connections" && (rel?.enabled ? <>
-          <EntryDrawerSection title="Linked units" description="Administrative relationships · No impact on resident access">{links.length ? links.map(link => <button key={link.id} type="button" onClick={() => openUnit(link.unitId,link.label)} className="flex w-full items-center justify-between border-b border-white/5 px-3.5 py-3 text-left text-sm text-white">{link.label}<ChevronRight className="size-4"/></button>) : <p className="p-3 text-xs text-[#A9A3B2]">No linked units.</p>}</EntryDrawerSection>
-          <UnitRelationshipsPanel communityId={target.communityId} unitId={unit.id} unitLabel={unit.label} units={rel.units} people={rel.people} peopleHasMore={rel.peopleHasMore} links={rel.links} responsibilities={rel.responsibilities} selectorError={rel.selectorError} onChanged={refresh}/>
+          <UnitRelationshipsPanel communityId={target.communityId} unitId={unit.id} unitLabel={unit.label} units={rel.units} people={rel.people} peopleHasMore={rel.peopleHasMore} links={rel.links} responsibilities={rel.responsibilities} selectorError={rel.selectorError} onChanged={refresh} compact onOpenUnit={openUnit}/>
         </> : <p className="text-xs text-[#A9A3B2]">{rel?.error || "Unit relationships are not enabled for this community."}</p>)}
         {tab === "actions" && <EntryDrawerSection title="Unit actions"><div className="p-3"><CommunityUnitQuickActions communityId={target.communityId} unit={unit} onChanged={refresh}/></div></EntryDrawerSection>}
       </>}
     </div>
     {unit && detail && <footer className="shrink-0 space-y-2 border-t border-[#141119] bg-[#292431] p-3">
-      <ResidentQuickCreate communityId={target.communityId} communityName={target.communityName} houses={detail.houses} fixedUnitId={unit.id} triggerClassName={entryButtonClass("primary","w-full")}/>
+      <ResidentQuickCreate communityId={target.communityId} communityName={target.communityName} houses={detail.houses} fixedUnitId={unit.id} onChanged={refresh} triggerClassName={entryButtonClass("primary","w-full")}/>
       <Link href={`/products/entry/communities/${target.communityId}/units/${unit.id}`} className={entryButtonClass("secondary","w-full")}>Open unit details</Link>
       <button type="button" onClick={refresh} className={entryButtonClass("secondary","w-full")}>Refresh unit</button>
     </footer>}

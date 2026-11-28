@@ -23,10 +23,12 @@ export async function searchGlobalUnitsAction(rawQuery: string): Promise<{ units
   if (communities.error) return { units: [], truncated: false, error: "Unable to search communities." };
   const ids = (communities.data ?? []).map(c => c.id);
   const fields = "id,community_id,house_label,unit_reference,public_reference,is_active";
-  const byLabel = db.from("houses").select(fields).or(`house_label.ilike.${pattern},unit_reference.ilike.${pattern},public_reference.ilike.${pattern}`).order("house_label").limit(LIMIT + 1);
-  const [labels, byCommunity] = await Promise.all([byLabel, ids.length ? db.from("houses").select(fields).in("community_id", ids).order("house_label").limit(LIMIT + 1) : Promise.resolve({data: [], error: null})]);
-  if (labels.error || byCommunity.error) return { units: [], truncated: false, error: "Unable to search units." };
-  const unique = [...new Map([...(labels.data ?? []), ...(byCommunity.data ?? [])].map(h => [h.id,h])).values()];
+  const sources = await Promise.all([
+    ...["house_label","unit_reference","public_reference"].map(field => db.from("houses").select(fields).ilike(field, pattern).order("house_label").limit(LIMIT + 1)),
+    ids.length ? db.from("houses").select(fields).in("community_id", ids).order("house_label").limit(LIMIT + 1) : Promise.resolve({data: [], error: null}),
+  ]);
+  if (sources.some(source => source.error)) return { units: [], truncated: false, error: "Unable to search units." };
+  const unique = [...new Map(sources.flatMap(source => source.data ?? []).map(h => [h.id,h])).values()];
   const selected = unique.slice(0, LIMIT);
   const communityIds = [...new Set(selected.map(h => h.community_id))];
   const context = communityIds.length ? await db.from("communities").select("id,name,city").in("id", communityIds) : {data: [], error: null};
